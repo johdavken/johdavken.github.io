@@ -133,7 +133,19 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
   assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("data-role")]),
-    [["BUTTON", "blend-edit"], ["DIV", "next-group"], ["DIV", "weights-group"], ["BUTTON", "reset-tracking"]]);
+    [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"], ["BUTTON", "reset-tracking"]]);
+  // Blend Edit's group: the switch, and beside it Bulk Edit with the
+  // Confirm / Cancel / field it becomes (hidden until it does).
+  assert.deepEqual(rail.blendGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["blend-edit", "station-rail__flyout"]);
+  assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-edit", "bulk-confirm", "bulk-cancel", "bulk-field-slot"]);
+  assert.ok(rail.fieldSlot.hasAttribute("hidden"), "the field's slot is hidden until a selection is on");
+  assert.equal(rail.blendFlyout.getAttribute("aria-label"), "Blend Edit actions");
+  assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
+  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
+  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
+  assert.ok(rail.confirmButton.hasAttribute("hidden") && rail.cancelButton.hasAttribute("hidden"));
+  // The rail builds no field of its own: the boot file hands one in (station-bulk-field.js).
+  assert.equal(rail.element.querySelectorAll("input").length, 0);
   assert.deepEqual(rail.weightsGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["weights-edit", "station-rail__flyout"]);
   assert.deepEqual(rail.weightsFlyout.children.map(node => node.getAttribute("data-action")), ["smart-hoppers"]);
   assert.equal(rail.weightsFlyout.getAttribute("aria-label"), "Weights actions");
@@ -151,9 +163,12 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
     "Load Next into Current": "Load Next into Current is not available: no application is connected to Station commands.",
     "Copy Current into Next": "Copy Current into Next is not available: no application is connected to Station commands.",
     "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands.",
-    "Reset Tracking": "Reset Tracking is not available: no application is connected to Station commands."
+    "Reset Tracking": "Reset Tracking is not available: no application is connected to Station commands.",
+    "Bulk Edit": "Bulk Edit is not available: no application is connected to Station commands.",
+    "Apply resin to selected hoppers": "Apply resin to selected hoppers · select a hopper on a card first",
+    "Cancel bulk edit": "Cancel bulk edit · nothing is written; the selection is cleared"
   };
-  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"]]) {
+  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"], [rail.bulkButton, "Bulk Edit"], [rail.confirmButton, "Apply resin to selected hoppers"], [rail.cancelButton, "Cancel bulk edit"]]) {
     assert.equal(button.getAttribute("type"), "button");
     assert.equal(button.getAttribute("aria-label"), label);
     assert.equal(button.getAttribute("title"), REST_TITLE[label]);
@@ -163,7 +178,7 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
     assert.equal(svg.tagName, "SVG");
     assert.equal(svg.getAttribute("viewBox"), "0 0 20 20");
     assert.equal(svg.getAttribute("aria-hidden"), "true");
-    assert.ok(svg.children.length >= 3, "a drawn glyph, not a single mark");
+    assert.ok(svg.children.length >= 1, "a drawn glyph");
     walk(svg, node => {
       assert.match(node.getAttribute("class") || "", /^station-rail__glyph/, `a glyph part outside the namespace: ${node.tagName}`);
       assert.ok(!["TEXT", "IMAGE", "USE"].includes(node.tagName), "a glyph from text, an image or a symbol");
@@ -180,7 +195,7 @@ test("four in the column - Blend Edit, Next with its two children in a flyout be
   assert.ok(rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "true", "folded: out of the tab order and the reader's tree");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next" });
+  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit" });
 });
 
 test("the Weights switch and the Smart Hoppers switch show what they are told and hand every click back as one call; a held switch takes no click", () => {
@@ -380,8 +395,10 @@ test("anchor() stands the rail along the far-right box's outer edge - its top an
   const offsetX = (1400 - 1378 * scale) / 2;
   const right = 1330 * scale + offsetX + 16;
   const top = 10 * scale + 80 - 64;
-  assert.deepEqual(at, { left: Math.round(right + railModule.GAP), top: Math.round(top), height: Math.round(394 * scale) });
+  const left = Math.round(right + railModule.GAP);
+  assert.deepEqual(at, { left, top: Math.round(top), height: Math.round(394 * scale), roomRight: Math.round(1432 - (right + railModule.GAP + 36) - railModule.EDGE) });
   assert.ok(at.height > 78, "the strip is the box's height, taller than its two controls");
+  assert.ok(at.roomRight >= railModule.FLYOUT_ROW_WIDTH, "letterboxed, there is room for a two-child flyout beside the rail");
   // Which cluster is furthest right is read, not assumed: the order of
   // the list does not matter (a line drawn with Layer A on the right).
   const reversed = railModule.anchor({ viewBox: VB, clusters: CLUSTERS.slice().reverse(), stage, host, rail });
@@ -398,6 +415,7 @@ test("anchor() stands the rail along the far-right box's outer edge - its top an
   // A cluster at the very edge of its cell: the rail stays inside the host.
   assert.equal(tall.left, Math.min(Math.round(1330 * tallScale + 16 + railModule.GAP), 1100 - 36 - railModule.EDGE));
   assert.ok(tall.left + 36 <= 1100);
+  assert.ok(tall.roomRight < railModule.FLYOUT_ROW_WIDTH, "against the edge, no room for a row of two beside the rail");
   // Nothing to stand beside, or nothing drawn: null, and the rail keeps its place.
   assert.equal(railModule.anchor({ viewBox: VB, clusters: [], stage, host, rail }), null);
   assert.equal(railModule.anchor({ viewBox: VB, clusters: CLUSTERS, stage: { left: 0, top: 0, width: 0, height: 0 }, host, rail }), null);
@@ -447,6 +465,18 @@ test("place() measures the stage, the host and itself, writes the anchor as the 
   rail.element.rect = { left: 0, top: 0, width: 36, height: 78 };
   const at = rail.place(svg, host);
   assert.deepEqual(at, railModule.anchor({ viewBox: VB, clusters: [CLUSTERS[2]], stage: svg.rect, host: host.rect, rail: { width: 36, height: 78 } }));
+  // The flyouts' shape follows the room beside the rail: a row with room
+  // for two children, a column against the edge.
+  assert.equal(rail.element.getAttribute("data-room"), at.roomRight < railModule.FLYOUT_ROW_WIDTH ? "tight" : "wide");
+  const edge = build();
+  edge.rail.update({ hidden: false, blend: { active: false, available: true } });
+  const narrow = edge.doc.createElement("div");
+  narrow.rect = { left: 0, top: 0, width: 1100, height: 1232 };
+  svg.rect = { left: 16, top: 16, width: 1068, height: 1200 };
+  edge.rail.element.rect = { left: 0, top: 0, width: 36, height: 78 };
+  const tight = edge.rail.place(svg, narrow);
+  assert.ok(tight && tight.roomRight < railModule.FLYOUT_ROW_WIDTH);
+  assert.equal(edge.rail.element.getAttribute("data-room"), "tight");
   assert.equal(rail.element.style.left, `${at.left}px`);
   assert.equal(rail.element.style.top, `${at.top}px`);
   assert.equal(rail.element.style.height, `${at.height}px`);
@@ -655,4 +685,83 @@ test("Smart Hoppers is the Weights switch's child: folded until the Weights face
   assert.equal(smart.getAttribute("aria-checked"), "true");
   // The Next group is its own: unaffected by the Weights face.
   assert.equal(rail.flyout.getAttribute("data-open"), "false");
+});
+
+/* ----------------------------------------------------------------------
+ *   Bulk Edit: Blend Edit's child, and what it becomes
+ * -------------------------------------------------------------------- */
+
+function blendOn(rail, bulk) {
+  rail.update({ hidden: false, blend: { active: true, available: true }, bulk: Object.assign({ active: false, available: true, count: 0, resin: "" }, bulk || {}) });
+}
+
+test("Bulk Edit unfolds beside Blend Edit only while that face is on, and asks the boot file on its click", () => {
+  const { rail, calls, live } = build({ onBulkEdit: () => calls.push("bulk") });
+  live();
+  assert.equal(rail.blendGroup.getAttribute("data-open"), "false");
+  assert.ok(rail.blendFlyout.hasAttribute("inert"));
+  blendOn(rail);
+  assert.equal(rail.blendGroup.getAttribute("data-open"), "true");
+  assert.equal(rail.blendFlyout.hasAttribute("inert"), false);
+  assert.equal(rail.bulkButton.disabled, false);
+  assert.match(rail.bulkButton.getAttribute("title"), /select hoppers on the cards/);
+  rail.bulkButton.click();
+  assert.deepEqual(calls, ["bulk"]);
+  // Not offered: held, with the reason.
+  blendOn(rail, { available: false, reason: "the application does not offer bulk resin editing from Station." });
+  assert.equal(rail.bulkButton.disabled, true);
+  assert.match(rail.bulkButton.getAttribute("title"), /does not offer bulk resin editing/);
+  rail.bulkButton.click();
+  assert.deepEqual(calls, ["bulk"]);
+  // The Weights face: Blend's flyout folds with its child.
+  rail.update({ blend: { active: false, available: true }, weights: { active: true, available: true } });
+  assert.equal(rail.blendGroup.getAttribute("data-open"), "false");
+});
+
+test("on, Bulk Edit swaps in place for Confirm and Cancel; Confirm waits for a selected hopper and a drafted resin, both told by the boot file", () => {
+  const { rail, calls } = build({ onBulkConfirm: () => calls.push("confirm"), onBulkCancel: () => calls.push("cancel") });
+  blendOn(rail, { active: true, count: 0 });
+  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "true");
+  assert.ok(rail.element.classList.contains("is-bulk-active"));
+  assert.ok(rail.bulkButton.hasAttribute("hidden") && rail.bulkButton.hasAttribute("inert"));
+  assert.equal(rail.confirmButton.hasAttribute("hidden"), false);
+  assert.equal(rail.cancelButton.hasAttribute("hidden"), false);
+  assert.equal(rail.fieldSlot.hasAttribute("hidden"), false, "the field's slot shows with the selection");
+  assert.equal(rail.confirmButton.disabled, true);
+  assert.match(rail.confirmButton.getAttribute("title"), /select a hopper on a card first/);
+  rail.confirmButton.click();
+  assert.deepEqual(calls, []);
+
+  blendOn(rail, { active: true, count: 2 });
+  assert.equal(rail.confirmButton.disabled, true, "no resin drafted yet");
+  assert.match(rail.confirmButton.getAttribute("title"), /enter the resin in the card's field for 2 hoppers/);
+  blendOn(rail, { active: true, count: 2, resin: "  LLDPE 1001 " });
+  assert.equal(rail.confirmButton.disabled, false);
+  assert.equal(rail.confirmButton.getAttribute("title"), 'Apply "LLDPE 1001" to 2 hoppers');
+  assert.equal(rail.confirmButton.getAttribute("aria-label"), "Apply resin to 2 hoppers");
+  rail.confirmButton.click();
+  assert.deepEqual(calls, ["confirm"]);
+  // The boot file ends the selection: back to Bulk Edit.
+  blendOn(rail, { active: false });
+  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
+  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
+  assert.ok(rail.confirmButton.hasAttribute("hidden") && rail.fieldSlot.hasAttribute("hidden"));
+  // A field handed in stands in the slot, above the row.
+  const doc2 = fakeDocument();
+  const field = doc2.createElement("label");
+  field.setAttribute("data-role", "bulk-resin");
+  const hosted = railModule.create(doc2, { bulkField: field });
+  assert.ok(hosted.fieldSlot.children[0] === field);
+  assert.ok(hosted.blendFlyout.contains(field), "in the Blend flyout, so it folds and unfolds with it");
+  // Cancel.
+  blendOn(rail, { active: true, count: 1 });
+  rail.cancelButton.click();
+  assert.deepEqual(calls, ["confirm", "cancel"]);
+  const state = rail.getState();
+  assert.deepEqual(state.bulk, { active: true, available: true, reason: "", count: 1, resin: "" });
+  // Bulk on without the Blend face is drawn folded and at rest: the boot
+  // file owns the mode, the rail shows what can be seen.
+  rail.update({ blend: { active: false, available: true } });
+  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
+  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
 });

@@ -25,6 +25,13 @@
   --station-grid-major: rgba(173, 206, 240, 0.085);
   --station-grid-minor: rgba(173, 206, 240, 0.035);
   --station-canvas-pattern: var(--station-canvas-grid);
+  /* No room: the machine stands on the sheet, and the glass stands on
+     the sheet with it. */
+  --station-atmosphere-glow: transparent;
+  --station-atmosphere-horizon: transparent;
+  --station-atmosphere-floor: transparent;
+  --station-atmosphere-vignette: transparent;
+  --station-stage-atmosphere: none;
 
   --station-bg: #10294b;
   --station-surface: #132e54;

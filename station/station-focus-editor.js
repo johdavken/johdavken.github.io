@@ -653,8 +653,30 @@
     // A row with something in it can be dragged, when the move is on offer.
     item.classList.toggle("is-movable", !!(able.move && entry.assigned));
 
-    /* The badge: static identity, anchoring the row. Not a control. */
-    item.appendChild(text(doc, "span", "station-editor__badge", entry.id));
+    /* The badge: static identity, anchoring the row. Not a control -
+     * except under the rail's Bulk Edit (deps.bulk), when it is the
+     * row's one selection toggle: a button, pressed while the hopper is
+     * in the selection, and never the start of a drag (a BUTTON is an
+     * interactive target). Which hoppers are selected is the boot file's
+     * to say; the badge only asks (onToggle) and shows (setBulk). */
+    if (deps.bulk.active) {
+      const badge = text(doc, "button", "station-editor__badge station-editor__badge--select", entry.id, {
+        type: "button", "data-action": "select-hopper", "aria-pressed": deps.bulk.selected.has(`${state.layer.id}:${entry.index}`) ? "true" : "false",
+        title: `Select ${entry.id} for bulk edit`
+      });
+      badge.addEventListener("click", event => {
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        deps.bulk.onToggle(entry.index);
+      });
+      row.badge = badge;
+      row.badgeNode = badge;
+      item.appendChild(badge);
+      item.classList.toggle("is-bulk-selected", deps.bulk.selected.has(`${state.layer.id}:${entry.index}`));
+    } else {
+      row.badge = null;
+      row.badgeNode = item.appendChild(text(doc, "span", "station-editor__badge", entry.id));
+      item.classList.remove("is-bulk-selected");
+    }
 
     const main = element(doc, "div", "station-editor__main");
     row.main = main;
@@ -947,6 +969,17 @@
   /* What the bridge offers, per slot, and why a slot is read-only when it
    * is. Asked once per build: the application declares its commands when
    * it connects, and a structural render rebuilds the editor. */
+  /* The rail's Bulk Edit as the rows read it: off, or on with the
+   * selected keys as a Set and the toggle callback. */
+  function bulkFrom(given) {
+    const b = given && typeof given === "object" ? given : {};
+    return {
+      active: !!b.active,
+      selected: new Set(Array.isArray(b.selected) ? b.selected.map(String) : []),
+      onToggle: typeof b.onToggle === "function" ? b.onToggle : () => {}
+    };
+  }
+
   function abilities(commands, recipe, variant) {
     const connected = !!(commands && typeof commands.isAvailable === "function" && commands.isAvailable());
     const usable = connected && typeof commands.dispatch === "function" && typeof commands.capabilities === "function";
@@ -1004,7 +1037,14 @@
    *        a hopper cluster's footprint: no header, no source line; the
    *        rows edit and drag as in the full editor. Anything else is the
    *        full focused editor.
-   * @returns {{ element: Element, blend: object, note: function, update: function, able: object, variant: string }}
+   * @param {Element} [options.actions]   an element to stand in the card's
+   *        actions slot, under the note (the compact face's layer menu,
+   *        station-layer-menu.js). Built by the caller; placed here.
+   * @param {object} [options.bulk]       { active, selected, onToggle }:
+   *        the rail's Bulk Edit. While active every badge is a selection
+   *        toggle; `selected` lists "<layer>:<index>" keys; onToggle(index)
+   *        is the badge's click. The handle's setBulk() changes it in place.
+   * @returns {{ element: Element, blend: object, note: function, update: function, setBulk: function, able: object, variant: string }}
    */
   function create(doc, options) {
     const settings = options || {};
@@ -1069,6 +1109,7 @@
         ? settings.dragRoot
         : row => { try { return row.item.closest(".station-root") || null; } catch (error) { return null; } },
       note: message => { note.textContent = message; },
+      bulk: bulkFrom(settings.bulk),
       able: offer.able,
       reason: offer.reason,
       // The source line is the full editor's; the compact face has none.
@@ -1315,6 +1356,15 @@
     writeTotal(doc, total, blend);
     rootEl.appendChild(total);
     rootEl.appendChild(note);
+    /* The actions slot: whatever the caller built to stand at the card's
+     * foot (the layer menu), placed last so it takes the room the rows
+     * leave. Nothing here reads it. */
+    if (settings.actions && typeof settings.actions === "object") {
+      const actions = element(doc, "div", "station-editor__actions");
+      actions.appendChild(settings.actions);
+      rootEl.appendChild(actions);
+    }
+    rootEl.classList.toggle("is-selectable", deps.bulk.active);
 
     /* Apply new canonical values to the rows that exist. See the header:
      * the active control keeps its live value, and a row whose shape must
@@ -1328,7 +1378,43 @@
       return fresh;
     }
 
-    return { element: rootEl, blend, note: deps.note, update, able: offer.able, variant };
+    /* Bulk Edit changed under the rows: the mode going on or off rebuilds
+     * every badge (a span becomes a button, or back); a selection change
+     * only re-marks the rows that exist. No row's controls are touched. */
+    function setBulk(next) {
+      const bulk = bulkFrom(next);
+      const wasActive = deps.bulk.active;
+      deps.bulk.active = bulk.active;
+      deps.bulk.selected = bulk.selected;
+      if (typeof next === "object" && next && typeof next.onToggle === "function") deps.bulk.onToggle = next.onToggle;
+      rootEl.classList.toggle("is-selectable", bulk.active);
+      for (const row of rows) {
+        const key = `${state.layer.id}:${row.index}`;
+        const on = bulk.active && bulk.selected.has(key);
+        if (wasActive !== bulk.active) {
+          // Rebuild the badge only - the span or button fillRow placed.
+          const old = row.badgeNode || null;
+          const fresh = bulk.active
+            ? text(doc, "button", "station-editor__badge station-editor__badge--select", row.id, { type: "button", "data-action": "select-hopper", "aria-pressed": on ? "true" : "false", title: `Select ${row.id} for bulk edit` })
+            : text(doc, "span", "station-editor__badge", row.id);
+          if (bulk.active) {
+            fresh.addEventListener("click", event => {
+              if (typeof event.stopPropagation === "function") event.stopPropagation();
+              deps.bulk.onToggle(row.index);
+            });
+          }
+          if (old && typeof row.item.replaceChild === "function") row.item.replaceChild(fresh, old);
+          else { if (old) row.item.removeChild(old); row.item.appendChild(fresh); }
+          row.badge = bulk.active ? fresh : null;
+          row.badgeNode = fresh;
+        } else if (row.badge) {
+          row.badge.setAttribute("aria-pressed", on ? "true" : "false");
+        }
+        row.item.classList.toggle("is-bulk-selected", on);
+      }
+    }
+
+    return { element: rootEl, blend, note: deps.note, update, setBulk, able: offer.able, variant };
   }
 
   return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };

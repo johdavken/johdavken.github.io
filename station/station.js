@@ -136,6 +136,18 @@
    * words for what a promotion would change. Optional: without it the
    * Next face still edits the plan; the rail holds the two moves. */
   const planControls = root.PolynStationPlanControls || null;
+  /* The blend actions (station-blend-actions.js): the seam the layer-wide
+   * edits go through - a layer pasted onto another, a layer emptied, one
+   * resin written onto a selection - and the layer menu on every Blend
+   * Edit card that asks for the first two (station-layer-menu.js).
+   * Optional: without them the cards edit hopper by hopper and the rail
+   * holds Bulk Edit. */
+  const blendActions = root.PolynStationBlendActions || null;
+  const layerMenu = root.PolynStationLayerMenu || null;
+  /* The bulk field (station-bulk-field.js): the one place the resin Bulk
+   * Edit writes is entered - built once and handed to the rail, which
+   * stands it above its Blend row. Optional with the rest. */
+  const bulkFieldModule = root.PolynStationBulkField || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
    * Management as the application publishes them (station-admin-bridge.js).
@@ -301,10 +313,30 @@
    * "weights" (the weight cards) or "next" (the PLANNED recipe's cards -
    * the same blend card, turned to the plan and addressed to it). */
   const blendEdit = { active: false, kind: "blend", flipped: [] };
+  /* LAYER COPY - the grid's per-layer Copy / Paste, as presentation state:
+   * which layer of which recipe is armed as the source, or none. A live
+   * reference, not a snapshot: pasting reads that layer as it stands at
+   * paste time, exactly as the grid does. One paste per copy - the paste
+   * disarms - and the arming is cleared when the face changes (a layer
+   * name means something different on Current and Next), when the mode
+   * ends, and when the layer stops existing. */
+  const layerCopy = { recipe: null, layer: null };
+  /* BULK EDIT - the rail's child of Blend Edit, as presentation state:
+   * whether the selection is on, and which hoppers are in it, as the
+   * "<layer>:<index>" keys the state bridge uses. Only under the blend
+   * face; ends with it. The resin to write is the rail's field's until
+   * Confirm hands it over. */
+  const bulk = { active: false, selected: new Set(), resin: "" };
+  /* The bulk field's handle, once built (start()) and handed to the rail;
+   * told the selection's state by syncBulkField. */
+  let bulkField = null;
   /* The compact editors' handles, by layer id, for the stage as drawn:
    * what a value-only publish updates in place, as editorHandle is for
    * the open layer. Rebuilt by every render. */
   let cardHandles = {};
+  /* The layer menus' handles, by layer id, beside the cards': told who
+   * the copy source is and what the bridge offers (syncLayerMenus). */
+  let menuHandles = {};
   /* The Handbook's handle, once mounted, so the boot file can tell it
    * something it shows changed (a line change, a value). */
   let handbookPanel = null;
@@ -509,6 +541,10 @@
     leaveStageControl();
     // The open layer closes: the two modes do not share the stage.
     focus = null;
+    // A face change is a different recipe under the same layer names:
+    // nothing armed carries across, and no selection either.
+    clearLayerCopy();
+    endBulk();
     const were = blendEdit.active ? blendEdit.flipped.slice() : [];
     blendEdit.active = true;
     blendEdit.kind = face;
@@ -526,6 +562,8 @@
   function exitBlendEdit() {
     if (!blendEdit.active) return false;
     leaveStageControl();
+    clearLayerCopy();
+    endBulk();
     const were = blendEdit.flipped.slice();
     blendEdit.active = false;
     blendEdit.kind = "blend";
@@ -561,6 +599,258 @@
   /* The rail's third switch: the same mode, turned to the plan. */
   function toggleNextEdit() {
     return modeIs("next") ? exitBlendEdit() : enterBlendEdit("next");
+  }
+
+  /* --------------------------------------------------------------------
+   *   Layer Copy / Paste / Reset, from the cards' menus
+   * ------------------------------------------------------------------
+   * The recipe every one of these addresses is the face's: the plan
+   * under the Next face, the running recipe otherwise. Each is one
+   * command through the blend actions' seam; the answer through the same
+   * publish policy as every other, and said - on the card's own note,
+   * which is where a refusal of that layer belongs. */
+
+  function faceRecipe() {
+    return blendEdit.kind === "next" ? "next" : "current";
+  }
+
+  function clearLayerCopy() {
+    if (!layerCopy.layer) return false;
+    layerCopy.recipe = null;
+    layerCopy.layer = null;
+    syncLayerMenus();
+    return true;
+  }
+
+  function cardNote(id, message) {
+    const card = cardHandles[id];
+    if (card && typeof card.note === "function") card.note(message);
+    else say(message);
+  }
+
+  /* Arm: the layer named is the source, for the recipe the face shows. */
+  function copyLayerFrom(id) {
+    if (!blendEdit.active || !layerIds().includes(id)) return false;
+    layerCopy.recipe = faceRecipe();
+    layerCopy.layer = id;
+    syncLayerMenus();
+    say(`Layer ${id} copied. Open another layer's menu and choose Paste; Cancel copy on Layer ${id} to stop.`);
+    return true;
+  }
+
+  function cancelLayerCopy() {
+    const was = layerCopy.layer;
+    if (!clearLayerCopy()) return false;
+    say(`Copying Layer ${was} cancelled.`);
+    return true;
+  }
+
+  /* Paste: the armed layer's assignment onto the layer named, as one
+   * copyLayer. The source must be of this face's recipe; a source armed
+   * on the other face cannot have survived the face change, but the
+   * check stands so a stale arming can never cross recipes. One paste per
+   * copy: disarmed whatever the answer, as the grid disarms. */
+  function pasteLayer(id) {
+    if (!blendActions || !blendEdit.active || !layerCopy.layer) return null;
+    const recipe = faceRecipe();
+    const from = layerCopy.layer;
+    if (layerCopy.recipe !== recipe || from === id) return null;
+    const result = blendActions.copyLayer(commandsFor(current.resolved), recipe, from, id);
+    clearLayerCopy();
+    if (!result || !result.ok) {
+      cardNote(id, result && result.message ? result.message : `Layer ${from} could not be pasted onto Layer ${id}.`);
+      return result || null;
+    }
+    if (!result.changed) {
+      cardNote(id, `Layer ${id} already holds Layer ${from}'s blend.`);
+      return result;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say(`Pasted Layer ${from} onto Layer ${id}${recipe === "next" ? " in the plan" : ""}.`);
+    return result;
+  }
+
+  /* Reset, already confirmed on the menu: every hopper on the layer
+   * emptied, as one clearLayer. */
+  function clearLayer(id) {
+    if (!blendActions || !blendEdit.active || !layerIds().includes(id)) return null;
+    const recipe = faceRecipe();
+    const result = blendActions.clearLayer(commandsFor(current.resolved), recipe, id);
+    if (!result || !result.ok) {
+      cardNote(id, result && result.message ? result.message : `Layer ${id} could not be reset.`);
+      return result || null;
+    }
+    if (!result.changed) {
+      cardNote(id, `Layer ${id} is already empty.`);
+      return result;
+    }
+    if (layerCopy.layer === id) clearLayerCopy();
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say(`Layer ${id} reset${recipe === "next" ? " in the plan" : ""}: every hopper emptied.`);
+    return result;
+  }
+
+  /* What every menu shows, from the state this file holds and the
+   * bridge's offer. After a render (the menus are new), after an arming,
+   * and after anything that could change the offer. */
+  function syncLayerMenus() {
+    const ids = Object.keys(menuHandles);
+    if (!ids.length) return;
+    const commandsNow = commandsFor(current.resolved);
+    const can = action => !!(blendActions && blendActions.can(commandsNow, action));
+    const able = { copy: can("copy"), paste: can("copy"), reset: can("clear") };
+    const reason = blendActions ? (able.paste ? (able.reset ? "" : blendActions.reason(commandsNow, "clear")) : blendActions.reason(commandsNow, "copy")) : "the layer actions module is not loaded.";
+    const source = layerCopy.recipe === faceRecipe() ? layerCopy.layer : null;
+    const layerCount = layerIds().length;
+    for (const id of ids) {
+      menuHandles[id].update({ source, layerCount, able, reason });
+      const card = cardHandles[id];
+      if (card && card.element && card.element.classList) card.element.classList.toggle("is-copy-source", source === id);
+    }
+  }
+
+  /* One menu per blend card (the weight cards have none): built with
+   * the callbacks above, registered for syncLayerMenus. Null without the
+   * module, and the card stands without a foot. */
+  function menuFor(layerId) {
+    if (!layerMenu || blendEdit.kind === "weights") return null;
+    const doc = root.document;
+    const menu = layerMenu.create(doc, {
+      layer: layerId,
+      onCopy: () => copyLayerFrom(layerId),
+      onCancelCopy: () => cancelLayerCopy(),
+      onPaste: () => pasteLayer(layerId),
+      onReset: () => clearLayer(layerId),
+      resinOnly: blendActions ? blendActions.resinOnlyTarget : null,
+      setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
+      clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
+    });
+    menuHandles[layerId] = menu;
+    return menu.element;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Bulk Edit, from the rail
+   * ------------------------------------------------------------------
+   * The selection is this file's; the cards show it (setBulk) and ask to
+   * change it (the badge's click); the rail shows how many and holds the
+   * resin until Confirm. Confirm is one setHopperResins over the whole
+   * selection, addressed to the running recipe - the blend face's; the
+   * answer through the same publish policy; said on the status line. */
+
+  function bulkKeys() {
+    return Array.from(bulk.selected);
+  }
+
+  function bulkOptionsFor(layerId) {
+    if (!bulk.active) return null;
+    return { active: true, selected: bulkKeys(), onToggle: index => toggleBulkHopper(layerId, index) };
+  }
+
+  function canBulkEdit() {
+    return modeIs("blend") && !!blendActions && blendActions.can(commandsFor(current.resolved), "resins");
+  }
+
+  function syncBulkCards() {
+    for (const id of Object.keys(cardHandles)) {
+      const card = cardHandles[id];
+      if (typeof card.setBulk === "function") card.setBulk(bulk.active ? { active: true, selected: bulkKeys(), onToggle: index => toggleBulkHopper(id, index) } : { active: false });
+    }
+    syncBulkField();
+  }
+
+  /* The field, told the selection's state: shown while it is on, the
+   * count for its label, the draft (a rebuilt or externally-changed
+   * field takes it back), the catalog's codes. Focus goes to it when the
+   * first hopper is selected - the next thing is to type. */
+  function syncBulkField(options) {
+    if (!bulkField) return;
+    bulkField.update({ shown: bulk.active, count: bulk.active ? bulk.selected.size : 0, draft: bulk.resin, resins: catalogCodes() });
+    if (options && options.appeared) bulkField.focus();
+  }
+
+  function catalogCodes() {
+    return catalogResins().map(entry => entry && (entry.resin_code || entry.code)).filter(code => typeof code === "string" && code);
+  }
+
+  function startBulk() {
+    if (bulk.active || !canBulkEdit()) return false;
+    leaveStageControl();
+    bulk.active = true;
+    bulk.selected = new Set();
+    bulk.resin = "";
+    syncBulkCards();
+    syncRail();
+    say("Bulk Edit: click hopper badges on the cards to select them, then enter the resin above the rail and confirm.");
+    return true;
+  }
+
+  /* Ends the selection without writing: Cancel, Escape, the mode
+   * leaving, the face changing. Quiet - the caller says what happened. */
+  function endBulk() {
+    if (!bulk.active) return false;
+    bulk.active = false;
+    bulk.selected = new Set();
+    bulk.resin = "";
+    syncBulkCards();
+    syncRail();
+    return true;
+  }
+
+  /* The field's keystrokes: the draft is the boot file's, so it survives
+   * the field moving and a card rebuilt under it; the rail's Confirm reads
+   * it. */
+  function draftBulkResin(value) {
+    if (!bulk.active) return false;
+    bulk.resin = String(value || "");
+    syncRail();
+    return true;
+  }
+
+  function cancelBulk() {
+    if (!endBulk()) return false;
+    say("Bulk Edit cancelled: nothing was written.");
+    return true;
+  }
+
+  function toggleBulkHopper(layerId, index) {
+    if (!bulk.active || !layerIds().includes(layerId)) return false;
+    const key = `${layerId}:${index}`;
+    const before = bulk.selected.size;
+    if (bulk.selected.has(key)) bulk.selected.delete(key);
+    else bulk.selected.add(key);
+    for (const id of Object.keys(cardHandles)) {
+      const card = cardHandles[id];
+      if (typeof card.setBulk === "function") card.setBulk({ active: true, selected: bulkKeys(), onToggle: i => toggleBulkHopper(id, i) });
+    }
+    syncBulkField({ appeared: before === 0 && bulk.selected.size > 0 });
+    syncRail();
+    return true;
+  }
+
+  function confirmBulk() {
+    if (!bulk.active || !blendActions) return null;
+    const keys = bulkKeys();
+    const value = String(bulk.resin || "").trim();
+    if (!keys.length) { say("Select at least one hopper on a card first."); return null; }
+    if (!value) { say("Enter the resin to write onto the selected hoppers."); return null; }
+    const result = blendActions.applyResins(commandsFor(current.resolved), "current", keys, value);
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "The resin could not be applied.");
+      return result || null;
+    }
+    const count = keys.length;
+    endBulk();
+    if (!result.changed) {
+      say(`${count} hopper${count === 1 ? "" : "s"} already ${count === 1 ? "holds" : "hold"} ${value}: nothing to write.`);
+      return result;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say(`Applied ${value} to ${count} hopper${count === 1 ? "" : "s"}.`);
+    return result;
   }
 
   /* --------------------------------------------------------------------
@@ -613,6 +903,13 @@
         on: !!(smart && smart.enabled),
         available: smartOffered,
         reason: smartOffered || !weightCards ? "" : weightCards.smartReason(commandsNow, smart)
+      },
+      bulk: {
+        active: bulk.active,
+        available: canBulkEdit(),
+        reason: !blendActions ? "the layer actions module is not loaded." : (blendActions.can(commandsNow, "resins") ? "" : blendActions.reason(commandsNow, "resins")),
+        count: bulk.selected.size,
+        resin: bulk.resin
       },
       reset: {
         available: resetOffered,
@@ -1114,6 +1411,15 @@
     // mode with.
     blendEdit.flipped = blendEdit.flipped.filter(id => !!model && model.layers.some(layer => layer.id === id));
     if (blendEdit.active && (!model || !model.layers.length)) blendEdit.active = false;
+    // Nor an armed source, or a selected hopper, on a layer that is gone.
+    if (layerCopy.layer && (!model || !model.layers.some(layer => layer.id === layerCopy.layer))) { layerCopy.recipe = null; layerCopy.layer = null; }
+    if (bulk.active) {
+      for (const key of Array.from(bulk.selected)) {
+        const layerId = key.slice(0, key.lastIndexOf(":"));
+        if (!model || !model.layers.some(layer => layer.id === layerId)) bulk.selected.delete(key);
+      }
+      if (!blendEdit.active) { bulk.active = false; bulk.selected = new Set(); }
+    }
     current = { model, resolved };
     // A rebuilt stage starts with a clean line: what a click on the old
     // one could not do is not what this one is refusing.
@@ -1197,6 +1503,7 @@
       if (handbookPanel) handbookPanel.update();
       // And the rail: how many hoppers a reset would touch is a value.
       syncRail();
+      syncLayerMenus();
       return;
     }
 
@@ -1368,6 +1675,10 @@
      * enterBlendEdit) - and only for layers the model still has. */
     const cards = {};
     cardHandles = {};
+    // An open menu holds a click-away listener on the document; the card
+    // it stands in is about to be discarded, so it is closed first.
+    for (const id of Object.keys(menuHandles)) menuHandles[id].close();
+    menuHandles = {};
     if (blendEdit.active && model && !focusLayer) {
       /* The Next face: the same blend card, turned to the plan's hopper
        * state and addressed to the plan; every command from it names
@@ -1401,6 +1712,11 @@
           commands: commandsFor(current.resolved),
           recipe: cardRecipe,
           variant: "compact",
+          /* The card's foot: the layer menu (Copy / Paste / Reset), built
+           * here and told what to show once every card stands. And the
+           * rail's Bulk Edit, when on: the badges as toggles. */
+          actions: menuFor(entry.id),
+          bulk: bulkOptionsFor(entry.id),
           onEditing: record => {
             editing = record ? Object.assign({
               recipe: cardRecipe,
@@ -1416,6 +1732,7 @@
         cards[entry.id] = card.element;
         cardHandles[entry.id] = card;
       }
+      syncLayerMenus();
     }
     const svg = render.mountStage(mounts.machine, model, {
       hopperState,
@@ -1434,6 +1751,8 @@
     // the renderer knows only that a layer is turned over.
     if (blendEdit.active && !focusLayer) mounts.machine.setAttribute("data-edit-face", blendEdit.kind);
     else mounts.machine.removeAttribute("data-edit-face");
+    // The field's count and draft, as the rebuilt cards show the selection.
+    syncBulkField();
     // A rendered stage is new elements: the marks the boot file owns are
     // written to it from the projection as it stands (feedJob follows
     // with the fresh one on every path that changes the job).
@@ -1581,6 +1900,9 @@
     doc.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
       if (focus) { clearFocus(); return; }
+      // A selection in progress is the nearer thing to leave: Escape
+      // cancels Bulk Edit first, and only the next one leaves the mode.
+      if (bulk.active) { cancelBulk(); return; }
       // With nothing open, Escape leaves Blend Edit - the same exit Done
       // is, with the same commit of whatever field was being entered.
       if (blendEdit.active) exitBlendEdit();
@@ -1686,6 +2008,17 @@
      * Handed the four callbacks and nothing else; told what to show by syncRail, and where to stand by
      * placeRail after each render of the normal layout and whenever the
      * stage's cell changes size. */
+    /* The bulk field, built once and handed to the rail below: the boot
+     * file holds the draft, Enter is the rail's Confirm, Escape the rail's
+     * Cancel. */
+    if (bulkFieldModule) {
+      bulkField = bulkFieldModule.create(doc, {
+        onInput: draftBulkResin,
+        onConfirm: () => { confirmBulk(); },
+        onCancel: () => { cancelBulk(); }
+      });
+    }
+
     if (machineRail && mounts.rail) {
       railPanel = machineRail.create(doc, {
         onBlendEdit: toggleBlendEdit,
@@ -1695,6 +2028,10 @@
         onNextEdit: toggleNextEdit,
         onPromote: promoteNextRecipe,
         onCopy: copyCurrentToNext,
+        onBulkEdit: startBulk,
+        onBulkConfirm: confirmBulk,
+        onBulkCancel: cancelBulk,
+        bulkField: bulkField ? bulkField.element : null,
         setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
       });

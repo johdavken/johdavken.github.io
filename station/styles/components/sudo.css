@@ -1,6 +1,7 @@
 /* Sudo (station-sudo.js), Workspace Management
- * (station-sudo-workspaces.js) and Line Configuration
- * (station-sudo-lines.js): the Operator Handbook's administrator page.
+ * (station-sudo-workspaces.js), Line Configuration (station-sudo-lines.js)
+ * and Resin Database (station-sudo-resins.js): the Operator Handbook's
+ * administrator page.
  *
  * ONE MORE PAGE OF THE SAME BOOK
  *
@@ -17,12 +18,13 @@
  *                lines as a narrow list on the left, the chosen one on
  *                the right - each scrolling on its own inside the bench
  *
- * The two tools share the panes' shape - the columns, the list and its
+ * The three tools share the panes' shape - the columns, the list and its
  * rows, the detail pane, the fold, the confirmation - and Line
- * Configuration draws them under Workspace Management's class names
- * rather than a second set of the same rules. What is its own is the
- * editor: short aligned field rows, the layer rows under them, and the
- * tags on the line's name.
+ * Configuration and Resin Database draw them under Workspace
+ * Management's class names rather than a second set of the same rules.
+ * What is each one's own is its editor: short aligned field rows, the
+ * layer rows under them (lines) or a search over the list (resins), and
+ * the tags on the record's name.
  *
  * The right pane has three faces, drawn one at a time in the same box:
  * the workspace (its name and counts, its linked devices, and maintenance
@@ -289,7 +291,8 @@
 .station-sudo__tools,
 .station-sudo__tool,
 .station-sudo-ws,
-.station-sudo-lines {
+.station-sudo-lines,
+.station-sudo-resins {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -947,6 +950,181 @@
 
 /* How far a saved change reaches: one small line under the fields. */
 .station-sudo-lines__reach {
+  max-width: 44em;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+/* ---------------------------------------------------------------------
+ *   Resin Database
+ * ------------------------------------------------------------------- */
+
+/* The catalog's tally, in the strip: how many records are active, how
+   many are kept inactive. */
+.station-sudo-resins__current {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-sudo-resins__current-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The list is long - a plant keeps well over a hundred codes - so its
+   column takes a little more of the bench than a line list needs. */
+.station-sudo-resins .station-sudo-ws__columns {
+  grid-template-columns: minmax(16em, 1fr) minmax(0, 2fr);
+}
+
+/* The search, between the pane's head and the list: one field the width
+   of the column, the bench's editable surface, in the mono face the
+   codes are set in. Outside the list, so a redraw of the rows never
+   touches it. The face is set on the row and inherited: the bench's
+   input reset reads `font: inherit` and out-specifies a class on the
+   field itself. */
+.station-sudo-resins__search-row {
+  flex: 0 0 auto;
+  padding: 0 var(--station-space-3) var(--station-space-2);
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  letter-spacing: 0.02em;
+}
+
+.station-sudo-resins__search {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: 100%;
+}
+
+.station-sudo-resins__search:focus {
+  --station-field-shadow: 0 0 0 2px var(--station-selection);
+}
+
+.station-sudo-resins__search::placeholder {
+  color: var(--station-text-faint);
+  font-family: var(--station-font);
+  letter-spacing: normal;
+}
+
+.station-sudo-resins__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+}
+
+/* The code and its tags on one line. */
+.station-sudo-resins__name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+}
+
+/* A tag beside the code: inactive in the muted, unsaved changes in the
+   warning - the same small spaced word Line Configuration uses. */
+.station-sudo-resins__tag {
+  padding: 1px var(--station-space-1);
+  border: var(--station-stroke) solid currentColor;
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text-faint);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-sudo-resins__tag[data-tag="inactive"] {
+  color: var(--station-text-muted);
+}
+
+.station-sudo-resins__tag[data-tag="dirty"] {
+  color: var(--station-warning);
+}
+
+/* ---- The fields: three short aligned rows ---- */
+
+.station-sudo-resins__fields {
+  display: flex;
+  flex-direction: column;
+  max-width: 44em;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-resins__field {
+  display: grid;
+  grid-template-columns: 11em minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--station-space-3);
+  min-height: calc(var(--station-space-5) + var(--station-space-2));
+  padding: var(--station-space-1) 0;
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-sudo-resins__label {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The value track carries the face its input inherits (see the search):
+   the mono face codes and numbers are set in. */
+.station-sudo-resins__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-1) var(--station-space-2);
+  min-width: 0;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The inputs: the code takes the row; a density is short, and blank
+   when unknown. */
+.station-sudo-resins__input {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: min(24em, 100%);
+}
+
+.station-sudo-resins__input[data-width="short"] {
+  --station-field-width: 9em;
+}
+
+.station-sudo-resins__input:focus {
+  --station-field-shadow: 0 0 0 2px var(--station-selection);
+}
+
+.station-sudo-resins__input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+.station-sudo-resins__input::placeholder {
+  color: var(--station-text-faint);
+  font-family: var(--station-font);
+}
+
+/* How far a saved change reaches: one small line under the fields. */
+.station-sudo-resins__reach {
   max-width: 44em;
   color: var(--station-text-faint);
   font-size: var(--station-text-xs);

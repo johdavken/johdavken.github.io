@@ -54,10 +54,13 @@
   const lines = typeof require === "function"
     ? require("./station-sudo-lines.js")
     : (root && root.PolynStationSudoLines);
-  const api = factory(workspaces, lines);
+  const resins = typeof require === "function"
+    ? require("./station-sudo-resins.js")
+    : (root && root.PolynStationSudoResins);
+  const api = factory(workspaces, lines, resins);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationSudo = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (workspacesModule, linesModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (workspacesModule, linesModule, resinsModule) {
   "use strict";
 
   const ID = "sudo";
@@ -122,6 +125,7 @@
     const defaultTools = [];
     if (workspacesModule && workspacesModule.tool) defaultTools.push(workspacesModule.tool);
     if (linesModule && linesModule.tool) defaultTools.push(linesModule.tool);
+    if (resinsModule && resinsModule.tool) defaultTools.push(resinsModule.tool);
     const toolList = Array.isArray(settings.sudoTools) && settings.sudoTools.length
       ? settings.sudoTools
       : defaultTools;

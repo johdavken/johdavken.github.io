@@ -162,7 +162,10 @@ function producer(overrides) {
       const saved = Object.assign({ id: id || `l-${env.nextId++}`, updatedAt: "2026-09-13T00:00:00Z" }, definition);
       env.lines = env.lines.filter(item => item.id !== saved.id).concat([saved]);
       return { ok: true, line: saved };
-    }
+    },
+    listResins: async () => ({ ok: true, resins: [] }),
+    saveResin: async ({ id, resin }) => ({ ok: true, resin: Object.assign({ id: id || "r-new" }, resin) }),
+    deleteResin: async () => ({ ok: true })
   };
   const actions = {};
   for (const name of bridgeModule.ACTIONS) {
@@ -237,8 +240,8 @@ test("signed in, the row names the two tools inside the one Sudo page, Workspace
   const nav = s.root.querySelector(".station-sudo__nav");
   assert.ok(!hidden(nav));
   assert.equal(nav.getAttribute("role"), "tablist");
-  assert.deepEqual(tabs(s.root).map(tab => tab.textContent), ["Workspaces", "Line Configuration"]);
-  assert.deepEqual(tabs(s.root).map(tab => tab.getAttribute("aria-pressed")), ["true", "false"]);
+  assert.deepEqual(tabs(s.root).map(tab => tab.textContent), ["Workspaces", "Line Configuration", "Resin Database"]);
+  assert.deepEqual(tabs(s.root).map(tab => tab.getAttribute("aria-pressed")), ["true", "false", "false"]);
   assert.equal(s.section.getState().tool, "workspaces");
   assert.ok(!hidden(paneFor(s.root, "workspaces")));
   assert.ok(hidden(paneFor(s.root, "lines")));
@@ -246,7 +249,7 @@ test("signed in, the row names the two tools inside the one Sudo page, Workspace
   assert.equal(s.lines.getState().loaded, false);
   // The strip's slot shows the showing tool's status alone.
   const slots = s.root.querySelectorAll(".station-sudo__slot-item");
-  assert.deepEqual(slots.map(slot => [slot.getAttribute("data-tool"), hidden(slot)]), [["workspaces", false], ["lines", true]]);
+  assert.deepEqual(slots.map(slot => [slot.getAttribute("data-tool"), hidden(slot)]), [["workspaces", false], ["lines", true], ["resins", true]]);
 });
 
 test("turning to Line Configuration shows it, reads its list once, and moves the strip's status; turning back re-reads nothing", async () => {
@@ -254,13 +257,13 @@ test("turning to Line Configuration shows it, reads its list once, and moves the
   click(tabFor(s.root, "lines"));
   await tick();
   assert.equal(s.section.getState().tool, "lines");
-  assert.deepEqual(tabs(s.root).map(tab => tab.getAttribute("aria-pressed")), ["false", "true"]);
+  assert.deepEqual(tabs(s.root).map(tab => tab.getAttribute("aria-pressed")), ["false", "true", "false"]);
   assert.ok(hidden(paneFor(s.root, "workspaces")));
   assert.ok(!hidden(paneFor(s.root, "lines")));
   assert.deepEqual(calls(s), ["listWorkspaces", "listLineConfigurations"]);
   assert.equal(s.lines.getState().loaded, true);
   const slots = s.root.querySelectorAll(".station-sudo__slot-item");
-  assert.deepEqual(slots.map(slot => hidden(slot)), [true, false]);
+  assert.deepEqual(slots.map(slot => hidden(slot)), [true, false, true]);
   assert.equal(s.root.querySelector(".station-sudo-lines__current-text").textContent, "This desktop is on Line 8");
   click(tabFor(s.root, "workspaces"));
   await tick();

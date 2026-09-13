@@ -91,6 +91,11 @@
     // The plan controls: the seam for the rail's two moves under the Next
     // face. Beside the hopper controls, whose reset the rail asks for too.
     "station/station-plan-controls.js",
+    // The blend actions: the seam for a card's Copy / Paste / Reset and the
+    // rail's Bulk Edit; the layer menu each blend card carries at its foot.
+    "station/station-blend-actions.js",
+    "station/station-layer-menu.js",
+    "station/station-bulk-field.js",
     "station/station-layer-share.js",
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
@@ -116,10 +121,12 @@
     "station/station-resin-totals.js",
     "station/station-theme-preview.js",
     "station/station-appearance.js",
-    // Sudo: its tools, Workspace Management and Line Configuration, before
-    // the page that hosts them; all before the Handbook that hosts the page.
+    // Sudo: its tools, Workspace Management, Line Configuration and Resin
+    // Database, before the page that hosts them; all before the Handbook
+    // that hosts the page.
     "station/station-sudo-workspaces.js",
     "station/station-sudo-lines.js",
+    "station/station-sudo-resins.js",
     "station/station-sudo.js",
     "station/station-handbook.js",
     "station/station-demo-lines.js",
@@ -127,7 +134,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.43.0";
+  const VERSION = "0.47.2";
 
   function requested() {
     try {

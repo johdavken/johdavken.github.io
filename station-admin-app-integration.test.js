@@ -126,6 +126,7 @@ test("the bridge is loaded by both pages after the state bridge and before its p
   for (const page of [harness, host]) {
     assert.ok(page.indexOf("station-sudo-workspaces.js") < page.indexOf("station-sudo.js"), "the tool before the page that hosts it");
     assert.ok(page.indexOf("station-sudo-lines.js") < page.indexOf("station-sudo.js"), "the second tool before the page that hosts it");
+    assert.ok(page.indexOf("station-sudo-resins.js") < page.indexOf("station-sudo.js"), "the third tool before the page that hosts it");
     assert.ok(page.indexOf("station-line-model.js") < page.indexOf("station-sudo-lines.js"), "the line model before the tool that derives roles from it");
     assert.ok(page.indexOf("station-sudo.js") < page.indexOf("station-handbook.js"), "the page before the Handbook that hosts it");
     assert.ok(page.includes("components/sudo.css"));
@@ -181,4 +182,45 @@ test("a saved change reaches a running Station by the existing path: the announc
   const tool = read("station/station-sudo-lines.js");
   assert.doesNotMatch(tool, /getLineConfigurations|setConfiguredLineConfigurations|loadCachedLineConfigurations|refreshResins|PolynLineConfigurations/);
   assert.match(tool, /lineIdentityModule\.validateLineConfigurations\(combined\)/, "it validates by line-identity's rules before asking");
+});
+
+/* ----------------------------------------------------------------------
+ *   Resin Database: the same instance the floor UI's panel runs
+ * -------------------------------------------------------------------- */
+
+test("ONE resin database: Station's list, save and delete are the admin instance's own procedures - the same three the floor UI's Resin Database panel runs - and a save's catalog refresh is the service's, not the producer's", () => {
+  const source = connect();
+  assert.match(source, /function guardedResins\(run\)\{[\s\S]*?if \(!instance\?\.getState\?\.\(\)\.isAdmin\) return NO_ADMIN;/, "the same isAdmin guard as every other action, over the instance itself");
+  assert.match(source, /listResins: guardedResins\(async instance=>\{[\s\S]*?const result = await instance\.listResins\(\);/);
+  assert.match(source, /saveResin: guardedResins\(async \(instance, \{ id, resin \}\)=>\{[\s\S]*?const result = await instance\.saveResin\(id \|\| null, resinValues\(resin\)\);/);
+  assert.match(source, /deleteResin: guardedResins\(\(instance, \{ id \}\)=>instance\.deleteResin\(id\)\)/);
+  assert.match(source, /if \(message === "That resin code already exists\."\) return \{ ok:false, code:"duplicate_code", message \};/);
+  // The producer neither touches the catalog nor the table, and announces nothing: the window has no resin in it.
+  assert.doesNotMatch(source, /refreshResins|PolynResinCatalog|acceptConfirmedResin|\.from\(|"resins"|resins"\)/);
+  assert.equal((ui.match(/stationAdminHandle\?\.publish\(\)/g) || []).length, 2, "a resin write moves no window value");
+  // The floor UI's panel: the same three procedures on the same instance.
+  const legacy = read("resin-admin-ui.js");
+  assert.match(legacy, /await admin\.listResins\(\)/);
+  assert.match(legacy, /await admin\.saveResin\(id \|\| null, values\)/);
+  assert.match(legacy, /await admin\.deleteResin\(id\)/);
+  // And the service is where the validation, the duplicate answer and the catalog refresh live - once.
+  const service = read("resin-admin.js");
+  assert.match(between(service, "async function saveResin(", "async function updateBulkDensity("), /await catalog\?\.refreshResins\?\.\(\);/);
+  assert.match(between(service, "async function deleteResin(", "function subscribe("), /await catalog\?\.refreshResins\?\.\(\);/);
+  assert.match(service, /"That resin code already exists\."/);
+  assert.match(service, /function validateResin\(values\)\{/);
+  // app.js knows nothing of the tool or the actions.
+  assert.doesNotMatch(app, /PolynStationSudoResins|station-sudo-resins|listResins|saveResin|deleteResin/);
+});
+
+test("the Station tool neither reads the catalog nor refreshes it, holds no column name, and subscribes to nothing: the service's refresh is how a change reaches the running application", () => {
+  const tool = read("station/station-sudo-resins.js");
+  assert.doesNotMatch(tool, /refreshResins|PolynResinCatalog|getResins|acceptConfirmedResin|resin_code|density_g_cm3|bulk_density_lb_ft3|is_active|\.subscribe\s*\(/);
+  assert.match(tool, /request\("listResins"\)/);
+  assert.match(tool, /request\("saveResin", \{ id: values\.id \|\| "", resin: values \}\)/);
+  assert.match(tool, /request\("deleteResin", \{ id: resin\.id \}\)/);
+  // The value rules are the service's: the tool checks only what it can know on its own.
+  assert.doesNotMatch(tool, /0\.001|\b10\b.*g\/cm|between 1 and 100/);
+  assert.match(tool, /duplicateCode\(state\.resins, values\.resinCode, values\.id\)/);
+  assert.match(tool, /Permanently delete \$\{resin\.resinCode\}\? Use Inactive instead if this catalog record may be needed again\. This cannot be undone\./);
 });

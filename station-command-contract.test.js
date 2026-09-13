@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -523,4 +523,78 @@ test("the plan commands are the two moves between the running recipe and the pla
   }
   // Its one failure of its own: nothing planned, or a plan that cannot be promoted.
   assert.equal(contract.failure("no_plan").message, contract.MESSAGES.no_plan);
+});
+
+/* ----------------------------------------------------------------------
+ *   Layer commands: paste, reset and the bulk resin
+ * -------------------------------------------------------------------- */
+
+test("the layer commands are recipe edits over a layer at once: each names its recipe, may address the plan, and is neither runtime nor equipment", () => {
+  assert.deepEqual([...contract.LAYER_COMMANDS], ["copyLayer", "clearLayer", "setHopperResins"]);
+  assert.ok(Object.isFrozen(contract.LAYER_COMMANDS));
+  for (const command of contract.LAYER_COMMANDS) {
+    assert.equal(contract.ARGUMENTS[command][0], "recipe");
+    assert.ok(!contract.RUNTIME_COMMANDS.includes(command) && !contract.EQUIPMENT_COMMANDS.includes(command) && !contract.JOB_COMMANDS.includes(command) && !contract.PLAN_COMMANDS.includes(command));
+  }
+  assert.deepEqual([...contract.ARGUMENTS.copyLayer], ["recipe", "layer", "toLayer"]);
+  assert.deepEqual([...contract.ARGUMENTS.clearLayer], ["recipe", "layer"]);
+  assert.deepEqual([...contract.ARGUMENTS.setHopperResins], ["recipe", "resins"]);
+
+  // copyLayer: the source as every command names its position, the
+  // destination as toLayer; the plan is a valid address. The same layer
+  // twice passes here - whether that is a no-op is the executor's.
+  const paste = contract.normalizeArguments("copyLayer", { recipe: "next", layer: " A ", toLayer: "C", index: 2 });
+  assert.equal(paste.ok, true);
+  assert.deepEqual(paste.args, { recipe: "next", layer: "A", toLayer: "C" });
+  assert.ok(Object.isFrozen(paste.args));
+  assert.equal(contract.normalizeArguments("copyLayer", { recipe: "current", layer: "B", toLayer: "B" }).ok, true);
+  const noTarget = contract.normalizeArguments("copyLayer", { recipe: "current", layer: "A" });
+  assert.equal(noTarget.ok, false);
+  assert.equal(noTarget.field, "toLayer");
+
+  // clearLayer: recipe and layer, nothing else.
+  const reset = contract.normalizeArguments("clearLayer", { recipe: "current", layer: "B", index: 3 });
+  assert.equal(reset.ok, true);
+  assert.deepEqual(reset.args, { recipe: "current", layer: "B" });
+  assert.equal(contract.normalizeArguments("clearLayer", { recipe: "current" }).field, "layer");
+});
+
+test("a resin list follows the weight list's rules: non-empty, capped, no position twice, each entry read by setHopperResin's own normalizers", () => {
+  const one = contract.normalizeArguments("setHopperResins", { recipe: "current", resins: [
+    { layer: "A", index: "1", resin: "  LLDPE   1001 " },
+    { layer: "B", index: 2, resin: "" },
+    { layer: "B", index: 3 }
+  ] });
+  assert.equal(one.ok, true);
+  assert.deepEqual(one.args.resins, [
+    { layer: "A", index: 1, resin: "LLDPE 1001" },
+    { layer: "B", index: 2, resin: "" },
+    { layer: "B", index: 3, resin: "" }
+  ]);
+  assert.ok(Object.isFrozen(one.args.resins) && Object.isFrozen(one.args.resins[0]));
+
+  const empty = contract.normalizeArguments("setHopperResins", { recipe: "current", resins: [] });
+  assert.equal(empty.ok, false);
+  assert.equal(empty.field, "resins");
+  assert.equal(contract.normalizeArguments("setHopperResins", { recipe: "current" }).ok, false);
+
+  const twice = contract.normalizeArguments("setHopperResins", { recipe: "current", resins: [
+    { layer: "A", index: 1, resin: "X" }, { layer: "A", index: 1, resin: "Y" }
+  ] });
+  assert.equal(twice.ok, false);
+  assert.match(twice.message, /A:1 is listed twice/);
+
+  const badIndex = contract.normalizeArguments("setHopperResins", { recipe: "current", resins: [{ layer: "A", index: 6, resin: "X" }] });
+  assert.equal(badIndex.ok, false);
+  assert.equal(badIndex.code, "unknown_hopper");
+
+  const tooLong = contract.normalizeArguments("setHopperResins", { recipe: "current", resins: [{ layer: "A", index: 1, resin: "x".repeat(contract.MAX_RESIN_LENGTH + 1) }] });
+  assert.equal(tooLong.ok, false);
+
+  const page = [];
+  for (let i = 0; i <= contract.MAX_WEIGHT_ENTRIES; i++) page.push({ layer: `L${i}`, index: 0, resin: "X" });
+  const over = contract.normalizeArguments("setHopperResins", { recipe: "next", resins: page });
+  assert.equal(over.ok, false);
+  assert.match(over.message, /No more than/);
+  assert.equal(contract.normalizeArguments("setHopperResins", { recipe: "next", resins: page.slice(1) }).ok, true);
 });

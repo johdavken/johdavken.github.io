@@ -118,6 +118,13 @@
   min-height: 0;
   padding: var(--station-space-4);
   overflow: hidden;
+  /* The stage atmosphere (tokens.css), or none: the room the theme stands
+     the machine in. It is the stage cell's and not the root's because it
+     is sized to the stage - the horizon is a fraction of this cell - and
+     because the rail, the Handbook and the utility surfaces, the glass
+     that needs it behind them, all sit over this one cell. The root keeps
+     the drafting grid. */
+  background-image: var(--station-stage-atmosphere);
 }
 
 /* The Operator Handbook's slot: the stage's own cell, laid over the
