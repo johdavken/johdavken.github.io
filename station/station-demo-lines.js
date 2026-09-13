@@ -141,6 +141,9 @@
       // The bridge's own shape: labels per recipe document. The demo plans
       // nothing, so `next` is empty.
       sources: { current: sources, next: {} },
+      // The bridge's Smart Hoppers block, at rest: off, no identified
+      // line, no circumference.
+      smartHoppers: { enabled: false, geometryMode: null, circumference: 0 },
       layers: names.map((name, layerIndex) => {
         const layerConfig = declared ? declared.find(entry => (entry.id || entry.name) === name) : null;
         const hopperCount = Number(layerConfig && layerConfig.hopperCount) || defaultHoppers;
@@ -163,6 +166,9 @@
               weight: active ? 400 : 0,
               effectiveWeight: active ? 400 : 0,
               usableHeight: DEMO_HEIGHTS[(layerIndex + index) % DEMO_HEIGHTS.length],
+              usableGallons: 0,
+              // A demo line computes nothing: no catalog, no line, no switch.
+              smartWeight: null,
               track: false,
               pumpOff: index === DEMO_PUMP_OFF_INDEX
             };

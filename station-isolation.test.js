@@ -29,7 +29,7 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
   "station-handbook.js", "station-recipe-book.js", "station-resin-totals.js", "station-appearance.js", "station-theme-preview.js",
   "station-changeover.js", "station-avatar.js", "station-machine-rail.js", "station-logo.js",
-  "station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js", "station-weights.js"];
+  "station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js", "station-weights.js", "station-weight-cards.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -640,7 +640,7 @@ test("Station never writes through the bridge - it only reads and subscribes", (
   }
 });
 
-test("exactly six Station files dispatch commands - the focused editor, the hopper controls, the job controls, the layer share, Resin Totals and Weights - and only through the bridge they are handed", () => {
+test("exactly seven Station files dispatch commands - the focused editor, the hopper controls, the job controls, the layer share, Resin Totals, Weights and the weight cards - and only through the bridge they are handed", () => {
   /* The write path is: editor -> command bridge -> the application's
    * executor. The editor is one of four places a Station file may say
    * `.dispatch(` - the others are the hopper cluster's controls module,
@@ -649,12 +649,14 @@ test("exactly six Station files dispatch commands - the focused editor, the hopp
    * changeover, and the layer share, the percentage edited in each
    * layer's header, and the Handbook's Resin Totals, which carries the
    * job's production and scrap pounds, and the Handbook's Weights page,
-   * which carries the receiver weights - and each says it on the bridge
-   * object it was given, never on the global. Every other file stays a
-   * reader; the boot file's part is to hand the bridge over and to
-   * re-run the publish policy on the answer. A seventh dispatching file
-   * arrives as an edit to this test. */
-  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js"];
+   * which carries the receiver weights, and the weight cards on the
+   * stage, which carry the same weights and the hopper geometry from the
+   * machine rail's Weights face (and the rail's Smart Hoppers switch) -
+   * and each says it on the bridge object it was given, never on the
+   * global. Every other file stays a reader; the boot file's part is to
+   * hand the bridge over and to re-run the publish policy on the answer.
+   * An eighth dispatching file arrives as an edit to this test. */
+  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js", "station-weight-cards.js"];
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     if (DISPATCHES.includes(file)) {

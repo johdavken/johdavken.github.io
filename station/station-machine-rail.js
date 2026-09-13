@@ -4,13 +4,29 @@
  *
  * WHAT IT IS
  *
- * Two controls, and nothing else for now:
+ * Four controls, and nothing else for now:
  *
  *   Blend Edit       the mode's one switch. On: every layer turns over to
  *                    its compact blend card (station.js owns the mode; the
  *                    rail only asks). On again: the mode ends along its one
  *                    exit, every layer back as hoppers. The control shows
  *                    the mode's state as its own.
+ *   Weights          the other mode's switch: every layer turns over to
+ *                    its weight card (station-weight-cards.js) - the
+ *                    receiver weights, and with Smart Hoppers on the
+ *                    geometry each is computed from. The two modes share
+ *                    one stage: one is on, or neither. The control shows
+ *                    the mode's state as its own.
+ *   Smart Hoppers    the application's device-local switch: weights
+ *                    computed from hopper geometry and each resin's bulk
+ *                    density, or the entered weights. Not a mode of the
+ *                    stage - it acts on every hopper at once, in every
+ *                    view - so it stands here with the other operations
+ *                    over the whole machine. The boot file asks the
+ *                    application (one setSmartHoppers) and tells the rail
+ *                    what the application then holds; held with the
+ *                    reason when this desktop is not on an identified
+ *                    line, or the command is not offered.
  *   Reset Tracking   every hopper untracked and its pump marked running -
  *                    the floor UI's Reset tracking, as the one resetTracking
  *                    command (station-hopper-controls.js). A reset is easy
@@ -69,16 +85,16 @@
   /* The gap between the card box's outer edge and the rail, and the least
    * the rail keeps from its host's edges when the bank stands too near
    * one. Screen pixels: the rail is not part of the drawing and does not
-   * scale with it. */
+   * scale with it. The fallback box is four controls and the gaps between. */
   const GAP = 10;
   const EDGE = 4;
   /* The rail's box before it has been measured (a host that cannot
    * measure, or a rail not yet laid out): the control size the stylesheet
    * sets, two of them and the gap between - the least height the strip
    * is ever given. */
-  const FALLBACK_SIZE = Object.freeze({ width: 36, height: 78 });
+  const FALLBACK_SIZE = Object.freeze({ width: 36, height: 162 });
 
-  const LABEL = Object.freeze({ blend: "Blend Edit", reset: "Reset Tracking" });
+  const LABEL = Object.freeze({ blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking" });
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -137,6 +153,35 @@
     svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 16.6 8.2 A 7 7 0 1 0 17 10.8" }));
     svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 17.4 4.4 L 17 8.6 L 12.8 8.2" }));
     svg.appendChild(svgNode(doc, "path", "station-rail__glyph-hopper", { d: "M 7.2 7.4 L 12.8 7.4 L 11.4 11.6 L 10.8 13.6 L 9.2 13.6 L 8.6 11.6 Z" }));
+    return svg;
+  }
+
+  /* Weights: a weight of the kind set on a scale - a block, wider at
+   * its foot, with the loop of a handle over it. */
+  function weightsGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 7.4 6.2 A 2.6 2.6 0 0 1 12.6 6.2" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 6.2 6.6 L 13.8 6.6 L 16 17 L 4 17 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 7.6 13.5 L 12.4 13.5" }));
+    return svg;
+  }
+
+  /* Smart Hoppers: a hopper as the stage draws one, with the ticks of a
+   * gauge up its side - the measure a weight is computed from - and a
+   * small spark above its rim for the computing. */
+  function smartGlyph(doc) {
+    const svg = svgNode(doc, "svg", "station-rail__glyph", {
+      viewBox: "0 0 20 20", width: "20", height: "20", "aria-hidden": "true", focusable: "false"
+    });
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-hopper", { d: "M 4.6 5.4 L 15.4 5.4 L 12.8 13.6 L 11.6 17 L 8.4 17 L 7.2 13.6 Z" }));
+    for (const [index, width] of [[0, 3], [1, 2.4], [2, 1.8]].values()) {
+      const y = 7.6 + index * 2.6;
+      const x = 6 + index * 0.8;
+      svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: `M ${x} ${y} L ${x + width} ${y}` }));
+    }
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 16.4 1 L 16.4 4.2 M 14.8 2.6 L 18 2.6" }));
     return svg;
   }
 
@@ -238,6 +283,9 @@
    * @param {object} options
    * @param {function} options.onBlendEdit      () => void; the click, whichever
    *        way the mode is going - the boot file toggles and tells the rail
+   * @param {function} [options.onWeightsEdit]  () => void; the same for the Weights mode
+   * @param {function} [options.onSmartHoppers] () => void; the switch's click - the
+   *        boot file asks the application and tells the rail what it holds
    * @param {function} options.onResetTracking  () => void; the confirming click
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
    * @param {function} [options.clearTimeout]
@@ -247,6 +295,8 @@
   function create(doc, options) {
     const settings = options || {};
     const onBlendEdit = typeof settings.onBlendEdit === "function" ? settings.onBlendEdit : () => {};
+    const onWeightsEdit = typeof settings.onWeightsEdit === "function" ? settings.onWeightsEdit : () => {};
+    const onSmartHoppers = typeof settings.onSmartHoppers === "function" ? settings.onSmartHoppers : () => {};
     const onResetTracking = typeof settings.onResetTracking === "function" ? settings.onResetTracking : () => {};
     const timers = {
       set: typeof settings.setTimeout === "function" ? settings.setTimeout : (typeof setTimeout === "function" ? setTimeout : null),
@@ -261,6 +311,8 @@
       hidden: true,
       withdrawn: false,
       blend: { active: false, available: false },
+      weights: { active: false, available: false },
+      smart: { on: false, available: false, reason: "" },
       reset: { available: false, reason: "", count: 0 },
       armed: false,
       timer: null,
@@ -273,11 +325,21 @@
       type: "button", "data-action": "blend-edit", "aria-pressed": "false", "aria-label": LABEL.blend, title: LABEL.blend
     });
     blendButton.appendChild(blendGlyph(doc));
+    const weightsButton = element(doc, "button", "station-rail__control station-rail__control--weights", {
+      type: "button", "data-action": "weights-edit", "aria-pressed": "false", "aria-label": LABEL.weights, title: LABEL.weights
+    });
+    weightsButton.appendChild(weightsGlyph(doc));
+    const smartButton = element(doc, "button", "station-rail__control station-rail__control--smart", {
+      type: "button", role: "switch", "data-action": "smart-hoppers", "aria-checked": "false", "aria-label": LABEL.smart, title: LABEL.smart
+    });
+    smartButton.appendChild(smartGlyph(doc));
     const resetButton = element(doc, "button", "station-rail__control station-rail__control--reset", {
       type: "button", "data-action": "reset-tracking", "aria-label": LABEL.reset, title: LABEL.reset
     });
     resetButton.appendChild(resetGlyph(doc));
     rootEl.appendChild(blendButton);
+    rootEl.appendChild(weightsButton);
+    rootEl.appendChild(smartButton);
     rootEl.appendChild(resetButton);
 
     /* ---- Drawing what it was told ---- */
@@ -287,6 +349,7 @@
       else rootEl.removeAttribute("hidden");
       rootEl.classList.toggle("is-withdrawn", state.withdrawn);
       rootEl.classList.toggle("is-blend-active", state.blend.active);
+      rootEl.classList.toggle("is-weights-active", state.weights.active);
 
       blendButton.setAttribute("aria-pressed", state.blend.active ? "true" : "false");
       blendButton.classList.toggle("is-active", state.blend.active);
@@ -294,6 +357,22 @@
       blendButton.setAttribute("title", state.blend.active
         ? `${LABEL.blend} · on — click to finish and show every hopper`
         : (state.blend.available ? LABEL.blend : `${LABEL.blend} needs a line with layers on the stage`));
+
+      weightsButton.setAttribute("aria-pressed", state.weights.active ? "true" : "false");
+      weightsButton.classList.toggle("is-active", state.weights.active);
+      weightsButton.disabled = !state.weights.available && !state.weights.active;
+      weightsButton.setAttribute("title", state.weights.active
+        ? `${LABEL.weights} · on — click to finish and show every hopper`
+        : (state.weights.available ? `${LABEL.weights} · receiver weights and hopper geometry, on every layer` : `${LABEL.weights} needs a line with layers on the stage`));
+
+      smartButton.setAttribute("aria-checked", state.smart.on ? "true" : "false");
+      smartButton.classList.toggle("is-on", state.smart.on);
+      smartButton.disabled = !state.smart.available;
+      smartButton.setAttribute("title", !state.smart.available
+        ? `${LABEL.smart} is not available: ${state.smart.reason || "no application is connected to Station commands."}`
+        : (state.smart.on
+          ? `${LABEL.smart} · on — weights computed from hopper geometry and each resin's bulk density; click to use the entered weights`
+          : `${LABEL.smart} · off — click to compute weights from hopper geometry and each resin's bulk density`));
 
       const count = state.reset.count;
       const hoppers = `${count} hopper${count === 1 ? "" : "s"}`;
@@ -340,6 +419,15 @@
       disarm();
       onBlendEdit();
     });
+    weightsButton.addEventListener("click", () => {
+      disarm();
+      onWeightsEdit();
+    });
+    smartButton.addEventListener("click", () => {
+      if (smartButton.disabled) return;
+      disarm();
+      onSmartHoppers();
+    });
     resetButton.addEventListener("click", () => {
       if (resetButton.disabled) return;
       if (!state.armed) { arm(); return; }
@@ -363,6 +451,8 @@
      * @param {boolean} [next.hidden]     no line on the stage: nothing to stand beside
      * @param {boolean} [next.withdrawn]  a layer is open: the rail steps back
      * @param {object}  [next.blend]      { active, available }
+     * @param {object}  [next.weights]    { active, available }
+     * @param {object}  [next.smart]      { on, available, reason }
      * @param {object}  [next.reset]      { available, reason, count }
      */
     function update(next) {
@@ -373,6 +463,19 @@
         state.blend = {
           active: !!n.blend.active,
           available: !!n.blend.available
+        };
+      }
+      if (n.weights && typeof n.weights === "object") {
+        state.weights = {
+          active: !!n.weights.active,
+          available: !!n.weights.available
+        };
+      }
+      if (n.smart && typeof n.smart === "object") {
+        state.smart = {
+          on: !!n.smart.on,
+          available: !!n.smart.available,
+          reason: typeof n.smart.reason === "string" ? n.smart.reason : ""
         };
       }
       if (n.reset && typeof n.reset === "object") {
@@ -417,6 +520,8 @@
     return {
       element: rootEl,
       blendButton,
+      weightsButton,
+      smartButton,
       resetButton,
       update,
       place,
@@ -424,11 +529,12 @@
       isArmed: () => state.armed,
       getState: () => ({
         hidden: state.hidden, withdrawn: state.withdrawn, armed: state.armed,
-        blend: Object.assign({}, state.blend), reset: Object.assign({}, state.reset),
+        blend: Object.assign({}, state.blend), weights: Object.assign({}, state.weights),
+        smart: Object.assign({}, state.smart), reset: Object.assign({}, state.reset),
         placed: state.placed ? Object.assign({}, state.placed) : null
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, GAP, EDGE, LABEL, FALLBACK_SIZE, blendGlyph, resetGlyph, parseBox, readStage, anchor, create });
+  return Object.freeze({ ARM_DURATION, GAP, EDGE, LABEL, FALLBACK_SIZE, blendGlyph, weightsGlyph, smartGlyph, resetGlyph, parseBox, readStage, anchor, create });
 });

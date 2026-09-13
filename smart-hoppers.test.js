@@ -462,3 +462,23 @@ test("the always-live wide weights grid surfaces the Smart Hoppers computed weig
   assert.doesNotMatch(styles, /:has\(\.weightsLayerHeader\) \.weightsComputedWeight\{\s*display:none!important/);
   assert.match(styles, /body\[data-shell="touch"\] #weightsArea\[data-smart-hoppers="true"\] \.weightsMatrix:has\(\.weightsLayerHeader\) \.weightsMatrixCell\{\s*height:84px;/);
 });
+
+// --- Station: the console reads the same computation, never a second one ---
+
+test("the Station state bridge is handed smartHopperComputation and currentSmartHopperGeometryMode - the console shows a computed weight as computed without re-deriving the number or the line's geometry mode", () => {
+  const start = app.indexOf("function connectStationBridge()");
+  const body = app.slice(start, app.indexOf("\n  }\n", start));
+  assert.match(body, /resolveHopperWeight: effectiveHopperWeight,/);
+  assert.match(body, /resolveSmartHopper: smartHopperComputation,/);
+  assert.match(body, /smartHopperGeometryMode: currentSmartHopperGeometryMode\(\),/);
+});
+
+test("the Station command executor writes geometry and the switch through the same fields and tails the floor UI uses - the circumference through setWorkspaceHopperCircumference, the mode from currentSmartHopperGeometryMode, never a second copy", () => {
+  const start = app.indexOf("function createStationCommandExecutor()");
+  const body = app.slice(start, app.indexOf("\n  }\n", start));
+  assert.match(body, /setWorkspaceHopperCircumference\(args\.circumference\);/);
+  assert.doesNotMatch(body, /state\.hopperCircumference\s*=/);
+  assert.match(body, /const field = args\.dimension === "volume" \? "usableGallons" : "usableHeight";/);
+  assert.match(body, /state\.smartHoppersEnabled = args\.enabled;/);
+  assert.doesNotMatch(body, /calculateHopperWeight|calculateHopperVolumeWeight|bulk_density/, "the executor stores geometry; it never computes a weight");
+});

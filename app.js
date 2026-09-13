@@ -9738,6 +9738,23 @@
     // save, no publish - and so nothing persisted.
     function unchanged(){ return done(false, false); }
 
+    /* Whether a geometry stated as `dimension` is the connected line's
+     * measure. Null when it is; a failure that says which measure the
+     * line uses, or that no line is identified, when it is not. */
+    function geometryRefusal(dimension){
+      const mode = currentSmartHopperGeometryMode();
+      if (mode === null) {
+        return contract.failure("bad_argument", { field: "dimension", message: "Connect this desktop to an identified line to set hopper geometry." });
+      }
+      const wanted = dimension === "volume" ? "volume" : "cylindrical";
+      if (wanted !== mode) {
+        return contract.failure("bad_argument", { field: "dimension", message: mode === "volume"
+          ? "This line measures its hoppers by usable volume (gallons), not height."
+          : "This line measures its hoppers by usable height (inches), not volume." });
+      }
+      return null;
+    }
+
     const commands = {
       /* The grid's resin field: hopper.resinName = normName(value), then
        * validateAndCompute({ sync:true }) and saveSession. The grid records
@@ -10068,6 +10085,84 @@
         return done(true, persisted);
       },
 
+      /* Smart Hoppers' geometry: the wrench popover's field. The measure
+       * is stated in the line's own terms, and the line decides which
+       * terms those are (currentSmartHopperGeometryMode, the one resolver
+       * every surface uses) - a height for a volume line is refused rather
+       * than stored where nothing would read it. Same tail as the weight:
+       * validated, saved, synced; the hidden weights grid rebuilt so its
+       * fields agree; no history. Current only, said again here. */
+      setHopperGeometry(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Hopper geometry belongs to the physical hoppers, not to the planned recipe." });
+        const wrong = geometryRefusal(args.dimension);
+        if (wrong) return wrong;
+        const at = locate(args.recipe, args.layer, args.index);
+        if (at.failure) return at.failure;
+        const field = args.dimension === "volume" ? "usableGallons" : "usableHeight";
+        if (clampNum(at.hopper[field]) === args.value) return unchanged();
+        at.hopper[field] = args.value;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The bulk apply's geometry: every position and every dimension
+       * checked before anything is written, then ONE tail. */
+      setHopperGeometries(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Hopper geometry belongs to the physical hoppers, not to the planned recipe." });
+        const writes = [];
+        for (const entry of args.geometries) {
+          const wrong = geometryRefusal(entry.dimension);
+          if (wrong) return wrong;
+          const at = locate(args.recipe, entry.layer, entry.index);
+          if (at.failure) return at.failure;
+          const field = entry.dimension === "volume" ? "usableGallons" : "usableHeight";
+          if (clampNum(at.hopper[field]) !== entry.value) writes.push({ hopper: at.hopper, field, value: entry.value });
+        }
+        if (!writes.length) return unchanged();
+        for (const write of writes) write.hopper[write.field] = write.value;
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The shared circumference field: one value for the line's hoppers,
+       * written through setWorkspaceHopperCircumference so the legacy
+       * per-hopper mirror stays aligned, as the field itself does. Only a
+       * cylindrical line has one to set. */
+      setHopperCircumference(args){
+        const mode = currentSmartHopperGeometryMode();
+        if (mode !== "cylindrical") {
+          return contract.failure("bad_argument", { field: "circumference", message: mode === "volume"
+            ? "This line measures its hoppers by volume; it has no shared circumference."
+            : "Connect this desktop to an identified line to set a hopper circumference." });
+        }
+        if (clampNum(state.hopperCircumference) === args.circumference) return unchanged();
+        setWorkspaceHopperCircumference(args.circumference);
+        renderWeightsArea();
+        const persisted = commit({ sync: true, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The Smart Hoppers switch: this device's preference, as the floor
+       * UI's toggle flips it - saved, and validateAndCompute({ sync:false })
+       * so every run-down and every SMART badge re-reads the effective
+       * weights (refreshSmartHopperState runs in that tail); nothing is
+       * synced, because nothing shared changed. The weights grid is
+       * rebuilt as the toggle's own setter rebuilds it, which also re-syncs
+       * the toggle's face. Unavailable off an identified line, as the
+       * floor UI offers no switch there. */
+      setSmartHoppers(args){
+        if (currentSmartHopperGeometryMode() === null) {
+          return contract.failure("unavailable", { message: "Connect this desktop to an identified line to use Smart Hoppers." });
+        }
+        if (!!state.smartHoppersEnabled === args.enabled) return unchanged();
+        state.smartHoppersEnabled = args.enabled;
+        renderWeightsArea();
+        const persisted = commit({ sync: false, grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
        * helper runs so an empty stack never touches Next's working copy. */
       undo(args){
@@ -10126,6 +10221,12 @@
           // The run-down formula's own weight, Smart Hoppers included, so the
           // console never has to re-derive a number this app already resolves.
           resolveHopperWeight: effectiveHopperWeight,
+          // And why: the Smart Hoppers computation itself, per hopper, and
+          // the line's geometry mode from the one resolver - so Station can
+          // show a computed weight as computed without a second reading
+          // of the line number or the catalog.
+          resolveSmartHopper: smartHopperComputation,
+          smartHopperGeometryMode: currentSmartHopperGeometryMode(),
           // The plan as this app reads it when it needs the effective one:
           // the working copy while the operator has one open, the durable
           // payload otherwise. Reading state.nextRecipe directly would show

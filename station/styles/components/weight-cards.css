@@ -1,0 +1,226 @@
+/* The weight cards (station-weight-cards.js): the hopper cluster's third
+ * face, in the cluster's own footprint - the card the machine rail's
+ * Weights control turns each layer over to.
+ *
+ * WHAT IT LOOKS LIKE
+ *
+ * The blend card's shape (focus-editor.css, compact variant): one row per
+ * hopper, the id in a badge and the resin beside it, and then the
+ * fields - the receiver weight, and with Smart Hoppers on the measure it
+ * is computed from - with the computed weight, when there is one, in
+ * the computed colour under the resin. The card is in the drawing, so
+ * its type is the bank's own scale, as the blend card's is. Every
+ * colour is a token; no length of its own beyond the field widths.
+ */
+
+.station-weight-card {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--station-space-2) var(--station-space-2) var(--station-space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+  color: var(--station-text);
+  font-family: var(--station-font);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-tight);
+}
+
+.station-weight-card__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+/* A row: the badge, the resin (with the computed weight under it), and
+   the fields at the right edge. */
+.station-weight-card__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "badge resin fields" "badge computed fields";
+  align-items: center;
+  column-gap: var(--station-space-2);
+  padding: var(--station-space-1) var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+}
+
+.station-weight-card__badge {
+  grid-area: badge;
+  min-width: 2.2em;
+  padding: 1px var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  background: var(--station-surface-raised);
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-2xs);
+  text-align: center;
+}
+
+.station-weight-card__resin {
+  grid-area: resin;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+.station-weight-card__resin.is-placeholder {
+  color: var(--station-text-faint);
+}
+
+.station-weight-card__fields {
+  grid-area: fields;
+}
+
+/* The fields stand together at the row's right edge. */
+.station-weight-card__field-wrap {
+  grid-area: fields;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  justify-self: end;
+}
+
+.station-weight-card__field-wrap.station-weight-card__geometry {
+  grid-area: fields;
+  margin-left: var(--station-space-2);
+}
+
+/* With the geometry field beside the weight, the two share the column. */
+.station-weight-card__item:has(.station-weight-card__geometry) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "badge resin weight geometry" "badge computed weight geometry";
+}
+
+.station-weight-card__item:has(.station-weight-card__geometry) .station-weight-card__field-wrap {
+  grid-area: weight;
+}
+
+.station-weight-card__item:has(.station-weight-card__geometry) .station-weight-card__field-wrap.station-weight-card__geometry {
+  grid-area: geometry;
+}
+
+.station-weight-card__field,
+.station-weight-card__geometry-field,
+.station-weight-card__circumference-field {
+  --station-field-padding: 1px var(--station-space-1);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: 5.5ch;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.station-weight-card__field[aria-invalid="true"],
+.station-weight-card__geometry-field[aria-invalid="true"],
+.station-weight-card__circumference-field[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* Read-only (no application, or one without the command): the field
+   keeps its value and loses its editable surface. */
+.station-weight-card__field[readonly],
+.station-weight-card__geometry-field[readonly],
+.station-weight-card__circumference-field[readonly] {
+  --station-field-bg: transparent;
+  --station-field-border: var(--station-stroke) solid var(--station-border-subtle);
+  --station-field-cursor: default;
+  color: var(--station-text-muted);
+}
+
+/* The value moved underneath the operator: the edge says so in the
+   warning colour until they commit or cancel what they are entering. */
+.station-weight-card__field.is-changed-underneath,
+.station-weight-card__geometry-field.is-changed-underneath,
+.station-weight-card__circumference-field.is-changed-underneath {
+  --station-field-shadow: 0 0 0 2px var(--station-warning);
+}
+
+.station-weight-card__unit {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-2xs);
+}
+
+/* Under the resin with Smart Hoppers on: the computed weight in the
+   computed colour - the colour the caption wears it in - or, quietly,
+   why there is none. */
+.station-weight-card__computed {
+  grid-area: computed;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--station-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-weight-card__computed[data-kind="computed"] {
+  color: var(--station-smart, var(--station-accent));
+  font-weight: 600;
+}
+
+.station-weight-card__computed[data-kind="hint"] {
+  color: var(--station-text-faint);
+  font-style: italic;
+}
+
+/* ---- The foot: the line's shared circumference ---- */
+
+.station-weight-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--station-space-1) var(--station-space-2);
+  padding: 0 var(--station-space-1);
+}
+
+.station-weight-card__foot:empty {
+  display: none;
+}
+
+.station-weight-card__circumference {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--station-space-1);
+}
+
+.station-weight-card__circumference-label {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-weight-card__shared {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-2xs);
+  font-style: italic;
+}
+
+/* ---- The note: one line, why a field did not take the edit ---- */
+
+.station-weight-card__note {
+  margin: 0;
+  min-height: 1.2em;
+  padding: 0 var(--station-space-1);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-2xs);
+}
+
+.station-weight-card__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+.station-weight-card__note[data-kind="warning"] {
+  color: var(--station-warning);
+}
+
+.station-weight-card__note:empty {
+  display: none;
+}

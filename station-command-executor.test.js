@@ -96,6 +96,16 @@ function boot(options) {
     function renderSplitsArea(){ log.renders += 1; }
     function renderTimelineHookups(){ log.hookupRenders += 1; }
     function renderWeightsArea(){ log.weightsRenders = (log.weightsRenders || 0) + 1; }
+    /* Smart Hoppers' two helpers as app.js has them: the line's geometry
+     * mode from the one resolver, and the circumference setter that keeps
+     * the legacy per-hopper mirror aligned. */
+    let geometryMode = env.geometryMode === undefined ? "cylindrical" : env.geometryMode;
+    function currentSmartHopperGeometryMode(){ return geometryMode; }
+    function setWorkspaceHopperCircumference(value){
+      state.hopperCircumference = clampNum(value);
+      state.layers.forEach(layer=>layer.hoppers.forEach(hopper=>{ hopper.circumference = state.hopperCircumference; }));
+      log.circumferenceSets = (log.circumferenceSets || 0) + 1;
+    }
     function syncMobileLineRateReadout(){ log.lineRateReadouts = (log.lineRateReadouts || 0) + 1; }
     function syncChangeoverTimeDisplay(){ log.changeoverDisplays = (log.changeoverDisplays || 0) + 1; }
     const isChangeoverStale = env.scheduling.isChangeoverStale;
@@ -126,6 +136,7 @@ function boot(options) {
       ensureNextRecipeWorking, plannedRecipePayload,
       working: () => nextRecipeWorking,
       setPage(page){ uiPage = page; },
+      setGeometryMode(mode){ geometryMode = mode; },
       setRearranging(on){ hopperRearrangement = on ? { active: true } : null; },
       setApplyingRemote(on){ syncState.isApplyingRemote = !!on; }
     };
@@ -137,8 +148,10 @@ function boot(options) {
       layers: layersFor(["A", "B", "C"], "LIVE"),
       nextRecipe: settings.nextRecipe === undefined ? null : settings.nextRecipe,
       hookupSources: { current: { "A:0": { resin: "LIVE-A0", source: "SILO 1" } }, next: {} },
-      resinLots: {}, nextRecipeLots: {}
+      resinLots: {}, nextRecipeLots: {},
+      smartHoppersEnabled: false, hopperCircumference: 0
     },
+    geometryMode: settings.geometryMode,
     validation, contract, stateBridgeModule, commandBridgeModule, lifted: LIFTED,
     scheduling: require("./scheduling.js")
   };
@@ -169,7 +182,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -192,7 +205,7 @@ test("app.js installs the executor once, beside the state bridge, and nothing el
   for (const file of fs.readdirSync(path.join(ROOT, "station")).filter(name => name.endsWith(".js"))) {
     const source = fs.readFileSync(path.join(ROOT, "station", file), "utf8");
     assert.doesNotMatch(source, /PolynStationCommandBridge\s*\.\s*connect|commands\.connect\s*\(/, `${file} connects a producer`);
-    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
+    if (!["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js", "station-weight-cards.js"].includes(file)) assert.doesNotMatch(source, /\.dispatch\s*\(/, `${file} dispatches a command`);
   }
 });
 
@@ -825,7 +838,7 @@ test("rearrangement mode and a remote apply in progress refuse every command wit
   const before = h.stateJson();
   h.setRearranging(true);
   for (const command of contract.COMMANDS) {
-    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000, pounds: 10, weight: 10, weights: [{ layer: "A", index: 1, weight: 10 }] });
+    const result = h.dispatch(command, { recipe: "current", layer: "A", index: 1, pct: 10, resin: "X", source: "Y", toLayer: "B", toIndex: 2, track: true, pumpOff: true, lineRate: 10, at: Date.now() + 3600000, pounds: 10, weight: 10, weights: [{ layer: "A", index: 1, weight: 10 }], dimension: "height", value: 10, geometries: [{ layer: "A", index: 1, dimension: "height", value: 10 }], circumference: 10, enabled: true });
     assert.equal(result.code, "rearranging", `${command} ran during rearrangement`);
   }
   h.setRearranging(false);
@@ -1350,4 +1363,165 @@ test("invalid pounds never reach state: refused by the contract, nothing touched
   assert.equal(h.stateJson(), before);
   assert.equal(h.log.saves, 0);
   assert.deepEqual(h.log.validates, []);
+});
+
+/* ----------------------------------------------------------------------
+ *   Smart Hoppers: the equipment commands and the switch
+ * -------------------------------------------------------------------- */
+
+test("setHopperGeometry sets the hopper's usable height on a cylindrical line as the wrench popover's field does: synced as an ordinary edit, saved, the weights grid rebuilt, no recipe grid rebuild, no history", () => {
+  const h = boot();
+  const revision = h.stationBridge.getRevision();
+  const result = h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 2, dimension: "height", value: "31.5" }));
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(h.hopper("current", "A", 2).usableHeight, 31.5);
+  assert.equal(h.hopper("current", "A", 2).usableGallons, 0, "the other measure is untouched");
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.renders, 0);
+  assert.equal(h.log.weightsRenders, 1);
+  assert.equal(h.log.hookupRenders, 0);
+  assert.equal(h.log.saves, 2);
+  assert.ok(result.revision > revision);
+  assert.equal(result.snapshot.layers[0].hoppers[2].usableHeight, 31.5, "the snapshot returned is the bridge's, carrying the height");
+  assert.equal(h.recipeEditHistory.current.undo.length, 0, "geometry is the hopper's, not the recipe's");
+  // The same measure again is no change; 0 clears.
+  const saves = h.log.saves;
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 2, dimension: "height", value: 31.5 })).changed, false);
+  assert.equal(h.log.saves, saves);
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 2, dimension: "height", value: 0 })).changed, true);
+  assert.equal(h.hopper("current", "A", 2).usableHeight, 0);
+  // Nothing of the recipe or the weight moved.
+  assert.equal(h.hopper("current", "A", 2).weight, 0);
+  assert.equal(h.hopper("current", "A", 0).pct, 60);
+});
+
+test("setHopperGeometry refuses a measure the line does not take, the plan, an unknown position, and no identified line - touching nothing", () => {
+  const h = boot();
+  const before = h.stateJson();
+  const volume = h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 1, dimension: "volume", value: 55 }));
+  assert.equal(volume.ok, false);
+  assert.equal(volume.code, "bad_argument");
+  assert.equal(volume.field, "dimension");
+  assert.match(volume.message, /usable height \(inches\), not volume/);
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, NXT, { index: 1, dimension: "height", value: 30 })).field, "recipe");
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, CUR, { layer: "Z", index: 1, dimension: "height", value: 30 })).code, "unknown_layer");
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 6, dimension: "height", value: 30 })).code, "unknown_hopper");
+  h.setGeometryMode(null);
+  const unlinked = h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 1, dimension: "height", value: 30 }));
+  assert.equal(unlinked.code, "bad_argument");
+  assert.match(unlinked.message, /identified line/);
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  assert.equal(h.log.weightsRenders || 0, 0);
+});
+
+test("on a volume line the measure is usable gallons, and a height is refused", () => {
+  const h = boot({ geometryMode: "volume" });
+  assert.equal(h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 1, dimension: "volume", value: "55" })).changed, true);
+  assert.equal(h.hopper("current", "A", 1).usableGallons, 55);
+  assert.equal(h.hopper("current", "A", 1).usableHeight, 30, "the height a profile stored is left as it was");
+  const height = h.dispatch("setHopperGeometry", Object.assign({}, CUR, { index: 1, dimension: "height", value: 30 }));
+  assert.equal(height.code, "bad_argument");
+  assert.match(height.message, /usable volume \(gallons\), not height/);
+});
+
+test("setHopperGeometries writes every listed measure then ONE tail, and refuses the whole request on one unknown position or one wrong measure", () => {
+  const h = boot();
+  const result = h.dispatch("setHopperGeometries", { recipe: "current", geometries: [
+    { layer: "A", index: 0, dimension: "height", value: 34 }, { layer: "B", index: 1, dimension: "height", value: "34" }, { layer: "C", index: 5, dimension: "height", value: 34 }
+  ] });
+  assert.equal(result.changed, true);
+  assert.deepEqual([h.hopper("current", "A", 0).usableHeight, h.hopper("current", "B", 1).usableHeight, h.hopper("current", "C", 5).usableHeight], [34, 34, 34]);
+  assert.equal(h.hopper("current", "A", 1).usableHeight, 30, "an unlisted hopper is untouched");
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }], "one tail");
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }], "one sync notification");
+  assert.equal(h.log.saves, 2);
+  assert.equal(h.log.weightsRenders, 1);
+  const before = h.stateJson();
+  const saves = h.log.saves;
+  const unknown = h.dispatch("setHopperGeometries", { recipe: "current", geometries: [
+    { layer: "A", index: 0, dimension: "height", value: 1 }, { layer: "Q", index: 0, dimension: "height", value: 1 }
+  ] });
+  assert.equal(unknown.code, "unknown_layer");
+  const wrong = h.dispatch("setHopperGeometries", { recipe: "current", geometries: [
+    { layer: "A", index: 0, dimension: "height", value: 1 }, { layer: "B", index: 0, dimension: "volume", value: 1 }
+  ] });
+  assert.equal(wrong.code, "bad_argument");
+  assert.equal(wrong.field, "dimension");
+  assert.equal(h.stateJson(), before, "nothing was written before the refusal");
+  assert.equal(h.log.saves, saves);
+  // Every listed measure already held is no change.
+  assert.equal(h.dispatch("setHopperGeometries", { recipe: "current", geometries: [{ layer: "A", index: 0, dimension: "height", value: 34 }] }).changed, false);
+  assert.equal(h.log.saves, saves);
+});
+
+test("setHopperCircumference is the shared circumference field: written through setWorkspaceHopperCircumference (the per-hopper mirror kept), one ordinary synced edit; only a cylindrical line has one", () => {
+  const h = boot();
+  const result = h.dispatch("setHopperCircumference", { circumference: "40.5" });
+  assert.equal(result.changed, true);
+  assert.equal(h.state.hopperCircumference, 40.5);
+  assert.equal(h.log.circumferenceSets, 1, "the application's own setter, not a bare assignment");
+  assert.ok(h.state.layers.every(layer => layer.hoppers.every(hopper => hopper.circumference === 40.5)), "the legacy mirror follows");
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: false, kind: "edit" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: false, kind: "edit" }]);
+  assert.equal(h.log.weightsRenders, 1);
+  assert.equal(h.log.saves, 2);
+  assert.equal(result.snapshot.smartHoppers.circumference, 40.5, "the snapshot returned carries it");
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  const saves = h.log.saves;
+  assert.equal(h.dispatch("setHopperCircumference", { circumference: 40.5 }).changed, false);
+  assert.equal(h.log.saves, saves);
+  assert.equal(h.dispatch("setHopperCircumference", { circumference: 0 }).changed, true, "0 clears");
+  assert.equal(h.state.hopperCircumference, 0);
+  const before = h.stateJson();
+  h.setGeometryMode("volume");
+  const volume = h.dispatch("setHopperCircumference", { circumference: 40 });
+  assert.equal(volume.code, "bad_argument");
+  assert.match(volume.message, /by volume; it has no shared circumference/);
+  h.setGeometryMode(null);
+  assert.match(h.dispatch("setHopperCircumference", { circumference: 40 }).message, /identified line/);
+  assert.equal(h.stateJson(), before);
+});
+
+test("setSmartHoppers flips this device's switch as the floor UI's toggle does: saved and recomputed, never synced, the weights grid rebuilt; unavailable off an identified line", () => {
+  const h = boot();
+  const revision = h.stationBridge.getRevision();
+  assert.equal(h.stationBridge.getSnapshot().smartHoppers.enabled, false);
+  const result = h.dispatch("setSmartHoppers", { enabled: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(h.state.smartHoppersEnabled, true);
+  assert.deepEqual(h.log.validates, [{ sync: false, immediate: false, kind: "edit" }], "the toggle's tail: validateAndCompute({ sync:false })");
+  assert.deepEqual(h.log.notified, [], "a preference is never synced");
+  assert.equal(h.log.renders, 0);
+  assert.equal(h.log.weightsRenders, 1);
+  assert.equal(h.log.saves, 2);
+  assert.ok(result.revision > revision);
+  assert.equal(result.snapshot.smartHoppers.enabled, true);
+  assert.equal(h.recipeEditHistory.current.undo.length, 0);
+  const saves = h.log.saves;
+  assert.equal(h.dispatch("setSmartHoppers", { enabled: true }).changed, false);
+  assert.equal(h.log.saves, saves);
+  assert.equal(h.dispatch("setSmartHoppers", { enabled: false }).changed, true);
+  assert.equal(h.state.smartHoppersEnabled, false);
+  h.setGeometryMode(null);
+  const before = h.stateJson();
+  const unlinked = h.dispatch("setSmartHoppers", { enabled: true });
+  assert.equal(unlinked.code, "unavailable");
+  assert.match(unlinked.message, /identified line/);
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.dispatch("setSmartHoppers", { enabled: "on" }).code, "bad_argument");
+});
+
+test("app.js hands the state bridge its own Smart Hoppers computation and geometry mode, so Station never re-derives either", () => {
+  const start = app.indexOf("function connectStationBridge()");
+  const connect = app.slice(start, app.indexOf("\n  }\n", start));
+  assert.match(connect, /resolveSmartHopper: smartHopperComputation,/);
+  assert.match(connect, /smartHopperGeometryMode: currentSmartHopperGeometryMode\(\),/);
+  const executor = block("  function createStationCommandExecutor(){", "\n  }\n");
+  assert.doesNotMatch(executor, /state\.hopperCircumference\s*=/, "the circumference goes through the application's own setter");
+  assert.match(executor, /setWorkspaceHopperCircumference\(args\.circumference\);/);
+  assert.equal((executor.match(/currentSmartHopperGeometryMode\(\)/g) || []).length, 3, "the one resolver: geometryRefusal, the circumference, the switch");
 });

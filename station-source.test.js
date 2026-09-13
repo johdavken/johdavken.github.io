@@ -416,3 +416,47 @@ test("classifyChange is pure and reads nothing it is not given", () => {
   source.classifyChange(b, a);
   assert.equal(JSON.stringify([a, b]), before);
 });
+
+/* ----------------------------------------------------------------------
+ *   Smart Hoppers
+ * -------------------------------------------------------------------- */
+
+test("smartHoppersFrom reads the bridge's block at rest or as given, never guessing a mode; the demo carries it at rest", () => {
+  assert.deepEqual(source.smartHoppersFrom(null), { enabled: false, geometryMode: null, circumference: 0 });
+  assert.deepEqual(source.smartHoppersFrom({ smartHoppers: { enabled: true, geometryMode: "volume", circumference: 40 } }), { enabled: true, geometryMode: "volume", circumference: 40 });
+  assert.deepEqual(source.smartHoppersFrom({ smartHoppers: { enabled: "yes", geometryMode: "spherical", circumference: -3 } }), { enabled: false, geometryMode: null, circumference: 0 });
+  const demo = source.resolveSource({ snapshot: null, demoLines, demoId: "three-layer" });
+  assert.deepEqual(demo.smartHoppers, { enabled: false, geometryMode: null, circumference: 0 });
+  assert.ok(Object.values(demo.hopperState).every(entry => entry.smartWeight === null && entry.usableGallons === 0), "a demo line computes nothing");
+  const live = resolvedFor(liveState({ smartHoppersEnabled: true, hopperCircumference: 40 }), { smartHopperGeometryMode: "cylindrical" });
+  assert.deepEqual(live.smartHoppers, { enabled: true, geometryMode: "cylindrical", circumference: 40 });
+});
+
+test("hopperStateFrom carries usable gallons and the computed weight beside the entered one, each read strictly", () => {
+  const state = source.hopperStateFrom({ layers: [{ name: "A", hoppers: [
+    { index: 0, resinName: "HX", pct: 60, weight: 1250, effectiveWeight: 812.5, usableHeight: 30, usableGallons: 0, smartWeight: { value: 812.5, bulkDensity: 35, resinCode: "HX" } },
+    { index: 1, resinName: "LD", pct: 40, weight: 500, effectiveWeight: 500, usableGallons: 55, smartWeight: null },
+    { index: 2, resinName: "", pct: 0, weight: 0, usableGallons: -1, smartWeight: { value: 0 } },
+    { index: 3, resinName: "", pct: 0, weight: 0, smartWeight: { value: 12, bulkDensity: "x", resinCode: 4 } }
+  ] }] });
+  assert.deepEqual(state["A:0"].smartWeight, { value: 812.5, bulkDensity: 35, resinCode: "HX" });
+  assert.equal(state["A:0"].weight, 1250, "the entered weight is still the Weights field's value");
+  assert.equal(state["A:0"].effectiveWeight, 812.5);
+  assert.equal(state["A:1"].usableGallons, 55);
+  assert.equal(state["A:1"].smartWeight, null);
+  assert.equal(state["A:2"].usableGallons, 0);
+  assert.equal(state["A:2"].smartWeight, null, "no positive value, no result");
+  assert.deepEqual(state["A:3"].smartWeight, { value: 12, bulkDensity: 0, resinCode: "" });
+});
+
+test("the switch, the circumference, a usable volume and a computed weight are values - patched in place; a usable height stays structural", () => {
+  const base = resolvedFor(liveState(), { smartHopperGeometryMode: "cylindrical" });
+  assert.equal(source.classifyChange(base, resolvedFor(liveState({ smartHoppersEnabled: true }), { smartHopperGeometryMode: "cylindrical" })), "values");
+  assert.equal(source.classifyChange(base, resolvedFor(liveState({ hopperCircumference: 41 }), { smartHopperGeometryMode: "cylindrical" })), "values");
+  assert.equal(source.classifyChange(base, resolvedFor(edited(s => { s.layers[0].hoppers[0].usableGallons = 55; }), { smartHopperGeometryMode: "cylindrical" })), "values");
+  assert.equal(source.classifyChange(base, resolvedFor(liveState(), { smartHopperGeometryMode: "cylindrical", resolveSmartHopper: () => ({ value: 700, bulkDensity: 35, resin: { resin_code: "RESIN-X" } }) })), "values");
+  assert.equal(source.classifyChange(base, resolvedFor(edited(s => { s.layers[0].hoppers[0].usableHeight = 40; }), { smartHopperGeometryMode: "cylindrical" })), "structural", "the body is drawn to scale from the height");
+  // The line's geometry mode changing is a values change too: no layout reads it.
+  assert.equal(source.classifyChange(base, resolvedFor(liveState(), { smartHopperGeometryMode: "volume" })), "values");
+  assert.equal(source.classifyChange(base, resolvedFor(liveState(), { smartHopperGeometryMode: "cylindrical" })), "none");
+});

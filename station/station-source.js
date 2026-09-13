@@ -65,6 +65,14 @@
           weight: Number.isFinite(hopper.weight) && hopper.weight > 0 ? hopper.weight : 0,
           // Receiver Weight Profile height, in inches. 0 means "not profiled".
           usableHeight: Number.isFinite(hopper.usableHeight) ? hopper.usableHeight : 0,
+          // Usable volume in gallons - a volume line's measure. 0 means
+          // "not entered". Never shapes the drawing.
+          usableGallons: Number.isFinite(hopper.usableGallons) && hopper.usableGallons > 0 ? hopper.usableGallons : 0,
+          // Why effectiveWeight is what it is: the application's Smart
+          // Hoppers result for this hopper - the computed pounds, the
+          // bulk density used and the catalog code it came from - or null
+          // when the entered weight stands.
+          smartWeight: smartWeightFrom(hopper.smartWeight),
           // Resolved through hookup-sources' own helper, which refuses a label
           // whose resin has since changed - reading entry.source raw would
           // show a stale silo against a resin that is no longer in that hopper.
@@ -75,6 +83,31 @@
       }
     }
     return bySlot;
+  }
+
+  function smartWeightFrom(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const value = Number(raw.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return {
+      value,
+      bulkDensity: Number.isFinite(raw.bulkDensity) && raw.bulkDensity > 0 ? raw.bulkDensity : 0,
+      resinCode: typeof raw.resinCode === "string" ? raw.resinCode : ""
+    };
+  }
+
+  /* Smart Hoppers as the bridge carries it: this device's switch, how the
+   * line measures its hoppers ("cylindrical" | "volume" | null = not on an
+   * identified line, so unavailable), and the line's shared circumference
+   * in inches (0 = not entered). The demo fixture carries none of it: a
+   * demo line is not connected to anything that could compute. */
+  function smartHoppersFrom(snapshot) {
+    const raw = snapshot && snapshot.smartHoppers && typeof snapshot.smartHoppers === "object" ? snapshot.smartHoppers : {};
+    return {
+      enabled: raw.enabled === true,
+      geometryMode: raw.geometryMode === "cylindrical" || raw.geometryMode === "volume" ? raw.geometryMode : null,
+      circumference: Number.isFinite(raw.circumference) && raw.circumference > 0 ? raw.circumference : 0
+    };
   }
 
   /* Per-layer state: the layer's share of the film structure. Same keying
@@ -196,6 +229,7 @@
         layerState: layerStateFrom(snapshot),
         job: jobStateFrom(snapshot),
         recipe: recipeFrom(snapshot),
+        smartHoppers: smartHoppersFrom(snapshot),
         revision: typeof snapshot.revision === "number" ? snapshot.revision : null,
         label: snapshot.line && snapshot.line.linked ? "Live" : "Live (no line linked)",
         detail: snapshot.line && snapshot.line.linked
@@ -228,6 +262,7 @@
       // A demo line runs no job: no output, no changeover, as no tracking.
       job: jobStateFrom(demoSnapshot),
       recipe: recipeFrom(demoSnapshot),
+      smartHoppers: smartHoppersFrom(demoSnapshot),
       revision: null,
       label: mode === MODE_DEMO ? "Demo (pinned)" : "Demo",
       detail: mode === MODE_DEMO
@@ -250,7 +285,9 @@
    *                 The stage must be rendered again.
    *   "values"      only runtime values moved: resin, blend, tracking,
    *                 pump state, source, layer share, a receiver weight,
-   *                 the line's output or changeover, the job's production,
+   *                 a usable volume or a computed Smart Hoppers weight,
+   *                 the Smart Hoppers switch or circumference, the line's
+   *                 output or changeover, the job's production,
    *                 scrap or scanned lots. The mounted stage and
    *                 the editor are patched in place (a hopper whose drawing
    *                 reads nothing new is left alone), and the run-down
@@ -270,7 +307,7 @@
   }
 
   function valuesKey(resolved) {
-    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || null });
+    return JSON.stringify({ hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || null, smartHoppers: resolved.smartHoppers || null });
   }
 
   function classifyChange(before, after) {
@@ -279,5 +316,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, recipeFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
 });

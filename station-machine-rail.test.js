@@ -2,7 +2,7 @@
 
 /* The machine utility rail (station/station-machine-rail.js): the short
  * stack of icon controls beside the far-right hopper cluster - Blend
- * Edit's switch and Reset Tracking.
+ * Edit's and Weights' switches, Smart Hoppers and Reset Tracking.
  *
  * Tested on its own here: what it draws, how it is placed against the
  * drawn stage (pure arithmetic over what the SVG declares), what each
@@ -110,28 +110,37 @@ function build(options) {
   const timers = [];
   const rail = railModule.create(doc, Object.assign({
     onBlendEdit: () => calls.push("blend"),
+    onWeightsEdit: () => calls.push("weights"),
+    onSmartHoppers: () => calls.push("smart"),
     onResetTracking: () => calls.push("reset"),
     setTimeout: (fn, ms) => { timers.push({ fn, ms, cleared: false }); return timers.length; },
     clearTimeout: id => { if (timers[id - 1]) timers[id - 1].cleared = true; }
   }, options || {}));
   doc.body.appendChild(rail.element);
   const live = () => rail.update({ hidden: false, blend: { active: false, available: true }, reset: { available: true, count: 4 } });
-  return { doc, rail, calls, timers, live, blend: rail.blendButton, reset: rail.resetButton };
+  return { doc, rail, calls, timers, live, blend: rail.blendButton, weights: rail.weightsButton, smart: rail.smartButton, reset: rail.resetButton };
 }
 
 /* ----------------------------------------------------------------------
  *   What it draws
  * -------------------------------------------------------------------- */
 
-test("two controls and nothing else, each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label", () => {
-  const { rail, blend, reset } = build();
+test("four controls and nothing else, each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label", () => {
+  const { rail, blend, weights, smart, reset } = build();
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
-  assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action")]), [["BUTTON", "blend-edit"], ["BUTTON", "reset-tracking"]]);
-  for (const [button, label] of [[blend, "Blend Edit"], [reset, "Reset Tracking"]]) {
+  assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action")]),
+    [["BUTTON", "blend-edit"], ["BUTTON", "weights-edit"], ["BUTTON", "smart-hoppers"], ["BUTTON", "reset-tracking"]]);
+  const REST_TITLE = {
+    "Blend Edit": "Blend Edit needs a line with layers on the stage",
+    "Weights": "Weights needs a line with layers on the stage",
+    "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands.",
+    "Reset Tracking": "Reset Tracking is not available: no application is connected to Station commands."
+  };
+  for (const [button, label] of [[blend, "Blend Edit"], [weights, "Weights"], [smart, "Smart Hoppers"], [reset, "Reset Tracking"]]) {
     assert.equal(button.getAttribute("type"), "button");
     assert.equal(button.getAttribute("aria-label"), label);
-    assert.equal(button.getAttribute("title"), label.startsWith("Reset") ? "Reset Tracking is not available: no application is connected to Station commands." : "Blend Edit needs a line with layers on the stage");
+    assert.equal(button.getAttribute("title"), REST_TITLE[label]);
     assert.equal(button.textContent, "", "no text on the control");
     assert.ok(button.classList.contains("station-rail__control"));
     const svg = button.children[0];
@@ -145,10 +154,52 @@ test("two controls and nothing else, each an SVG glyph in Station's own classes 
     });
   }
   assert.equal(blend.getAttribute("aria-pressed"), "false", "the switch says which way it is");
+  assert.equal(weights.getAttribute("aria-pressed"), "false", "so does the Weights switch");
+  assert.equal(smart.getAttribute("role"), "switch", "Smart Hoppers is a switch to a reader");
+  assert.equal(smart.getAttribute("aria-checked"), "false");
+  assert.equal(smart.disabled, true, "held until the boot file says the application offers it");
   assert.equal(reset.getAttribute("aria-pressed"), null, "the reset is a command, not a switch");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", reset: "Reset Tracking" });
+  assert.deepEqual(railModule.LABEL, { blend: "Blend Edit", weights: "Weights", smart: "Smart Hoppers", reset: "Reset Tracking" });
+});
+
+test("the Weights switch and the Smart Hoppers switch show what they are told and hand every click back as one call; a held switch takes no click", () => {
+  const { rail, weights, smart, calls, live } = build();
+  live();
+  assert.equal(weights.disabled, true, "Weights waits to be told there is a line");
+  rail.update({ weights: { active: false, available: true } });
+  assert.equal(weights.disabled, false);
+  assert.match(weights.getAttribute("title"), /^Weights · receiver weights and hopper geometry/);
+  weights.click();
+  assert.deepEqual(calls, ["weights"]);
+  assert.equal(weights.getAttribute("aria-pressed"), "false", "the rail does not turn itself on: the boot file tells it");
+  rail.update({ weights: { active: true, available: true } });
+  assert.equal(weights.getAttribute("aria-pressed"), "true");
+  assert.ok(weights.classList.contains("is-active"));
+  assert.ok(rail.element.classList.contains("is-weights-active"));
+  assert.match(weights.getAttribute("title"), /^Weights · on/);
+  rail.update({ weights: { active: true, available: false } });
+  assert.equal(weights.disabled, false, "an active mode can always be left");
+
+  // Smart Hoppers: held with its reason, then on offer, then on.
+  rail.update({ smart: { on: false, available: false, reason: "Connect this desktop to an identified line to use Smart Hoppers." } });
+  assert.equal(smart.disabled, true);
+  assert.equal(smart.getAttribute("title"), "Smart Hoppers is not available: Connect this desktop to an identified line to use Smart Hoppers.");
+  smart.click();
+  assert.deepEqual(calls, ["weights"], "a held switch hands nothing back");
+  rail.update({ smart: { on: false, available: true } });
+  assert.equal(smart.disabled, false);
+  assert.match(smart.getAttribute("title"), /^Smart Hoppers · off — click to compute/);
+  smart.click();
+  assert.deepEqual(calls, ["weights", "smart"]);
+  assert.equal(smart.getAttribute("aria-checked"), "false", "the switch shows the application's state, not the click");
+  rail.update({ smart: { on: true, available: true } });
+  assert.equal(smart.getAttribute("aria-checked"), "true");
+  assert.ok(smart.classList.contains("is-on"));
+  assert.match(smart.getAttribute("title"), /^Smart Hoppers · on — weights computed/);
+  assert.deepEqual(rail.getState().smart, { on: true, available: true, reason: "" });
+  assert.deepEqual(rail.getState().weights, { active: true, available: false });
 });
 
 test("update() is what it shows: the switch's state and availability, the reset's availability and count, hidden and withdrawn", () => {
@@ -424,6 +475,8 @@ test("the stylesheet names no colour and no length of its own, sizes the control
   assert.match(css, /backdrop-filter: blur\(var\(--station-handbook-glass-blur\)\)/);
   assert.match(css, /\.station-root \.station-rail__control\.is-active \{[^}]*border-color: var\(--station-accent\);/);
   assert.match(css, /\.station-root \.station-rail__control\.is-armed \{[^}]*border-color: var\(--station-warning\);/);
+  // Smart Hoppers on wears the computed colour the captions wear (hopper.css).
+  assert.match(css, /\.station-root \.station-rail__control\.is-on \{[^}]*border-color: var\(--station-smart, var\(--station-accent\)\);/);
   assert.match(css, /\.station-rail\.is-withdrawn \{[^}]*opacity: 0;[^}]*visibility: hidden;[^}]*pointer-events: none;/, "a withdrawn rail leaves the tab order, not only the eye");
   assert.match(css, /\.station-rail\[hidden\] \{[^}]*display: none;/);
   // The slot is the shell's; the rail is absolute in it, its fallback the

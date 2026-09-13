@@ -82,9 +82,20 @@
     "setScrapPounds",   // { pounds }    the job's scrap resin, lb; 0 clears
     "setHopperWeight",  // { recipe, layer, index, weight } the receiver weight
                         //   of the physical hopper at layer:index, lb; 0 clears
-    "setHopperWeights"  // { recipe, weights: [{ layer, index, weight }] }
+    "setHopperWeights", // { recipe, weights: [{ layer, index, weight }] }
                         //   several receiver weights in one request - the
                         //   Weights page's bulk apply - written and saved once
+    "setHopperGeometry",  // { recipe, layer, index, dimension, value } the
+                        //   hopper's usable measure for Smart Hoppers:
+                        //   dimension "height" (inches) or "volume"
+                        //   (gallons), whichever the line uses; 0 clears
+    "setHopperGeometries", // { recipe, geometries: [{ layer, index, dimension, value }] }
+                        //   several usable measures in one request - the
+                        //   bulk apply's geometry - written and saved once
+    "setHopperCircumference", // { circumference } the line's one shared
+                        //   hopper circumference, inches, for cylindrical
+                        //   lines; 0 clears
+    "setSmartHoppers"   // { enabled }  this device's Smart Hoppers switch
   ]);
 
   /* The three runtime commands. Tracking and pump-off are operational state
@@ -118,7 +129,28 @@
    * (next-recipe.js). Refused here, like the runtime commands, before an
    * executor sees the request. The second is the first over a list, so the
    * Weights page's bulk apply is one commit and one sync notification. */
-  const EQUIPMENT_COMMANDS = Object.freeze(["setHopperWeight", "setHopperWeights"]);
+  const EQUIPMENT_COMMANDS = Object.freeze([
+    "setHopperWeight", "setHopperWeights",
+    /* Smart Hoppers' geometry is the same kind of fact: a hopper's usable
+     * height or volume describes the vessel, and the shared circumference
+     * describes the line's vessels. The circumference names no position -
+     * the application keeps one value for the whole line. */
+    "setHopperGeometry", "setHopperGeometries", "setHopperCircumference"
+  ]);
+
+  /* The one preference command. Smart Hoppers on or off is a display
+   * preference of the device the application runs on: saved with its
+   * session, never carried in the active job, never synced (the
+   * application's applySharedActiveJob keeps it local on purpose). A
+   * Station view asks THIS browser's application, which is that device,
+   * so the switch it flips is its own. It names no recipe and no
+   * position. */
+  const PREFERENCE_COMMANDS = Object.freeze(["setSmartHoppers"]);
+
+  /* The two ways a line measures its hoppers for Smart Hoppers, as
+   * line-identity.js names the geometry (`hopperGeometry`), so the value
+   * a command sets is stated in the line's own terms. */
+  const DIMENSIONS = Object.freeze(["height", "volume"]);
 
   /* The most weights one bulk request may carry: every hopper of the
    * largest line the application lays out, with room for a naming mode
@@ -144,7 +176,11 @@
     setProductionPounds: Object.freeze(["pounds"]),
     setScrapPounds: Object.freeze(["pounds"]),
     setHopperWeight: Object.freeze(["recipe", "layer", "index", "weight"]),
-    setHopperWeights: Object.freeze(["recipe", "weights"])
+    setHopperWeights: Object.freeze(["recipe", "weights"]),
+    setHopperGeometry: Object.freeze(["recipe", "layer", "index", "dimension", "value"]),
+    setHopperGeometries: Object.freeze(["recipe", "geometries"]),
+    setHopperCircumference: Object.freeze(["circumference"]),
+    setSmartHoppers: Object.freeze(["enabled"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -400,6 +436,62 @@
     return { ok: true, value: Object.freeze(out) };
   }
 
+  /* Which measure a geometry names: the line's, "height" (inches) or
+   * "volume" (gallons). Whether it is the connected line's measure is the
+   * executor's question: it knows the line. */
+  function normalizeDimension(value) {
+    if (DIMENSIONS.includes(value)) return { ok: true, value };
+    return { ok: false, code: "bad_argument", message: 'The dimension must be "height" or "volume".' };
+  }
+
+  /* A physical measure - inches of usable height, gallons of usable
+   * volume, inches of circumference: a number, or a string with a
+   * thousands separator; never negative; 0 is "not entered". The same
+   * reading the floor UI's geometry fields give (acceptNumericInput with
+   * min 0). */
+  function normalizeMeasure(value) {
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value.replace(/,/g, "")) : value;
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      return { ok: false, code: "bad_argument", message: "Enter a number." };
+    }
+    if (number < 0) {
+      return { ok: false, code: "out_of_range", message: "The measure cannot be less than 0." };
+    }
+    return { ok: true, value: number };
+  }
+
+  /* A list of usable measures for the bulk apply: the weight list's rules
+   * - non-empty, capped, no position twice - over { layer, index,
+   * dimension, value } entries read by the single command's normalizers. */
+  function normalizeGeometryList(value) {
+    if (!Array.isArray(value) || value.length === 0) {
+      return { ok: false, code: "bad_argument", message: "List the hoppers and the measure for each." };
+    }
+    if (value.length > MAX_WEIGHT_ENTRIES) {
+      return { ok: false, code: "bad_argument", message: `No more than ${MAX_WEIGHT_ENTRIES} measures can be applied at once.` };
+    }
+    const out = [];
+    const seen = new Set();
+    for (const entry of value) {
+      const given = isPlainObject(entry) ? entry : {};
+      const layer = normalizeLayer(given.layer);
+      if (!layer.ok) return layer;
+      const index = normalizeIndex(given.index);
+      if (!index.ok) return index;
+      const dimension = normalizeDimension(given.dimension);
+      if (!dimension.ok) return dimension;
+      const measure = normalizeMeasure(given.value);
+      if (!measure.ok) return measure;
+      const key = `${layer.value}:${index.value}`;
+      if (seen.has(key)) {
+        return { ok: false, code: "bad_argument", message: `Hopper ${key} is listed twice.` };
+      }
+      seen.add(key);
+      out.push(Object.freeze({ layer: layer.value, index: index.value, dimension: dimension.value, value: measure.value }));
+    }
+    return { ok: true, value: Object.freeze(out) };
+  }
+
   /* An absolute instant as epoch milliseconds, or null to clear. Whether
    * the instant is in the past, or further away than the application can
    * store, is the executor's question: it needs the clock. */
@@ -427,7 +519,12 @@
     at: normalizeTimestamp,
     pounds: normalizePounds,
     weight: normalizePounds,
-    weights: normalizeWeightList
+    weights: normalizeWeightList,
+    dimension: normalizeDimension,
+    value: normalizeMeasure,
+    geometries: normalizeGeometryList,
+    circumference: normalizeMeasure,
+    enabled: normalizeFlag
   });
 
   /**
@@ -453,8 +550,8 @@
     if (RUNTIME_COMMANDS.includes(command) && out.recipe !== "current") {
       return failure("bad_argument", { field: "recipe", message: "Tracking and pump-off belong to the running job: the recipe must be \"current\"." });
     }
-    if (EQUIPMENT_COMMANDS.includes(command) && out.recipe !== "current") {
-      return failure("bad_argument", { field: "recipe", message: "Receiver weights belong to the physical hoppers, not to a recipe: the recipe must be \"current\"." });
+    if (EQUIPMENT_COMMANDS.includes(command) && ARGUMENTS[command].includes("recipe") && out.recipe !== "current") {
+      return failure("bad_argument", { field: "recipe", message: "Receiver weights and hopper geometry belong to the physical hoppers, not to a recipe: the recipe must be \"current\"." });
     }
     return Object.freeze({ ok: true, command, args: Object.freeze(out) });
   }
@@ -464,6 +561,8 @@
     RUNTIME_COMMANDS,
     JOB_COMMANDS,
     EQUIPMENT_COMMANDS,
+    PREFERENCE_COMMANDS,
+    DIMENSIONS,
     RECIPES,
     ARGUMENTS,
     ERROR_CODES,
@@ -482,6 +581,9 @@
     normalizeRate,
     normalizePounds,
     normalizeWeightList,
+    normalizeDimension,
+    normalizeMeasure,
+    normalizeGeometryList,
     normalizeTimestamp,
     normalizeArguments,
     success,

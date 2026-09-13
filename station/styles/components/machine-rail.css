@@ -183,3 +183,18 @@
   stroke-width: 1.3;
   stroke-linejoin: round;
 }
+
+/* ---- Smart Hoppers on: the computed colour, as the captions wear it ---- */
+
+/* The switch on is the smart token - the colour a computed weight is
+   drawn in on the stage (hopper.css) - as an edge, a glyph and a wash,
+   so the rail and the captions say the same thing in the same colour. */
+.station-root .station-rail__control.is-on {
+  border-color: var(--station-smart, var(--station-accent));
+  background: var(--station-accent-soft);
+  color: var(--station-smart, var(--station-accent));
+}
+
+.station-root .station-rail__control.is-on:hover:not(:disabled) {
+  border-color: var(--station-text);
+}

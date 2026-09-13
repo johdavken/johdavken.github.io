@@ -55,6 +55,7 @@
 
   --station-success: #7fd3a8;
   --station-tracking: #7fd3a8;
+  --station-smart: #9fd0ff;
   /* The run-down flow's chevrons (hopper.css): pale flow arrows in the sheet's own blue, as a draughtsman marks direction. */
   --station-rundown-flow: #a9d6f5;
   --station-warning: #e8c170;

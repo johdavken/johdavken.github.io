@@ -21,15 +21,16 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
   for (const command of contract.COMMANDS) {
     assert.ok(Array.isArray(contract.ARGUMENTS[command]), `${command} declares no arguments`);
     // A recipe command names its recipe first; a job command names no
-    // recipe at all - output and changeover belong to the whole job.
-    if (contract.JOB_COMMANDS.includes(command)) {
+    // recipe at all - output and changeover belong to the whole job - nor
+    // does the device's preference, nor the line's one circumference.
+    if (contract.JOB_COMMANDS.includes(command) || contract.PREFERENCE_COMMANDS.includes(command) || command === "setHopperCircumference") {
       assert.ok(!contract.ARGUMENTS[command].includes("recipe"), `${command} names a recipe`);
     } else {
       assert.equal(contract.ARGUMENTS[command][0], "recipe", `${command} does not name its recipe first`);
@@ -339,7 +340,7 @@ test("resetTracking names the running job and nothing else: no position, no flag
  * -------------------------------------------------------------------- */
 
 test("the equipment commands are declared, read pounds like the job's figures, and are addressable to the Current recipe only", () => {
-  assert.deepEqual([...contract.EQUIPMENT_COMMANDS], ["setHopperWeight", "setHopperWeights"]);
+  assert.deepEqual([...contract.EQUIPMENT_COMMANDS], ["setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference"]);
   assert.ok(Object.isFrozen(contract.EQUIPMENT_COMMANDS));
   assert.deepEqual([...contract.ARGUMENTS.setHopperWeight], ["recipe", "layer", "index", "weight"]);
   assert.deepEqual([...contract.ARGUMENTS.setHopperWeights], ["recipe", "weights"]);
@@ -434,4 +435,75 @@ test("a runtime flag is a boolean and nothing else: no strings, numbers or absen
   assert.equal(request.ok, false);
   assert.equal(request.field, "pumpOff");
   assert.equal(contract.normalizeArguments("setHopperTracking", { recipe: "current", layer: "A", index: 1 }).field, "track");
+});
+
+/* ----------------------------------------------------------------------
+ *   Smart Hoppers: geometry, circumference, the switch
+ * -------------------------------------------------------------------- */
+
+test("the geometry commands are equipment commands: Current only, a hopper's usable measure stated in the line's own terms, 0 clearing", () => {
+  assert.deepEqual([...contract.ARGUMENTS.setHopperGeometry], ["recipe", "layer", "index", "dimension", "value"]);
+  assert.deepEqual([...contract.ARGUMENTS.setHopperGeometries], ["recipe", "geometries"]);
+  assert.deepEqual([...contract.DIMENSIONS], ["height", "volume"]);
+  const ok = contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: "2", dimension: "height", value: "31.5" });
+  assert.deepEqual(ok, { ok: true, command: "setHopperGeometry", args: { recipe: "current", layer: "A", index: 2, dimension: "height", value: 31.5 } });
+  assert.ok(Object.isFrozen(ok.args));
+  assert.equal(contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "volume", value: "1,200" }).args.value, 1200);
+  assert.equal(contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "height", value: 0 }).args.value, 0, "0 clears");
+  const next = contract.normalizeArguments("setHopperGeometry", { recipe: "next", layer: "A", index: 0, dimension: "height", value: 30 });
+  assert.equal(next.ok, false);
+  assert.equal(next.field, "recipe");
+  assert.match(next.message, /hopper geometry belong to the physical hoppers/);
+  const bad = contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "depth", value: 30 });
+  assert.equal(bad.code, "bad_argument");
+  assert.equal(bad.field, "dimension");
+  assert.equal(contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "height", value: -1 }).code, "out_of_range");
+  assert.equal(contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "height", value: "tall" }).code, "bad_argument");
+  assert.equal(contract.normalizeArguments("setHopperGeometry", { recipe: "current", layer: "A", index: 0, dimension: "height" }).field, "value");
+});
+
+test("the bulk geometry list follows the weight list's rules: non-empty, capped, no position twice, each entry read by the single command's normalizers", () => {
+  const two = contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: [
+    { layer: "A", index: 0, dimension: "volume", value: "55" }, { layer: "B", index: "1", dimension: "volume", value: 0 }
+  ] });
+  assert.equal(two.ok, true);
+  assert.deepEqual([...two.args.geometries], [{ layer: "A", index: 0, dimension: "volume", value: 55 }, { layer: "B", index: 1, dimension: "volume", value: 0 }]);
+  assert.ok(Object.isFrozen(two.args.geometries) && Object.isFrozen(two.args.geometries[0]));
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: [] }).code, "bad_argument");
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: "A:0" }).code, "bad_argument");
+  const twice = contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: [
+    { layer: "A", index: 0, dimension: "height", value: 1 }, { layer: "A", index: 0, dimension: "height", value: 2 }
+  ] });
+  assert.equal(twice.code, "bad_argument");
+  assert.match(twice.message, /listed twice/);
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: [{ layer: "A", index: 0, dimension: "girth", value: 1 }] }).code, "bad_argument");
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: [{ layer: "A", index: 9, dimension: "height", value: 1 }] }).code, "unknown_hopper");
+  const tooMany = Array.from({ length: contract.MAX_WEIGHT_ENTRIES + 1 }, (_, i) => ({ layer: `L${i}`, index: 0, dimension: "height", value: 1 }));
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: tooMany }).code, "bad_argument");
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "current", geometries: tooMany.slice(0, contract.MAX_WEIGHT_ENTRIES) }).ok, true);
+  assert.equal(contract.normalizeArguments("setHopperGeometries", { recipe: "next", geometries: [{ layer: "A", index: 0, dimension: "height", value: 1 }] }).field, "recipe");
+});
+
+test("the circumference is the line's one value - no recipe, no position - and the switch is the device's preference, a boolean", () => {
+  assert.deepEqual([...contract.ARGUMENTS.setHopperCircumference], ["circumference"]);
+  assert.deepEqual([...contract.ARGUMENTS.setSmartHoppers], ["enabled"]);
+  assert.deepEqual([...contract.PREFERENCE_COMMANDS], ["setSmartHoppers"]);
+  assert.ok(Object.isFrozen(contract.PREFERENCE_COMMANDS));
+  assert.ok(contract.EQUIPMENT_COMMANDS.includes("setHopperCircumference"));
+  assert.ok(!contract.EQUIPMENT_COMMANDS.includes("setSmartHoppers"));
+  // A recipe handed to either is dropped, never refused: the command has no
+  // recipe to be wrong about.
+  assert.deepEqual(contract.normalizeArguments("setHopperCircumference", { circumference: "40.25", recipe: "next" }).args, { circumference: 40.25 });
+  assert.equal(contract.normalizeArguments("setHopperCircumference", { circumference: 0 }).args.circumference, 0, "0 clears");
+  assert.equal(contract.normalizeArguments("setHopperCircumference", { circumference: -2 }).code, "out_of_range");
+  assert.equal(contract.normalizeArguments("setHopperCircumference", {}).field, "circumference");
+  assert.deepEqual(contract.normalizeArguments("setSmartHoppers", { enabled: true, recipe: "next" }).args, { enabled: true });
+  assert.deepEqual(contract.normalizeArguments("setSmartHoppers", { enabled: false }).args, { enabled: false });
+  assert.equal(contract.normalizeArguments("setSmartHoppers", { enabled: "yes" }).code, "bad_argument");
+  assert.equal(contract.normalizeArguments("setSmartHoppers", { enabled: 1 }).field, "enabled");
+  // The measure normalizer itself, exported like the others.
+  assert.deepEqual(contract.normalizeMeasure("1,000"), { ok: true, value: 1000 });
+  assert.equal(contract.normalizeMeasure("").ok, false);
+  assert.deepEqual(contract.normalizeDimension("volume"), { ok: true, value: "volume" });
+  assert.equal(contract.normalizeDimension("Volume").ok, false);
 });

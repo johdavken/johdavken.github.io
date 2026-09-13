@@ -499,20 +499,25 @@ test("with no commands on offer the card is read-only and says so; it never inve
  * -------------------------------------------------------------------- */
 
 test("the mode is presentation state: two fields, no copy of a recipe, and entering it dispatches nothing and turns every layer over at once", () => {
-  assert.match(boot, /const blendEdit = \{ active: false, flipped: \[\] \};/);
+  assert.match(boot, /const blendEdit = \{ active: false, kind: "blend", flipped: \[\] \};/);
   assert.match(boot, /let cardHandles = \{\};/);
   const enter = body("enterBlendEdit");
   assert.doesNotMatch(enter, /dispatch|\.request\(|publish|hopperState|resinName|pct/, "entering Blend Edit touches recipe state");
-  assert.match(enter, /if \(blendEdit\.active \|\| !canEnterBlendEdit\(\)\) return false;/);
+  // The same face already out is nothing to enter; a face the stage cannot
+  // show (no layers; the Weights face without its module) is refused.
+  assert.match(enter, /if \(modeIs\(face\)\) return false;\n\s+if \(face === "weights" \? !canEnterWeightsEdit\(\) : !canEnterBlendEdit\(\)\) return false;/);
   assert.match(enter, /leaveStageControl\(\);/);
   assert.match(enter, /focus = null;/, "the open layer is not closed on entry");
   assert.match(enter, /blendEdit\.active = true;/);
   assert.match(enter, /blendEdit\.flipped = layerIds\(\);/, "every layer is turned over on entry: the rail's one click is Edit All");
-  assert.match(enter, /redrawForBlend\(blendEdit\.flipped\.slice\(\)\);/);
-  assert.match(enter, /say\(BLEND_EDIT_HINT\);/, "the mode says how to leave it and how to turn a layer back");
+  // Every layer is redrawn - the ones newly turned over and, when the face
+  // is being switched, the ones already out - and the face's hint said.
+  assert.match(enter, /redrawForBlend\(blendEdit\.flipped\.filter\(id => !were\.includes\(id\)\)\.concat\(were\)\);/);
+  assert.match(enter, /say\(HINT\[face\]\);/, "the mode says how to leave it and how to turn a layer back");
+  assert.match(boot, /const HINT = \{ blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT \};/);
   // The rail's switch is the one toggle over the one entry and the one exit.
   const toggle = body("toggleBlendEdit");
-  assert.match(toggle, /return blendEdit\.active \? exitBlendEdit\(\) : enterBlendEdit\(\);/);
+  assert.match(toggle, /return modeIs\("blend"\) \? exitBlendEdit\(\) : enterBlendEdit\("blend"\);/);
   assert.equal((boot.match(/blendEdit\.active = false;/g) || []).length, 2, "the mode is turned off in exitBlendEdit and by a line that lost its layers, nowhere else");
   assert.equal((boot.match(/blendEdit\.active = true;/g) || []).length, 1, "and turned on in enterBlendEdit only");
 });
@@ -552,14 +557,16 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   const draw = body("drawStage");
   assert.match(draw, /if \(blendEdit\.active && model && !focusLayer\) \{/);
   assert.match(draw, /if \(!isFlipped\(entry\.id\)\) continue;/);
-  assert.match(draw, /const card = focusEditor\.create\(mounts\.machine\.ownerDocument, \{/);
+  // The Weights face (station-weight-cards.js) takes the same footprint
+  // from the same builder; the blend face is the editor, as before.
+  assert.match(draw, /const card = blendEdit\.kind === "weights" && weightCards \? weightCards\.create\(mounts\.machine\.ownerDocument, \{[\s\S]*?\}\) : focusEditor\.create\(mounts\.machine\.ownerDocument, \{/);
   assert.match(draw, /variant: "compact",/);
   assert.match(draw, /recipe,\n/, "a card is not addressed to the boot file's one recipe");
   assert.match(draw, /blendEdit: blendEdit\.active && !focusLayer,/);
   assert.match(draw, /blendCards: cards,/);
   // The value path updates every card in place, as it does the editor.
   const publish = body("onPublish");
-  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) cardHandles\[id\]\.update\(\{ hopperState: resolved\.hopperState \}\);/);
+  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) cardHandles\[id\]\.update\(\{ hopperState: resolved\.hopperState, smartHoppers: resolved\.smartHoppers \}\);/);
   // A layer that vanished is dropped from the mode; a line with no layers ends it.
   const all = body("renderAll");
   assert.match(all, /blendEdit\.flipped = blendEdit\.flipped\.filter\(id => !!model && model\.layers\.some\(layer => layer\.id === id\)\);/);
@@ -595,7 +602,7 @@ test("the Handbook is mounted from the shell's slot with Recipe Book, Resin Tota
   // The rail is mounted from its own slot, ahead of the Handbook, and
   // handed the two callbacks and nothing else of the state.
   const rail = start.slice(start.indexOf("if (machineRail && mounts.rail) {"), start.indexOf("if (handbook && mounts.handbook) {"));
-  assert.match(rail, /railPanel = machineRail\.create\(doc, \{\s+onBlendEdit: toggleBlendEdit,\s+onResetTracking: resetTracking,/);
+  assert.match(rail, /railPanel = machineRail\.create\(doc, \{\s+onBlendEdit: toggleBlendEdit,\s+onWeightsEdit: toggleWeightsEdit,\s+onSmartHoppers: toggleSmartHoppers,\s+onResetTracking: resetTracking,/);
   assert.match(rail, /mounts\.rail\.appendChild\(railPanel\.element\);/);
   assert.match(rail, /syncRail\(\);\s+placeRail\(\);/, "the rail is told and placed once the stage that was drawn before it exists");
   assert.doesNotMatch(rail, /hopperState|commands|snapshot|blendEdit\./, "the rail is handed state to hold");

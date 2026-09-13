@@ -73,12 +73,13 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   // And the boot file writes lastOwnRevision there, and in the other
   // places a command's answer arrives - a cluster control's toggle, the
   // header's job controls' onCommitted, a Blend Edit card's onCommitted
-  // (the same editor, compact), the layer share editor's onCommitted, and
-  // the rail's Reset Tracking - which run the identical two lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 8, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted and the rail's resetTracking");
+  // (the same editor, compact), a weight card's onCommitted, the layer
+  // share editor's onCommitted, the rail's Reset Tracking and the rail's
+  // Smart Hoppers switch - which run the identical two lines.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 10, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted, the rail's resetTracking and the rail's toggleSmartHoppers");
   const reset = boot.slice(boot.indexOf("function resetTracking() {"), boot.indexOf("\n  }\n", boot.indexOf("function resetTracking() {")));
   assert.match(reset, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
-  const cards = draw.slice(draw.indexOf("const card = focusEditor.create("), draw.indexOf("cardHandles[entry.id] = card;"));
+  const cards = draw.slice(draw.indexOf("const card = blendEdit.kind === \"weights\""), draw.indexOf("cardHandles[entry.id] = card;"));
   assert.match(cards, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.match(cards, /variant: "compact",/);
   assert.match(cards, /commands: commandsFor\(current\.resolved\),/, "a card is not handed the same command bridge");
