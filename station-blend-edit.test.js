@@ -611,3 +611,15 @@ test("the shell's slot lies over the stage's cell and the Handbook's stylesheet 
   assert.match(host, /"station\/styles\/components\/handbook\.css"/);
   assert.match(harness, /styles\/components\/handbook\.css\?v=/);
 });
+
+test("a card's row list is not a scroll container: the result list a search hangs from a row stands clear of it, as in the full editor, instead of being clipped inside it with a scrollbar grown for it", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const list = css.match(/\.station-editor\[data-variant="compact"\] \.station-editor__list \{([^}]*)\}/);
+  assert.ok(list, "the compact list rule is missing");
+  assert.doesNotMatch(list[1], /overflow/, "the compact list is a scroll container: an absolutely positioned result list inside it counts as its scrollable overflow, so it grows a scrollbar for the list and clips it at its own edge");
+  // The result list is still placed inside the card's own box - the
+  // <foreignObject> - by the editor, on both faces.
+  assert.match(css, /\.station-editor__results \{[^}]*position: absolute;/);
+  const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
+  assert.match(source, /row\.item\.closest\("foreignObject"\)/);
+});
