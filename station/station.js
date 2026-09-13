@@ -76,6 +76,13 @@
    * is handed; what happens after is the same publish policy the
    * editor's commands run (see openShareEditor). */
   const layerShare = root.PolynStationLayerShare || null;
+  /* The machine utility rail (station-machine-rail.js): the short stack
+   * of controls beside the far-right hopper cluster - Blend Edit's one
+   * switch, and Reset Tracking. A reader that asks: the mode is this
+   * file's (below), the reset goes through the hopper controls' seam on
+   * the bridge, and the rail is told what to show after each. Optional,
+   * as the Handbook is; mounted only when the shell has its slot. */
+  const machineRail = root.PolynStationMachineRail || null;
   /* The run-down timeline (station-rundown-timeline.js) and the header's
    * job controls (station-job-controls.js). The timeline is a reader: it
    * is fed the same resolved state the stage draws from and projects it;
@@ -230,16 +237,25 @@
    *
    * The mode and the open layer are exclusive: entering Blend Edit closes
    * whatever layer is open, and while it is on a click on a mixer or an
-   * extruder opens nothing (it says so instead). One interaction model at
-   * a time, and no click that means two things. */
+   * extruder opens nothing - it turns that one layer over or back
+   * instead, the mode's per-layer switch. One interaction model at a
+   * time, and no click that means two things.
+   *
+   * The mode is switched from the machine utility rail (the one entry
+   * and the one exit an operator has, with Escape on the stage as the
+   * same exit); the Operator Handbook neither enters nor leaves it, so
+   * the Recipe Book can be read while the cards are out. */
   const blendEdit = { active: false, flipped: [] };
   /* The compact editors' handles, by layer id, for the stage as drawn:
    * what a value-only publish updates in place, as editorHandle is for
    * the open layer. Rebuilt by every render. */
   let cardHandles = {};
   /* The Handbook's handle, once mounted, so the boot file can tell it
-   * something it shows changed (the mode, a flip, a line change). */
+   * something it shows changed (a line change, a value). */
   let handbookPanel = null;
+  /* The machine rail's handle, once mounted: told the mode's state, what
+   * the reset may do, and where the far-right cluster stands. */
+  let railPanel = null;
   /* The theme controller belongs to the Station root, not to this boot file
    * or the application global. Resolved once the host root is known. */
   let themeController = null;
@@ -340,6 +356,7 @@
     stage.request(focusLayerFor());
     syncSelection();
     renderInspector(current.model, current.resolved);
+    syncRail();
   }
 
   function clearFocus() {
@@ -348,6 +365,7 @@
     stage.request(null);
     syncSelection();
     renderInspector(current.model, current.resolved);
+    syncRail();
   }
 
   /* --------------------------------------------------------------------
@@ -399,11 +417,18 @@
     stage.refresh(focusLayerFor());
     settleFaces(changed || []);
     if (handbookPanel) handbookPanel.update();
+    syncRail();
   }
 
   function canEnterBlendEdit() {
     return !!(current.model && current.model.layers.length);
   }
+
+  /* The rail's one click: every layer turns over at once - the mode IS
+   * "edit the blends", and a layer the operator wants as hoppers again is
+   * one click on its train. The hint says so, on the status line, until
+   * the first thing the operator does in the mode replaces it. */
+  const BLEND_EDIT_HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
 
   function enterBlendEdit() {
     if (blendEdit.active || !canEnterBlendEdit()) return false;
@@ -411,9 +436,9 @@
     // The open layer closes: the two modes do not share the stage.
     focus = null;
     blendEdit.active = true;
-    blendEdit.flipped = [];
-    redrawForBlend([]);
-    say("");
+    blendEdit.flipped = layerIds();
+    redrawForBlend(blendEdit.flipped.slice());
+    say(BLEND_EDIT_HINT);
     return true;
   }
 
@@ -445,30 +470,76 @@
     return true;
   }
 
-  function flipAll(on) {
-    if (!blendEdit.active) return false;
-    const ids = layerIds();
-    const changed = ids.filter(id => isFlipped(id) !== !!on);
-    if (!changed.length) return false;
-    leaveStageControl();
-    blendEdit.flipped = on ? ids.slice() : [];
-    redrawForBlend(changed);
-    say("");
-    return true;
+  /* The rail's switch: on when the mode is off, off when it is on. The
+   * one toggle, over the one entry and the one exit above. */
+  function toggleBlendEdit() {
+    return blendEdit.active ? exitBlendEdit() : enterBlendEdit();
   }
 
-  /* Blend Edit as the Handbook sees it: a small surface over the state
-   * above, handed to the Recipe Book, which holds nothing of its own. */
-  const blendSurface = Object.freeze({
-    available: () => !!commandsFor(current.resolved),
-    isActive: () => blendEdit.active,
-    canEnter: canEnterBlendEdit,
-    layers: () => (current.model ? current.model.layers.map(layer => ({ id: layer.id, roleLabel: layer.roleLabel, flipped: isFlipped(layer.id) })) : []),
-    enter: enterBlendEdit,
-    exit: exitBlendEdit,
-    flip: flipLayer,
-    flipAll
-  });
+  /* --------------------------------------------------------------------
+   *   The machine utility rail
+   * ------------------------------------------------------------------
+   * What the rail shows is read off the state this file already holds and
+   * the bridge's offer - never kept in the rail. syncRail runs after
+   * anything that could change one of its inputs: a render, a publish, a
+   * flip, a focus change. placeRail runs after every render of the
+   * normal layout and when the stage's cell resizes: the rail stands at
+   * the far-right cluster's outer corner, which the drawn stage declares
+   * (station-machine-rail.js reads it off the SVG). */
+
+  /* How many hoppers a reset would touch: tracked, or pump marked off. */
+  function trackedHopperCount(resolved) {
+    const states = resolved && resolved.hopperState ? resolved.hopperState : {};
+    let count = 0;
+    for (const key of Object.keys(states)) {
+      const entry = states[key];
+      if (entry && (entry.track || entry.pumpOff)) count += 1;
+    }
+    return count;
+  }
+
+  function syncRail() {
+    if (!railPanel) return;
+    const commandsNow = commandsFor(current.resolved);
+    const resetOffered = !!(hopperControls && typeof hopperControls.canReset === "function" && hopperControls.canReset(commandsNow, "current"));
+    railPanel.update({
+      hidden: !canEnterBlendEdit(),
+      withdrawn: !!focusLayerFor(),
+      blend: { active: blendEdit.active, available: canEnterBlendEdit() },
+      reset: {
+        available: resetOffered,
+        reason: resetOffered || !hopperControls ? "" : hopperControls.resetReason(commandsNow, "current"),
+        count: trackedHopperCount(current.resolved)
+      }
+    });
+  }
+
+  function placeRail() {
+    if (!railPanel || !mounts.machine || !mounts.rail || focusLayerFor()) return;
+    const svg = typeof mounts.machine.querySelector === "function" ? mounts.machine.querySelector("svg") : null;
+    if (svg) railPanel.place(svg, mounts.rail);
+  }
+
+  /* The rail's second click on Reset Tracking, already confirmed there:
+   * one resetTracking through the hopper controls' seam, and the answer
+   * run through the same publish policy a tracking toggle's is. What the
+   * application did is said on the status line either way. */
+  function resetTracking() {
+    if (!hopperControls || typeof hopperControls.resetTracking !== "function") return null;
+    const result = hopperControls.resetTracking(commandsFor(current.resolved));
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "Tracking could not be reset.");
+      return result || null;
+    }
+    if (!result.changed) {
+      say("Nothing is tracked: there was no tracking to reset.");
+      return result;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say("Tracking reset: every hopper is untracked and its pump marked running.");
+    return result;
+  }
 
   /* --------------------------------------------------------------------
    *   Hopper <-> editor row linking
@@ -886,6 +957,7 @@
     renderStatus(model, resolved);
     feedJob(model, resolved);
     if (handbookPanel) handbookPanel.update();
+    syncRail();
   }
 
   /* --------------------------------------------------------------------
@@ -949,6 +1021,8 @@
       // The Handbook's pages read values too (Resin Totals: production,
       // scrap, lots, the blend) - told the same way the full render tells it.
       if (handbookPanel) handbookPanel.update();
+      // And the rail: how many hoppers a reset would touch is a value.
+      syncRail();
       return;
     }
 
@@ -1163,6 +1237,9 @@
     // written to it from the projection as it stands (feedJob follows
     // with the fresh one on every path that changes the job).
     applyRundownMarks();
+    // The rail stands against the normal layout as drawn; a focused
+    // layout is not measured (the rail has stepped back for it).
+    if (!focusLayer) placeRail();
     return svg;
   }
 
@@ -1277,9 +1354,10 @@
       }
       /* While Blend Edit is on, the train opens nothing: the compact face
        * and the focused editor are two ways to edit the same layer, and
-       * the operator is in one of them. Said, rather than silently not. */
+       * the operator is in one of them. The click is the mode's per-layer
+       * switch instead - that layer over, or back to its hoppers. */
       if (blendEdit.active && opensLayer(target)) {
-        say("Finish Blend Edit (Done in the Handbook) to open a layer's detailed editor.");
+        flipLayer(layer);
         return;
       }
 
@@ -1312,7 +1390,7 @@
       mount: mounts.machine,
       render: drawStage,
       reducedMotion: prefersReducedMotion,
-      onChange: state => { if (devPanel) devPanel.update(state); }
+      onChange: state => { if (devPanel) devPanel.update(state); syncRail(); }
     });
 
     if (transitionDebugRequested()) {
@@ -1402,12 +1480,38 @@
       if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
     }
 
+    /* The machine utility rail, in its own slot over the stage: Blend
+     * Edit's switch and Reset Tracking. Handed the two callbacks and
+     * nothing else; told what to show by syncRail, and where to stand by
+     * placeRail after each render of the normal layout and whenever the
+     * stage's cell changes size. */
+    if (machineRail && mounts.rail) {
+      railPanel = machineRail.create(doc, {
+        onBlendEdit: toggleBlendEdit,
+        onResetTracking: resetTracking,
+        setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
+        clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
+      });
+      mounts.rail.appendChild(railPanel.element);
+      if (typeof root.ResizeObserver === "function" && mounts.machine) {
+        try {
+          new root.ResizeObserver(() => placeRail()).observe(mounts.machine);
+        } catch (error) { /* the resize listener below stands in */ }
+      } else if (typeof root.addEventListener === "function") {
+        root.addEventListener("resize", () => placeRail());
+      }
+      // The stage was drawn before the rail existed: told and placed now.
+      syncRail();
+      placeRail();
+    }
+
     /* The Operator Handbook, in the slot laid over the stage. Built once
-     * with its sections - the Recipe Book today - and handed what they
-     * may use: the recipes bridge (read and request; never the global
-     * reached for from inside) and the Blend Edit surface above. The
-     * book redraws from the recipes bridge's own notifications, as the
-     * line console does from the connection bridge's. */
+     * with its sections - the Recipe Book, Resin Totals, Appearance - and
+     * handed what they may use: the recipes bridge (read and request;
+     * never the global reached for from inside). The book redraws from
+     * the recipes bridge's own notifications, as the line console does
+     * from the connection bridge's. Blend Edit is not the Handbook's:
+     * closing it, or turning its pages, leaves the mode as it is. */
     if (handbook && mounts.handbook) {
       const handbookSections = [];
       if (recipeBook) handbookSections.push(recipeBook.section);
@@ -1417,7 +1521,6 @@
         sections: handbookSections,
         context: {
           recipes,
-          blend: blendSurface,
           /* Resin Totals reads the same resolved state the stage draws
            * from - through a function, since `current` is replaced on
            * every render - and the shared calculation to run over it. */
@@ -1440,11 +1543,7 @@
           preview: themePreview
         },
         mount: mounts.handbook,
-        reducedMotion: prefersReducedMotion,
-        /* Closing the Handbook - its Close, its launcher, Escape inside it
-         * - is Done first when Blend Edit is on: the mode's one exit,
-         * before the panel that holds its Done goes away with it on. */
-        beforeClose: () => { if (blendEdit.active) exitBlendEdit(); }
+        reducedMotion: prefersReducedMotion
       });
       mounts.handbook.appendChild(handbookPanel.element);
       recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });

@@ -68,6 +68,7 @@
     "station/styles/components/glass.css",
     "station/styles/components/handbook.css",
     "station/styles/components/changeover.css",
+    "station/styles/components/machine-rail.css",
     "station/styles/components/theme-preview.css"
   ];
 
@@ -84,6 +85,9 @@
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
     "station/station-layer-share.js",
+    // The machine utility rail: Blend Edit and Reset Tracking beside the
+    // far-right cluster. After the hopper controls, whose reset it asks for.
+    "station/station-machine-rail.js",
     // The run-down projection before the two that read it: the timeline
     // and the header's job controls.
     "station/station-rundown.js",
@@ -106,7 +110,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.29.1";
+  const VERSION = "0.30.0";
 
   function requested() {
     try {

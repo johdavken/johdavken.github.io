@@ -8,7 +8,8 @@
  * slot there). The launcher is an application icon in the cell's lower
  * left corner; the panel it opens stands centred across the lower part of
  * the cell, under the hopper bank - so the hoppers drawn above stay where
- * they are and stay clickable, which is what Blend Edit needs of them.
+ * they are and stay clickable, which is what Blend Edit (switched from the
+ * machine rail, machine-rail.css) needs of them.
  * Nothing here dims the stage or takes a track of the shell: the Handbook
  * is a surface Station opens out of itself, not a dialog laid over it.
  *
@@ -16,8 +17,8 @@
  *
  * The panel is a workstation with a set amount of bench: its box is sized
  * from the stage (the Handbook tokens in tokens.css) and from nothing
- * inside it. Every section - the Recipe Book, Blend Edit's controls in
- * it, whatever comes next - draws into the same frame: same edges, same
+ * inside it. Every section - the Recipe Book, Resin Totals, Appearance,
+ * whatever comes next - draws into the same frame: same edges, same
  * head, same Close, same place the opening flight lands. A section with
  * more than fits scrolls, splits or paginates INSIDE its own box; the
  * frame does not grow to meet it, and a section with less leaves the
@@ -42,7 +43,8 @@
  *                                completes the work at hand, `is-quiet`
  *                                for one that only steps back
  *   .station-handbook__utility   a small icon-only command (Refresh)
- *   .station-handbook__chip      a compact stateful selector (a layer)
+ *   .station-handbook__chip      a compact stateful selector (the
+ *                                Changeover Calculator's presets)
  *   .station-handbook__close     the window control, kept quiet
  *
  * Hierarchy is carried by surface, weight and space: a primary action is
@@ -457,10 +459,8 @@
  * -------------------------------------------------------------------
  * A row of actions across the top; under it the saved list on the left
  * and the selected recipe's blend on the right, each scrolling on its own
- * inside the bench the frame gives them. While Blend Edit is on, the
- * actions give way to the mode's own: which layers are turned over, Edit
- * all, Done. Compact by design - the editing happens on the hoppers
- * above, and this panel is where it is entered and left.
+ * inside the bench the frame gives them. Compact by design: a book to
+ * read from and save to, the same with Blend Edit on as off.
  */
 
 .station-book {
@@ -471,7 +471,7 @@
   min-height: 0;
 }
 
-/* Save Current, Blend Edit, Refresh, and the line's name at the far end.
+/* Save Current, Refresh, and the line's name at the far end.
    Spaced from what follows, not ruled off from it. */
 .station-book__toolbar {
   display: flex;
@@ -574,7 +574,6 @@
    never the heaviest line on the glass. */
 .station-book__list,
 .station-book__detail,
-.station-book__blend,
 .station-totals__list,
 .station-appearance {
   scrollbar-width: thin;
@@ -706,86 +705,6 @@
 .station-book__hopper-pct {
   color: var(--station-text-muted);
   font-variant-numeric: tabular-nums;
-}
-
-/* ---- Blend Edit's controls ----
- * The mode's controller, not another editor: three lines at the top of
- * the bench - what the mode is doing, the layers, the actions - nearest
- * the cards it speaks for. The rest of the bench stays clear; the frame
- * is the same one the Recipe Book fills. */
-
-.station-book__blend {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: var(--station-space-3);
-  min-height: 0;
-  padding: var(--station-space-3) var(--station-space-4);
-  overflow-y: auto;
-}
-
-.station-book__blend[hidden] {
-  display: none;
-}
-
-/* One short line of state, and the longer explanation behind an
-   information mark beside it - a note, on the tab order, that says its
-   piece on hover and to a reader, and takes no room on the bench. */
-.station-book__blend-status {
-  display: flex;
-  align-items: center;
-  gap: var(--station-space-2);
-}
-
-.station-book__blend-hint {
-  margin: 0;
-  color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
-  line-height: var(--station-line-tight);
-}
-
-.station-book__blend-info {
-  display: inline-flex;
-  flex: none;
-  border-radius: 50%;
-  color: var(--station-text-faint);
-  cursor: help;
-}
-
-.station-book__blend-info:hover {
-  color: var(--station-text);
-}
-
-/* The layers: a label and a row of chips, reading "Layers  A B C D E". */
-.station-book__layers {
-  display: flex;
-  align-items: center;
-  gap: var(--station-space-3);
-}
-
-.station-book__layers-label {
-  color: var(--station-text-faint);
-  font-size: var(--station-text-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.station-book__layer-chips {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--station-space-1);
-}
-
-/* Edit all and Show all together; Done at the far end, on its own. */
-.station-book__blend-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--station-space-2);
-}
-
-.station-book__blend-actions .station-handbook__action.is-primary {
-  margin-left: auto;
 }
 
 /* ---------------------------------------------------------------------

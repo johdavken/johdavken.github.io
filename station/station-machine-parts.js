@@ -884,7 +884,13 @@
        * (station-transition.js) can carry each between layouts without
        * measuring anything the drawing did not already decide. Canvas units. */
       "data-object-cluster": box(bank.objects.cluster),
-      "data-object-train": box(bank.objects.train)
+      "data-object-train": box(bank.objects.train),
+      /* The footprint the bank's upper half takes whichever face is
+       * showing: the card's box, which is the cluster's column widened to
+       * the bank (blendCardBox). What stands beside the bank - the machine
+       * rail (station-machine-rail.js) - keeps its distance from this, so
+       * it neither crowds a card nor drifts from the hoppers. */
+      "data-object-card": box(blendCardBox(bank))
     });
     /* The one inline value besides the hopper's fill fraction, and for the
      * same reason: it is a number from the layout, not a design decision.

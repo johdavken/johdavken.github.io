@@ -402,7 +402,7 @@ test("the frame is sized from the stage's tokens alone - a definite height, no m
   // The bench clips; a section with more than fits scrolls within itself.
   assert.match(rule(".station-handbook__body"), /overflow: hidden;/);
   assert.match(rule(".station-handbook__section"), /overflow: hidden;/);
-  for (const own of [".station-book__list", ".station-book__detail", ".station-book__blend"]) {
+  for (const own of [".station-book__list", ".station-book__detail"]) {
     assert.match(rule(own), /overflow-y: auto;/, `${own} does not scroll on its own`);
   }
   // No section rule sets a height the frame would have to meet.

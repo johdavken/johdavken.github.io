@@ -3,9 +3,8 @@
  * WHAT IT IS
  *
  * The saved recipes of the production line this desktop is on, as a
- * compact list; the blend of whichever one is selected; Save Current, to
- * add the running recipe to them; and the way into Blend Edit, with the
- * mode's own controls while it is on. That is all of it. Loading a saved
+ * compact list; the blend of whichever one is selected; and Save Current,
+ * to add the running recipe to them. That is all of it. Loading a saved
  * recipe onto the line is not here yet: selecting one shows it and
  * changes nothing.
  *
@@ -24,15 +23,14 @@
  * same way. Nothing here knows what a recipe payload looks like on the
  * wire, where it is stored, or how a name is normalized there.
  *
- * BLEND EDIT
+ * BLEND EDIT IS NOT HERE
  *
- * A mode of the stage, not of this panel: while it is on, each layer's
- * hopper cluster can be turned over to a compact blend editor in its own
- * footprint (station.js, station-machine-parts.js). This section is where
- * the mode is entered and left, and where the operator sees which layers
- * are turned over and can turn them all. The editing itself happens on
- * the hoppers above; the controls here go through the surface the boot
- * file handed in (`context.blend`) and hold nothing of their own.
+ * Blend Edit - the stage's mode under which each layer's hopper cluster
+ * turns over to a compact blend editor - is switched on and off from the
+ * machine utility rail beside the far-right cluster
+ * (station-machine-rail.js), not from this book. The two are independent:
+ * the book opens, lists and previews saved recipes exactly the same with
+ * the mode on, and nothing the book does enters or leaves it.
  *
  * WHAT IT HOLDS
  *
@@ -105,21 +103,15 @@
     return node;
   }
 
-  /* The two glyphs this section draws, 16 by 16, stroked in the current
-   * colour by the stylesheet (handbook.css) so they follow the control
-   * they sit in: a refresh arrow, and an information mark. */
-  function glyph(doc, kind) {
+  /* The one glyph this section draws, 16 by 16, stroked in the current
+   * colour by the stylesheet (handbook.css) so it follows the control it
+   * sits in: a refresh arrow. */
+  function glyph(doc) {
     const svg = svgNode(doc, "svg", "station-handbook__glyph", {
       viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false"
     });
-    if (kind === "refresh") {
-      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.2 8.6 A 5.2 5.2 0 1 1 11.9 4.3" }));
-      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.4 2.6 L 13.4 5.8 L 10.2 5.8" }));
-    } else {
-      svg.appendChild(svgNode(doc, "circle", "station-handbook__glyph-stroke", { cx: 8, cy: 8, r: 6.4 }));
-      svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 8 7.2 L 8 11.4" }));
-      svg.appendChild(svgNode(doc, "circle", "station-handbook__glyph-fill", { cx: 8, cy: 4.9, r: 0.9 }));
-    }
+    svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.2 8.6 A 5.2 5.2 0 1 1 11.9 4.3" }));
+    svg.appendChild(svgNode(doc, "path", "station-handbook__glyph-stroke", { d: "M 13.4 2.6 L 13.4 5.8 L 10.2 5.8" }));
     return svg;
   }
 
@@ -178,16 +170,12 @@
    * @param {object} context
    * @param {object|null} context.recipes   the recipes bridge (getBook,
    *        subscribe, isConnected, request). Handed in, never reached for.
-   * @param {object|null} context.blend     Blend Edit's surface, from the
-   *        boot file: { available(), isActive(), layers(), enter(), exit(),
-   *        flip(id, on), flipAll(on) }
    * @param {object} [context.lineModel]    for hopper naming; defaults to
    *        the line model module
    */
   function create(doc, context) {
     const settings = context || {};
     const recipes = settings.recipes || null;
-    const blend = settings.blend || null;
     const lineModel = settings.lineModel || lineModelModule;
 
     const state = {
@@ -202,17 +190,16 @@
     const rootEl = element(doc, "div", "station-book", { "data-role": "recipe-book" });
 
     /* ---- Toolbar ----
-     * Save Current leads; Blend Edit is the other command; Refresh is a
-     * utility, an icon that says what it is on hover and to a reader. */
+     * Save Current leads; Refresh is a utility, an icon that says what it
+     * is on hover and to a reader. */
     const toolbar = element(doc, "div", "station-book__toolbar");
     const saveButton = text(doc, "button", PRIMARY, "Save Current", { type: "button", "data-action": "save-current" });
-    const blendButton = text(doc, "button", ACTION, "Blend Edit", { type: "button", "data-action": "blend-edit" });
     const refreshButton = element(doc, "button", "station-handbook__utility", {
       type: "button", "data-action": "refresh", "aria-label": "Refresh", title: "Refresh the line's saved recipes"
     });
-    refreshButton.appendChild(glyph(doc, "refresh"));
+    refreshButton.appendChild(glyph(doc));
     const contextLabel = element(doc, "span", "station-book__context");
-    toolbar.appendChild(saveButton); toolbar.appendChild(blendButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
+    toolbar.appendChild(saveButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
     rootEl.appendChild(toolbar);
 
     /* ---- Save Current: the name, asked for in place ---- */
@@ -237,33 +224,6 @@
     columns.appendChild(list); columns.appendChild(detail);
     rootEl.appendChild(columns);
 
-    /* ---- Blend Edit's controls ----
-     * One line of state with the longer explanation behind an information
-     * mark; the layers as a row of chips; then the actions, Done leading.
-     * Show all hoppers is a step back, not a completion, and is drawn as
-     * one. */
-    const blendPanel = element(doc, "div", "station-book__blend", { hidden: "", "data-role": "blend-controls" });
-    const blendStatus = element(doc, "div", "station-book__blend-status");
-    const blendHint = text(doc, "p", "station-book__blend-hint", "");
-    const blendInfo = element(doc, "span", "station-book__blend-info", {
-      tabindex: "0", role: "note",
-      "aria-label": "About Blend Edit: turn a layer over here to edit its blend in place; its share stays editable in its header. The hoppers stay where they are; Done turns them back.",
-      title: "Turn a layer over here to edit its blend in place; its share stays editable in its header. The hoppers stay where they are; Done turns them back."
-    });
-    blendInfo.appendChild(glyph(doc, "info"));
-    blendStatus.appendChild(blendHint); blendStatus.appendChild(blendInfo);
-    const layerRow = element(doc, "div", "station-book__layers", { role: "group", "aria-label": "Layers in Blend Edit" });
-    layerRow.appendChild(text(doc, "span", "station-book__layers-label", "Layers"));
-    const layerChips = element(doc, "span", "station-book__layer-chips");
-    layerRow.appendChild(layerChips);
-    const blendActions = element(doc, "div", "station-book__blend-actions");
-    const editAllButton = text(doc, "button", ACTION, "Edit all layers", { type: "button", "data-action": "edit-all" });
-    const showAllButton = text(doc, "button", QUIET, "Show all hoppers", { type: "button", "data-action": "show-all" });
-    const doneButton = text(doc, "button", PRIMARY, "Done", { type: "button", "data-action": "done" });
-    blendActions.appendChild(editAllButton); blendActions.appendChild(showAllButton); blendActions.appendChild(doneButton);
-    blendPanel.appendChild(blendStatus); blendPanel.appendChild(layerRow); blendPanel.appendChild(blendActions);
-    rootEl.appendChild(blendPanel);
-
     /* ---- Reading ---- */
 
     function connected() {
@@ -272,10 +232,6 @@
 
     function book() {
       return recipes && typeof recipes.getBook === "function" ? recipes.getBook() : null;
-    }
-
-    function blendActive() {
-      return !!(blend && typeof blend.isActive === "function" && blend.isActive());
     }
 
     function say(message, kind) {
@@ -357,35 +313,6 @@
       return "";
     }
 
-    function drawBlend() {
-      const active = blendActive();
-      show(blendPanel, active);
-      show(columns, !active);
-      show(toolbar, !active);
-      show(entry, !active && state.entryOpen);
-      if (!active) return;
-      clearChildren(layerChips);
-      const layers = blend && typeof blend.layers === "function" ? blend.layers() : [];
-      for (const layer of layers) {
-        // The chip is the letter; its state is the chip's own fill, said in
-        // words by the title and aria-pressed.
-        const chip = text(doc, "button", "station-handbook__chip station-book__layer-chip", layer.id, {
-          type: "button", "data-layer": layer.id, "aria-pressed": layer.flipped ? "true" : "false",
-          "aria-label": `Layer ${layer.id}`,
-          title: layer.flipped ? `Layer ${layer.id}: editing its blend in place; click to show its hoppers` : `Layer ${layer.id}: click to edit its blend in place`
-        });
-        layerChips.appendChild(chip);
-      }
-      const flipped = layers.filter(layer => layer.flipped).length;
-      blendHint.textContent = blend && typeof blend.available === "function" && !blend.available()
-        ? "Blend Edit is read-only here: no application is connected to Station commands. Turn a layer over to see its blend as a list."
-        : (flipped
-          ? `${flipped} of ${layers.length} layer${layers.length === 1 ? "" : "s"} turned over. Changes apply to the running recipe as they are made.`
-          : "Select layers to edit their blends in place.");
-      editAllButton.disabled = flipped === layers.length;
-      showAllButton.disabled = flipped === 0;
-    }
-
     function refresh() {
       const current = book();
       const on = connected();
@@ -405,18 +332,14 @@
       refreshButton.setAttribute("aria-label", refreshing ? "Refreshing…" : "Refresh");
       refreshButton.setAttribute("title", refreshing ? "Refreshing the line's saved recipes…" : "Refresh the line's saved recipes");
       refreshButton.classList.toggle("is-busy", refreshing);
-      blendButton.disabled = !(blend && typeof blend.enter === "function" && (typeof blend.canEnter !== "function" || blend.canEnter()));
-      blendButton.setAttribute("title", blendButton.disabled
-        ? "Blend Edit needs a line with layers on the stage."
-        : "Turn the layers on the stage over to edit their blends in place.");
       confirmButton.disabled = !!state.pending;
       replaceButton.disabled = !!state.pending;
       show(replaceButton, !!state.duplicate);
+      show(entry, state.entryOpen);
       // A selection that is no longer in the book is dropped, not kept as a ghost.
       if (state.selectedId && !selected(current)) state.selectedId = null;
       drawList(current);
       drawDetail(current);
-      drawBlend();
     }
 
     /* ---- Actions ---- */
@@ -516,7 +439,7 @@
     }
 
     rootEl.addEventListener("click", event => {
-      const target = event.target && event.target.closest ? event.target.closest("[data-action], [data-recipe], [data-layer]") : null;
+      const target = event.target && event.target.closest ? event.target.closest("[data-action], [data-recipe]") : null;
       if (!target) return;
       const recipeId = target.getAttribute("data-recipe");
       if (recipeId) {
@@ -531,15 +454,6 @@
       if (action === "replace") { void replaceExisting(); return; }
       if (action === "cancel-save") { closeEntry(); return; }
       if (action === "refresh") { void refreshBook(); return; }
-      if (action === "blend-edit") { if (blend && typeof blend.enter === "function") blend.enter(); refresh(); return; }
-      if (action === "edit-all") { if (blend && typeof blend.flipAll === "function") blend.flipAll(true); refresh(); return; }
-      if (action === "show-all") { if (blend && typeof blend.flipAll === "function") blend.flipAll(false); refresh(); return; }
-      if (action === "done") { if (blend && typeof blend.exit === "function") blend.exit(); refresh(); return; }
-      const layerId = target.getAttribute("data-layer");
-      if (layerId && blendActive() && blend && typeof blend.flip === "function") {
-        blend.flip(layerId, target.getAttribute("aria-pressed") !== "true");
-        refresh();
-      }
     });
     nameInput.addEventListener("keydown", event => {
       if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); void confirmSave(); }
@@ -552,7 +466,7 @@
       element: rootEl,
       update: refresh,
       focus() {
-        const target = state.entryOpen ? nameInput : (blendActive() ? doneButton : saveButton);
+        const target = state.entryOpen ? nameInput : saveButton;
         if (target && typeof target.focus === "function" && !target.disabled) target.focus();
       },
       confirmSave,

@@ -70,12 +70,14 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   assert.match(committed, /onPublish\(\{ own: true \}\);/);
   // Nothing else: no patching of its own, no second render path, no note.
   assert.doesNotMatch(committed, /patchStage|renderAll|editorHandle|mountStage|note\(/);
-  // And the boot file writes lastOwnRevision there, and in the four other
+  // And the boot file writes lastOwnRevision there, and in the other
   // places a command's answer arrives - a cluster control's toggle, the
   // header's job controls' onCommitted, a Blend Edit card's onCommitted
-  // (the same editor, compact), and the layer share editor's onCommitted
-  // - which run the identical two lines.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 7, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted and the Handbook's (Resin Totals' fields) onCommitted");
+  // (the same editor, compact), the layer share editor's onCommitted, and
+  // the rail's Reset Tracking - which run the identical two lines.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 8, "lastOwnRevision is written somewhere other than its declaration, the editor's and the cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted and the rail's resetTracking");
+  const reset = boot.slice(boot.indexOf("function resetTracking() {"), boot.indexOf("\n  }\n", boot.indexOf("function resetTracking() {")));
+  assert.match(reset, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
   const cards = draw.slice(draw.indexOf("const card = focusEditor.create("), draw.indexOf("cardHandles[entry.id] = card;"));
   assert.match(cards, /onCommitted: result => \{\n\s+lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\n\s+onPublish\(\{ own: true \}\);/);
   assert.match(cards, /variant: "compact",/);

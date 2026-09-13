@@ -50,6 +50,8 @@ const LIFTED = [
   block("    const RECIPE_HISTORY_LIMIT = 40;", "    /* The plan's own percentage totals"),
   block("    function plannedRecipePayload(){", "\n    }\n"),
   block("    function hookupRecipePositions(){", "    function renderResultsFlat("),
+  block("    function hasTrackedHoppers(){", "\n    }\n"),
+  block("    function clearAllTracking(){", "\n    }\n"),
   block("  function createStationCommandExecutor(){", "\n  }\n")
 ].join("\n");
 
@@ -166,7 +168,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -899,6 +901,70 @@ test("setPumpOff sets the Current hopper's flag as the Timeline's I/O toggle doe
   assert.equal(h.hopper("current", "A", 0).pumpOff, true, "untracking leaves pump-off standing, as the grid's button does (only Reset tracking clears both)");
 });
 
+test("resetTracking is the toolbar's Reset tracking as one command: every hopper of the running job untracked and its pump marked running, through the tracking toggle's tail, synced at once as reset-tracking, no history", () => {
+  const h = boot();
+  h.hopper("current", "B", 1).track = true;
+  h.hopper("current", "C", 0).pumpOff = true;
+  h.hopper("current", "C", 0).track = false;
+  const revision = h.stationBridge.getRevision();
+  const before = JSON.parse(h.stateJson());
+  const result = h.dispatch("resetTracking", { recipe: "current" });
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.persisted, true);
+  for (const layer of h.state.layers) {
+    for (const hopper of layer.hoppers) {
+      assert.equal(hopper.track, false, `${layer.name} hopper ${hopper.index} still tracked`);
+      assert.equal(hopper.pumpOff, false, `${layer.name} hopper ${hopper.index} still pumped off`);
+    }
+  }
+  // The two flags and nothing else: resins, shares, weights and sources
+  // are byte-identical.
+  const after = JSON.parse(h.stateJson());
+  const strip = layers => layers.map(L => Object.assign({}, L, { hoppers: L.hoppers.map(({ track, pumpOff, ...rest }) => rest) }));
+  assert.deepEqual(strip(after.state.layers), strip(before.state.layers));
+  assert.deepEqual(after.state.hookupSources, before.state.hookupSources);
+  assert.deepEqual(h.log.validates, [{ sync: true, immediate: true, kind: "reset-tracking" }]);
+  assert.deepEqual(h.log.notified, [{ immediate: true, kind: "reset-tracking" }]);
+  assert.equal(h.log.renders, 1, "the grid is rebuilt, as for a tracking toggle: its tracked cells live there");
+  assert.equal(h.log.hookupRenders, 0);
+  assert.equal(h.log.saves, 2);
+  assert.ok(h.stationBridge.getRevision() > revision, "the bridge published");
+  assert.equal(result.snapshot, h.stationBridge.getSnapshot());
+  assert.ok(result.snapshot.layers.every(L => L.hoppers.every(hopper => !hopper.track && !hopper.pumpOff)));
+  assert.equal(h.recipeEditHistory.current.undo.length, 0, "runtime state: nothing to undo");
+  assert.equal(h.dispatch("undo", { recipe: "current" }).code, "nothing_to_undo");
+});
+
+test("resetTracking with nothing tracked and no pump off is a no-op, and it refuses the Next recipe at the contract and the executor", () => {
+  const h = boot();
+  for (const layer of h.state.layers) for (const hopper of layer.hoppers) { hopper.track = false; hopper.pumpOff = false; }
+  const before = h.stateJson();
+  const revision = h.stationBridge.getRevision();
+  const result = h.dispatch("resetTracking", { recipe: "current" });
+  assert.deepEqual([result.ok, result.changed, result.persisted], [true, false, false]);
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+  assert.deepEqual(h.log.notified, []);
+  assert.equal(h.stationBridge.getRevision(), revision);
+  h.hopper("current", "A", 0).track = true;
+  const viaBridge = h.dispatch("resetTracking", { recipe: "next" });
+  assert.equal(viaBridge.code, "bad_argument");
+  assert.equal(viaBridge.field, "recipe");
+  const direct = h.executor.execute("resetTracking", { recipe: "next" });
+  assert.equal(direct.code, "bad_argument");
+  assert.equal(direct.field, "recipe");
+  assert.equal(h.hopper("current", "A", 0).track, true, "a refused reset touched nothing");
+  assert.equal(h.working(), null, "no Next working copy was created");
+  // And the two refusals every mutating command shares.
+  h.setRearranging(true);
+  assert.equal(h.dispatch("resetTracking", { recipe: "current" }).code, "rearranging");
+  h.setRearranging(false);
+  h.setApplyingRemote(true);
+  assert.equal(h.dispatch("resetTracking", { recipe: "current" }).code, "busy");
+  assert.equal(h.hopper("current", "A", 0).track, true);
+});
+
 test("stating the flag a hopper already has is a no-op: no mutation, no save, no publish, no notification", () => {
   const h = boot();
   const before = h.stateJson();
@@ -951,15 +1017,28 @@ test("the runtime commands refuse an unknown layer or hopper with nothing touche
 test("the executor's runtime cases mirror the floor UI's own toggles: the same kinds, immediate, and no history recorded", () => {
   const executor = block("  function createStationCommandExecutor(){", "\n  }\n");
   const tracking = executor.slice(executor.indexOf("setHopperTracking(args){"), executor.indexOf("setPumpOff(args){"));
-  const pump = executor.slice(executor.indexOf("setPumpOff(args){"), executor.indexOf("undo(args){"));
+  const pump = executor.slice(executor.indexOf("setPumpOff(args){"), executor.indexOf("resetTracking(args){"));
+  const reset = executor.slice(executor.indexOf("resetTracking(args){"), executor.indexOf("undo(args){"));
   assert.match(tracking, /at\.hopper\.track = args\.track;/);
   assert.match(tracking, /commit\(\{ sync: true, immediate: true, kind: "tracking" \}\)/);
   assert.match(pump, /at\.hopper\.pumpOff = args\.pumpOff;/);
   assert.match(pump, /commit\(\{ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false \}\)/);
-  for (const source of [tracking, pump]) {
+  for (const source of [tracking, pump, reset]) {
     assert.doesNotMatch(source, /snapshotRecipeEdit|recordRecipeEdit/, "runtime state was forced into recipe history");
     assert.match(source, /args\.recipe !== "current"/);
   }
+  // The reset is the toolbar's own mutation, not a second one: the same
+  // clearAllTracking the legacy button calls, behind the same guard, and
+  // no loop over the hoppers of its own.
+  assert.match(reset, /if \(!hasTrackedHoppers\(\)\) return unchanged\(\);/);
+  assert.match(reset, /clearAllTracking\(\);/);
+  assert.match(reset, /commit\(\{ sync: true, immediate: true, kind: "reset-tracking" \}\)/);
+  assert.doesNotMatch(reset, /forEach|\.track = |\.pumpOff = /);
+  const legacyReset = block("    function resetTracking(){", "\n    }\n");
+  assert.match(legacyReset, /if \(!hasTrackedHoppers\(\)\) return;/);
+  assert.match(legacyReset, /clearAllTracking\(\);/);
+  assert.match(legacyReset, /notifyActiveJobMutation\(\{ immediate: true, kind: "reset-tracking" \}\);/);
+  assert.doesNotMatch(legacyReset, /forEach/, "the toolbar's reset loops over no hoppers of its own either");
   // The legacy paths these adapt: the grid's toggleTracking and the
   // Timeline's pump toggle, with the same kinds and no history.
   const legacyTracking = block("          function toggleTracking(){", "\n          }\n");

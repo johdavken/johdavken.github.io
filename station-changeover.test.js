@@ -698,10 +698,12 @@ test("booted: the Handbook and the calculator stand open together; closing eithe
   input(s.field("lineSpeed"), "77");
   s.launcher.click();
   assert.ok(s.calcOpen() && s.handbookOpen(), "both open");
-  // Blend Edit on in the Handbook, with the calculator open.
-  s.q(".station-handbook__panel [data-action='blend-edit']").click();
+  // Blend Edit on from the machine rail, with the calculator and the
+  // Handbook both open.
+  s.q("[data-role='machine-rail'] [data-action='blend-edit']").click();
   assert.equal(s.machine.getAttribute("data-blend-edit"), "true");
   assert.ok(s.calcOpen(), "entering Blend Edit did not touch the calculator");
+  assert.ok(s.handbookOpen(), "nor the Handbook");
   assert.equal(s.field("lineSpeed").value, "77");
   s.panel.querySelector("[data-action='close-changeover']").click();
   assert.ok(!s.calcOpen() && s.handbookOpen(), "closing the calculator left the Handbook open");
@@ -710,8 +712,11 @@ test("booted: the Handbook and the calculator stand open together; closing eithe
   assert.equal(s.field("lineSpeed").value, "77", "the answers survived the close");
   s.q(".station-handbook__panel [data-action='close-handbook']").click();
   assert.ok(s.calcOpen() && !s.handbookOpen(), "closing the Handbook left the calculator open");
-  assert.equal(s.machine.getAttribute("data-blend-edit"), null, "Blend Edit ended with the Handbook, as before");
+  assert.equal(s.machine.getAttribute("data-blend-edit"), "true", "Blend Edit is the rail's, not the Handbook's: closing the Handbook leaves it on");
   assert.equal(s.field("lineSpeed").value, "77");
+  s.q("[data-role='machine-rail'] [data-action='blend-edit']").click();
+  assert.equal(s.machine.getAttribute("data-blend-edit"), null, "the rail's second click ends it, with the calculator still open");
+  assert.ok(s.calcOpen());
   assert.deepEqual(s.calls, []);
 });
 

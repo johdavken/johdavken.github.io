@@ -809,17 +809,16 @@ test("booted: the clock pass moves the mark; pump-off takes it away; untracking 
   // Tracked again: overdue again, at once.
   s.control("C1", "tracking").click();
   assert.deepEqual(s.overdue(), ["C1"]);
-  // Blend Edit turns layer C over: the cluster is hidden whole, the
-  // hopper and its mark stand under the card, and come back as they went.
-  s.doc.querySelector(".station-handbook__launcher").click();
-  s.doc.querySelector("[data-action='blend-edit']").click();
-  const chip = s.doc.querySelectorAll(".station-book__layer-chip").find(n => n.getAttribute("data-layer") === "C");
-  chip.click();
+  // Blend Edit (the machine rail's switch) turns every layer over: the
+  // cluster is hidden whole, the hopper and its mark stand under the
+  // card, and come back as they went.
+  const blendSwitch = s.doc.querySelector("[data-role='machine-rail'] [data-action='blend-edit']");
+  blendSwitch.click();
   const layerC = s.machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === "C");
   assert.ok(layerC.classList.contains("is-flipped"));
   assert.ok(s.hopper("C1").classList.contains("is-overdue"), "the mark stands on the hidden cluster");
   assert.equal(layerC.querySelectorAll(".station-blend-card .station-hopper__rundown").length, 0, "the card draws no flow of its own");
-  s.doc.querySelector("[data-action='done']").click();
+  blendSwitch.click();
   assert.ok(!s.machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === "C").classList.contains("is-flipped"));
   assert.deepEqual(s.overdue(), ["C1"]);
 });
@@ -834,7 +833,7 @@ test("the boot file writes the marks from the timeline's projection and nothing 
   // feed, the clock pass.
   assert.match(source, /onTick: \(\) => \{[^}]*applyRundownMarks\(\);/);
   assert.match(source, /if \(changeoverPanel\) changeoverPanel\.update\(inputs\);\s*applyRundownMarks\(\);/);
-  assert.match(source, /applyRundownMarks\(\);\s*return svg;/);
+  assert.match(source, /applyRundownMarks\(\);(?:\s*\/\/[^\n]*)*\s*if \(!focusLayer\) placeRail\(\);\s*return svg;/);
   for (const pattern of [/setInterval/, /requestAnimationFrame/]) assert.doesNotMatch(source, pattern);
   // The renderer derives no deadline and keeps no clock.
   const renderer = read("station/station-render.js").replace(/\/\*[\s\S]*?\*\//g, "");

@@ -144,6 +144,21 @@
   pointer-events: none;
 }
 
+/* The machine utility rail's slot: the same cell a third time, for the
+ * short stack of controls that stands beside the far-right hopper
+ * cluster (machine-rail.css). Under the Handbook's and the utility
+ * surfaces' slots in the stack - a surface laid across the stage covers
+ * the rail, never the other way round - and above the machine only. Inert
+ * to the pointer itself; the rail takes it back for its own box. */
+.station-rail-slot {
+  grid-area: machine;
+  position: relative;
+  z-index: 4;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
 /* The timeline's row: the component inside sets its own height; the row
  * only frames it against the stage above and the status bar below. */
 .station-timeline {

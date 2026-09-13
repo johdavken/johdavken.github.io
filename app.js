@@ -7679,22 +7679,34 @@
       area.replaceChildren(board);
     }
 
-    function resetTracking(){
-      const hasTracked = state.layers.some(L =>
-      L.hoppers.some(h => h.track || h.pumpOff)
-      );
+    /* Whether any hopper of the running job carries tracking state to
+     * reset: tracked, or its pump marked off. The one question both the
+     * toolbar's Reset tracking and the Station executor's resetTracking
+     * ask before touching anything. */
+    function hasTrackedHoppers(){
+      return state.layers.some(L => L.hoppers.some(h => h.track || h.pumpOff));
+    }
 
-      if (!hasTracked) return;
-
-      const ok = confirm("Untrack all hoppers and clear their Pump off status?");
-      if (!ok) return;
-
+    /* The reset itself: every hopper untracked and its pump marked running.
+     * The mutation only - no confirmation, no render, no save - so the two
+     * callers share one definition of what a reset is and differ only in
+     * how they ask and how they redraw. */
+    function clearAllTracking(){
       state.layers.forEach(L => {
         L.hoppers.forEach(h => {
           h.track = false;
           h.pumpOff = false;
         });
       });
+    }
+
+    function resetTracking(){
+      if (!hasTrackedHoppers()) return;
+
+      const ok = confirm("Untrack all hoppers and clear their Pump off status?");
+      if (!ok) return;
+
+      clearAllTracking();
 
       rebuildUIFromState();
       saveSession();
@@ -9892,6 +9904,25 @@
         if (!!at.hopper.pumpOff === args.pumpOff) return unchanged();
         at.hopper.pumpOff = args.pumpOff;
         const persisted = commit({ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false });
+        return done(true, persisted);
+      },
+
+      /* The toolbar's Reset tracking (resetTracking above), less its
+       * confirm(): the same clearAllTracking - every hopper of the running
+       * job untracked and its pump marked running - then the tracking
+       * toggle's own tail (the grid rebuilt, since it shows tracked cells;
+       * validateAndCompute redrawing the Timeline rows; saved), synced at
+       * once under the toolbar's own "reset-tracking" kind. Station asks
+       * for its confirmation on its own surface, so none is asked here. No
+       * history entry: tracking is runtime state, not recipe state. With
+       * nothing tracked and no pump off the command is a no-op, as the
+       * toolbar's button returns before asking. Current only, as every
+       * runtime command is. */
+      resetTracking(args){
+        if (args.recipe !== "current") return contract.failure("bad_argument", { field: "recipe", message: "Tracking belongs to the running job, not to the planned recipe." });
+        if (!hasTrackedHoppers()) return unchanged();
+        clearAllTracking();
+        const persisted = commit({ sync: true, immediate: true, kind: "reset-tracking" });
         return done(true, persisted);
       },
 

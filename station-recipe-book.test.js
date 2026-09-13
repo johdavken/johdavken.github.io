@@ -139,26 +139,9 @@ function producer(overrides) {
 }
 
 /* A Blend Edit surface that records what it was asked. */
-function blendSurface(layers) {
-  const state = { active: false, flipped: new Set(), calls: [] };
-  return {
-    state,
-    surface: {
-      available: () => true,
-      canEnter: () => true,
-      isActive: () => state.active,
-      layers: () => layers.map(id => ({ id, roleLabel: "Layer", flipped: state.flipped.has(id) })),
-      enter() { state.calls.push(["enter"]); state.active = true; state.flipped.clear(); return true; },
-      exit() { state.calls.push(["exit"]); state.active = false; state.flipped.clear(); return true; },
-      flip(id, on) { state.calls.push(["flip", id, on]); if (on) state.flipped.add(id); else state.flipped.delete(id); return true; },
-      flipAll(on) { state.calls.push(["flipAll", on]); state.flipped = new Set(on ? layers : []); return true; }
-    }
-  };
-}
-
-function build(env, blend) {
+function build(env, extra) {
   const doc = fakeDocument();
-  const book = bookModule.create(doc, { recipes: env ? env.bridge : null, blend: blend ? blend.surface : null });
+  const book = bookModule.create(doc, Object.assign({ recipes: env ? env.bridge : null }, extra || {}));
   return { doc, book, root: book.element };
 }
 
@@ -355,79 +338,45 @@ test("Refresh is one request, and its failure is said", async () => {
 });
 
 /* ----------------------------------------------------------------------
- *   Blend Edit's controls
+ *   Blend Edit is not the book's
  * -------------------------------------------------------------------- */
 
-test("Blend Edit is entered by its own button and not by opening the book or selecting a recipe", () => {
+test("the book carries no Blend Edit control and no page for the mode: the toolbar is Save Current, Refresh and the line, whatever a context hands it", () => {
   const env = producer();
-  const blend = blendSurface(["A", "B", "C"]);
-  const { root, book } = build(env, blend);
+  // A context that still names a blend surface (an older boot file) changes
+  // nothing: the book neither reads it nor draws for it.
+  const calls = [];
+  const stale = { isActive() { calls.push("isActive"); return true; }, enter() { calls.push("enter"); }, layers() { calls.push("layers"); return []; } };
+  const { root, book } = build(env, { blend: stale });
   book.update();
-  click(rows(root)[0]);
-  assert.deepEqual(blend.state.calls, [], "browsing entered Blend Edit");
-  assert.ok(hidden(root.querySelector("[data-role='blend-controls']")));
-  click(byAction(root, "blend-edit"));
-  assert.deepEqual(blend.state.calls, [["enter"]]);
-  assert.ok(!hidden(root.querySelector("[data-role='blend-controls']")));
-  assert.ok(hidden(root.querySelector(".station-book__toolbar")), "the toolbar gives way to the mode's controls");
-  assert.ok(hidden(root.querySelector(".station-book__columns")));
-});
-
-test("the mode's controls show which layers are turned over, turn one or all, and Done leaves - all through the surface, nothing kept here", () => {
-  const env = producer();
-  const blend = blendSurface(["A", "B", "C"]);
-  const { root, book } = build(env, blend);
-  click(byAction(root, "blend-edit"));
-  const chips = () => root.querySelectorAll(".station-book__layer-chip");
-  assert.deepEqual(chips().map(chip => [chip.getAttribute("data-layer"), chip.getAttribute("aria-pressed")]), [["A", "false"], ["B", "false"], ["C", "false"]]);
-  assert.match(root.querySelector(".station-book__blend-hint").textContent, /Select layers to edit their blends in place/);
-  // The longer explanation is behind the information mark, on the tab
-  // order, not on the bench.
-  const info = root.querySelector(".station-book__blend-info");
-  assert.equal(info.getAttribute("tabindex"), "0");
-  assert.match(info.getAttribute("title"), /Turn a layer over here to edit its blend in place; its share stays editable in its header/);
-  assert.match(info.getAttribute("aria-label"), /Done turns them back/);
-  assert.equal(byAction(root, "show-all").disabled, true);
-  assert.equal(byAction(root, "edit-all").disabled, false);
-  click(chips()[1]);
-  assert.deepEqual(blend.state.calls.slice(1), [["flip", "B", true]]);
-  assert.deepEqual(chips().map(chip => chip.getAttribute("aria-pressed")), ["false", "true", "false"]);
-  assert.match(root.querySelector(".station-book__blend-hint").textContent, /1 of 3 layers turned over/);
-  click(byAction(root, "edit-all"));
-  assert.deepEqual(blend.state.calls.slice(2), [["flipAll", true]]);
-  assert.deepEqual(chips().map(chip => chip.getAttribute("aria-pressed")), ["true", "true", "true"]);
-  assert.equal(byAction(root, "edit-all").disabled, true);
-  click(chips()[0]);
-  assert.deepEqual(blend.state.calls.slice(3), [["flip", "A", false]]);
-  click(byAction(root, "show-all"));
-  assert.deepEqual(blend.state.calls.slice(4), [["flipAll", false]]);
-  click(byAction(root, "done"));
-  assert.deepEqual(blend.state.calls.slice(5), [["exit"]]);
-  assert.ok(hidden(root.querySelector("[data-role='blend-controls']")));
+  assert.deepEqual(root.querySelectorAll("[data-action]").map(node => node.getAttribute("data-action")),
+    ["save-current", "refresh", "confirm-save", "replace", "cancel-save"]);
+  assert.equal(root.querySelector("[data-role='blend-controls']"), null);
+  assert.equal(root.querySelectorAll(".station-book__layer-chip").length, 0);
+  assert.equal(root.querySelector(".station-book__blend"), null);
+  assert.deepEqual(calls, [], "the book asked the surface nothing");
+  assert.doesNotMatch(root.textContent, /Blend Edit|Edit all|Show all hoppers|Done/);
+  // The list and the toolbar are showing, the way they always are.
   assert.ok(!hidden(root.querySelector(".station-book__toolbar")));
-  // The surface is the only record: a section rebuilt from the same
-  // surface shows the same chips, and the book's own state knows no layer.
-  assert.deepEqual(Object.keys(book.getState()).sort(), ["duplicate", "entryOpen", "note", "noteKind", "pending", "selectedId"]);
-  // The mode is the stage's: told from outside, the section follows.
-  blend.surface.enter();
-  book.update();
-  assert.ok(!hidden(root.querySelector("[data-role='blend-controls']")));
+  assert.ok(!hidden(root.querySelector(".station-book__columns")));
+  click(rows(root)[0]);
+  assert.equal(root.querySelector(".station-book__detail-name").textContent, "Clear film");
+  // Nor does the source know the mode: no surface, no flip, no exit.
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "station/station-recipe-book.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(source, /\bblend\.\w|flipAll|flipLayer|exitBlendEdit|enterBlendEdit|blend-controls|blend-edit|isActive/);
 });
 
-test("without a Blend Edit surface, or a line to edit, the button is disabled and says so", () => {
+test("the name entry opens and closes on its own, with nothing else on the bench giving way", () => {
   const env = producer();
-  const none = build(env, null);
-  assert.equal(byAction(none.root, "blend-edit").disabled, true);
-  const blend = blendSurface([]);
-  blend.surface.canEnter = () => false;
-  const empty = build(env, blend);
-  assert.equal(byAction(empty.root, "blend-edit").disabled, true);
-  assert.match(byAction(empty.root, "blend-edit").getAttribute("title"), /needs a line with layers/);
-  const readOnly = blendSurface(["A"]);
-  readOnly.surface.available = () => false;
-  const ro = build(env, readOnly);
-  click(byAction(ro.root, "blend-edit"));
-  assert.match(ro.root.querySelector(".station-book__blend-hint").textContent, /read-only here/);
+  const { root } = build(env);
+  const entry = root.querySelector(".station-book__entry");
+  assert.ok(hidden(entry));
+  click(byAction(root, "save-current"));
+  assert.ok(!hidden(entry));
+  assert.ok(!hidden(root.querySelector(".station-book__columns")), "the list stays");
+  assert.ok(!hidden(root.querySelector(".station-book__toolbar")), "the toolbar stays");
+  click(byAction(root, "cancel-save"));
+  assert.ok(hidden(entry));
 });
 
 test("the section is what the Handbook takes: an id, a title and a builder, with no state of its own outside create()", () => {

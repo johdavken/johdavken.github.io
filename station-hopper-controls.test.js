@@ -117,12 +117,37 @@ test("with no bridge, an unconnected bridge, or a bridge without the command, th
   assert.equal(controls.toggle(bridge, {}).code, "unavailable");
 });
 
+test("Reset Tracking is one resetTracking addressed to Current, on offer only when the producer declared it, and unavailable otherwise", () => {
+  const { bridge, calls } = connectedBridge([...contract.COMMANDS]);
+  assert.equal(controls.RESET_COMMAND, "resetTracking");
+  assert.equal(controls.canReset(bridge, "current"), true);
+  assert.equal(controls.canReset(bridge, "next"), false, "the plan carries no tracking");
+  const result = controls.resetTracking(bridge);
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [{ command: "resetTracking", args: { recipe: "current" } }]);
+  // Not on offer: an unconnected bridge, no bridge, or a producer without
+  // the command - and the reason says which.
+  assert.equal(controls.canReset(commandBridge.create(), "current"), false);
+  assert.equal(controls.canReset(null, "current"), false);
+  assert.match(controls.resetReason(null, "current"), /no application is connected/);
+  assert.match(controls.resetReason(bridge, "next"), /running job/);
+  const { bridge: without, calls: none } = connectedBridge(["setHopperTracking", "setPumpOff"]);
+  assert.equal(controls.canReset(without, "current"), false);
+  assert.match(controls.resetReason(without, "current"), /does not offer a tracking reset/);
+  assert.equal(controls.resetTracking(without).code, "unavailable");
+  assert.equal(none.length, 0, "nothing reached the executor");
+  assert.deepEqual(controls.resetTracking(null), { ok: false, code: "unavailable", message: "No application is connected to Station commands." });
+  // The reset is not a hopper control: abilities() and CONTROLS are what they were.
+  assert.deepEqual([...controls.CONTROLS], ["tracking", "pump"]);
+  assert.deepEqual(controls.abilities(bridge, "current"), { tracking: true, pump: true });
+});
+
 test("the module is pure: no DOM, no state, no timers, no reach for the global bridges", () => {
   const source = fs.readFileSync(path.join(ROOT, "station/station-hopper-controls.js"), "utf8");
   for (const pattern of [/\bdocument\b/, /\bwindow\b/, /localStorage/, /setTimeout|requestAnimationFrame/, /PolynStationCommandBridge\s*\./, /PolynStationStateBridge/, /\.connect\s*\(/, /\.publish\s*\(/, /saveSession|notifyActiveJobMutation/]) {
     assert.doesNotMatch(source, pattern, `the module reaches outside itself (${pattern})`);
   }
-  assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 1, "one call on the bridge");
+  assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 2, "two calls on the bridge: a hopper's toggle, and the reset over all of them");
 });
 
 /* ----------------------------------------------------------------------

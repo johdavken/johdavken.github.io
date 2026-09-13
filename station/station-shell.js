@@ -33,9 +33,10 @@
    *
    * Four regions and nothing else: the header (with the job controls' slot
    * and the line console's slot), the machine stage, the run-down timeline
-   * across the foot of the workspace, and the status bar - plus two slots
-   * that are not regions: the Operator Handbook's, and the utility
-   * surfaces', both laid over the stage's own cell (see below). The earlier side
+   * across the foot of the workspace, and the status bar - plus three slots
+   * that are not regions: the Operator Handbook's, the utility surfaces'
+   * and the machine utility rail's, all laid over the stage's own cell
+   * (see below). The earlier side
    * columns - a demo-configuration list on the left, an inspector on the
    * right - and the Current / Next recipe strip under the stage were taken
    * out (2026-09-12) so the stage has the whole width: configuration
@@ -44,7 +45,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility"]);
+  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility", "rail"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -157,6 +158,16 @@
      * together without meeting. The same rule as the Handbook's slot:
      * laid over the stage, no track, inert to the pointer itself. */
     shell.appendChild(element(doc, "div", "station-utility-slot", { "data-station-mount": "utility" }));
+
+    /* The machine utility rail's slot (station-machine-rail.js): the
+     * short stack of controls that stands at the outer edge of the
+     * far-right hopper cluster - Blend Edit and Reset Tracking. The same
+     * cell again, under the two slots above in the stack, so a surface
+     * laid across the stage covers the rail rather than meeting it; the
+     * rail itself is placed by script against the drawn cluster, and
+     * reserves no track and moves nothing. Inert to the pointer itself,
+     * like the others. */
+    shell.appendChild(element(doc, "div", "station-rail-slot", { "data-station-mount": "rail" }));
 
     /* The run-down timeline's row: no heading, no card - the timeline
      * itself (station-rundown-timeline.js) begins with its Now anchor. */

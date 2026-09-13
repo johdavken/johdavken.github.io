@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -296,8 +296,8 @@ test("isResult recognizes exactly the two shapes", () => {
  *   Step 10: the runtime commands - tracking and pump-off
  * -------------------------------------------------------------------- */
 
-test("the two runtime commands are declared, take a boolean flag, and are addressable to the Current recipe only", () => {
-  assert.deepEqual([...contract.RUNTIME_COMMANDS], ["setHopperTracking", "setPumpOff"]);
+test("the runtime commands are declared, the two toggles take a boolean flag, and all are addressable to the Current recipe only", () => {
+  assert.deepEqual([...contract.RUNTIME_COMMANDS], ["setHopperTracking", "setPumpOff", "resetTracking"]);
   assert.ok(Object.isFrozen(contract.RUNTIME_COMMANDS));
   assert.deepEqual([...contract.ARGUMENTS.setHopperTracking], ["recipe", "layer", "index", "track"]);
   assert.deepEqual([...contract.ARGUMENTS.setPumpOff], ["recipe", "layer", "index", "pumpOff"]);
@@ -317,6 +317,21 @@ test("the two runtime commands are declared, take a boolean flag, and are addres
     assert.equal(refused.field, "recipe");
     assert.match(refused.message, /running job/);
   }
+});
+
+test("resetTracking names the running job and nothing else: no position, no flag, Current only", () => {
+  assert.deepEqual([...contract.ARGUMENTS.resetTracking], ["recipe"]);
+  const request = contract.normalizeArguments("resetTracking", { recipe: "current", layer: "B", index: 1, track: false });
+  assert.deepEqual(request, { ok: true, command: "resetTracking", args: { recipe: "current" } }, "a position handed along is dropped: the command is the job's");
+  assert.ok(Object.isFrozen(request.args));
+  const refused = contract.normalizeArguments("resetTracking", { recipe: "next" });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.code, "bad_argument");
+  assert.equal(refused.field, "recipe");
+  assert.match(refused.message, /running job/);
+  const unnamed = contract.normalizeArguments("resetTracking", {});
+  assert.equal(unnamed.ok, false, "the recipe is named, never defaulted");
+  assert.equal(unnamed.field, "recipe");
 });
 
 test("a runtime flag is a boolean and nothing else: no strings, numbers or absence", () => {
