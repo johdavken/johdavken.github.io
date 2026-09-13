@@ -1,8 +1,17 @@
 /* The Station job controls: the running job's two line-wide settings, as
- * two compact readouts in the header.
+ * one ribbon in the header.
  *
- *   OUTPUT 850 lb/hr     the line's output, edited in place
- *   CHANGEOVER 3:28 AM   the changeover deadline, edited in place
+ *   ( Output ⟩ ~ 850 lb/hr ⟩⟩⟩⟩ Changeover ⟩⟩ ◷ 3:28 AM ⟩  in 2h 26m
+ *
+ * A powerline: eight segments, each notched to take the point of the one
+ * before it and pointed into the one after, rounded at its head and ending
+ * in the point that serves as the ribbon's own `>`. The line's output is
+ * the first two (its name, then a tilde and the figure); three empty
+ * slivers of colour lead to the changeover's name, one more to its clock
+ * time, and past the last point, in plain text outside the ribbon, how far
+ * off it is. Each segment's colour is the theme's (--station-ribbon-1 …
+ * --station-ribbon-8, job-controls.css); this file draws the shape and
+ * says nothing about colour.
  *
  * They are the machine status the header carries beside Station's name;
  * visually subordinate to the line console beside them and to the stage
@@ -26,15 +35,23 @@
  * parseChangeoverDate - turns it into the instant, so what Station asks
  * for is what the floor UI's field would have stored.
  *
- * THE CHANGEOVER READOUT IS A LAUNCHER
+ * EDITING IN PLACE
  *
- * Given `onChangeover`, a click on the CHANGEOVER readout does not open
- * a field in the header: it opens the Changeover Calculator (station-
- * changeover.js), the surface where the deadline is edited and estimated,
- * and the readout stays as it is - the calculator's closed form. The
- * calculator sets the deadline back through this module's `apply`, so
- * setChangeover is still issued from here and nowhere else. Without a
- * launcher (a page without the calculator) the readout keeps its field.
+ * The output is edited where it is read: a click on either of its
+ * segments opens a field in the figure's segment - the name stays as the
+ * ribbon's head - and Enter, Escape or leaving the field settle it. The
+ * changeover has the same field, in its clock segment, on a page without
+ * the calculator.
+ *
+ * THE CHANGEOVER IS A LAUNCHER
+ *
+ * Given `onChangeover`, a click anywhere on the changeover - its name,
+ * its clock, or the time remaining after the ribbon - does not open a
+ * field: it opens the Changeover Calculator (station-changeover.js), the
+ * surface where the deadline is edited and estimated, and the readout
+ * stays as it is - the calculator's closed form. The calculator sets the
+ * deadline back through this module's `apply`, so setChangeover is still
+ * issued from here and nowhere else.
  */
 (function (root, factory) {
   const rundown = typeof require === "function"
@@ -51,6 +68,14 @@
 
   const COMMAND = Object.freeze({ output: "setLineRate", changeover: "setChangeover" });
   const LABEL = Object.freeze({ output: "Output", changeover: "Changeover" });
+  /* The ribbon's eight segments, in order: which each readout's name and
+   * figure take, and which are the bare slivers between them. The colours
+   * are the theme's, by this number (job-controls.css). */
+  const SEGMENT = Object.freeze({
+    output: Object.freeze({ key: 1, value: 2 }),
+    slivers: Object.freeze([3, 4, 5]),
+    changeover: Object.freeze({ key: 6, sliver: 7, value: 8 })
+  });
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -91,14 +116,18 @@
     return rate > 0 ? `${rate.toLocaleString([], { maximumFractionDigits: 2 })} lb/hr` : "Not set";
   }
 
-  /** The changeover as the header states it, at `now`. */
+  /** The changeover as the header states it, at `now`: `clock` for the
+   * ribbon's last segment, `tail` for the plain text past its point (how
+   * far off, or `confirm` for a deadline old enough to be yesterday's),
+   * and `text` the two as one line, for anything that wants a sentence. */
   function changeoverText(job, now, rundown) {
     const resolved = rundown.resolveChangeover(job, { now });
-    if (resolved.at === null) return { text: "Not set", stale: false, set: false };
+    if (resolved.at === null) return { text: "Not set", clock: "Not set", tail: "", stale: false, set: false };
     const clock = rundown.formatClock(resolved.at);
-    if (resolved.stale) return { text: `${clock} · confirm`, stale: true, set: true };
+    if (resolved.stale) return { text: `${clock} · confirm`, clock, tail: "confirm", stale: true, set: true };
     const remaining = resolved.at - now;
-    return { text: `${clock} · in ${rundown.formatRemaining(remaining)}`, stale: false, set: true };
+    const tail = `in ${rundown.formatRemaining(remaining)}`;
+    return { text: `${clock} · ${tail}`, clock, tail, stale: false, set: true };
   }
 
   /* "HH:MM" from an instant, for the time field's value. */
@@ -137,27 +166,53 @@
       note: ""
     };
 
-    const rootEl = element(doc, "div", "station-job", { role: "group", "aria-label": "Job settings" });
+    const rootEl = element(doc, "div", "station-job station-ribbon", { role: "group", "aria-label": "Job settings" });
 
-    function item(field, unit, inputAttributes) {
+    /* One segment of the ribbon: its place in the run of colour, and its
+     * part - the name, the figure, or a bare sliver. */
+    function segment(seg, role, className) {
+      return element(doc, "span", `station-ribbon__seg${className ? ` ${className}` : ""}`, { "data-seg": String(seg), "data-role": role });
+    }
+
+    function sliver(seg) {
+      return segment(seg, "sliver", "station-ribbon__sliver");
+    }
+
+    /* A readout: the trigger holding its segments, and the field that
+     * takes the figure's segment while it is being edited. The changeover
+     * carries one sliver between its name and its clock, and the time
+     * remaining after the clock, outside the ribbon. */
+    function item(field, segs, unit, inputAttributes) {
       const wrap = element(doc, "div", "station-job__item", { "data-field": field });
       const trigger = element(doc, "button", "station-job__trigger", { type: "button", "data-field": field });
-      trigger.appendChild(text(doc, "span", "station-job__key", LABEL[field]));
-      trigger.appendChild(text(doc, "span", "station-job__value", "Not set"));
-      const editor = element(doc, "div", "station-job__editor", { hidden: "" });
+      const key = segment(segs.key, "key", "station-job__key");
+      key.textContent = LABEL[field];
+      trigger.appendChild(key);
+      if (segs.sliver) trigger.appendChild(sliver(segs.sliver));
+      const figure = segment(segs.value, "value");
+      if (field === "output") figure.appendChild(text(doc, "span", "station-ribbon__tilde", "~", { "aria-hidden": "true" }));
+      else figure.appendChild(element(doc, "span", "station-ribbon__clock", { "aria-hidden": "true" }));
+      figure.appendChild(text(doc, "span", "station-job__value", "Not set"));
+      trigger.appendChild(figure);
+      let remaining = null;
+      if (field === "changeover") {
+        remaining = element(doc, "span", "station-job__remaining");
+        trigger.appendChild(remaining);
+      }
+      const editor = element(doc, "div", "station-job__editor station-ribbon__seg", { hidden: "", "data-seg": String(segs.value), "data-role": "editor" });
       const input = element(doc, "input", "station-job__input", Object.assign({
         "aria-label": field === "output" ? "Line output, pounds per hour" : "Changeover time"
       }, inputAttributes));
       editor.appendChild(input);
       if (unit) editor.appendChild(text(doc, "span", "station-job__unit", unit));
       wrap.append(trigger, editor);
-      return { wrap, trigger, editor, input, value: trigger.querySelector(".station-job__value") };
+      return { wrap, trigger, editor, input, remaining, value: trigger.querySelector(".station-job__value") };
     }
 
-    const output = item("output", "lb/hr", { type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false" });
-    const changeover = item("changeover", "", { type: "time" });
+    const output = item("output", SEGMENT.output, "lb/hr", { type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false" });
+    const changeover = item("changeover", SEGMENT.changeover, "", { type: "time" });
     const fields = { output, changeover };
-    rootEl.append(output.wrap, changeover.wrap);
+    rootEl.append(output.wrap, ...SEGMENT.slivers.map(sliver), changeover.wrap);
 
     const note = element(doc, "p", "station-job__note", { role: "status", hidden: "" });
     rootEl.appendChild(note);
@@ -177,7 +232,9 @@
       output.value.textContent = outputText(job);
       output.wrap.classList.toggle("is-unset", !(job && job.lineRate > 0));
       const co = changeoverText(job, t, rundown);
-      changeover.value.textContent = co.text;
+      changeover.value.textContent = co.clock;
+      changeover.remaining.textContent = co.tail;
+      show(changeover.remaining, !!co.tail);
       changeover.wrap.classList.toggle("is-unset", !co.set);
       changeover.wrap.classList.toggle("is-stale", co.stale);
       const commands = commandsFor();
@@ -364,5 +421,5 @@
     };
   }
 
-  return Object.freeze({ COMMAND, LABEL, able, outputText, changeoverText, clockValue, create });
+  return Object.freeze({ COMMAND, LABEL, SEGMENT, able, outputText, changeoverText, clockValue, create });
 });

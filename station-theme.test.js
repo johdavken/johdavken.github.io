@@ -248,6 +248,22 @@ test("theme text and semantic status colours meet normal-text contrast against t
   }
 });
 
+test("the header ribbon's four text segments read against their own fills in every theme, and every theme names all eight stops", () => {
+  for (const id of theme.THEME_IDS) {
+    const css = fs.readFileSync(path.join(ROOT, "station/styles/themes", `${id}.css`), "utf8");
+    const colours = Object.fromEntries(
+      [...css.matchAll(/--station-([a-z0-9-]+)\s*:\s*(#[0-9a-f]{6})/gi)].map(match => [match[1], match[2]])
+    );
+    for (let n = 1; n <= 8; n += 1) assert.match(colours[`ribbon-${n}`] || "", /^#[0-9a-f]{6}$/i, `${id} names no stop ${n}`);
+    for (const n of [1, 2, 6, 8]) {
+      assert.ok(contrastRatio(colours[`ribbon-ink-${n}`], colours[`ribbon-${n}`]) >= 4.5, `${id} ribbon ink ${n} is below 4.5:1 on its fill`);
+    }
+    // No two adjacent text-bearing or sliver stops are the same colour:
+    // the run is a ramp, not a band.
+    for (let n = 1; n < 8; n += 1) assert.notEqual(colours[`ribbon-${n}`], colours[`ribbon-${n + 1}`], `${id} stops ${n} and ${n + 1} are the same`);
+  }
+});
+
 test("the technical pair draws the grid and the schematic; the other four draw neither", () => {
   const read = id => fs.readFileSync(path.join(ROOT, "station/styles/themes", `${id}.css`), "utf8");
   const token = (css, name) => (css.match(new RegExp(`--station-${name}:\\s*([^;]+);`)) || [])[1];

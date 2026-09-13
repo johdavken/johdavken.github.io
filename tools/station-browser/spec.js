@@ -182,11 +182,12 @@ async function run(browserName) {
         console: !!document.querySelector("[data-station-mount='connection'] *")
       };
     });
-    /* The Handbook's slot lies over the stage's cell (shell.css: grid-area
-     * machine, pointer-events none), so it is a child of the shell without
-     * being a region of it. */
+    /* The Handbook's, the utility surfaces' and the machine rail's slots
+     * lie over the stage's cell (shell.css: grid-area machine,
+     * pointer-events none), so they are children of the shell without
+     * being regions of it. */
     check(browserName, `${tag} the shell is header, stage, run-down timeline and status bar across the full width - no side pane, no recipe strip, no spare track`,
-      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-utility-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
+      frame.columns === 1 && frame.regions.join() === "station-header,station-machine,station-handbook-slot,station-utility-slot,station-rail-slot,station-timeline,station-status" && frame.panes === 0 && frame.headerFull && frame.machineFull && frame.timelineFull && frame.statusFull && frame.stageWide && frame.console, frame);
 
     /* The header: Station's name, the way back, the two job readouts and
      * the line console - one row, no badge, no scale. Legacy is a plain
@@ -199,7 +200,26 @@ async function run(browserName) {
       const ls = legacy.getBoundingClientRect(), title = header.querySelector(".station-header__title").getBoundingClientRect();
       const keys = [...header.querySelectorAll(".station-job__key")].map(k => k.textContent);
       const values = [...header.querySelectorAll(".station-job__value")].map(v => v.textContent);
+      /* The ribbon: eight segments in one row at one height, each after
+       * the first overlapping the one before it by the point's depth, the
+       * head rounded, the slivers bare, and the tail past the last point. */
+      const segs = [...header.querySelectorAll(".station-ribbon__seg")].filter(s => s.getAttribute("data-role") !== "editor");
+      const boxes = segs.map(s => s.getBoundingClientRect());
+      const point = parseFloat(getComputedStyle(segs[0]).getPropertyValue("--station-ribbon-point"));
+      const tail = header.querySelector(".station-job__remaining");
+      const ribbon = {
+        segs: segs.map(s => s.getAttribute("data-seg")).join(),
+        oneHeight: boxes.every(b => Math.abs(b.height - boxes[0].height) < 0.5) && boxes[0].height === parseFloat(getComputedStyle(segs[0]).getPropertyValue("--station-ribbon-height")),
+        overlap: boxes.slice(1).every((b, i) => Math.abs(boxes[i].right - b.x - point) < 0.5),
+        clipped: segs.every(s => getComputedStyle(s).clipPath.startsWith("polygon(")),
+        roundedHead: parseFloat(getComputedStyle(segs[0]).borderTopLeftRadius) === boxes[0].height / 2 && getComputedStyle(segs[1]).borderTopLeftRadius === "0px",
+        fills: segs.map(s => getComputedStyle(s).backgroundColor),
+        bareSlivers: segs.filter(s => s.getAttribute("data-role") === "sliver").every(s => s.textContent === "" && s.children.length === 0),
+        /* With no changeover set there is no tail to place: it is hidden. */
+        tail: tail ? { text: tail.textContent, hidden: tail.hidden, afterRibbon: tail.hidden || tail.getBoundingClientRect().x >= boxes[7].right, plain: getComputedStyle(tail).backgroundColor === "rgba(0, 0, 0, 0)", inLauncher: !!tail.closest(".station-job__trigger[data-field='changeover']") } : null
+      };
       return {
+        ribbon,
         text: header.textContent, badge: !!header.querySelector(".station-header__tag, .pill, .badge"),
         scaleInHeader: !!header.querySelector("[data-window], .station-job__scale, .station-job__window"),
         legacy: legacy && legacy.tagName === "A" && legacy.textContent === "Legacy" ? legacy.getAttribute("href") : null,
@@ -213,6 +233,9 @@ async function run(browserName) {
       !/experimental/i.test(chrome.text) && !chrome.badge && !chrome.scaleInHeader && chrome.keys.join() === "Output,Changeover" && /lb\/hr/.test(chrome.values[0]) && /Not set|PM|AM/.test(chrome.values[1]) && chrome.headerHeight === 52 && chrome.oneRow, chrome);
     check(browserName, `${tag} Legacy is a quiet link beside the name to the application without the Station flag`,
       chrome.legacy === "/" && chrome.legacyQuiet && chrome.legacyBesideName, chrome);
+    check(browserName, `${tag} the readouts are one ribbon: eight chevron segments in a row, each overlapping the point before it, a rounded head, eight fills, bare slivers, and the time remaining in plain text past the last point`,
+      chrome.ribbon.segs === "1,2,3,4,5,6,7,8" && chrome.ribbon.oneHeight && chrome.ribbon.overlap && chrome.ribbon.clipped && chrome.ribbon.roundedHead && chrome.ribbon.bareSlivers
+        && new Set(chrome.ribbon.fills).size === 8 && chrome.ribbon.tail && (chrome.ribbon.tail.hidden ? chrome.ribbon.tail.text === "" : /^in \d+h \d+m$|^in \d+m$|^confirm$/.test(chrome.ribbon.tail.text)) && chrome.ribbon.tail.afterRibbon && chrome.ribbon.tail.plain && chrome.ribbon.tail.inLauncher, chrome.ribbon);
 
     /* Station's picture: a 32px rounded face immediately left of the name,
      * inside the header's row and clear of everything else in it; pressed,
@@ -378,7 +401,7 @@ async function run(browserName) {
         width: p ? p.width : null, height: p ? p.height : null, clipped: body.scrollHeight > body.clientHeight + 1,
         handbookOpen: !!hb && hb.width > 0, gap: hb && p ? hb.y - p.bottom : null,
         glass: cs ? [cs.backdropFilter || cs.webkitBackdropFilter, cs.backgroundColor] : null,
-        readout: document.querySelectorAll(".station-job__value")[1].textContent,
+        readout: `${document.querySelectorAll(".station-job__value")[1].textContent} · ${document.querySelector(".station-job__remaining").textContent}`,
         app: window.PolynStationStateBridge.getSnapshot().job.changeoverTime,
         legacy: document.getElementById("changeoverTime") ? document.getElementById("changeoverTime").value : null,
         estimate: document.querySelector(".station-changeover__result-time").textContent, ready: document.querySelector(".station-changeover__result").classList.contains("is-ready"),
@@ -482,15 +505,15 @@ async function run(browserName) {
     await page.mouse.move(5, 5);
     const restingOverdue = await page.evaluate(sel => { const h = document.querySelector(sel); const cs = getComputedStyle(h.querySelector(".station-hopper__shell")); return { fill: cs.fill, stroke: cs.stroke }; }, hopperSel("A", "A1"));
     check(browserName, `${tag} hovering an overdue hopper lifts its outline and keeps its wash`, hoveredOverdue.overdue && hoveredOverdue.fill === restingOverdue.fill && hoveredOverdue.stroke !== restingOverdue.stroke, { hoveredOverdue, restingOverdue });
-    // Blend Edit turns layer A over and back: the marks are where they were.
-    await page.click(".station-handbook__launcher"); await page.waitForTimeout(450);
-    await page.click(".station-handbook__panel [data-action='blend-edit']"); await page.waitForTimeout(100);
-    await page.click(".station-book__layer-chip[data-layer='A']"); await page.waitForTimeout(250);
-    const flipped = await page.evaluate(() => ({ flipped: !!document.querySelector("[data-role='layer'][data-layer='A'].is-flipped"), card: !!document.querySelector("[data-role='layer'][data-layer='A'] .station-blend-card"), cardFlows: document.querySelectorAll(".station-blend-card .station-hopper__rundown").length, clusterHidden: getComputedStyle(document.querySelector("[data-role='layer'][data-layer='A'] .station-hopper-cluster")).display === "none" }));
-    await page.click(".station-handbook__panel [data-action='done']"); await page.waitForTimeout(250);
-    await page.click(".station-handbook__panel [data-action='close-handbook']"); await page.waitForTimeout(450);
+    // Blend Edit - the machine rail's switch, beside the far-right bank -
+    // turns every layer over; the switch again turns them back, and the
+    // marks are where they were.
+    await page.click(".station-rail [data-action='blend-edit']"); await page.waitForTimeout(250);
+    const flipped = await page.evaluate(() => ({ pressed: document.querySelector(".station-rail [data-action='blend-edit']").getAttribute("aria-pressed"), flipped: !!document.querySelector("[data-role='layer'][data-layer='A'].is-flipped"), card: !!document.querySelector("[data-role='layer'][data-layer='A'] .station-blend-card"), cardFlows: document.querySelectorAll(".station-blend-card .station-hopper__rundown").length, clusterHidden: getComputedStyle(document.querySelector("[data-role='layer'][data-layer='A'] .station-hopper-cluster")).display === "none" }));
+    await page.click(".station-rail [data-action='blend-edit']"); await page.waitForTimeout(250);
+    const back = await page.evaluate(() => ({ pressed: document.querySelector(".station-rail [data-action='blend-edit']").getAttribute("aria-pressed"), flipped: document.querySelectorAll("[data-role='layer'].is-flipped").length, cards: document.querySelectorAll(".station-blend-card").length }));
     tv = await trackingState();
-    check(browserName, `${tag} Blend Edit turns the layer over with no flow of the card's own, and back with the marks as they were`, flipped.flipped && flipped.card && flipped.cardFlows === 0 && flipped.clusterHidden && tv.overdue.includes("A1") && tv.agree, { flipped, tv });
+    check(browserName, `${tag} Blend Edit turns the layer over with no flow of the card's own, and back with the marks as they were`, flipped.pressed === "true" && flipped.flipped && flipped.card && flipped.cardFlows === 0 && flipped.clusterHidden && back.pressed === "false" && back.flipped === 0 && back.cards === 0 && tv.overdue.includes("A1") && tv.agree, { flipped, back, tv });
     // Reduced motion: the flow stands, the marks stay, the calculator opens at once.
     await page.emulateMedia({ reducedMotion: "reduce" }); await page.waitForTimeout(60);
     const reduced = await page.evaluate(() => ({

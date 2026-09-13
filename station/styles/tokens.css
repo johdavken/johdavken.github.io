@@ -134,6 +134,15 @@
   --station-handbook-max-height: 400px;
   --station-handbook-clearance: 96px;
 
+  /* ---- Header ribbon ----
+   * The job readouts' powerline (job-controls.css): one row's height,
+   * the depth of each segment's point - half the height, so the point is
+   * a right angle - and the band of colour a bare sliver shows between
+   * its notch and its point. Colour is the theme's (--station-ribbon-*). */
+  --station-ribbon-height: 22px;
+  --station-ribbon-point: 11px;
+  --station-ribbon-sliver: 5px;
+
   /* ---- Changeover Calculator ----
    * The utility surface that opens out of the header's CHANGEOVER
    * readout: a smaller, fixed-capacity box centred under the header

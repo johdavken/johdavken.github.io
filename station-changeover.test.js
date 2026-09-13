@@ -629,7 +629,9 @@ function boot(options) {
     stageKey: () => JSON.stringify(machine.querySelectorAll("[data-role='hopper']").map(h => [h.getAttribute("data-hopper"), h.getAttribute("data-state"), h.getAttribute("class")])),
     field: name => panel.querySelectorAll(".station-changeover__form input[data-field]").find(n => n.getAttribute("data-field") === name),
     chip: (field, value) => panel.querySelectorAll("[data-value]").find(n => n.getAttribute("data-field") === field && n.getAttribute("data-value") === String(value)),
-    value: () => doc.querySelectorAll(".station-job__value")[1].textContent
+    /* The header's changeover as one line: the clock in the ribbon's last
+     * segment, then the tail past its point. */
+    value: () => `${doc.querySelectorAll(".station-job__value")[1].textContent} · ${q(".station-job__remaining").textContent}`
   };
 }
 
