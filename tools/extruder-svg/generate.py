@@ -7,6 +7,24 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'images' / 'extruder'
 OUT.mkdir(parents=True, exist_ok=True)
 
+# The machine's proportion, decided here and nowhere downstream. The model is
+# authored in (x = width, z = length, h = height) and reshaped before it is
+# projected: the cross-section grows a little everywhere, the barrel ahead of
+# the feed flange grows more, and nothing behind the flange changes length.
+# Station places the machine by its feed flange, so a fixed rear keeps the
+# motor end - the outer end of every turned machine - exactly where it was
+# while the die end reaches further in. Feet and readouts follow the feet.
+SECTION_SCALE = 1.15   # x and h, the whole length of the machine
+BARREL_STRETCH = 1.30  # z, only ahead of the feed flange
+BARREL_KNEE_Z = 366    # feed flange front edge: everything behind it keeps its z
+
+
+def shape(p):
+    x, z, h = p
+    if z < BARREL_KNEE_Z:
+        z = BARREL_KNEE_Z - BARREL_STRETCH * (BARREL_KNEE_Z - z)
+    return x * SECTION_SCALE, z, h * SECTION_SCALE
+
 
 def render(angle):
     a, e = math.radians(angle), math.radians(12)
@@ -15,11 +33,13 @@ def render(angle):
     prefix = f'extruder-{angle}'
 
     def project(p):
-        x, z, h = p
+        x, z, h = shape(p)
         return x * ca + z * sa, x * sa * se - z * ca * se - h * ce
 
     def face(points, fill, part, stroke='#454d50', width=.65):
         xy = [project(p) for p in points]
+        # Depth is sorted on the reshaped geometry, like everything drawn.
+        points = [shape(p) for p in points]
         bounds.extend(xy)
         depth = sum(x * sa * ce - z * ca * ce + h * se for x, z, h in points) / len(points)
         d = 'M' + ' L'.join(f'{x:.2f},{y:.2f}' for x, y in xy) + ' Z'
@@ -112,8 +132,9 @@ def render(angle):
             disc(x,-.2,h,2.5,'#7c888c','end-panel-bolt','#232c31')
 
     minx, maxx = min(p[0] for p in bounds)-18, max(p[0] for p in bounds)+18
-    # Shared vertical framing and unit scale across all angles.
-    miny, height = -510, 545
+    # Shared vertical framing and unit scale across all angles, wide enough
+    # for the reshaped machine (motor top near -548, base near +25).
+    miny, height = -565, 610
     width=maxx-minx
     outlet=project((0,-24.6,172))
     defs=f'''<defs>

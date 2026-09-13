@@ -400,6 +400,34 @@ test("neighbouring extruders never overlap, in any layer count or focus state", 
   }
 });
 
+test("the outer extruders stay on the canvas at the narrowest bank, whatever the layer count", () => {
+  /* The motor end is the outer end of every turned machine, and the outer
+   * pair of a five- or seven-layer line is what limits how big the machines
+   * can be. A three-hopper bank is the narrowest a bank gets (bankMinWidth),
+   * so this is the tightest case: the rear reach of the angled view against
+   * the canvas padding. The 2026-09 growth kept that reach fixed and grew
+   * the barrel inward instead - this is what pins it. */
+  for (const layerCount of [1, 3, 5, 7]) {
+    const layout = layoutFor(literal({ layerCount, hopperCount: 3 }));
+    const first = layout.banks[0].extruder.bounds;
+    const last = layout.banks[layout.banks.length - 1].extruder.bounds;
+    assert.ok(first.left >= 0, `${layerCount} layers: left extruder runs off the canvas (${first.left})`);
+    assert.ok(last.right <= layout.width, `${layerCount} layers: right extruder runs off the canvas (${last.right})`);
+  }
+});
+
+test("every view's feet stay above the readout line in the normal row", () => {
+  /* The stage ends at DIMENSIONS.height and the timeline is a separate row
+   * beneath it, so nothing can overlap the timeline; but a machine can run
+   * off the canvas bottom. The feed lands where the mixer's height puts it,
+   * so this is the machine's height against the room under the mixer. */
+  const d = layoutModule.DIMENSIONS;
+  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
+    assert.ok(bank.extruder.bounds.bottom <= d.height - d.extruderLabelGap - 4,
+      `${bank.facing.key}: feet at ${bank.extruder.bounds.bottom} are too low for the canvas`);
+  }
+});
+
 /* ----------------------------------------------------------------------
  *   The equipment train stacks in process order
  * -------------------------------------------------------------------- */

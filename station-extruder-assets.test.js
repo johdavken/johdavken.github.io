@@ -164,6 +164,37 @@ test("every view faces the same way, so mirroring is the renderer's job", () => 
   assert.deepEqual(assets.ORDER.map(v => assets.views[v].yaw), [0, 30, 60]);
 });
 
+test("the scale is fixed, so the masters' proportions reach the stage 1:1", () => {
+  /* The unit is a constant, not a fit: tools/extruder-svg/generate.py decides
+   * the machine's shape and size, and a height fit here would quietly undo a
+   * change made there. MACHINE_HEIGHT is what that unit measures. */
+  assert.equal(assets.UNIT, derive.UNIT);
+  assert.equal(derive.UNIT, 0.2616);
+  assert.equal(derive.derive().machineHeight, assets.MACHINE_HEIGHT);
+});
+
+test("the 2026-09 growth lengthened the barrel and kept the motor end where it was", () => {
+  /* Station places the machine by its feed flange, so the reach from the feed
+   * to the rear (the bounds on the motor side) is what decides where a turned
+   * machine's outer end lands. That reach is pinned to what it was before
+   * the growth; the die-side reach and the height are pinned to have grown. */
+  const { front, intermediate, angled } = assets.views;
+  const within = (value, low, high, what) => assert.ok(value >= low && value <= high, `${what}: ${value} not in [${low}, ${high}]`);
+  // Rear reach: within 1.5 units of the pre-growth 27.47 / 47.7 / 63.25.
+  within(front.bounds.right, 27, 33, "front rear reach");
+  within(intermediate.bounds.right, 47, 52, "intermediate rear reach");
+  within(angled.bounds.right, 62, 66, "angled rear reach");
+  // Motor top: within 3 units of the pre-growth -29.24 / -28.54 / -25.27.
+  within(front.bounds.top, -33, -29, "front motor top");
+  within(intermediate.bounds.top, -32, -28, "intermediate motor top");
+  within(angled.bounds.top, -29, -25, "angled motor top");
+  // Die reach: grown from -54.42 / -94.26.
+  assert.ok(intermediate.outlet.x < -65, `intermediate die reach ${intermediate.outlet.x}`);
+  assert.ok(angled.outlet.x < -115, `angled die reach ${angled.outlet.x}`);
+  // Feed to lowest foot: grown from 96, and still a machine the stage can hold.
+  within(assets.MACHINE_HEIGHT, 110, 114, "front feed-to-foot height");
+});
+
 test("the standalone derivative and the module agree, polygon for polygon", () => {
   for (const view of assets.ORDER) {
     const svg = read(derivedFile(view));

@@ -52,11 +52,15 @@ const VIEWS = [
   { name: "angled", file: "extruder-angled.svg" }
 ];
 
-/* Stage units from the feed anchor down to the lowest foot, in the FRONT
- * view. One scale for all three views - they share a physical scale in the
- * source, and must keep sharing one here or a turned machine would change
- * size as well as direction. */
-const MACHINE_HEIGHT = 96;
+/* Stage units per source unit. One scale for all three views - they share a
+ * physical scale in the source, and must keep sharing one here or a turned
+ * machine would change size as well as direction. FIXED, like the mixer's
+ * UNIT, so a proportion change in the masters (tools/extruder-svg/generate.py
+ * decides the machine's shape and size) reaches the stage 1:1 rather than
+ * being fitted away. At this unit the front machine stood 96 units from
+ * feed anchor to lowest foot before the 2026-09 growth; the measured height
+ * is emitted as MACHINE_HEIGHT for the readers that want it. */
+const UNIT = 0.2616;
 
 /* Existing Station part names stay stable. Additional authored hardware is
  * grouped as detail, with its exact sourcePart retained on every polygon. */
@@ -376,7 +380,7 @@ function standaloneSvg(name, view, rules, sourceFile) {
  *   The renderer's module
  * ---------------------------------------------------------------------- */
 
-function moduleSource(views, unit) {
+function moduleSource(views, unit, machineHeight) {
   const literal = view => [
     `      yaw: ${view.yaw},`,
     `      gradients: ${JSON.stringify(view.gradients)},`,
@@ -429,9 +433,10 @@ ${VIEWS.map(v => `    ${v.name}: {\n${literal(views[v.name])}\n    }`).join(",\n
   return Object.freeze({
     classesFor, styleFor,
     SOURCE: "images/extruder",
-    // Stage units per source unit, and the height that fixed it.
+    // Stage units per source unit, and the front view's feed-to-foot height
+    // that follows from it.
     UNIT: ${round(unit * 10000) / 10000},
-    MACHINE_HEIGHT: ${MACHINE_HEIGHT},
+    MACHINE_HEIGHT: ${machineHeight},
     ORDER: Object.freeze(${JSON.stringify(VIEWS.map(v => v.name))}),
     views: Object.freeze(views)
   });
@@ -450,21 +455,19 @@ function derive() {
   }));
   const adapted = sources.map(s => ({ ...s, adapted: adaptSource(s.parsed, s.file) }));
 
-  // One scale, fixed by the front view.
-  const front = adapted.find(s => s.name === "front");
-  const lowest = Math.max(...front.adapted.polygons.flatMap(p => p.points.map(q => q[1])));
-  const unit = MACHINE_HEIGHT / (lowest - front.adapted.anchor.y);
-
+  const unit = UNIT;
   const views = {};
   for (const s of adapted) views[s.name] = normalise(s.parsed, s.adapted, unit);
+  // The front view's feed-to-foot height, measured rather than imposed.
+  const machineHeight = views.front.bounds.bottom;
 
   const rules = extruderRules(readTokens());
   const files = {};
   for (const s of adapted) {
     files[path.join(ASSET_DIR, s.file)] = standaloneSvg(s.name, views[s.name], rules, s.file);
   }
-  files[MODULE_PATH] = moduleSource(views, unit);
-  return { views, unit, files };
+  files[MODULE_PATH] = moduleSource(views, unit, machineHeight);
+  return { views, unit, machineHeight, files };
 }
 
 function main(argv) {
@@ -492,7 +495,7 @@ function main(argv) {
 }
 
 module.exports = {
-  derive, parseSource, PART_ALIASES, CYLINDERS, MACHINE_HEIGHT, VIEWS, SOURCE_DIR, ASSET_DIR, MODULE_PATH,
+  derive, parseSource, PART_ALIASES, CYLINDERS, UNIT, VIEWS, SOURCE_DIR, ASSET_DIR, MODULE_PATH,
   // Shared with tools/station-mixer/derive.js.
   parsePolygon, readTokens, resolveVars, stationRules, round, centroid, pathData
 };
