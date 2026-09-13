@@ -74,8 +74,10 @@
     "undo",             // { recipe }
     "redo",             // { recipe }
     "setLineRate",      // { lineRate }  the line's output in lb/hr; 0 clears it
-    "setChangeover"     // { at }        the changeover as an absolute epoch-ms
+    "setChangeover",    // { at }        the changeover as an absolute epoch-ms
                         //   timestamp, or null to clear it
+    "setProductionPounds", // { pounds } the job's production resin, lb; 0 clears
+    "setScrapPounds"    // { pounds }    the job's scrap resin, lb; 0 clears
   ]);
 
   /* The two runtime commands. Tracking and pump-off are operational state
@@ -94,7 +96,10 @@
    * the application keeps it as the clock time it already stores and
    * synchronizes, and derives that from the instant; a later producer (the
    * Changeover Calculator) states the same kind of value. */
-  const JOB_COMMANDS = Object.freeze(["setLineRate", "setChangeover"]);
+  /* Production and scrap pounds are the same kind of value: Resin Totals'
+   * two figures, entered for the job as a whole (the application's
+   * #prodResinLb / #scrapResinLb fields), stated in pounds, 0 clearing. */
+  const JOB_COMMANDS = Object.freeze(["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
 
   const RECIPES = Object.freeze(["current", "next"]);
 
@@ -110,7 +115,9 @@
     undo: Object.freeze(["recipe"]),
     redo: Object.freeze(["recipe"]),
     setLineRate: Object.freeze(["lineRate"]),
-    setChangeover: Object.freeze(["at"])
+    setChangeover: Object.freeze(["at"]),
+    setProductionPounds: Object.freeze(["pounds"]),
+    setScrapPounds: Object.freeze(["pounds"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -320,6 +327,20 @@
     return { ok: true, value: number };
   }
 
+  /* A number of pounds, as the Resin Totals fields read one: a number, or
+   * a string with a thousands separator; never negative; 0 is "not
+   * entered". The same reading as the output's. */
+  function normalizePounds(value) {
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value.replace(/,/g, "")) : value;
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      return { ok: false, code: "bad_argument", message: "Enter a number of pounds." };
+    }
+    if (number < 0) {
+      return { ok: false, code: "out_of_range", message: "Pounds cannot be less than 0." };
+    }
+    return { ok: true, value: number };
+  }
+
   /* An absolute instant as epoch milliseconds, or null to clear. Whether
    * the instant is in the past, or further away than the application can
    * store, is the executor's question: it needs the clock. */
@@ -344,7 +365,8 @@
     track: normalizeFlag,
     pumpOff: normalizeFlag,
     lineRate: normalizeRate,
-    at: normalizeTimestamp
+    at: normalizeTimestamp,
+    pounds: normalizePounds
   });
 
   /**

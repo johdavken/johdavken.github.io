@@ -49,7 +49,7 @@
        then the two that wear it: the Operator Handbook (its own rule, on
        the same tokens) and the Changeover Calculator. -->
   <link rel="stylesheet" href="styles/components/glass.css?v=0.1.0">
-  <link rel="stylesheet" href="styles/components/handbook.css?v=0.4.0">
+  <link rel="stylesheet" href="styles/components/handbook.css?v=0.5.1">
   <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/theme-preview.css?v=0.2.0">
   <!-- Development-only review controls (?transition=debug). Harness only. -->
@@ -69,12 +69,15 @@
        arithmetic and device-local records): what the Station Changeover
        Calculator runs. Shared, like scheduling.js. -->
   <script src="../changeover-estimate.js?v=0.1.1" defer></script>
+  <!-- The application's Resin Totals arithmetic as a module: what the
+       Handbook's Resin Totals page runs. Shared, like scheduling.js. -->
+  <script src="../resin-totals.js?v=0.1.0" defer></script>
   <!-- The command contract and command bridge: the write direction's
        vocabulary and transport. Loaded so Station discovers commands the
        same way here as in the application host; nothing connects a producer
        on this page, so every command is answered "unavailable" and Station
        stays read-only. -->
-  <script src="../station-command-contract.js?v=0.4.0" defer></script>
+  <script src="../station-command-contract.js?v=0.5.0" defer></script>
   <script src="../station-command-bridge.js?v=0.1.0" defer></script>
   <!-- The shared resin catalog, for the focused editor's resin search: the
        same list Recipe Setup offers, from the same service. On this page
@@ -85,7 +88,7 @@
   <!-- The read-only state bridge. Loaded so this page runs the same code path
        the application host does; nothing connects to it here, so Station falls
        back to the demo configurations. That is the fallback working. -->
-  <script src="../station-state-bridge.js?v=0.5.0" defer></script>
+  <script src="../station-state-bridge.js?v=0.6.0" defer></script>
   <!-- The line connection bridge: the application's RT Sync state and
        actions as Station may see them. Nothing connects a producer on this
        page, so the line console stays hidden here. -->
@@ -119,11 +122,12 @@
   <!-- The Operator Handbook: the launcher and shell, and its first section,
        the Recipe Book (with Blend Edit's controls). -->
   <script src="station-recipe-book.js?v=0.2.1" defer></script>
+  <script src="station-resin-totals.js?v=0.2.0" defer></script>
   <script src="station-theme-preview.js?v=0.2.0" defer></script>
   <script src="station-appearance.js?v=0.2.0" defer></script>
   <script src="station-handbook.js?v=0.2.0" defer></script>
   <script src="station-demo-lines.js?v=0.3.2" defer></script>
-  <script src="station-source.js?v=0.5.0" defer></script>
+  <script src="station-source.js?v=0.6.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
        and deliberately NOT by station-host.js, so the real application cannot
        reach it. Delete this tag and the file to remove it. -->
@@ -131,7 +135,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.19.0" defer></script>
+  <script src="station.js?v=0.20.1" defer></script>
 </head>
 <body>
 

@@ -94,7 +94,51 @@
     return {
       lineRate: Number.isFinite(job.lineRate) && job.lineRate > 0 ? job.lineRate : 0,
       changeoverTime: typeof job.changeoverTime === "string" ? job.changeoverTime : "",
-      changeoverSetAt: Number.isFinite(job.changeoverSetAt) ? job.changeoverSetAt : null
+      changeoverSetAt: Number.isFinite(job.changeoverSetAt) ? job.changeoverSetAt : null,
+      /* Production and scrap pounds as the bridge carries them (a number,
+       * or the entered string) - passed through untouched, because
+       * resin-totals.js reads them with the application's own clampNum
+       * and a second reading here would be a second interpretation. */
+      prodResinLb: pounds(job.prodResinLb),
+      scrapResinLb: pounds(job.scrapResinLb),
+      /* Scanned lots by resin key, as the bridge projects them. Job state:
+       * a lot belongs to the run, not to the recipe. */
+      lots: lotsFrom(snapshot)
+    };
+  }
+
+  function pounds(value) {
+    if (typeof value === "string") return value;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function lotsFrom(snapshot) {
+    const raw = snapshot && snapshot.lots && typeof snapshot.lots === "object" && !Array.isArray(snapshot.lots)
+      ? snapshot.lots
+      : {};
+    const out = {};
+    for (const key of Object.keys(raw)) if (typeof raw[key] === "string") out[key] = raw[key];
+    return out;
+  }
+
+  /* The recipe as Resin Totals reads it: layers in recipe order, each with
+   * its share and its hoppers' resin and blend. Recipe fields only - the
+   * same three resin-totals.js reads off the application's own state - kept
+   * in the snapshot's order because the totals' display names and the
+   * order of equal rows follow first appearance. Nothing here is a second
+   * copy of hopperState: it is the same values, in the shape the shared
+   * calculation takes. */
+  function recipeFrom(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.layers)) return { layers: [] };
+    return {
+      layers: snapshot.layers.filter(Boolean).map(layer => ({
+        name: String(layer.name || ""),
+        layerPct: Number.isFinite(layer.layerPct) ? layer.layerPct : 0,
+        hoppers: (Array.isArray(layer.hoppers) ? layer.hoppers : []).filter(Boolean).map(hopper => ({
+          pct: Number.isFinite(hopper.pct) ? hopper.pct : 0,
+          resinName: hopper.resinName ? String(hopper.resinName) : ""
+        }))
+      }))
     };
   }
 
@@ -146,6 +190,7 @@
         hopperState: hopperStateFrom(snapshot),
         layerState: layerStateFrom(snapshot),
         job: jobStateFrom(snapshot),
+        recipe: recipeFrom(snapshot),
         revision: typeof snapshot.revision === "number" ? snapshot.revision : null,
         label: snapshot.line && snapshot.line.linked ? "Live" : "Live (no line linked)",
         detail: snapshot.line && snapshot.line.linked
@@ -177,6 +222,7 @@
       layerState: demoSnapshot ? layerStateFrom(demoSnapshot) : {},
       // A demo line runs no job: no output, no changeover, as no tracking.
       job: jobStateFrom(demoSnapshot),
+      recipe: recipeFrom(demoSnapshot),
       revision: null,
       label: mode === MODE_DEMO ? "Demo (pinned)" : "Demo",
       detail: mode === MODE_DEMO
@@ -199,7 +245,8 @@
    *                 The stage must be rendered again.
    *   "values"      only runtime values moved: resin, blend, tracking,
    *                 pump state, source, layer share, a receiver weight,
-   *                 the line's output or changeover. The mounted stage and
+   *                 the line's output or changeover, the job's production,
+   *                 scrap or scanned lots. The mounted stage and
    *                 the editor are patched in place (a hopper whose drawing
    *                 reads nothing new is left alone), and the run-down
    *                 timeline re-projects.
@@ -227,5 +274,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, jobStateFrom, recipeFrom, configFromSnapshot, resolveSource, classifyChange };
 });

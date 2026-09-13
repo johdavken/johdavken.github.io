@@ -575,14 +575,14 @@ test("the header's share is its own click target, ahead of the mode's guard; a t
   assert.ok(positions.every(p => p > -1) && positions.every((p, i) => i === 0 || p > positions[i - 1]), "the click handler's order changed");
 });
 
-test("the Handbook is mounted from the shell's slot with Recipe Book, Appearance, and their narrow surfaces", () => {
+test("the Handbook is mounted from the shell's slot with Recipe Book, Resin Totals, Appearance, and their narrow surfaces", () => {
   const start = boot.slice(boot.indexOf("function start()"));
   const mount = start.slice(start.indexOf("if (handbook && mounts.handbook) {"), start.indexOf("feedJob(current.model, current.resolved);"));
   assert.match(mount, /handbookPanel = handbook\.create\(doc, \{/);
   assert.match(mount, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);/);
   assert.match(mount, /if \(appearance\) handbookSections\.push\(appearance\.section\);/);
   assert.match(mount, /sections: handbookSections,/);
-  assert.match(mount, /recipes,\s+blend: blendSurface,\s+theme: themeController,\s+themes: theme \? theme\.THEMES : \[\]/);
+  assert.match(mount, /recipes,\s+blend: blendSurface,[\s\S]*?theme: themeController,\s+themes: theme \? theme\.THEMES : \[\]/);
   assert.match(mount, /reducedMotion: prefersReducedMotion/);
   assert.match(mount, /mounts\.handbook\.appendChild\(handbookPanel\.element\);/);
   // The surface: the whole of what the book may do to the stage.

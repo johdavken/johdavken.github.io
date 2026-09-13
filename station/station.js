@@ -96,6 +96,11 @@
    * when the shell has its slot. */
   const handbook = root.PolynStationHandbook || null;
   const recipeBook = root.PolynStationRecipeBook || null;
+  /* Resin Totals (station-resin-totals.js), over the application's own
+   * calculation (resin-totals.js, a shared module like scheduling.js): it
+   * reads the resolved job and draws; it computes nothing itself. */
+  const resinTotalsSection = root.PolynStationResinTotals || null;
+  const resinTotals = root.PolynResinTotals || null;
   const appearance = root.PolynStationAppearance || null;
   const themePreview = root.PolynStationThemePreview || null;
   const theme = root.PolynStationTheme || null;
@@ -937,6 +942,9 @@
       renderInspector(model, resolved);
       renderStatus(model, resolved);
       feedJob(model, resolved);
+      // The Handbook's pages read values too (Resin Totals: production,
+      // scrap, lots, the blend) - told the same way the full render tells it.
+      if (handbookPanel) handbookPanel.update();
       return;
     }
 
@@ -1394,12 +1402,27 @@
     if (handbook && mounts.handbook) {
       const handbookSections = [];
       if (recipeBook) handbookSections.push(recipeBook.section);
+      if (resinTotalsSection) handbookSections.push(resinTotalsSection.section);
       if (appearance) handbookSections.push(appearance.section);
       handbookPanel = handbook.create(doc, {
         sections: handbookSections,
         context: {
           recipes,
           blend: blendSurface,
+          /* Resin Totals reads the same resolved state the stage draws
+           * from - through a function, since `current` is replaced on
+           * every render - and the shared calculation to run over it. */
+          resolved: () => current.resolved,
+          resinTotals,
+          /* Its two fields (production and scrap pounds) write through
+           * the same offer and the same publish policy as the header's
+           * job controls: the bridge for what is on screen, and the
+           * answer re-run as the operator's own publish. */
+          commands: () => commandsFor(current.resolved),
+          onCommitted: result => {
+            lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+            onPublish({ own: true });
+          },
           theme: themeController,
           themes: theme ? theme.THEMES : [],
           families: theme ? theme.FAMILIES : [],

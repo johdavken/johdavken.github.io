@@ -21,10 +21,10 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo", "setLineRate", "setChangeover"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
-  assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover"]);
+  assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
   for (const command of contract.COMMANDS) {
     assert.ok(Array.isArray(contract.ARGUMENTS[command]), `${command} declares no arguments`);
     // A recipe command names its recipe first; a job command names no

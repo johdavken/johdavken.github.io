@@ -399,13 +399,13 @@ test("with no bridge the field refuses on its own, as the bridge would, and hand
   assert.equal(handle.isOpen(), true);
 });
 
-test("the module never reaches for the global bridge, holds no recipe state, and is the fourth dispatching file", () => {
+test("the module never reaches for the global bridge, holds no recipe state, and is one of the named dispatching files", () => {
   const source = read("station/station-layer-share.js");
   assert.doesNotMatch(source, /PolynStationCommandBridge|PolynStationStateBridge/);
   assert.doesNotMatch(source, /\.connect\s*\(|\.publish\s*\(|localStorage|fetch\s*\(/);
   assert.match(source, /commands\.dispatch\s*\(COMMAND, \{ recipe: settings\.recipe, layer, pct:/);
   assert.equal((source.match(/commands\.dispatch\s*\(/g) || []).length, 1, "one dispatch, one command");
-  assert.match(read("station-isolation.test.js"), /"station-layer-share\.js"\]/, "the isolation test does not name the module");
+  assert.match(read("station-isolation.test.js"), /"station-layer-share\.js"[,\]]/, "the isolation test does not name the module");
   // Loaded by both hosts, after the hopper controls and before the boot file.
   const host = read("station-host.js");
   const html = read("station/station.html");

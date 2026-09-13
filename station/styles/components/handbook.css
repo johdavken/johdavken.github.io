@@ -1,5 +1,6 @@
 /* The Operator Handbook (station-handbook.js) and its sections: the Recipe
- * Book (station-recipe-book.js) and Appearance (station-appearance.js).
+ * Book (station-recipe-book.js), Resin Totals (station-resin-totals.js) and
+ * Appearance (station-appearance.js).
  *
  * WHERE IT SITS
  *
@@ -574,6 +575,7 @@
 .station-book__list,
 .station-book__detail,
 .station-book__blend,
+.station-totals__list,
 .station-appearance {
   scrollbar-width: thin;
   scrollbar-color: var(--station-handbook-control-border) transparent;
@@ -935,4 +937,318 @@
 
 .station-appearance__tile[aria-checked="true"] .station-appearance__mark {
   visibility: visible;
+}
+
+/* ---------------------------------------------------------------------
+ *   Resin Totals (station-resin-totals.js)
+ * -------------------------------------------------------------------
+ * An end-of-job reading laid out for the bench's width: three figures in
+ * a strip across the top - production, scrap, total - and the materials
+ * in two columns under a hairline. No panels inside the panel: the strip
+ * is words and numbers on the glass, the rule under it is the one line,
+ * and a material is a row, not a card. The frame is the Handbook's; with
+ * more materials than the two columns hold, the list scrolls inside it.
+ */
+.station-totals {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+/* ---- The strip: three readings, evenly across, the total leading ----
+ * Compact and strong: a small spaced label over a large tabular number.
+ * The unit is a quiet word beside the figure, so "lb" does not repeat at
+ * the figure's own size three times. */
+.station-totals__strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 0 0 auto;
+  gap: var(--station-space-4);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-totals__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+  min-width: 0;
+}
+
+.station-totals__stat-label {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The reading: a figure and its unit. For production and scrap it is a
+   button - the figure is the field, opened in place - styled as the figure
+   and nothing more; a hover wash and the pointer say it can be pressed.
+   Under .station-root buttons are reset at (0,1,1), so the control says
+   its own chrome at (0,2,0), as the job controls' do. */
+.station-totals__stat-reading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+}
+
+.station-root .station-totals__stat-reading {
+  margin: 0 calc(-1 * var(--station-space-1));
+  padding: 0 var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  text-align: left;
+}
+
+.station-root .station-totals__stat-reading.is-field:hover {
+  background: var(--station-handbook-control-hover);
+}
+
+.station-root .station-totals__stat-reading.is-field:active {
+  background: var(--station-handbook-control-active);
+}
+
+.station-totals__stat.is-readonly .station-totals__stat-reading {
+  cursor: default;
+}
+
+.station-totals__stat.is-readonly .station-totals__stat-reading:hover {
+  background: transparent;
+}
+
+.station-totals__stat-reading[hidden] {
+  display: none;
+}
+
+/* The editor: the input takes the figure's place at the figure's size, so
+   opening a field moves nothing around it. */
+.station-totals__editor {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+  min-width: 0;
+}
+
+.station-totals__editor[hidden] {
+  display: none;
+}
+
+.station-root .station-totals__input {
+  width: 6.5ch;
+  min-width: 0;
+  padding: 0 var(--station-space-1);
+  border: var(--station-stroke) solid var(--station-handbook-control-border);
+  border-radius: var(--station-radius-sm);
+  background: transparent;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--station-line-tight);
+}
+
+.station-root .station-totals__input[aria-invalid="true"] {
+  border-color: var(--station-danger);
+}
+
+/* What a refused or impossible edit said, under the strip. */
+.station-totals__note {
+  margin: 0;
+  padding: var(--station-space-1) var(--station-space-4) 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+.station-totals__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+.station-totals__note[hidden] {
+  display: none;
+}
+
+.station-totals__stat-value {
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--station-line-tight);
+}
+
+.station-totals__stat[data-stat="total"] .station-totals__stat-value {
+  color: var(--station-accent);
+}
+
+/* Nothing entered yet: the figures stand back. */
+.station-totals__strip[data-empty="true"] .station-totals__stat-value {
+  color: var(--station-text-faint);
+}
+
+.station-totals__stat-unit {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+/* ---- By material ---- */
+.station-totals__materials {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.station-totals__materials-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: var(--station-space-3);
+  padding: var(--station-space-2) var(--station-space-4) 0;
+}
+
+.station-totals__materials-title {
+  margin: 0;
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  font-weight: 600;
+}
+
+.station-totals__materials-note {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+/* Two columns of rows, reading down each column in turn (grid-auto-flow
+   row: left, right, left, right - the order of the pounds, so the two
+   largest share the first line). The gap between the columns carries a
+   hairline drawn on each left-column row's right edge. The list itself
+   is what scrolls, on the thin bar the other pages use. */
+.station-totals__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  column-gap: var(--station-space-4);
+  min-height: 0;
+  padding: 0 var(--station-space-4) var(--station-space-3);
+  overflow-y: auto;
+}
+
+.station-totals__list[hidden] {
+  display: none;
+}
+
+.station-totals__list:focus-visible {
+  outline-offset: calc(-1 * var(--station-space-1));
+  border-radius: var(--station-radius-sm);
+}
+
+/* A row: code and pounds on one line, the lot under the code. A hairline
+   above each row but the first line's; the left column's rows also carry
+   the hairline between the columns. Which column a row is in, and whether
+   it is on the first line, is said by the row itself (data-column,
+   is-first-line - station-resin-totals.js sets them as it lays the rows
+   out), not read off its position in the tree. */
+.station-totals__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "code pounds"
+    "lot  pounds";
+  align-items: baseline;
+  column-gap: var(--station-space-3);
+  row-gap: 1px;
+  padding: calc(var(--station-space-1) + 1px) 0;
+  border-top: var(--station-stroke) solid var(--station-handbook-rule);
+  line-height: var(--station-line-tight);
+}
+
+.station-totals__row.is-first-line {
+  border-top-color: transparent;
+}
+
+.station-totals__row[data-column="left"] {
+  padding-right: var(--station-space-4);
+  border-right: var(--station-stroke) solid var(--station-handbook-rule);
+}
+
+.station-totals__code {
+  grid-area: code;
+  overflow: hidden;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-totals__pounds {
+  grid-area: pounds;
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-1);
+  align-self: center;
+  white-space: nowrap;
+}
+
+.station-totals__pounds-value {
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-totals__pounds-unit {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+}
+
+/* The lot: secondary, one quiet line. Without a lot it is "Lot —" in the
+   faintest text, present so the row's shape does not change when a lot
+   arrives, and no louder than that; with one, the value is legible. */
+.station-totals__lot {
+  grid-area: lot;
+  display: flex;
+  gap: var(--station-space-1);
+  min-width: 0;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-totals__lot-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-totals__lot.has-lot {
+  color: var(--station-text-muted);
+}
+
+.station-totals__lot.has-lot .station-totals__lot-value {
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-weight: 600;
+}
+
+.station-totals__empty {
+  margin: 0;
+  padding: var(--station-space-3) var(--station-space-4);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+}
+
+.station-totals__empty[hidden] {
+  display: none;
 }
