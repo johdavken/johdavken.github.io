@@ -126,20 +126,21 @@
   /* ---- Header ribbon (job-controls.css) ----
      Eight stops, one per segment, and the ink for the four that carry
      text (1 Output, 2 the figure, 6 Changeover, 8 the clock).
-     The one accent, fading through its tints into pencil grey; then
-     graphite for the changeover and the ink for the clock. */
-  --station-ribbon-1: #2f5f8f;
-  --station-ribbon-2: #3f6d98;
-  --station-ribbon-3: #7ba3c8;
-  --station-ribbon-4: #9aa5b0;
-  --station-ribbon-5: #b9c1c9;
-  --station-ribbon-6: #3a4552;
-  --station-ribbon-7: #6a727c;
-  --station-ribbon-8: #2b3038;
-  --station-ribbon-ink-1: #f7f9fb;
-  --station-ribbon-ink-2: #f7f9fb;
-  --station-ribbon-ink-6: #f7f9fb;
-  --station-ribbon-ink-8: #f7f9fb;
+     The one accent as a mid blue, fading through its tints into pencil
+     grey; a graphite mid-tone for the changeover, and the clock on the
+     white of the paper - every segment carrying the ink. */
+  --station-ribbon-1: #6fa3d4;
+  --station-ribbon-2: #8ebce3;
+  --station-ribbon-3: #a9cbe8;
+  --station-ribbon-4: #b9c2cb;
+  --station-ribbon-5: #cfd3d6;
+  --station-ribbon-6: #9aa3ad;
+  --station-ribbon-7: #c8c6bf;
+  --station-ribbon-8: #ffffff;
+  --station-ribbon-ink-1: #2b3038;
+  --station-ribbon-ink-2: #2b3038;
+  --station-ribbon-ink-6: #2b3038;
+  --station-ribbon-ink-8: #2b3038;
 
   --station-shadow-pop: 0 10px 28px rgba(43, 48, 56, 0.16);
   --station-qr-surface: #ffffff;
