@@ -118,12 +118,20 @@
       r.assigned === false ? "u" : "",
       r.resinName || "",
       Number.isFinite(r.pct) ? r.pct : "",
+      // The entered receiver weight, drawn in the caption.
+      Number.isFinite(r.weight) ? r.weight : "",
       r.source || "",
       // Which of the hopper's controls may act: written on the drawing, so
       // a change in the offer alone redraws the controls as a change in
       // state does.
       (c.tracking ? "T" : "") + (c.pump ? "P" : "")
     ].join("|");
+  }
+
+  /* The caption's weight line: whole pounds, digits only, fitted to the
+   * column; "—" when no weight is entered. */
+  function weightText(weight, width, scale) {
+    return Number.isFinite(weight) && weight > 0 ? fitText(String(Math.round(weight)), width, 9 * scale) : "—";
   }
 
   /* The layer's share of the film structure, as the layer header shows it. */
@@ -188,6 +196,7 @@
       ? `${geometry.id} · ${runtime.resinName}${runtime.pct ? ` · ${round(runtime.pct)}%` : ""}` +
         `${runtime.source ? ` · from ${runtime.source}` : ""}`
       : `${geometry.id} · no resin assigned`) +
+      (runtime && runtime.weight > 0 ? ` · ${Math.round(runtime.weight).toLocaleString("en-US")} lb` : "") +
       (runtime && runtime.track ? " · tracked" : "") + (runtime && runtime.pumpOff ? " · pump off" : "");
     g.appendChild(name);
 
@@ -503,9 +512,13 @@
     drawing.appendChild(details);
 
     /* ---- Readout ----
-     * Identity and contribution. The resin code joins them when the hopper
-     * is wide enough to draw it at full size; it is never shrunk to fit,
-     * because an unreadable code is worse than no code. */
+     * Identity, contribution, and the receiver weight. The resin code joins
+     * them when the hopper is wide enough to draw it at full size; it is
+     * never shrunk to fit, because an unreadable code is worse than no
+     * code. The weight is the entered receiver weight (the Weights page's
+     * value), in whole pounds and digits only - the column has room for
+     * five characters, so the unit and the thousands separator are the
+     * tooltip's; "—" when none is entered. */
     const caption = group(doc, "station-hopper__caption", "hopper-caption");
     let y = geometry.captionTop;
     caption.appendChild(label(doc, geometry.id, cx, y, "station-hopper__id"));
@@ -519,6 +532,8 @@
         runtime && runtime.resinName ? fitText(runtime.resinName, w, 9 * scale) : "",
         cx, y, "station-hopper__resin"));
     }
+    y += 12 * scale;
+    caption.appendChild(label(doc, weightText(runtime && runtime.weight, w, scale), cx, y, "station-hopper__weight"));
     drawing.appendChild(caption);
 
     return g;

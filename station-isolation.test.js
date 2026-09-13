@@ -29,7 +29,7 @@ const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js
   "station-rundown.js", "station-rundown-timeline.js", "station-job-controls.js",
   "station-handbook.js", "station-recipe-book.js", "station-resin-totals.js", "station-appearance.js", "station-theme-preview.js",
   "station-changeover.js", "station-avatar.js", "station-machine-rail.js", "station-logo.js",
-  "station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js"];
+  "station-sudo.js", "station-sudo-workspaces.js", "station-sudo-lines.js", "station-weights.js"];
 
 const stationHtml = fs.readFileSync(path.join(STATION, "station.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -131,8 +131,9 @@ const COMMAND_BRIDGE = "station-command-bridge.js";
 const CONNECTION_BRIDGE = "station-connection-bridge.js";
 const RECIPES_BRIDGE = "station-recipes-bridge.js";
 const ADMIN_BRIDGE = "station-admin-bridge.js";
+const WEIGHT_PROFILES_BRIDGE = "station-weight-profiles-bridge.js";
 const THEME = "station-theme.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, ADMIN_BRIDGE, THEME].sort();
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, ADMIN_BRIDGE, WEIGHT_PROFILES_BRIDGE, THEME].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -285,10 +286,10 @@ test("no Station file names an RT Sync internal, subscribes to anything but the 
     }
     // The only subscriptions Station holds are to the windows the
     // application publishes through: the state bridge, the connection
-    // bridge, the recipes bridge and the admin bridge. Anything else would
-    // be a second live feed.
+    // bridge, the recipes bridge, the weight-profiles bridge and the admin
+    // bridge. Anything else would be a second live feed.
     for (const match of source.matchAll(/(\w+)\??\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection", "recipes", "admin"].includes(match[1]),
+      assert.ok(["bridge", "connection", "recipes", "weightProfiles", "admin"].includes(match[1]),
         `${file} subscribes to "${match[1]}", which is none of the bridges`);
     }
   }
@@ -329,6 +330,42 @@ test("exactly one Station file requests a saved-recipe action - the Recipe Book 
     assert.doesNotMatch(source, /createRecipePayload|applyRecipePayload|polyn\.workspaceConfigurations|savedRecipes\s*=\s*\[/,
       `${file} keeps a recipe list or a payload of its own`);
   }
+});
+
+test("exactly one Station file requests a weight-profile action - the Weights page - and only through the bridge it is handed", () => {
+  const REQUESTS = ["station-weights.js"];
+  for (const file of STATION_FILES) {
+    const source = fs.readFileSync(path.join(STATION, file), "utf8");
+    if (REQUESTS.includes(file)) {
+      assert.match(source, /weightProfiles\.request\s*\(/, `${file} no longer requests through the bridge it is handed`);
+      assert.doesNotMatch(source, /PolynStationWeightProfilesBridge/, `${file} reaches for the global bridge instead of the one it is handed`);
+    } else {
+      assert.doesNotMatch(source, /weightProfiles\.request\s*\(/, `${file} requests a weight-profile action`);
+    }
+    // The page holds no profile of its own and applies none: no payload
+    // builder, no apply helper, no second list. What it lists is what the
+    // bridge published; what it loads, the application applies.
+    assert.doesNotMatch(source, /createReceiverWeightProfile|applyReceiverWeightProfile|validateReceiverWeightProfile|receiver_weights_lb/,
+      `${file} keeps a weight profile or applies one of its own`);
+  }
+});
+
+test("the weight-profiles bridge touches no DOM, names no RT Sync internal, and knows no cache key or payload rule", () => {
+  const source = fs.readFileSync(path.join(ROOT, WEIGHT_PROFILES_BRIDGE), "utf8");
+  for (const pattern of [/\bdocument\b/, /addEventListener/, /polyn\.workspaceConfigurations/, /createReceiverWeightProfile/, /applyReceiverWeightProfile/, /PolynWorkspaceConfigurations\b/, ...RT_SYNC_INTERNALS]) {
+    assert.doesNotMatch(source, pattern, `${WEIGHT_PROFILES_BRIDGE} reaches outside itself (matched ${pattern})`);
+  }
+  for (const page of [indexHtml, stationHtml]) {
+    assert.ok(page.indexOf(SHARED_BRIDGE) < page.indexOf(WEIGHT_PROFILES_BRIDGE), "the weight-profiles bridge loads before the state bridge it requires");
+  }
+  assert.ok(indexHtml.indexOf(WEIGHT_PROFILES_BRIDGE) < indexHtml.indexOf('src="app.js'));
+  const bridge = require("./station-weight-profiles-bridge.js");
+  for (const forbidden of ["publish", "disconnect", "setBook", "setState", "state"]) {
+    assert.equal(bridge[forbidden], undefined, `the module surface exposes ${forbidden}`);
+  }
+  assert.ok(Object.isFrozen(bridge));
+  assert.deepEqual([...bridge.ACTIONS], ["saveCurrentWeights", "replaceWeightProfile", "loadWeightProfile", "renameWeightProfile", "duplicateWeightProfile", "deleteWeightProfile", "refresh"],
+    "a new weight-profile action Station may ask for arrives as an edit to this list");
 });
 
 test("exactly three Station files request an administrator action - Sudo and its two tools, Workspace Management and Line Configuration - and only through the bridge they are handed", () => {
@@ -603,7 +640,7 @@ test("Station never writes through the bridge - it only reads and subscribes", (
   }
 });
 
-test("exactly five Station files dispatch commands - the focused editor, the hopper controls, the job controls, the layer share and Resin Totals - and only through the bridge they are handed", () => {
+test("exactly six Station files dispatch commands - the focused editor, the hopper controls, the job controls, the layer share, Resin Totals and Weights - and only through the bridge they are handed", () => {
   /* The write path is: editor -> command bridge -> the application's
    * executor. The editor is one of four places a Station file may say
    * `.dispatch(` - the others are the hopper cluster's controls module,
@@ -611,12 +648,13 @@ test("exactly five Station files dispatch commands - the focused editor, the hop
    * the header's job controls, which carry the line's output and
    * changeover, and the layer share, the percentage edited in each
    * layer's header, and the Handbook's Resin Totals, which carries the
-   * job's production and scrap pounds - and each says it on the bridge
+   * job's production and scrap pounds, and the Handbook's Weights page,
+   * which carries the receiver weights - and each says it on the bridge
    * object it was given, never on the global. Every other file stays a
    * reader; the boot file's part is to hand the bridge over and to
-   * re-run the publish policy on the answer. A sixth dispatching file
+   * re-run the publish policy on the answer. A seventh dispatching file
    * arrives as an edit to this test. */
-  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js"];
+  const DISPATCHES = ["station-focus-editor.js", "station-hopper-controls.js", "station-job-controls.js", "station-layer-share.js", "station-resin-totals.js", "station-weights.js"];
   for (const file of STATION_FILES) {
     const source = fs.readFileSync(path.join(STATION, file), "utf8");
     if (DISPATCHES.includes(file)) {

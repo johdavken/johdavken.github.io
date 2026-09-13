@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: fifteen names, nothing else is a command
+ *   COMMANDS       the vocabulary: seventeen names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -79,7 +79,12 @@
     "setChangeover",    // { at }        the changeover as an absolute epoch-ms
                         //   timestamp, or null to clear it
     "setProductionPounds", // { pounds } the job's production resin, lb; 0 clears
-    "setScrapPounds"    // { pounds }    the job's scrap resin, lb; 0 clears
+    "setScrapPounds",   // { pounds }    the job's scrap resin, lb; 0 clears
+    "setHopperWeight",  // { recipe, layer, index, weight } the receiver weight
+                        //   of the physical hopper at layer:index, lb; 0 clears
+    "setHopperWeights"  // { recipe, weights: [{ layer, index, weight }] }
+                        //   several receiver weights in one request - the
+                        //   Weights page's bulk apply - written and saved once
   ]);
 
   /* The three runtime commands. Tracking and pump-off are operational state
@@ -105,6 +110,21 @@
    * #prodResinLb / #scrapResinLb fields), stated in pounds, 0 clearing. */
   const JOB_COMMANDS = Object.freeze(["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
 
+  /* The two equipment commands. A receiver weight is a fact about the
+   * physical hopper (a Receiver Weight Profile's value), not about what is
+   * running in it - so it names the hopper's position through the recipe
+   * that describes the line's layers, and the only recipe that describes
+   * physical hoppers is "current": the plan has no weights at all
+   * (next-recipe.js). Refused here, like the runtime commands, before an
+   * executor sees the request. The second is the first over a list, so the
+   * Weights page's bulk apply is one commit and one sync notification. */
+  const EQUIPMENT_COMMANDS = Object.freeze(["setHopperWeight", "setHopperWeights"]);
+
+  /* The most weights one bulk request may carry: every hopper of the
+   * largest line the application lays out, with room for a naming mode
+   * that adds a position. Anything longer is not a page's worth of edits. */
+  const MAX_WEIGHT_ENTRIES = 48;
+
   const RECIPES = Object.freeze(["current", "next"]);
 
   const ARGUMENTS = Object.freeze({
@@ -122,7 +142,9 @@
     setLineRate: Object.freeze(["lineRate"]),
     setChangeover: Object.freeze(["at"]),
     setProductionPounds: Object.freeze(["pounds"]),
-    setScrapPounds: Object.freeze(["pounds"])
+    setScrapPounds: Object.freeze(["pounds"]),
+    setHopperWeight: Object.freeze(["recipe", "layer", "index", "weight"]),
+    setHopperWeights: Object.freeze(["recipe", "weights"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -346,6 +368,38 @@
     return { ok: true, value: number };
   }
 
+  /* A list of receiver weights for the bulk apply: a non-empty array, each
+   * entry a { layer, index, weight } read by the same three normalizers a
+   * single setHopperWeight uses, no position named twice (two weights for
+   * one hopper is a contradiction, not a last-write), and never more than
+   * a page's worth. Whether each position exists is the executor's. */
+  function normalizeWeightList(value) {
+    if (!Array.isArray(value) || value.length === 0) {
+      return { ok: false, code: "bad_argument", message: "List the hoppers and the weight for each." };
+    }
+    if (value.length > MAX_WEIGHT_ENTRIES) {
+      return { ok: false, code: "bad_argument", message: `No more than ${MAX_WEIGHT_ENTRIES} weights can be applied at once.` };
+    }
+    const out = [];
+    const seen = new Set();
+    for (const entry of value) {
+      const given = isPlainObject(entry) ? entry : {};
+      const layer = normalizeLayer(given.layer);
+      if (!layer.ok) return layer;
+      const index = normalizeIndex(given.index);
+      if (!index.ok) return index;
+      const weight = normalizePounds(given.weight);
+      if (!weight.ok) return weight;
+      const key = `${layer.value}:${index.value}`;
+      if (seen.has(key)) {
+        return { ok: false, code: "bad_argument", message: `Hopper ${key} is listed twice.` };
+      }
+      seen.add(key);
+      out.push(Object.freeze({ layer: layer.value, index: index.value, weight: weight.value }));
+    }
+    return { ok: true, value: Object.freeze(out) };
+  }
+
   /* An absolute instant as epoch milliseconds, or null to clear. Whether
    * the instant is in the past, or further away than the application can
    * store, is the executor's question: it needs the clock. */
@@ -371,7 +425,9 @@
     pumpOff: normalizeFlag,
     lineRate: normalizeRate,
     at: normalizeTimestamp,
-    pounds: normalizePounds
+    pounds: normalizePounds,
+    weight: normalizePounds,
+    weights: normalizeWeightList
   });
 
   /**
@@ -397,6 +453,9 @@
     if (RUNTIME_COMMANDS.includes(command) && out.recipe !== "current") {
       return failure("bad_argument", { field: "recipe", message: "Tracking and pump-off belong to the running job: the recipe must be \"current\"." });
     }
+    if (EQUIPMENT_COMMANDS.includes(command) && out.recipe !== "current") {
+      return failure("bad_argument", { field: "recipe", message: "Receiver weights belong to the physical hoppers, not to a recipe: the recipe must be \"current\"." });
+    }
     return Object.freeze({ ok: true, command, args: Object.freeze(out) });
   }
 
@@ -404,6 +463,7 @@
     COMMANDS,
     RUNTIME_COMMANDS,
     JOB_COMMANDS,
+    EQUIPMENT_COMMANDS,
     RECIPES,
     ARGUMENTS,
     ERROR_CODES,
@@ -411,6 +471,7 @@
     HOPPERS_PER_LAYER,
     MAX_RESIN_LENGTH,
     MAX_SOURCE_LENGTH,
+    MAX_WEIGHT_ENTRIES,
     normalizeRecipe,
     normalizeLayer,
     normalizeIndex,
@@ -419,6 +480,8 @@
     normalizeSource,
     normalizeFlag,
     normalizeRate,
+    normalizePounds,
+    normalizeWeightList,
     normalizeTimestamp,
     normalizeArguments,
     success,

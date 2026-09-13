@@ -504,6 +504,43 @@ test("the compact readout leads with identity and contribution", () => {
   assert.deepEqual(textOf(svg, "station-hopper__pct").slice(0, 3), ["60%", "30%", "—"]);
 });
 
+test("the readout's fourth line is the receiver weight: whole pounds, digits only, a dash when none is entered, and the tooltip carries the unit", () => {
+  const svg = stageFor(literal({ layerCount: 5, hopperCount: 3 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "HX204", pct: 60, weight: 1250.4, effectiveWeight: 900 },
+      "A:1": { assigned: true, resinName: "LD105", pct: 30, weight: 0, effectiveWeight: 500 },
+      "A:2": { assigned: false, resinName: "", pct: 0, weight: 75 }
+    }
+  });
+  // The entered weight, never the run-down's resolved one (Smart Hoppers
+  // may derive that from geometry); an unassigned hopper has one too.
+  assert.deepEqual(textOf(svg, "station-hopper__weight").slice(0, 3), ["1250", "—", "75"]);
+  const own = h => h.children.find(c => c.nodeName === "title").textContent;
+  const titles = hoppersIn(svg).slice(0, 3).map(own);
+  assert.match(titles[0], /· 1,250 lb/);
+  assert.doesNotMatch(titles[1], /lb/);
+  assert.match(titles[2], /no resin assigned · 75 lb/);
+  // Digits only: the column has room for five characters, so the unit and
+  // the separator are the tooltip's; a weight too wide is fitted, not lied about.
+  assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250||");
+  assert.notEqual(parts.hopperStateKey({ weight: 1250 }), parts.hopperStateKey({ weight: 1300 }), "a weight change redraws the hopper");
+  assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0||");
+});
+
+test("a weight change alone re-patches only that hopper", () => {
+  const doc = fakeDocument();
+  const mount = doc.createElement("div");
+  mount.ownerDocument = doc;
+  const config = literal({ layerCount: 3, hopperCount: 2 });
+  const lineModel = model.buildLineModel(config);
+  const state = { "A:0": { assigned: true, resinName: "HX", pct: 60, weight: 1000 }, "A:1": { assigned: true, resinName: "LD", pct: 40, weight: 500 } };
+  render.mountStage(mount, lineModel, { document: doc, hopperState: state, stageAspect: 1.6 });
+  walk(mount, node => { node.replaceChild = (fresh, old) => { node.children[node.children.indexOf(old)] = fresh; return old; }; });
+  const next = Object.assign({}, state, { "A:1": Object.assign({}, state["A:1"], { weight: 650 }) });
+  assert.deepEqual(render.patchStage(mount, lineModel, { document: doc, hopperState: next, stageAspect: 1.6 }), { hoppers: 1, layers: 3 });
+  assert.deepEqual(textOf(mount, "station-hopper__weight").slice(0, 2), ["1000", "650"]);
+});
+
 test("resin codes are dropped in the dense view and shown where there is room", () => {
   /* Never shrunk to fit: an unreadable code is worse than no code. Five layers
    * is the dense case; one layer has the width for it. */
@@ -2119,6 +2156,6 @@ test("a change in the offer alone redraws a hopper's controls: the data-state ca
   assert.deepEqual(hoppersIn(mount).map(h => [controlOf(h, "tracking").getAttribute("data-able"), controlOf(h, "pump").getAttribute("data-able")]), [["true", "false"], ["true", "false"]]);
   // Same state, same offer: nothing is redrawn.
   assert.deepEqual(render.patchStage(mount, model, { document: doc, hopperState: state, hopperControls: { tracking: true, pump: false }, stageAspect: 1.6 }), { hoppers: 0, layers: 1 });
-  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t|||||" + "|TP");
-  assert.equal(parts.hopperStateKey({ track: true }), "t||||||");
+  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t||||||" + "|TP");
+  assert.equal(parts.hopperStateKey({ track: true }), "t|||||||");
 });

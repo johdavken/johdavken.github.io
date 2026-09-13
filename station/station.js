@@ -116,6 +116,13 @@
   const themePreview = root.PolynStationThemePreview || null;
   const theme = root.PolynStationTheme || null;
   const recipes = root.PolynStationRecipesBridge || null;
+  /* Weights (station-weights.js): the Handbook's page for the physical
+   * hoppers - every receiver weight in a field, the bulk apply, and the
+   * line's Weight Profiles - and the bridge it reads the profiles from
+   * and asks through (station-weight-profiles-bridge.js). The weights
+   * themselves it writes through the command bridge, like Resin Totals. */
+  const weightsSection = root.PolynStationWeights || null;
+  const weightProfiles = root.PolynStationWeightProfilesBridge || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
    * Management as the application publishes them (station-admin-bridge.js).
@@ -1522,6 +1529,7 @@
     if (handbook && mounts.handbook) {
       const handbookSections = [];
       if (recipeBook) handbookSections.push(recipeBook.section);
+      if (weightsSection) handbookSections.push(weightsSection.section);
       if (resinTotalsSection) handbookSections.push(resinTotalsSection.section);
       if (appearance) handbookSections.push(appearance.section);
       if (sudo) handbookSections.push(sudo.section);
@@ -1535,6 +1543,9 @@
            * the connection bridge, the same way. */
           admin,
           connection,
+          /* Weights reads the line's shared Weight Profiles and asks for
+           * the profile actions through this bridge alone. */
+          weightProfiles,
           /* A saved recipe's layer, accented by the side it sits on for
            * the line the stage shows: the line model's own role for that
            * letter, so the book and the banks above agree about Layer A. */
@@ -1545,6 +1556,9 @@
           /* Resin Totals reads the same resolved state the stage draws
            * from - through a function, since `current` is replaced on
            * every render - and the shared calculation to run over it. */
+          /* Weights lists the hoppers the stage draws: the same line
+           * model, through a function for the same reason. */
+          model: () => current.model,
           resolved: () => current.resolved,
           resinTotals,
           /* Its two fields (production and scrap pounds) write through
@@ -1568,6 +1582,7 @@
       });
       mounts.handbook.appendChild(handbookPanel.element);
       recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
+      weightProfiles?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
       admin?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
     }
     feedJob(current.model, current.resolved);

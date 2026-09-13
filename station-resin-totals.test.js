@@ -423,8 +423,8 @@ test("station.js registers the section second, hands it the resolved state and t
   const boot = read("station/station.js");
   assert.match(boot, /const resinTotalsSection = root\.PolynStationResinTotals \|\| null;/);
   assert.match(boot, /const resinTotals = root\.PolynResinTotals \|\| null;/);
-  assert.match(boot, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);\s*if \(resinTotalsSection\) handbookSections\.push\(resinTotalsSection\.section\);\s*if \(appearance\) handbookSections\.push\(appearance\.section\);/,
-    "Recipe Book, Resin Totals, Appearance");
+  assert.match(boot, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);\s*if \(weightsSection\) handbookSections\.push\(weightsSection\.section\);\s*if \(resinTotalsSection\) handbookSections\.push\(resinTotalsSection\.section\);\s*if \(appearance\) handbookSections\.push\(appearance\.section\);/,
+    "Recipe Book, Weights, Resin Totals, Appearance");
   assert.match(boot, /resolved: \(\) => current\.resolved,\s*resinTotals,/);
   // Its fields write through the same offer and publish policy as the
   // header's job controls.

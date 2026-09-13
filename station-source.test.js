@@ -244,6 +244,26 @@ test("an unassigned hopper is reported as unassigned", () => {
   assert.equal(resolved.hopperState["A:1"].assigned, false);
 });
 
+test("hopperStateFrom carries the entered receiver weight beside the run-down's resolved one, and keeps them apart", () => {
+  const state = source.hopperStateFrom({ layers: [{ name: "A", hoppers: [
+    { index: 0, resinName: "HX", pct: 60, weight: 1250, effectiveWeight: 900, usableHeight: 30 },
+    { index: 1, resinName: "LD", pct: 40, weight: 0, effectiveWeight: 500 },
+    { index: 2, resinName: "", pct: 0, weight: -3 },
+    { index: 3, resinName: "", pct: 0, weight: "12" }
+  ] }] });
+  assert.equal(state["A:0"].weight, 1250, "the Weights page's value");
+  assert.equal(state["A:0"].effectiveWeight, 900, "the run-down's value - Smart Hoppers may derive it from geometry");
+  assert.equal(state["A:1"].weight, 0, "not entered");
+  assert.equal(state["A:1"].effectiveWeight, 500);
+  assert.equal(state["A:2"].weight, 0, "never negative");
+  assert.equal(state["A:3"].weight, 0, "a number or nothing");
+  // A weight alone is a value change: the drawing patches, never re-renders.
+  const base = resolvedFor(liveState());
+  const heavier = resolvedFor(edited(s => { s.layers[0].hoppers[0].weight = 4321; }));
+  assert.equal(source.classifyChange(base, heavier), "values");
+  assert.equal(heavier.hopperState["A:0"].weight, 4321);
+});
+
 test("hopperStateFrom tolerates a malformed snapshot rather than throwing", () => {
   assert.deepEqual(source.hopperStateFrom(null), {});
   assert.deepEqual(source.hopperStateFrom({}), {});

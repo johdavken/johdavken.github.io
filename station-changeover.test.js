@@ -731,7 +731,7 @@ test("the calculator is loaded by the host and the harness after the job control
   const scripts = [...host.matchAll(/"(station\/[^"]+\.js)"/g)].map(m => m[1]);
   assert.ok(scripts.indexOf("station/station-changeover.js") > scripts.indexOf("station/station-job-controls.js"));
   assert.ok(scripts.indexOf("station/station-changeover.js") < scripts.indexOf("station/station.js"));
-  assert.match(host, /"station\/styles\/components\/glass\.css",\s*"station\/styles\/components\/handbook\.css",\s*"station\/styles\/components\/changeover\.css"/);
+  assert.match(host, /"station\/styles\/components\/glass\.css",\s*"station\/styles\/components\/handbook\.css",\s*"station\/styles\/components\/weights\.css",\s*"station\/styles\/components\/changeover\.css"/);
   const harness = read("station/station.html");
   assert.match(harness, /station-changeover\.js\?v=/);
   assert.match(harness, /\.\.\/changeover-estimate\.js\?v=/);

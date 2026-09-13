@@ -218,6 +218,14 @@
   font-weight: 600;
 }
 
+/* The receiver weight, in whole pounds: the Weights page's value under the
+   hopper it belongs to. Muted like the id - equipment, not the blend. */
+.station-hopper__weight {
+  fill: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+}
+
 /* A hopper with no Receiver Weight Profile height is drawn at the default
    size. The dashed outline says that size is a default and not a measurement,
    so nobody reads it as a short hopper. */

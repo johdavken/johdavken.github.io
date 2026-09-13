@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -332,6 +332,94 @@ test("resetTracking names the running job and nothing else: no position, no flag
   const unnamed = contract.normalizeArguments("resetTracking", {});
   assert.equal(unnamed.ok, false, "the recipe is named, never defaulted");
   assert.equal(unnamed.field, "recipe");
+});
+
+/* ----------------------------------------------------------------------
+ *   Weights: the equipment commands
+ * -------------------------------------------------------------------- */
+
+test("the equipment commands are declared, read pounds like the job's figures, and are addressable to the Current recipe only", () => {
+  assert.deepEqual([...contract.EQUIPMENT_COMMANDS], ["setHopperWeight", "setHopperWeights"]);
+  assert.ok(Object.isFrozen(contract.EQUIPMENT_COMMANDS));
+  assert.deepEqual([...contract.ARGUMENTS.setHopperWeight], ["recipe", "layer", "index", "weight"]);
+  assert.deepEqual([...contract.ARGUMENTS.setHopperWeights], ["recipe", "weights"]);
+
+  const one = contract.normalizeArguments("setHopperWeight", { recipe: "current", layer: "B", index: "2", weight: "1,250", extra: 1 });
+  assert.deepEqual(one, { ok: true, command: "setHopperWeight", args: { recipe: "current", layer: "B", index: 2, weight: 1250 } });
+  assert.ok(Object.isFrozen(one.args));
+  const cleared = contract.normalizeArguments("setHopperWeight", { recipe: "current", layer: "B", index: 0, weight: 0 });
+  assert.equal(cleared.args.weight, 0, "0 is 'not entered', as the Weights page reads a blank field");
+
+  const negative = contract.normalizeArguments("setHopperWeight", { recipe: "current", layer: "B", index: 0, weight: -5 });
+  assert.equal(negative.ok, false);
+  assert.equal(negative.code, "out_of_range");
+  assert.equal(negative.field, "weight");
+  const text = contract.normalizeArguments("setHopperWeight", { recipe: "current", layer: "B", index: 0, weight: "heavy" });
+  assert.equal(text.ok, false);
+  assert.equal(text.code, "bad_argument");
+  assert.equal(text.field, "weight");
+
+  // The plan has no weights: "next" is refused here, before any executor
+  // sees it, with the field named - and the wording is the equipment's,
+  // not the runtime commands'.
+  const refusedOne = contract.normalizeArguments("setHopperWeight", { recipe: "next", layer: "B", index: 1, weight: 10 });
+  assert.equal(refusedOne.ok, false);
+  assert.equal(refusedOne.code, "bad_argument");
+  assert.equal(refusedOne.field, "recipe");
+  assert.match(refusedOne.message, /physical hoppers/);
+  assert.doesNotMatch(refusedOne.message, /running job/);
+  const refusedMany = contract.normalizeArguments("setHopperWeights", { recipe: "next", weights: [{ layer: "A", index: 0, weight: 10 }] });
+  assert.equal(refusedMany.ok, false);
+  assert.equal(refusedMany.field, "recipe");
+  assert.match(refusedMany.message, /physical hoppers/);
+});
+
+test("a weight list is read entry by entry, frozen, never empty, never twice the same hopper, never more than a page", () => {
+  const request = contract.normalizeArguments("setHopperWeights", {
+    recipe: "current",
+    weights: [{ layer: "A", index: "0", weight: "1,000" }, { layer: "A", index: 1, weight: 0 }, { layer: "C", index: 5, weight: 12.5, extra: true }]
+  });
+  assert.deepEqual(request, {
+    ok: true,
+    command: "setHopperWeights",
+    args: { recipe: "current", weights: [{ layer: "A", index: 0, weight: 1000 }, { layer: "A", index: 1, weight: 0 }, { layer: "C", index: 5, weight: 12.5 }] }
+  });
+  assert.ok(Object.isFrozen(request.args.weights));
+  assert.ok(request.args.weights.every(entry => Object.isFrozen(entry)));
+
+  for (const empty of [[], null, undefined, "A:0", {}]) {
+    const refused = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: empty });
+    assert.equal(refused.ok, false, `${JSON.stringify(empty)} accepted`);
+    assert.equal(refused.code, "bad_argument");
+    assert.equal(refused.field, "weights");
+  }
+
+  const twice = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: [{ layer: "A", index: 1, weight: 1 }, { layer: "A", index: "1", weight: 2 }] });
+  assert.equal(twice.ok, false);
+  assert.equal(twice.field, "weights");
+  assert.match(twice.message, /A:1 is listed twice/);
+
+  // Each entry's own fault, in the list's field: a bad layer, index or
+  // weight is the same code the single command would give.
+  const badIndex = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: [{ layer: "A", index: 6, weight: 1 }] });
+  assert.equal(badIndex.ok, false);
+  assert.equal(badIndex.field, "weights");
+  const badWeight = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: [{ layer: "A", index: 0, weight: -1 }] });
+  assert.equal(badWeight.ok, false);
+  assert.equal(badWeight.code, "out_of_range");
+  assert.equal(badWeight.field, "weights");
+  const noLayer = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: [{ index: 0, weight: 1 }] });
+  assert.equal(noLayer.ok, false);
+  assert.equal(noLayer.field, "weights");
+
+  assert.equal(contract.MAX_WEIGHT_ENTRIES, 48);
+  const tooMany = Array.from({ length: contract.MAX_WEIGHT_ENTRIES + 1 }, (_, i) => ({ layer: `L${i}`, index: 0, weight: 1 }));
+  const refused = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: tooMany });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.field, "weights");
+  assert.match(refused.message, /48/);
+  const justEnough = contract.normalizeArguments("setHopperWeights", { recipe: "current", weights: tooMany.slice(0, contract.MAX_WEIGHT_ENTRIES) });
+  assert.equal(justEnough.ok, true);
 });
 
 test("a runtime flag is a boolean and nothing else: no strings, numbers or absence", () => {

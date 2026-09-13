@@ -58,6 +58,11 @@
           // value, Smart Hoppers included - in pounds. 0 means "no weight",
           // which is what the application reads it as too.
           effectiveWeight: Number.isFinite(hopper.effectiveWeight) && hopper.effectiveWeight > 0 ? hopper.effectiveWeight : 0,
+          // The receiver weight the operator entered - the Weights page's
+          // value, the one a Receiver Weight Profile stores - in pounds.
+          // 0 means "not entered". Distinct from effectiveWeight, which
+          // Smart Hoppers may derive from geometry instead.
+          weight: Number.isFinite(hopper.weight) && hopper.weight > 0 ? hopper.weight : 0,
           // Receiver Weight Profile height, in inches. 0 means "not profiled".
           usableHeight: Number.isFinite(hopper.usableHeight) ? hopper.usableHeight : 0,
           // Resolved through hookup-sources' own helper, which refuses a label

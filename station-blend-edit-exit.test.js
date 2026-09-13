@@ -207,7 +207,7 @@ function hostScripts() {
 const SHARED = [
   "hookup-sources.js", "line-identity.js", "scheduling.js", "workspace-configuration-payloads.js",
   "station-state-bridge.js", "station-command-contract.js", "station-command-bridge.js",
-  "station-connection-bridge.js", "station-recipes-bridge.js"
+  "station-connection-bridge.js", "station-recipes-bridge.js", "station-weight-profiles-bridge.js"
 ];
 
 function snapshot(overrides) {
@@ -280,6 +280,15 @@ function boot(options) {
       if (command === "setHopperBlend" && layerOf(args.layer)) layerOf(args.layer).hoppers[args.index].pct = Number(args.pct);
       else if (command === "setLayerShare" && layerOf(args.layer)) layerOf(args.layer).layerPct = Number(args.pct);
       else if (command === "setHopperTracking" && layerOf(args.layer)) layerOf(args.layer).hoppers[args.index].track = !!args.track;
+      else if (command === "setHopperWeight" && layerOf(args.layer)) {
+        const h = layerOf(args.layer).hoppers[args.index];
+        h.weight = Number(args.weight); h.effectiveWeight = h.weight;
+      } else if (command === "setHopperWeights") {
+        for (const entry of args.weights) {
+          const h = layerOf(entry.layer) && layerOf(entry.layer).hoppers[entry.index];
+          if (h) { h.weight = Number(entry.weight); h.effectiveWeight = h.weight; }
+        }
+      }
       else if (command === "resetTracking") {
         // The application's own reset: a job with nothing tracked answers
         // unchanged, as the executor does.
@@ -1191,4 +1200,69 @@ test("a row dragged on a Blend Edit card and dropped on another row is one moveH
   s.clickAction("close-handbook");
   s.clickBlend();
   assertModeCleared(s);
+});
+
+/* ----------------------------------------------------------------------
+ *   The Weights page
+ * -------------------------------------------------------------------- */
+
+test("the Weights page lists the line's hoppers with their weights; a value entered on it is one setHopperWeight through the executor, and the stage's caption shows it at once", () => {
+  const s = boot();
+  s.launcher.click();
+  s.showSection("weights");
+  const page = s.panel.querySelector("[data-role='weights']");
+  assert.ok(page, "the Handbook turned to the Weights page");
+  const fields = page.querySelectorAll(".station-weights__field");
+  assert.equal(fields.length, 18, "three layers of six hoppers");
+  assert.deepEqual(fields.slice(0, 3).map(f => f.getAttribute("data-key")), ["A:0", "A:1", "A:2"]);
+  assert.ok(!fields[0].hasAttribute("readonly") && !fields[0].readOnly, "the executor is connected, so the field is live");
+  // The caption under A1 reads no weight yet.
+  const captionOf = id => s.machine.querySelectorAll(".station-hopper__weight")[["A1", "A2", "A3", "A4", "A5", "A6"].indexOf(id)];
+  assert.equal(captionOf("A1").textContent, "—");
+  fields[0].focus();
+  fields[0].value = "1250";
+  fields[0].dispatchEvent(makeEvent("input", { bubbles: true }));
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.deepEqual(s.calls.map(c => [c.command, c.args, c.handbookOpen]),
+    [["setHopperWeight", { recipe: "current", layer: "A", index: 0, weight: 1250 }, true]]);
+  assert.equal(s.state().layers[0].hoppers[0].weight, 1250, "the application applied it");
+  assert.equal(captionOf("A1").textContent, "1250", "the operator's own publish redrew the hopper");
+  assert.equal(fields[0].value, "1250");
+  assert.ok(s.doc.activeElement === fields[0], "the field kept the focus");
+  // The same value again is nothing; Escape with no draft leaves the field
+  // and does not close the Handbook.
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.equal(s.calls.length, 1);
+  fields[0].dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(s.isHandbookOpen(), true, "the field's Escape is not the Handbook's");
+  // The bulk apply: two hoppers picked, one command, one publish.
+  page.querySelector("[data-pick='B:0']").click();
+  page.querySelector("[data-pick='B:1']").click();
+  const bulk = page.querySelector(".station-weights__bulk-field");
+  bulk.value = "900";
+  bulk.dispatchEvent(makeEvent("input", { bubbles: true }));
+  page.querySelector("[data-action='apply-bulk']").click();
+  assert.deepEqual(s.calls[1].command, "setHopperWeights");
+  assert.deepEqual(s.calls[1].args, { recipe: "current", weights: [{ layer: "B", index: 0, weight: 900 }, { layer: "B", index: 1, weight: 900 }] });
+  assert.deepEqual(s.state().layers[1].hoppers.slice(0, 3).map(h => h.weight), [900, 900, 0]);
+  const b = s.machine.querySelectorAll(".station-hopper__weight").slice(6, 9).map(n => n.textContent);
+  assert.deepEqual(b, ["900", "900", "—"]);
+  // Nothing of the recipe moved.
+  assert.equal(s.state().layers[0].hoppers[0].pct, 60);
+  assert.equal(s.state().layers[0].hoppers[0].resinName, "HX0");
+  s.clickAction("close-handbook");
+  assert.equal(s.isHandbookOpen(), false);
+});
+
+test("with no producer the Weights page is read-only, and the profiles say no application is connected", () => {
+  const s = boot({ connectCommands: false });
+  s.launcher.click();
+  s.showSection("weights");
+  const page = s.panel.querySelector("[data-role='weights']");
+  const field = page.querySelector(".station-weights__field");
+  assert.equal(field.readOnly, true);
+  assert.match(field.getAttribute("title"), /read-only here/);
+  assert.match(page.querySelector(".station-weights__list").textContent, /No application is connected to Station: weight profiles are not available/);
+  assert.equal(page.querySelector("[data-action='save-current']").disabled, true);
+  assert.deepEqual(s.calls, []);
 });
