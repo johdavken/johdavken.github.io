@@ -1073,7 +1073,11 @@
 
     const variant = settings.variant === "compact" ? "compact" : "full";
     const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
-    const rootEl = element(doc, "div", "station-editor", {
+    /* The compact editor is a face of the layer's card, and the card is
+     * the console's glass (glass.css) - the material the Handbook and the
+     * Changeover Calculator are made of - worn by the HTML root, because
+     * the card's SVG frame cannot blur what stands behind it. */
+    const rootEl = element(doc, "div", variant === "compact" ? "station-editor station-glass" : "station-editor", {
       "data-layer": blend.layer.id,
       "data-layer-role": blend.layer.role,
       "data-role": variant === "compact" ? "blend-editor" : "focus-editor",

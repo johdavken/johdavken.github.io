@@ -89,7 +89,7 @@ const settle = () => new Promise(r => setImmediate(r));
  *   The turn
  * -------------------------------------------------------------------- */
 
-test("turning to the card: the class at once, both faces held at their first frame, released two frames on, landed when both finish", async () => {
+test("turning to the card: the class at once, the card held at its first frame over the cluster, released two frames on, landed when it finishes - the cluster never moves", async () => {
   const { layer, made, animate } = layerWith(["cluster", "card"]);
   layer.classList.add("is-flippable");
   const f = frames();
@@ -97,37 +97,29 @@ test("turning to the card: the class at once, both faces held at their first fra
   assert.equal(handle.animated, true);
   assert.ok(layer.classList.contains("is-flipped"), "the class says the card, at once");
   assert.ok(layer.classList.contains("is-turning"), "and the layer is mid-turn");
-  // Two animations, paused where they start: the card invisible and
-  // narrow, the cluster whole.
-  assert.equal(made.length, 2);
-  const card = made.find(a => a.owner === "station-blend-card");
-  const cluster = made.find(a => a.owner === "station-hopper-cluster");
+  // One animation, paused where it starts: the card invisible and narrow.
+  // The cluster stands under the glass and is given no frames at all.
+  assert.equal(made.length, 1);
+  const card = made[0];
+  assert.equal(card.owner, "station-blend-card");
   assert.deepEqual(card.keyframes, [{ opacity: 0, transform: "scaleX(0.92)" }, { opacity: 1, transform: "none" }]);
-  assert.deepEqual(cluster.keyframes, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scaleX(0.92)" }]);
-  for (const a of made) {
-    assert.equal(a.options.duration, 200, "the settle time handed in");
-    assert.equal(a.options.fill, "both", "held at its first frame before it plays, and at its last after");
-    assert.deepEqual(a.log, ["pause"]);
-  }
+  assert.equal(card.options.duration, 200, "the settle time handed in");
+  assert.equal(card.options.fill, "both", "held at its first frame before it plays, and at its last after");
+  assert.deepEqual(card.log, ["pause"]);
   assert.equal(card.options.easing, "ease-out");
-  assert.equal(cluster.options.easing, "ease-in");
-  // Not the next frame - the one after, once that paint is behind them.
+  // Not the next frame - the one after, once that paint is behind it.
   assert.equal(f.pending(), 1);
   f.tick();
-  for (const a of made) assert.deepEqual(a.log, ["pause"], "released on the first frame");
+  assert.deepEqual(card.log, ["pause"], "released on the first frame");
   assert.equal(f.pending(), 1);
   f.tick();
-  for (const a of made) assert.deepEqual(a.log, ["pause", "play"]);
-  assert.ok(layer.classList.contains("is-turning"), "still mid-turn while they run");
-  // The first finishing is not the end.
+  assert.deepEqual(card.log, ["pause", "play"]);
+  assert.ok(layer.classList.contains("is-turning"), "still mid-turn while it runs");
   card.finish();
-  await settle();
-  assert.ok(layer.classList.contains("is-turning"));
-  cluster.finish();
   await handle.done;
-  assert.ok(!layer.classList.contains("is-turning"), "landed: the stylesheet hides the departing face");
+  assert.ok(!layer.classList.contains("is-turning"), "landed");
   assert.ok(layer.classList.contains("is-flipped"));
-  for (const a of made) assert.equal(a.log[a.log.length - 1], "cancel", "the held last frame is let go once the class hides the face");
+  assert.equal(card.log[card.log.length - 1], "cancel", "the held last frame is let go once the class shows the face");
 });
 
 test("turning back to the cluster is the same turn the other way", async () => {
@@ -139,15 +131,28 @@ test("turning back to the cluster is the same turn the other way", async () => {
   assert.equal(handle.animated, true);
   assert.ok(!layer.classList.contains("is-flipped"));
   assert.ok(layer.classList.contains("is-turning"));
-  const cluster = made.find(a => a.owner === "station-hopper-cluster");
-  const card = made.find(a => a.owner === "station-blend-card");
-  assert.deepEqual(cluster.keyframes, faceTurn.ARRIVE);
+  // The card departs from over the cluster, which was there all along.
+  assert.equal(made.length, 1);
+  const card = made[0];
+  assert.equal(card.owner, "station-blend-card");
   assert.deepEqual(card.keyframes, faceTurn.DEPART);
-  assert.equal(cluster.options.duration, faceTurn.SETTLE, "the token's default without a timing handed in");
+  assert.equal(card.options.easing, "ease-in");
+  assert.equal(card.options.duration, faceTurn.SETTLE, "the token's default without a timing handed in");
   f.tick(); f.tick();
-  for (const a of made) a.finish();
+  card.finish();
   await handle.done;
   assert.ok(!layer.classList.contains("is-turning"));
+});
+
+test("to the cluster from nothing there is nothing to move: instant, the class alone", () => {
+  const { layer, made, animate } = layerWith(["cluster", "card"]);
+  layer.classList.add("is-flipped");
+  const f = frames();
+  assert.equal(faceTurn.turn(layer, { to: "cluster", from: null, animate, requestAnimationFrame: f.request }).animated, false);
+  assert.ok(!layer.classList.contains("is-flipped"));
+  assert.ok(!layer.classList.contains("is-turning"));
+  assert.equal(made.length, 0);
+  assert.equal(f.pending(), 0);
 });
 
 test("with no face to leave (a face switch: the card that was there is gone) only the arrival plays", async () => {
@@ -218,24 +223,33 @@ test("a face that cannot animate - a node with no animate, one whose animate ret
     assert.equal(made.length, 0);
     assert.ok(layer.classList.contains("is-flipped") && !layer.classList.contains("is-turning"));
   }
-  // One face that animates and one that does not: no half-turn either.
-  const { layer, card, made, animate } = layerWith(["cluster", "card"]);
-  card.animate = () => null;
+  // A cluster that cannot animate is no matter: it is never asked to.
+  const { layer, cluster, made, animate } = layerWith(["cluster", "card"]);
+  cluster.animate = () => null;
   const f = frames();
   const handle = faceTurn.turn(layer, { to: "card", from: "cluster", animate, requestAnimationFrame: f.request });
-  assert.equal(handle.animated, false);
-  assert.ok(!layer.classList.contains("is-turning"));
+  assert.equal(handle.animated, true);
+  assert.ok(layer.classList.contains("is-turning"));
   assert.equal(made.length, 1);
-  assert.deepEqual(made[0].log, ["cancel"], "the one that was made is let go");
+  assert.equal(made[0].owner, "station-blend-card");
+  handle.finish();
+  assert.ok(!layer.classList.contains("is-turning"));
 });
 
 test("a missing face, no frame callback, or no layer at all: instant, and never a throw", () => {
   const f = frames();
   const only = faces => { const l = layerWith(faces); return { layer: l.layer, animate: l.animate }; };
+  // No card to move: instant.
   const a = only(["cluster"]);
   assert.equal(faceTurn.turn(a.layer, { to: "card", from: "cluster", animate: a.animate, requestAnimationFrame: f.request }).animated, false);
+  assert.equal(faceTurn.turn(a.layer, { to: "cluster", from: "card", animate: a.animate, requestAnimationFrame: f.request }).animated, false);
+  // No cluster is no matter: the card is the only face that moves.
   const b = only(["card"]);
-  assert.equal(faceTurn.turn(b.layer, { to: "card", from: "cluster", animate: b.animate, requestAnimationFrame: f.request }).animated, false);
+  const own = frames();
+  const moved = faceTurn.turn(b.layer, { to: "card", from: "cluster", animate: b.animate, requestAnimationFrame: own.request });
+  assert.equal(moved.animated, true);
+  moved.finish();
+  assert.ok(!b.layer.classList.contains("is-turning"));
   const { layer, animate } = layerWith(["cluster", "card"]);
   assert.equal(faceTurn.turn(layer, { to: "card", from: "cluster", animate, requestAnimationFrame: null }).animated, false);
   assert.ok(layer.classList.contains("is-flipped"), "the class is still set");
@@ -247,9 +261,10 @@ test("a missing face, no frame callback, or no layer at all: instant, and never 
  *   The stylesheet's side of it, and the loading
  * -------------------------------------------------------------------- */
 
-test("the stylesheet hides the face the class does not name, shows both mid-turn with the pointer off them, and keeps the rule the patch relies on", () => {
-  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8");
-  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*display: none;/);
+test("the stylesheet keeps the cluster drawn under the card with the pointer off it, hides a card the class does not name, shows it mid-turn with the pointer off both, and keeps the rule the patch relies on", () => {
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*pointer-events: none;\s*\}/);
+  assert.doesNotMatch(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{[^}]*display/, "the cluster is hidden under the glass");
   assert.match(css, /\.station-layer\.is-flippable:not\(\.is-flipped\) \.station-blend-card \{\s*display: none;/);
   assert.match(css, /\.station-layer\.is-turning \.station-hopper-cluster,\n\.station-layer\.is-turning \.station-blend-card \{\s*display: inline;\s*pointer-events: none;/);
 });

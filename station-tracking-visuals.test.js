@@ -488,8 +488,9 @@ test("the flow and the wash are styled from tokens, the outline's claimants stan
   assert.match(css, /\.station-hopper\.is-overdue\.is-selected \.station-hopper__shell,\s*\.station-hopper\.is-overdue\.is-drop-target \.station-hopper__shell \{\s*stroke: var\(--station-accent\);/);
   // Pump-off keeps its own marks (the receiver, the fill, the hose) untouched by overdue.
   assert.doesNotMatch(css, /is-overdue[^{]*(receiver|__fill\b|hose)/);
-  // Blend Edit hides the cluster whole; it removes no class.
-  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*display: none;/);
+  // Blend Edit leaves the cluster drawn under the card's glass, its marks
+  // and its flow running on behind it; it removes no class, only the pointer.
+  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*pointer-events: none;\s*\}/);
   // No raw colour anywhere in the sheet.
   assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\(/i);
   // Every theme answers the flow token.
@@ -810,13 +811,13 @@ test("booted: the clock pass moves the mark; pump-off takes it away; untracking 
   s.control("C1", "tracking").click();
   assert.deepEqual(s.overdue(), ["C1"]);
   // Blend Edit (the machine rail's switch) turns every layer over: the
-  // cluster is hidden whole, the hopper and its mark stand under the
-  // card, and come back as they went.
+  // cluster stays drawn under the card's glass, the hopper and its mark
+  // with it, and is the same when the card goes.
   const blendSwitch = s.doc.querySelector("[data-role='machine-rail'] [data-action='blend-edit']");
   blendSwitch.click();
   const layerC = s.machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === "C");
   assert.ok(layerC.classList.contains("is-flipped"));
-  assert.ok(s.hopper("C1").classList.contains("is-overdue"), "the mark stands on the hidden cluster");
+  assert.ok(s.hopper("C1").classList.contains("is-overdue"), "the mark stands on the cluster under the card");
   assert.equal(layerC.querySelectorAll(".station-blend-card .station-hopper__rundown").length, 0, "the card draws no flow of its own");
   blendSwitch.click();
   assert.ok(!s.machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === "C").classList.contains("is-flipped"));

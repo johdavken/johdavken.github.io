@@ -642,18 +642,25 @@
  */
 
 .station-editor[data-variant="compact"] {
+  /* The glass's edge (glass.css) is inside the card's box: the face is
+     the whole foreignObject, border and all. */
+  box-sizing: border-box;
   padding: var(--station-space-2) var(--station-space-2) var(--station-space-1);
   font-size: var(--station-text-sm);
 }
 
 /* The Next face: the same card turned to the planned recipe. It says so
-   as the timeline says "upcoming" - that colour as a dashed inset edge,
-   and the word in the card's top corner - so a card of the plan can never
-   be read as the running blend. Nothing else about the card changes. */
+   as the timeline says "upcoming" - that colour as an inset edge inside
+   the glass's own, and the word in the card's top corner - so a card of
+   the plan can never be read as the running blend. Nothing else about
+   the card changes: the glass's highlight and shadow are restated here
+   because the ring shares their one property. */
 .station-editor[data-variant="compact"][data-recipe="next"] {
   position: relative;
-  box-shadow: inset 0 0 0 var(--station-stroke) var(--station-timeline-upcoming, var(--station-info));
-  border-radius: var(--station-radius-sm);
+  box-shadow:
+    inset 0 0 0 var(--station-stroke) var(--station-timeline-upcoming, var(--station-info)),
+    inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight),
+    var(--station-handbook-glass-shadow);
 }
 
 .station-editor[data-variant="compact"][data-recipe="next"]::before {
