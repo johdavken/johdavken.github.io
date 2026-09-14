@@ -10,8 +10,12 @@
  * second surface spends the same tokens rather than asking each theme
  * for a second set. Nothing here names a colour or a length.
  *
- * Who wears it: the Changeover Calculator (changeover.css), and any
- * utility surface after it. The Operator Handbook's panel restates the
+ * Who wears it: the Changeover Calculator (changeover.css), the layer
+ * card's faces - the compact blend editor, current and Next
+ * (focus-editor.css), and the weight card (weight-cards.css), each the
+ * HTML root inside the card's <foreignObject>, since the SVG frame under
+ * them cannot blur what stands behind - and any utility surface after
+ * them. The Operator Handbook's panel restates the
  * same material under its own rule (handbook.css), pinned there by its
  * tests as the panel's own; bringing it onto this class is a small later
  * step, not a change in what it looks like.

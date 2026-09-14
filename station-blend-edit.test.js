@@ -211,7 +211,7 @@ test("the layer's share stays in its header slot in Blend Edit, unchanged in val
   assert.ok(Number(card.getAttribute("y")) > Number(slot.getAttribute("y")) + Number(slot.getAttribute("height")), "the card covers the share");
 });
 
-test("a layer turned over shows its card where its cluster stood; the others are untouched, and the clusters are hidden, not removed", () => {
+test("a layer turned over shows its card over its cluster; the others are untouched, and the cluster stays drawn under the glass, pointer off", () => {
   const doc = fakeDocument();
   const card = doc.createElement("div");
   card.setAttribute("data-role", "blend-editor");
@@ -241,17 +241,17 @@ test("a layer turned over shows its card where its cluster stood; the others are
   assert.ok(y > clusterBox[1] && y + h <= clusterBox[1] + clusterBox[3] + 0.01, "the card runs outside the cluster's box vertically");
   assert.ok(w >= clusterBox[2], "the card is narrower than the cluster");
   assert.ok(x <= clusterBox[0] && x + w >= clusterBox[0] + clusterBox[2], "the card does not cover the cluster");
-  // The hoppers are still there under it - hidden by the stylesheet, so a
-  // value patch finds them.
+  // The hoppers are still there under it - drawn, seen through the
+  // card's glass, and a value patch finds them; only the pointer leaves
+  // them (the stylesheet).
   const cluster = allWith(b, "data-role", "hopper-cluster")[0];
   assert.ok(cluster, "the cluster was removed");
   assert.equal(allWith(cluster, "data-role", "hopper").length, 6);
   assert.equal(allWith(b, "data-role", "flip").length, 0, "a flip chip is drawn on the turned-over layer");
   // A card makes the drawing a group with controls in it.
   assert.equal(svg.getAttribute("role"), "group");
-  // The stylesheet hides the turned-over cluster.
-  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8");
-  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*display: none;/);
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-layer\.is-flipped \.station-hopper-cluster \{\s*pointer-events: none;\s*\}/);
   void m; void r;
 });
 
@@ -753,4 +753,47 @@ test("a card's row list is not a scroll container: the result list a search hang
   assert.match(css, /\.station-editor__results \{[^}]*position: absolute;/);
   const source = fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8");
   assert.match(source, /row\.item\.closest\("foreignObject"\)/);
+});
+
+/* ----------------------------------------------------------------------
+ *   The card's material: the console's glass
+ * -------------------------------------------------------------------- */
+
+test("the layer card is glass: every face wears .station-glass on its HTML root, the SVG frame under it paints nothing, and the Next face keeps its ring inside the glass's shadows", () => {
+  const { bridge } = connectedBridge();
+  // The compact faces - current and Next - wear the material; the full
+  // editor in the focus workspace does not (the workspace is its frame).
+  for (const recipe of ["current", "next"]) {
+    const { card } = buildCard(bridge, { recipe });
+    assert.ok(classSet(card.element).has("station-glass"), `the ${recipe} face is not glass`);
+    assert.ok(classSet(card.element).has("station-editor"));
+  }
+  const { card: full } = buildCard(bridge, { variant: "full" });
+  assert.ok(!classSet(full.element).has("station-glass"), "the focus workspace's editor wears the card's glass");
+  // The drag proxy a row lifts is not a face and wears none of it.
+  const proxy = (fs.readFileSync(path.join(ROOT, "station/station-focus-editor.js"), "utf8").match(/station-editor__drag-proxy[^"]*"/g) || []).join(" ");
+  assert.doesNotMatch(proxy, /station-glass/);
+
+  const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = (css, name) => { const at = css.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return css.slice(at, css.indexOf("}", at)); };
+  const hopper = strip(fs.readFileSync(path.join(ROOT, "station/styles/components/hopper.css"), "utf8"));
+  const frame = rule(hopper, ".station-blend-card__frame");
+  assert.match(frame, /fill: none;/);
+  assert.match(frame, /stroke: none;/);
+  assert.doesNotMatch(frame, /surface-editable|border-strong/, "the frame still paints the old sunken panel under the glass");
+  // The material is spelled once, in glass.css; the faces restate none
+  // of it but the one property the Next ring shares with it. (The card's
+  // "⋯" menu is its own glass in focus-editor.css, as it was.)
+  const focus = strip(fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8"));
+  const weights = strip(fs.readFileSync(path.join(ROOT, "station/styles/components/weight-cards.css"), "utf8"));
+  const restated = /backdrop-filter|--station-handbook-glass\)|--station-handbook-glass-blur|--station-handbook-glass-border/;
+  assert.doesNotMatch(weights, restated, "weight-cards.css restates the glass");
+  assert.doesNotMatch(rule(focus, ".station-editor"), restated);
+  const compact = rule(focus, '.station-editor[data-variant="compact"]');
+  assert.doesNotMatch(compact, restated);
+  assert.match(compact, /box-sizing: border-box;/, "the glass's edge would push the face past its box");
+  const next = rule(focus, '.station-editor[data-variant="compact"][data-recipe="next"]');
+  assert.match(next, /box-shadow:\s*inset 0 0 0 var\(--station-stroke\) var\(--station-timeline-upcoming, var\(--station-info\)\),\s*inset 0 var\(--station-stroke\) 0 var\(--station-handbook-glass-highlight\),\s*var\(--station-handbook-glass-shadow\);/);
+  assert.doesNotMatch(next, restated);
+  assert.doesNotMatch(next, /border-radius/, "the Next face rounds itself differently from the glass");
 });

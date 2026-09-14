@@ -1,16 +1,18 @@
-/* A layer turning over: its hopper cluster and its blend card, cross-faded
- * in place.
+/* A layer turning over: its blend card fading in over its hopper cluster,
+ * or out from it, in place.
  *
  * WHAT IT IS
  *
  * While Blend Edit is on, every layer on the stage carries both faces -
  * the cluster it always had and the card the mode gave it - and the
- * layer's `is-flipped` class says which one the stylesheet shows
- * (hopper.css). Turning a layer over is therefore not a redraw: it is
- * that class changing, and the two faces trading places on screen. This
- * module is the trade. The departing face fades and narrows out while the
- * arriving one fades and widens in, over the settle time the tokens name,
- * and the two overlap the whole way - there is no frame with neither.
+ * layer's `is-flipped` class says whether the card is shown (hopper.css).
+ * The cluster is always shown: the card is glass, and the hoppers stand
+ * behind it, seen through it. Turning a layer over is therefore not a
+ * redraw: it is that class changing, and the card arriving over the
+ * cluster or leaving it. This module is that move. The card fades and
+ * widens in, or fades and narrows out, over the settle time the tokens
+ * name; the cluster under it never moves, so there is no frame with
+ * neither face and nothing for the cluster to do.
  *
  * One layer or every layer, the turn is this same routine run once per
  * layer, so the rail's switch and a train's click cannot look different.
@@ -19,15 +21,15 @@
  *
  * The class is set at once: the DOM tells the truth the moment the
  * operator acts, whatever the animation is doing. Then `is-turning` goes
- * on the layer, which shows both faces regardless of `is-flipped`, and the
- * animations are created PAUSED at their first frame - the departing face
- * whole, the arriving one invisible - so the next paint, however long it
- * takes (the stage may just have been rebuilt), still shows the picture
- * the operator was looking at. They are set going two frames later, once
- * that paint is behind them, so the fade runs its full length from a
+ * on the layer, which shows the card regardless of `is-flipped`, and the
+ * animation is created PAUSED at its first frame - the card whole if it
+ * is leaving, invisible if it is arriving - so the next paint, however
+ * long it takes (the stage may just have been rebuilt), still shows the
+ * picture the operator was looking at. It is set going two frames later,
+ * once that paint is behind it, so the fade runs its full length from a
  * frame that has actually been drawn rather than starting on a clock the
- * paint could not keep up with. When both finish, `is-turning` comes off
- * and the stylesheet hides the departing face where it lies.
+ * paint could not keep up with. When it finishes, `is-turning` comes off
+ * and the stylesheet hides a departed card where it lies.
  *
  * Reduced motion, a face that is not there, no animate function handed
  * in, or an element that cannot animate (a test's fake node: the function
@@ -49,8 +51,9 @@
   const SETTLE = 120;
   const FACES = Object.freeze({ card: ".station-blend-card", cluster: ".station-hopper-cluster" });
 
-  /* The arriving face's frames - the same settle the focus workspace
-   * uses - and the departing face's, which are those in reverse. */
+  /* The card's arriving frames - the same settle the focus workspace
+   * uses - and its departing ones, which are those in reverse. The
+   * cluster has no frames: it stands where it is under the glass. */
   const ARRIVE = Object.freeze([{ opacity: 0, transform: "scaleX(0.92)" }, { opacity: 1, transform: "none" }]);
   const DEPART = Object.freeze([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scaleX(0.92)" }]);
 
@@ -76,9 +79,12 @@
    * @param {object}  options
    * @param {string}  options.to     "card" | "cluster" - the face to show
    * @param {string}  [options.from] "card" | "cluster" | null - the face
-   *        being left; null (or the same as `to`) means nothing departs and
-   *        the arriving face settles in on its own, as when the mode
-   *        switches faces and the card that was there is already gone
+   *        being left. Only the card is ever animated: to the card, it
+   *        arrives over the cluster; to the cluster, it departs from over
+   *        it. `from` null (or the same as `to`) with the card arriving is
+   *        the same arrival, as when the mode switches faces and the card
+   *        that was there is already gone; to the cluster from nothing,
+   *        there is nothing to move and the turn is instant
    * @param {object}  [options.timing]  { settle } in ms
    * @param {function} [options.animate]  (element, keyframes, options) => Animation | null;
    *        none makes the turn instant
@@ -105,24 +111,23 @@
     // The truth first, whatever follows.
     setClass(layer, "is-flipped", to === "card");
 
-    const arriving = faceOf(layer, to);
-    const departing = from ? faceOf(layer, from) : null;
-    if (reduced || !animate || !arriving || (from && !departing) || !raf) return instant;
+    // The card, arriving or departing; the cluster never moves.
+    const card = to === "card" || from === "card" ? faceOf(layer, "card") : null;
+    if (reduced || !animate || !card || !raf) return instant;
+    const frames = to === "card" ? ARRIVE : DEPART;
+    const easing = to === "card" ? "ease-out" : "ease-in";
 
-    // Both faces shown while they trade, and each held at its first frame
-    // until the frame after the next paint.
+    // The card shown while it moves, held at its first frame until the
+    // frame after the next paint.
     setClass(layer, "is-turning", true);
     let animations;
     try {
-      animations = [
-        animate(arriving, ARRIVE, { duration: settle, easing: "ease-out", fill: "both" }),
-        departing ? animate(departing, DEPART, { duration: settle, easing: "ease-in", fill: "both" }) : null
-      ].filter(Boolean);
+      animations = [animate(card, frames, { duration: settle, easing, fill: "both" })].filter(Boolean);
     } catch (error) {
       animations = [];
     }
-    if (!animations.length || animations.length !== (departing ? 2 : 1)) {
-      // A face that cannot animate: no half-turn - land it now.
+    if (animations.length !== 1) {
+      // A card that cannot animate: no half-turn - land it now.
       for (const a of animations) { try { a.cancel(); } catch (error) { /* ok */ } }
       setClass(layer, "is-turning", false);
       return instant;

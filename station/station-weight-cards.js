@@ -235,7 +235,8 @@
 
     const editable = Object.keys(able).filter(kind => kind !== "smart" && able[kind]);
     const mode = editable.length === 0 ? "read-only" : "editing";
-    const rootEl = element(doc, "div", "station-weight-card", {
+    // The layer card's glass (glass.css), worn as the blend faces wear it.
+    const rootEl = element(doc, "div", "station-weight-card station-glass", {
       "data-layer": layer.id,
       "data-role": "weights-card",
       "data-mode": mode,

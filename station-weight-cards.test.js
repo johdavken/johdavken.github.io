@@ -454,3 +454,12 @@ test("the module computes no weight, keeps no application state, reaches for no 
   assert.match(css, /\.station-weight-card__field\.is-changed-underneath[^{]*\{[^}]*var\(--station-warning\)/);
   assert.match(css, /\[aria-invalid="true"\][^{]*\{[^}]*var\(--station-danger\)/);
 });
+
+test("the weight card is a face of the layer card and wears its glass", () => {
+  const { card } = build();
+  const classes = String(card.element.getAttribute("class") || "").split(/\s+/);
+  assert.ok(classes.includes("station-weight-card"));
+  assert.ok(classes.includes("station-glass"), "the weight face is not glass");
+  // Nothing inside the card wears it: the material is the face's alone.
+  assert.equal(card.element.querySelectorAll(".station-glass").length, 0);
+});

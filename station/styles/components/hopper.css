@@ -571,7 +571,11 @@
  */
 
 .station-layer.is-flipped .station-hopper-cluster {
-  display: none;
+  /* Still drawn: the card is glass (glass.css), and the hoppers stand
+     behind it as the mixers stand behind the Handbook - seen through it,
+     the run-down flow running on. Only the pointer leaves them, so a
+     click that falls past the card's edge finds nothing under it. */
+  pointer-events: none;
 }
 
 /* And the other way about: while the mode is on every layer carries its
@@ -583,21 +587,24 @@
   display: none;
 }
 
-/* Mid-turn both faces are shown, whichever the class names, so the one
-   leaving can fade out under the one arriving; neither takes the pointer
-   for the length of it. */
+/* Mid-turn the card is shown whichever way the class names it, so it can
+   fade in over the cluster or out from it; neither takes the pointer for
+   the length of it. The cluster is always there - the card is the only
+   face that moves. */
 .station-layer.is-turning .station-hopper-cluster,
 .station-layer.is-turning .station-blend-card {
   display: inline;
   pointer-events: none;
 }
 
-/* The card's own surface: the same sunken panel the focus workspace is,
-   with a quiet edge, so the two editors read as one family. */
+/* The card's surface is the console's glass (glass.css), worn by the
+   face inside the <foreignObject> - the compact editor or the weight
+   card - because a blur of what stands behind is a thing only an HTML
+   box can do; the frame rect under it is the card's box for the layout
+   and the transition to read, and paints nothing. */
 .station-blend-card__frame {
-  fill: var(--station-surface-editable);
-  stroke: var(--station-border-strong);
-  stroke-width: var(--station-line-thin);
+  fill: none;
+  stroke: none;
 }
 
 .station-blend-card__editor {
