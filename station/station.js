@@ -558,9 +558,9 @@
    * "edit the blends", and a layer the operator wants as hoppers again is
    * one click on its train. The hint says so, on the status line, until
    * the first thing the operator does in the mode replaces it. */
-  const BLEND_EDIT_HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
+  const BLEND_EDIT_HINT = "Current Recipe: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Current Recipe again when done.";
   const WEIGHTS_EDIT_HINT = "Weights: every layer is turned over to its weight card. Enter receiver weights - and, with Smart Hoppers on, each hopper's geometry; click Weights again when done.";
-  const NEXT_EDIT_HINT = "Next Recipe: every layer is turned over to a card of the PLANNED recipe. Edits here change the plan, not the running job; Load Next on the rail makes the plan the running recipe. Click Next Recipe again when done.";
+  const NEXT_EDIT_HINT = "Next Recipe: every layer is turned over to a card of the PLANNED recipe. Edits here change the plan, not the running job; Load Next, beside Current Recipe on the rail, makes the plan the running recipe. Click Next Recipe again when done.";
   const HINT = { blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT, next: NEXT_EDIT_HINT };
   const FACES = ["blend", "weights", "next"];
 
@@ -1000,8 +1000,8 @@
     });
   }
 
-  /* The rail's two moves under the Next face, through the plan controls'
-   * seam: the confirmed Load Next, and Copy Current. One command each;
+  /* The rail's two moves - Load Next under the Current face, Copy Current
+   * under the Next face - through the plan controls' seam. One command each;
    * the answer through the same publish policy as every other; what the
    * application did said on the status line either way. */
   function promoteNextRecipe() {

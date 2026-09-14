@@ -23,9 +23,9 @@
  * launcher's icon-plate is - and the same answer to the pointer, the
  * accent on the plate's edge. A glyph on the plate instead of the book.
  * No glass, no panel around them, no words on them - each says what it
- * is on hover and to a reader. Every colour is a token. Blend Edit on is
- * the accent, quietly: an accent edge and glyph, a wash of the accent
- * on the plate. An armed Load Next is the warning colour, the one
+ * is on hover and to a reader. Every colour is a token. Current Recipe
+ * on is the accent, quietly: an accent edge and glyph, a wash of the
+ * accent on the plate. An armed Load Next is the warning colour, the one
  * moment the rail is allowed to look like something is about to happen;
  * at rest it is as quiet as the launcher beside it.
  *
@@ -103,7 +103,7 @@
   cursor: default;
 }
 
-/* Blend Edit on: the accent, as an edge and a glyph and a wash - never
+/* Current Recipe on: the accent, as an edge and a glyph and a wash - never
    a filled block, which would shout across the machine. */
 .station-root .station-rail__control.is-active {
   --station-rail-plate: var(--station-accent-soft);
@@ -190,8 +190,8 @@
   stroke-linecap: round;
 }
 
-/* The hopper in the Smart Hoppers and the two moves' glyphs: an
-   outline, as the stage's. */
+/* The hopper in the Smart Hoppers glyph: an outline, as the stage's
+   (the recipe faces' hopper is a face - a thing on the plate). */
 .station-rail__glyph-hopper {
   fill: none;
   stroke: currentColor;
@@ -199,16 +199,17 @@
   stroke-linejoin: round;
 }
 
-/* ---- The Next face: its switch, and the two moves beside it ---- */
+/* ---- The recipe faces: each switch, and its row beside it ---- */
 
 /* A switch and its children are one group in the rail's column: the
    switch stands in the column like its neighbours; the flyout is laid
    beside it to the right, out of the column's flow, so the rail is no
-   wider for it and stands where it stood. Three groups: the Blend switch
-   with Bulk Edit, the Next switch with its two moves, the Weights switch
-   with Smart Hoppers. Each group's stem, bracket and children wear the
-   colour its switch takes when on - the Next face's "upcoming", the
-   others' the accent - so the parent and its children read as one. */
+   wider for it and stands where it stood. Three groups: the Current
+   switch with the bulk set and Load Next, the Next switch with the bulk
+   set and Copy Current, the Weights switch with Smart Hoppers. Each
+   group's stem, bracket and children wear the colour its switch takes
+   when on - the Next face's "upcoming", the others' the accent - so the
+   parent and its children read as one. */
 .station-rail__group {
   --station-rail-stem: var(--station-accent);
   position: relative;
@@ -224,13 +225,12 @@
    a hairline the width of the gap, and a bracket down its own left edge
    - so they read as the switch's children, not as more tiles of the
    dock. Its foot is the switch's own row and it grows UPWARD, a row at
-   a time with the column's gap between, so a flyout of two rows puts its
-   upper row exactly where the tile above the switch stands: the Next
-   flyout's bulk row stands in the Blend row's place, on the Next
-   bracket. Folded, it sits under the switch's edge, faded and a little
-   scaled; unfolding, it grows out to the right, the second child a beat
-   behind the first. Visibility follows the motion so the folded flyout
-   is out of the tab order and the reader's tree, and returns at once. */
+   a time with the column's gap between (each recipe face has one row
+   today; the Weights face one tile). Folded, it sits under the switch's
+   edge, faded and a little scaled; unfolding, it grows out to the right,
+   the second child a beat behind the first. Visibility follows the
+   motion so the folded flyout is out of the tab order and the reader's
+   tree, and returns at once. */
 .station-rail__flyout {
   position: absolute;
   bottom: 0;
@@ -253,13 +253,19 @@
     visibility 0s linear var(--station-motion-settle);
 }
 
-/* A row of the flyout: tiles side by side, the column's gap between. The
-   bulk row is positioned so the field's slot can stand over it. */
+/* A row of the flyout: tiles side by side, the column's gap between,
+   positioned so the field's slot can stand over it. The bulk set inside
+   it is laid as the row's own children, so the row's gap runs between
+   Bulk Edit (or Confirm and Cancel) and the move at its end. */
 .station-rail__row {
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--station-space-2);
+}
+
+.station-rail__bulk {
+  display: contents;
 }
 
 /* The stem: a hairline from the switch's edge to the bracket, at the
@@ -285,7 +291,8 @@
 }
 
 /* The children: the switch's own colour on their plates' edges, the same
-   tile as the column's, each arriving a beat after the one before. */
+   tile as the column's, each arriving a beat after the one before - the
+   move at the row's end after the bulk set. */
 .station-rail__flyout .station-rail__control {
   --station-rail-plate-edge: var(--station-rail-stem);
   transform: translateX(calc(-1 * var(--station-space-2)));
@@ -293,6 +300,7 @@
   transition: transform var(--station-motion-settle) var(--station-motion-ease), opacity var(--station-motion-settle) ease-out;
 }
 
+.station-rail__flyout .station-rail__control--promote,
 .station-rail__flyout .station-rail__control--copy {
   transition-delay: var(--station-motion-lead);
 }
@@ -344,30 +352,29 @@
   --station-rail-plate-edge: var(--station-text);
 }
 
-/* ---- Bulk Edit: the row both recipe faces share, and what it becomes ---- */
+/* ---- Bulk Edit: the set both recipe faces share, and what it becomes ---- */
 
-/* One bulk row (station-machine-rail.js moves it to whichever face is on:
-   the Blend flyout, or the top row of the Next flyout). It holds two
-   sets in one place: Bulk Edit at rest; Confirm and Cancel while a
-   selection is on (data-bulk on the row; the resin is entered in the
-   bulk field over the row). The set not showing is hidden outright -
-   out of layout, the tab order and the reader's tree - so the swap is a
-   swap and not two sets side by side; the set arriving settles in with
-   a short motion. */
+/* One bulk set (station-machine-rail.js moves it to the head of whichever
+   face's row is open). It holds two sets in one place: Bulk Edit at
+   rest; Confirm and Cancel while a selection is on (data-bulk on the row
+   it stands in; the resin is entered in the bulk field over the row).
+   The set not showing is hidden outright - out of layout, the tab order
+   and the reader's tree - so the swap is a swap and not two sets side by
+   side; the set arriving settles in with a short motion. */
 .station-root .station-rail__control[hidden] {
   display: none;
 }
 
-.station-rail__row--bulk[data-bulk="true"] .station-rail__control--confirm,
-.station-rail__row--bulk[data-bulk="true"] .station-rail__control--cancel {
+.station-rail__row[data-bulk="true"] .station-rail__control--confirm,
+.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
   animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
 }
 
-.station-rail__row--bulk[data-bulk="true"] .station-rail__control--cancel {
+.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
   animation-delay: var(--station-motion-lead);
 }
 
-.station-rail__row--bulk[data-bulk="false"] .station-rail__control--bulk {
+.station-rail__row[data-bulk="false"] .station-rail__control--bulk {
   animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
 }
 
@@ -376,7 +383,7 @@
   to { opacity: 1; transform: none; }
 }
 
-/* Bulk Edit on shows as the Blend switch does: the accent, quietly. */
+/* Bulk Edit on shows as the Current switch does: the accent, quietly. */
 .station-root .station-rail__control--bulk[aria-pressed="true"] {
   --station-rail-plate-edge: var(--station-accent);
   color: var(--station-accent);
@@ -396,11 +403,14 @@
   stroke-width: 1;
 }
 
-/* The resin field's slot: above the bulk row, its right edge the row's,
-   reaching back across the switch - over the stage, where the column
-   stands and nothing is drawn. Out of the row's flow, so the row is laid
-   as it was; it folds and unfolds with the flyout, and is hidden
-   outright while no selection is on. */
+/* The resin field's slot: above the Current row, its right edge the
+   row's, reaching back across the switch - over the stage, where the
+   column stands and nothing is drawn. Out of the row's flow, so the row
+   is laid as it was; it folds and unfolds with the flyout, and is hidden
+   outright while no selection is on. Under the Next face the set stands
+   a row lower, on the Next row, and the slot is lifted by that row and
+   the gap - so the field stands in ONE place whichever face it serves,
+   and never over the Current switch. */
 .station-rail__field-slot {
   position: absolute;
   right: 0;
@@ -409,6 +419,10 @@
   justify-content: flex-end;
   width: max(9rem, calc(100% + var(--station-handbook-launcher) + var(--station-space-2)));
   pointer-events: auto;
+}
+
+.station-rail__group--next .station-rail__field-slot {
+  bottom: calc(100% + var(--station-space-1) + var(--station-handbook-launcher) + var(--station-space-2));
 }
 
 .station-root .station-rail__field-slot[hidden] {
@@ -460,9 +474,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .station-rail__row--bulk[data-bulk="true"] .station-rail__control--confirm,
-  .station-rail__row--bulk[data-bulk="true"] .station-rail__control--cancel,
-  .station-rail__row--bulk[data-bulk="false"] .station-rail__control--bulk {
+  .station-rail__row[data-bulk="true"] .station-rail__control--confirm,
+  .station-rail__row[data-bulk="true"] .station-rail__control--cancel,
+  .station-rail__row[data-bulk="false"] .station-rail__control--bulk {
     animation: none;
   }
 }

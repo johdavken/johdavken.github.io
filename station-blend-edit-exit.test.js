@@ -454,7 +454,7 @@ function boot(options) {
   return api;
 }
 
-const HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
+const HINT = "Current Recipe: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Current Recipe again when done.";
 const count = (text, needle) => text.split(needle).length - 1;
 
 /* A stage back to normal: no mode attribute, no card, no chip, no turned
@@ -473,7 +473,7 @@ function assertModeCleared(s) {
   assert.equal(s.face(), null, "the mount names no face");
   assert.equal(s.blendControls(), null, "the Handbook has no Blend Edit controls");
   assert.equal(s.action("blend-edit"), null, "nor a Blend Edit action");
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/, "no Blend Edit notice is left on the status line");
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/, "no Current Recipe notice is left on the status line");
   assert.ok(s.shareEditor() === null, "no share field is left in a header");
   assert.ok(s.machine.querySelector(".is-editing") === null, "no header is still marked as being edited");
   assert.equal(s.machine.contains(s.doc.activeElement), false, "nothing on the stage keeps the focus");
@@ -487,7 +487,7 @@ test("one click on the rail enters the mode with every layer turned over; the sw
   const s = boot();
   const stageBefore = s.machine.querySelector("svg").attributes;
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "false");
-  assert.equal(s.blendSwitch().getAttribute("title"), "Blend Edit");
+  assert.equal(s.blendSwitch().getAttribute("title"), "Current Recipe");
   assert.equal(s.blendSwitch().disabled, false);
   s.clickBlend();
   assert.equal(s.modeOn(), true);
@@ -495,7 +495,7 @@ test("one click on the rail enters the mode with every layer turned over; the sw
   assert.equal(s.cards().length, 3);
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "true");
   assert.ok(s.blendSwitch().classList.contains("is-active"));
-  assert.match(s.blendSwitch().getAttribute("title"), /^Blend Edit · on/);
+  assert.match(s.blendSwitch().getAttribute("title"), /^Current Recipe · on/);
   assert.ok(s.status.textContent.startsWith(HINT), "the mode says how to leave it");
   assert.equal(s.isHandbookOpen(), false, "the Handbook was not opened to get here");
   assert.deepEqual(s.calls, []);
@@ -633,7 +633,7 @@ test("the Handbook carries nothing of the mode: no Blend Edit action, no control
   assert.equal(s.blendControls(), null);
   assert.ok(!s.panel.querySelector(".station-book__toolbar").hidden, "the book's toolbar is showing, not given way");
   assert.ok(!s.panel.querySelector(".station-book__columns").hidden);
-  assert.doesNotMatch(s.panel.textContent, /Blend Edit|Edit all|Show all hoppers/);
+  assert.doesNotMatch(s.panel.textContent, /Current Recipe|Blend Edit|Edit all|Show all hoppers/);
 });
 
 /* ----------------------------------------------------------------------
@@ -649,7 +649,7 @@ test("normal interactions work at once after the exit: the train opens a layer, 
   const editor = s.machine.querySelector("[data-role='focus-editor']");
   assert.ok(editor, "the focused editor opened");
   assert.equal(editor.getAttribute("data-variant"), "full");
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/);
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/);
   s.escapeOnStage();
   assert.equal(s.machine.querySelector("[data-role='focus-editor']"), null, "Escape closed it again");
   // A hopper's tracking control goes to the application as it always did.
@@ -787,7 +787,7 @@ test("a valid interaction clears the hint: a flip, a share edit, and the mode's 
   s.escapeOnStage();
   s.escapeOnStage();
   assertModeCleared(s);
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/);
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/);
 });
 
 /* ----------------------------------------------------------------------

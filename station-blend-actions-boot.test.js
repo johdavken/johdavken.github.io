@@ -647,7 +647,7 @@ test("with the commands not on offer the menu's items are held and say why, and 
  *   Bulk Edit from the rail
  * -------------------------------------------------------------------- */
 
-test("Bulk Edit unfolds beside Blend Edit while the blend face is on; its click turns every badge into a selection toggle and swaps the control for Confirm / Cancel; nothing is dispatched", () => {
+test("Bulk Edit unfolds beside Current Recipe while the blend face is on; its click turns every badge into a selection toggle and swaps the control for Confirm / Cancel; nothing is dispatched", () => {
   const s = boot();
   const group = s.rail.querySelector("[data-role='blend-group']");
   assert.equal(group.getAttribute("data-open"), "false");
@@ -794,7 +794,9 @@ test("on the Next face Bulk Edit is the same row on the Next bracket: the select
   assert.equal(s.face(), "next");
   const nextGroup = s.rail.querySelector("[data-role='next-group']");
   const flyout = nextGroup.querySelector(".station-rail__flyout");
-  assert.deepEqual(flyout.children.map(n => n.getAttribute("data-role")), ["bulk-row", "moves-row"], "the bulk row above the two moves");
+  const nextRow = flyout.querySelector("[data-role='next-row']");
+  assert.deepEqual(flyout.children.map(n => n.getAttribute("data-role")), ["next-row"], "the Next flyout's one row");
+  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "copy-current"], "the bulk set at the head of the row, before Copy Current");
   assert.equal(s.bulkControl().disabled, false);
   assert.match(s.bulkControl().getAttribute("title"), /in the plan$/);
   s.bulkControl().click();
@@ -804,7 +806,7 @@ test("on the Next face Bulk Edit is the same row on the Next bracket: the select
   s.badge("A", 2).click();
   s.badge("B", 1).click();
   assert.equal(s.fieldShown(), true);
-  assert.ok(s.resinField().closest("[data-role='next-group']"), "the field stands over the Next group's bulk row");
+  assert.ok(s.resinField().closest("[data-role='next-group']"), "the field stands over the Next group's row");
   s.resinInput().value = "PP77";
   s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
   s.confirmControl().click();
@@ -821,7 +823,8 @@ test("on the Next face Bulk Edit is the same row on the Next bracket: the select
   // running recipe again.
   s.enterBlendEdit();
   assert.ok(s.bulkControl().closest("[data-role='blend-group']"));
-  assert.deepEqual(flyout.children.map(n => n.getAttribute("data-role")), ["moves-row"]);
+  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action")), ["copy-current"], "Copy Current alone on the Next row again");
+  assert.deepEqual(s.rail.querySelector("[data-role='blend-row']").children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "promote-next"], "the set back at the head of the Current row, Load Next at its end");
 });
 
 test("a selection survives a structural publish from elsewhere: the rebuilt cards keep the selected badges pressed, and a value publish rebuilds nothing", async () => {

@@ -138,7 +138,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.53.0";
+  const VERSION = "0.54.0";
 
   function requested() {
     try {

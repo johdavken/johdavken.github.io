@@ -223,7 +223,7 @@
    * ------------------------------------------------------------------ */
 
   function deactivateLines(resin) {
-    return [`Deactivate ${resin.resinCode}? It leaves the active catalog: Recipe Setup and Blend Edit stop offering it. The record and its densities are kept, and recipes that name it still do.`];
+    return [`Deactivate ${resin.resinCode}? It leaves the active catalog: Recipe Setup and Station's recipe cards stop offering it. The record and its densities are kept, and recipes that name it still do.`];
   }
 
   function reactivateLines(resin) {
@@ -448,7 +448,7 @@
       const active = element(doc, "div", `station-sudo-ws__maintenance-item${resin.isActive ? " is-danger" : ""}`);
       active.appendChild(text(doc, "h4", "station-sudo-ws__maintenance-title", resin.isActive ? "Deactivate resin" : "Reactivate resin"));
       active.appendChild(text(doc, "p", "station-sudo-ws__maintenance-copy", resin.isActive
-        ? "It leaves the active catalog: Recipe Setup and Blend Edit stop offering it. The record and its densities are kept."
+        ? "It leaves the active catalog: Recipe Setup and Station's recipe cards stop offering it. The record and its densities are kept."
         : "It returns to the active catalog and is offered again."));
       const activeButton = text(doc, "button", resin.isActive ? DANGER : ACTION, resin.isActive ? "Deactivate Resin" : "Reactivate Resin", {
         type: "button", "data-action": resin.isActive ? "deactivate" : "reactivate"
@@ -486,7 +486,7 @@
       if (dirty()) nameRow.appendChild(text(doc, "span", "station-sudo-resins__tag", "Unsaved changes", { "data-tag": "dirty" }));
       identity.appendChild(nameRow);
       identity.appendChild(text(doc, "p", "station-sudo-ws__detail-meta", isNew
-        ? "A catalog record: its code and densities. Active resins are offered in Recipe Setup and Blend Edit."
+        ? "A catalog record: its code and densities. Active resins are offered in Recipe Setup and Station's recipe cards."
         : detailMeta(resin)));
       head.appendChild(identity);
       const actions = element(doc, "div", "station-sudo-ws__detail-actions");
