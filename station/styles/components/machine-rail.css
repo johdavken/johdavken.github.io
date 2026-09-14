@@ -1,54 +1,54 @@
-/* The machine utility rail (station-machine-rail.js): the short stack of
- * icon controls at the outer edge of the far-right hopper cluster.
+/* The machine utility rail (station-machine-rail.js): the column of icon
+ * tiles standing over the Operator Handbook's launcher.
  *
  * WHERE IT SITS
  *
- * In its own slot over the stage's cell (shell.css), positioned by script
- * along the outer edge of the far-right bank's card box - a strip the
- * box's own height, spaced a little off its edge, the controls stacked
- * from its top - so it reads as a fitting on that bank. Until the script
- * has measured (or where it cannot) the rail falls back to the cell's
- * lower right. The slot is inert to the pointer; the rail takes it
- * back for its own box only. It lies UNDER the Handbook and the utility
- * surfaces in the stack, so a surface laid across the stage covers it
- * rather than meeting it.
+ * In its own slot over the stage's cell (shell.css), in the corner the
+ * Handbook's launcher stands in (handbook.css): the column rises from
+ * just above the launcher, the same gap between every tile as between
+ * the last tile and the launcher, so the corner reads as one dock. The
+ * slot is inert to the pointer; the rail takes it back for its own box
+ * only. It lies UNDER the Handbook and the utility surfaces in the
+ * stack, so a surface laid across the stage covers what reaches under
+ * it rather than meeting it - the Handbook's panel keeps the launcher's
+ * column clear (the clearance token, tokens.css), so the column itself
+ * is never covered; a face's children, unfolded to the right of the
+ * column, may be.
  *
  * WHAT IT LOOKS LIKE
  *
- * Two small squares of the console's glass, one above the other, on a
- * hairline seam that runs the strip's full height down its inner edge:
- * the clip that holds it to the card. No panel around them, no words on them - each says what it is
- * on hover and to a reader. Every colour is a token; the glass is the
- * theme's own (the --station-handbook-glass-* tokens, the console's one
- * glass). Blend Edit on is the accent, quietly: an accent edge and glyph,
- * a wash of the accent behind. An armed reset is the warning colour, the
- * one moment the rail is allowed to look like something is about to
- * happen; at rest it is as quiet as its neighbour.
+ * The launcher's tile, over again: the same size (the launcher token),
+ * the same radius, the same plate - a rounded rect on the raised
+ * surface with a strong hairline edge, drawn inside the SVG as the
+ * launcher's icon-plate is - and the same answer to the pointer, the
+ * accent on the plate's edge. A glyph on the plate instead of the book.
+ * No glass, no panel around them, no words on them - each says what it
+ * is on hover and to a reader. Every colour is a token. Current Recipe
+ * on is the accent, quietly: an accent edge and glyph, a wash of the
+ * accent on the plate. An armed move - Load Next, Copy Current - is the
+ * warning colour, the one moment the rail is allowed to look like
+ * something is about to happen;
+ * at rest it is as quiet as the launcher beside it.
+ *
+ * The plate's colours are handed down as two custom properties the
+ * control sets for its state - the plate reads them - so every state
+ * is one rule on the control and no selector reaches into the SVG.
  */
 
 .station-rail {
   position: absolute;
-  right: var(--station-space-4);
-  bottom: var(--station-space-4);
+  left: var(--station-space-4);
+  bottom: calc(var(--station-space-4) + var(--station-handbook-launcher) + var(--station-space-2));
   z-index: 4;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: var(--station-space-1);
-  padding-left: var(--station-space-2);
-  border-left: var(--station-stroke) solid var(--station-border-subtle);
+  justify-content: flex-end;
+  gap: var(--station-space-2);
   pointer-events: auto;
   /* Stepping back fades, then hides: visibility waits for the fade so
      the rail leaves the tab order and the reader's tree once it is gone,
      and returns at once when it comes back. */
   transition: opacity var(--station-motion-settle) ease-out, visibility 0s linear 0s;
-}
-
-/* Measured: the script's left, top and height replace the fallback
-   corner; the seam runs the height of the box it stands beside. */
-.station-rail.is-placed {
-  right: auto;
-  bottom: auto;
 }
 
 .station-rail[hidden] {
@@ -65,31 +65,32 @@
   transition: opacity var(--station-motion-settle) ease-out, visibility 0s linear var(--station-motion-settle);
 }
 
-/* ---- A control: a small square of glass holding one glyph ---- */
+/* ---- A control: the launcher's tile, with a glyph on its plate ---- */
 
 .station-root .station-rail__control {
+  --station-rail-plate: var(--station-surface-raised);
+  --station-rail-plate-edge: var(--station-border-strong);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--station-space-6) + var(--station-space-1));
-  height: calc(var(--station-space-6) + var(--station-space-1));
-  border: var(--station-stroke) solid var(--station-handbook-glass-border);
-  border-radius: var(--station-radius);
-  background: var(--station-handbook-glass);
-  -webkit-backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
-  backdrop-filter: blur(var(--station-handbook-glass-blur)) saturate(var(--station-handbook-glass-saturate));
-  box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight);
+  flex: none;
+  width: var(--station-handbook-launcher);
+  height: var(--station-handbook-launcher);
+  padding: 0;
+  border-radius: var(--station-radius-lg);
   color: var(--station-text-muted);
-  transition: color var(--station-motion-ack) ease-out, border-color var(--station-motion-ack) ease-out, background-color var(--station-motion-ack) ease-out;
+  transition: color var(--station-motion-ack) ease-out;
 }
 
+/* Under the pointer the plate's edge takes the accent, as the launcher's
+   does; the glyph comes up to the text colour. */
 .station-root .station-rail__control:hover:not(:disabled) {
-  border-color: var(--station-border-strong);
+  --station-rail-plate-edge: var(--station-accent);
   color: var(--station-text);
 }
 
 .station-root .station-rail__control:active:not(:disabled) {
-  background: var(--station-handbook-control-active);
+  --station-rail-plate: var(--station-handbook-control-active);
 }
 
 .station-root .station-rail__control:focus-visible {
@@ -97,36 +98,37 @@
 }
 
 .station-root .station-rail__control:disabled {
+  --station-rail-plate: var(--station-surface);
+  --station-rail-plate-edge: var(--station-border-subtle);
   color: var(--station-text-disabled);
-  border-color: var(--station-border-subtle);
-  box-shadow: none;
   cursor: default;
 }
 
-/* Blend Edit on: the accent, as an edge and a glyph and a wash - never
+/* Current Recipe on: the accent, as an edge and a glyph and a wash - never
    a filled block, which would shout across the machine. */
 .station-root .station-rail__control.is-active {
-  border-color: var(--station-accent);
-  background: var(--station-accent-soft);
+  --station-rail-plate: var(--station-accent-soft);
+  --station-rail-plate-edge: var(--station-accent);
   color: var(--station-accent);
 }
 
 .station-root .station-rail__control.is-active:hover:not(:disabled) {
-  border-color: var(--station-accent-hover);
+  --station-rail-plate-edge: var(--station-accent-hover);
   color: var(--station-accent-hover);
 }
 
-/* The reset, armed: the warning colour on the edge and the glyph, and a
-   pulse of the same on the edge while it waits for its second click. */
+/* Load Next or Copy Current, armed: the warning colour on the edge and
+   the glyph, and a pulse of the same round the tile while it waits for
+   its second click. */
 .station-root .station-rail__control.is-armed {
-  border-color: var(--station-warning);
+  --station-rail-plate-edge: var(--station-warning);
   color: var(--station-warning);
   animation: station-rail-armed 1.2s ease-in-out infinite;
 }
 
 @keyframes station-rail-armed {
-  0%, 100% { box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight), 0 0 0 0 var(--station-warning); }
-  50% { box-shadow: inset 0 var(--station-stroke) 0 var(--station-handbook-glass-highlight), 0 0 0 3px transparent; }
+  0%, 100% { box-shadow: 0 0 0 0 var(--station-warning); }
+  50% { box-shadow: 0 0 0 3px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -138,62 +140,78 @@
   }
 }
 
-/* ---- The glyphs, in the control's own colour ---- */
+/* ---- The tile's plate and the glyph on it, in the control's colour ---- */
 
 .station-rail__glyph {
   display: block;
   flex: none;
+  width: 100%;
+  height: 100%;
 }
 
+/* The plate: the launcher's icon-plate, in the same tokens (handbook.css),
+   coloured by the control that carries it. */
+.station-rail__glyph-plate {
+  fill: var(--station-rail-plate);
+  stroke: var(--station-rail-plate-edge);
+  stroke-width: 1.5;
+  transition: stroke var(--station-motion-ack) ease-out, fill var(--station-motion-ack) ease-out;
+}
+
+/* The glyphs are drawn 20 by 20 and set on the plate at twice their size
+   (station-machine-rail.js), so every stroke here is half the weight it
+   should show at: 0.75 draws as the launcher icon's 1.5. */
 .station-rail__glyph-stroke {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 0.75;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 /* The card turning over: the face behind is an outline, the face in
-   front is filled with the glass's own highlight so the two read as one
-   card's two sides. */
+   front is filled with the surface so the two read as one card's two
+   sides, as the launcher's pages are. */
 .station-rail__glyph-back {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.3;
+  stroke-width: 0.65;
   opacity: 0.55;
 }
 
 .station-rail__glyph-face {
   fill: var(--station-surface);
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 0.75;
 }
 
 .station-rail__glyph-row {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.4;
+  stroke-width: 0.7;
   stroke-linecap: round;
 }
 
-/* The hopper inside the reset's arrow: an outline, as the stage's. */
+/* The hopper in the Smart Hoppers glyph: an outline, as the stage's
+   (the recipe faces' hopper is a face - a thing on the plate). */
 .station-rail__glyph-hopper {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.3;
+  stroke-width: 0.65;
   stroke-linejoin: round;
 }
 
-/* ---- The Next face: its switch, and the two moves beside it ---- */
+/* ---- The recipe faces: each switch, and its row beside it ---- */
 
 /* A switch and its children are one group in the rail's column: the
    switch stands in the column like its neighbours; the flyout is laid
    beside it to the right, out of the column's flow, so the rail is no
-   wider for it and stands where it stood. Two groups: the Next switch
-   with its two moves, the Weights switch with Smart Hoppers. Each
+   wider for it and stands where it stood. Three groups: the Current
+   switch with the bulk set and Load Next, the Next switch with the bulk
+   set and Copy Current, the Weights switch with Smart Hoppers. Each
    group's stem, bracket and children wear the colour its switch takes
-   when on - the Next face's "upcoming", the Weights face's accent - so
-   the parent and its children read as one. */
+   when on - the Next face's "upcoming", the others' the accent - so the
+   parent and its children read as one. */
 .station-rail__group {
   --station-rail-stem: var(--station-accent);
   position: relative;
@@ -205,22 +223,24 @@
   --station-rail-stem: var(--station-timeline-upcoming, var(--station-info));
 }
 
-/* The flyout: the two moves in a row, on a stem from the switch's right
-   edge - a hairline the width of the gap, and a bracket down its own
-   left edge - so they read as the switch's children, not as two more
-   controls of the rail. Folded, it sits under the switch's edge, faded
-   and a little scaled; unfolding, it grows out to the right, the second
-   child a beat behind the first. Visibility follows the motion so the
-   folded flyout is out of the tab order and the reader's tree, and
-   returns at once. */
+/* The flyout: rows of children, on a stem from the switch's right edge -
+   a hairline the width of the gap, and a bracket down its own left edge
+   - so they read as the switch's children, not as more tiles of the
+   dock. Its foot is the switch's own row and it grows UPWARD, a row at
+   a time with the column's gap between (each recipe face has one row
+   today; the Weights face one tile). Folded, it sits under the switch's
+   edge, faded and a little scaled; unfolding, it grows out to the right,
+   the second child a beat behind the first. Visibility follows the
+   motion so the folded flyout is out of the tab order and the reader's
+   tree, and returns at once. */
 .station-rail__flyout {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 100%;
   display: flex;
-  align-items: center;
-  gap: var(--station-space-1);
-  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--station-space-2);
   margin-left: var(--station-space-2);
   padding-left: var(--station-space-2);
   border-left: var(--station-stroke) solid var(--station-rail-stem);
@@ -228,18 +248,34 @@
   visibility: hidden;
   pointer-events: none;
   transform: translateX(calc(-1 * var(--station-space-3))) scale(0.85);
-  transform-origin: left center;
+  transform-origin: left bottom;
   transition:
     opacity var(--station-motion-settle) ease-out,
     transform var(--station-motion-settle) var(--station-motion-ease),
     visibility 0s linear var(--station-motion-settle);
 }
 
-/* The stem: a hairline from the switch's edge to the bracket. */
+/* A row of the flyout: tiles side by side, the column's gap between,
+   positioned so the field's slot can stand over it. The bulk set inside
+   it is laid as the row's own children, so the row's gap runs between
+   Bulk Edit (or Confirm and Cancel) and the move at its end. */
+.station-rail__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
+.station-rail__bulk {
+  display: contents;
+}
+
+/* The stem: a hairline from the switch's edge to the bracket, at the
+   switch's own row - the flyout's foot - whatever rows stand above. */
 .station-rail__flyout::before {
   content: "";
   position: absolute;
-  top: 50%;
+  bottom: calc(var(--station-handbook-launcher) / 2);
   right: 100%;
   width: var(--station-space-2);
   border-top: var(--station-stroke) solid var(--station-rail-stem);
@@ -256,15 +292,17 @@
     visibility 0s linear 0s;
 }
 
-/* The children: the switch's own colour on their edges, a size down from
-   the rail's controls, each arriving a beat after the one before. */
+/* The children: the switch's own colour on their plates' edges, the same
+   tile as the column's, each arriving a beat after the one before - the
+   move at the row's end after the bulk set. */
 .station-rail__flyout .station-rail__control {
-  border-color: var(--station-rail-stem);
+  --station-rail-plate-edge: var(--station-rail-stem);
   transform: translateX(calc(-1 * var(--station-space-2)));
   opacity: 0;
   transition: transform var(--station-motion-settle) var(--station-motion-ease), opacity var(--station-motion-settle) ease-out;
 }
 
+.station-rail__flyout .station-rail__control--promote,
 .station-rail__flyout .station-rail__control--copy {
   transition-delay: var(--station-motion-lead);
 }
@@ -274,22 +312,11 @@
   opacity: 1;
 }
 
-/* Tight beside the far-right bank (a five-layer line fills its cell), a
-   two-child flyout stands its children in a column, one control wide,
-   down the stem's bracket - so nothing reaches past the stage's edge.
-   The script measures the room and says which (data-room). */
-.station-rail[data-room="tight"] .station-rail__flyout {
-  flex-direction: column;
-  align-items: flex-start;
-  height: auto;
-  min-height: 100%;
-}
-
 /* The Next face on: the timeline's "upcoming" colour, as the cards
    wear it (focus-editor.css), instead of the accent the other faces
    take - so the switch, its stem and the cards say the same thing. */
 .station-root .station-rail__control--next.is-active {
-  border-color: var(--station-timeline-upcoming, var(--station-info));
+  --station-rail-plate-edge: var(--station-timeline-upcoming, var(--station-info));
   color: var(--station-timeline-upcoming, var(--station-info));
 }
 
@@ -318,39 +345,38 @@
    drawn in on the stage (hopper.css) - as an edge, a glyph and a wash,
    so the rail and the captions say the same thing in the same colour. */
 .station-root .station-rail__control.is-on {
-  border-color: var(--station-smart, var(--station-accent));
-  background: var(--station-accent-soft);
+  --station-rail-plate: var(--station-accent-soft);
+  --station-rail-plate-edge: var(--station-smart, var(--station-accent));
   color: var(--station-smart, var(--station-accent));
 }
 
 .station-root .station-rail__control.is-on:hover:not(:disabled) {
-  border-color: var(--station-text);
+  --station-rail-plate-edge: var(--station-text);
 }
 
-/* ---- Bulk Edit: Blend Edit's child, and what it becomes ---- */
+/* ---- Bulk Edit: the set both recipe faces share, and what it becomes ---- */
 
-/* The Blend group's stem is the accent, the colour the Blend switch takes
-   when on - the group's default. Its flyout holds two sets in one place:
-   Bulk Edit at rest; Confirm and Cancel while a selection is on
-   (data-bulk on the group; the resin is entered on the cards, in the
-   bulk field - focus-editor.css). The set not showing is
-   hidden outright - out of layout, the tab order and the reader's tree -
-   so the swap is a swap and not two sets side by side; the set arriving
-   settles in with a short motion. */
+/* One bulk set (station-machine-rail.js moves it to the head of whichever
+   face's row is open). It holds two sets in one place: Bulk Edit at
+   rest; Confirm and Cancel while a selection is on (data-bulk on the row
+   it stands in; the resin is entered in the bulk field over the row).
+   The set not showing is hidden outright - out of layout, the tab order
+   and the reader's tree - so the swap is a swap and not two sets side by
+   side; the set arriving settles in with a short motion. */
 .station-root .station-rail__control[hidden] {
   display: none;
 }
 
-.station-rail__group--blend[data-bulk="true"] .station-rail__control--confirm,
-.station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel {
+.station-rail__row[data-bulk="true"] .station-rail__control--confirm,
+.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
   animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
 }
 
-.station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel {
+.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
   animation-delay: var(--station-motion-lead);
 }
 
-.station-rail__group--blend[data-bulk="false"] .station-rail__control--bulk {
+.station-rail__row[data-bulk="false"] .station-rail__control--bulk {
   animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
 }
 
@@ -359,41 +385,46 @@
   to { opacity: 1; transform: none; }
 }
 
-/* Bulk Edit on shows as the Blend switch does: the accent, quietly. */
+/* Bulk Edit on shows as the Current switch does: the accent, quietly. */
 .station-root .station-rail__control--bulk[aria-pressed="true"] {
-  border-color: var(--station-accent);
+  --station-rail-plate-edge: var(--station-accent);
   color: var(--station-accent);
 }
 
-/* Confirm is the one control on the rail allowed the accent as a fill
+/* Confirm is the one control on the rail allowed the accent as a wash
    while it can act: the choice that writes, told apart from the one that
    does not. Held (nothing selected, nothing typed) it is the rail's
-   disabled glass like any other. */
+   disabled tile like any other. */
 .station-root .station-rail__control--confirm:not(:disabled) {
-  border-color: var(--station-accent);
-  background: var(--station-accent-soft);
+  --station-rail-plate: var(--station-accent-soft);
+  --station-rail-plate-edge: var(--station-accent);
   color: var(--station-accent);
 }
 
 .station-rail__glyph-stroke--bold {
-  stroke-width: 2;
+  stroke-width: 1;
 }
 
-/* The resin field's slot: above the flyout's row, its right edge the
-   row's, reaching back across the switch - the band between the layer
-   header and the card, where nothing else stands. Out of the flyout's
-   flow, so the row is laid as it was; it folds and unfolds with the
-   flyout, and is hidden outright while no selection is on. In the tight
-   column layout the row is one control wide and the field reaches a
-   little past the rail's left edge, over the same empty band. */
+/* The resin field's slot: above the Current row, its right edge the
+   row's, reaching back across the switch - over the stage, where the
+   column stands and nothing is drawn. Out of the row's flow, so the row
+   is laid as it was; it folds and unfolds with the flyout, and is hidden
+   outright while no selection is on. Under the Next face the set stands
+   a row lower, on the Next row, and the slot is lifted by that row and
+   the gap - so the field stands in ONE place whichever face it serves,
+   and never over the Current switch. */
 .station-rail__field-slot {
   position: absolute;
   right: 0;
   bottom: calc(100% + var(--station-space-1));
   display: flex;
   justify-content: flex-end;
-  width: max(9rem, calc(100% + var(--station-space-6) + var(--station-space-4)));
+  width: max(9rem, calc(100% + var(--station-handbook-launcher) + var(--station-space-2)));
   pointer-events: auto;
+}
+
+.station-rail__group--next .station-rail__field-slot {
+  bottom: calc(100% + var(--station-space-1) + var(--station-handbook-launcher) + var(--station-space-2));
 }
 
 .station-root .station-rail__field-slot[hidden] {
@@ -436,15 +467,18 @@
   font-size: var(--station-text-sm);
 }
 
+/* Focused, the field looks as it does at rest: it is the one field in
+   its band, put there by the operator's own click on Bulk Edit, and the
+   caret says where the typing goes. No ring, no shadow, no accent. */
 .station-root .station-bulk-field__input:focus-visible {
-  --station-field-shadow: 0 0 0 2px var(--station-accent-soft);
-  --station-field-border: var(--station-stroke) solid var(--station-accent);
+  outline: none;
+  --station-field-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .station-rail__group--blend[data-bulk="true"] .station-rail__control--confirm,
-  .station-rail__group--blend[data-bulk="true"] .station-rail__control--cancel,
-  .station-rail__group--blend[data-bulk="false"] .station-rail__control--bulk {
+  .station-rail__row[data-bulk="true"] .station-rail__control--confirm,
+  .station-rail__row[data-bulk="true"] .station-rail__control--cancel,
+  .station-rail__row[data-bulk="false"] .station-rail__control--bulk {
     animation: none;
   }
 }

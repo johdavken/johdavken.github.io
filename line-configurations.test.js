@@ -69,3 +69,40 @@ test("inactive definitions resolve structured identity but not names",()=>{
   assert.equal(identity.workspaceLineNumber(workspace("Extruder 17")),null);
   assert.equal(identity.workspaceLineNumber(workspace("Line 17")),17);
 });
+
+test("hoppers per layer: six a layer unless the line says, one whole number from 1 to 6 per layer, copied out rather than shared",()=>{
+  const identity=fresh();
+  assert.equal(identity.MAX_HOPPERS_PER_LAYER,6);
+  identity.BUILT_IN_LINE_CONFIGURATIONS.forEach(line=>assert.deepEqual([...line.hopperCounts],Array(line.layerCount).fill(6)));
+  // A row without the column (an older cache, an older server) reads as six a layer.
+  assert.equal(identity.setConfiguredLineConfigurations([{line_number:12,display_name:"Line 12",aliases:[],layer_count:3,layer_a_position:"outside",hopper_geometry:"cylindrical",hopper_naming_mode:"standard",is_active:true}]).valid,true);
+  assert.deepEqual(identity.definitionForLine(12).hopperCounts,[6,6,6]);
+  // The column, snake or camel, round-trips.
+  assert.equal(identity.setConfiguredLineConfigurations([{line_number:12,display_name:"Line 12",aliases:[],layer_count:3,hopper_counts:[6,4,6],layer_a_position:"outside",hopper_geometry:"cylindrical",hopper_naming_mode:"standard",is_active:true}]).valid,true);
+  assert.deepEqual(identity.definitionForLine(12).hopperCounts,[6,4,6]);
+  assert.deepEqual(identity.getLineConfiguration(12).hopperCounts,[6,4,6]);
+  assert.deepEqual(identity.normalizedDefinition({lineNumber:5,displayName:"Line 5",layerCount:3,hopperCounts:["6","4","6"],layerAPosition:"inside",hopperGeometry:"cylindrical",hopperNamingMode:"standard"}).hopperCounts,[6,4,6]);
+  // Copied out: a caller's edit does not reach the definition.
+  const copy=identity.getLineConfigurations().find(line=>line.lineNumber===12);
+  copy.hopperCounts[1]=1;
+  assert.deepEqual(identity.definitionForLine(12).hopperCounts,[6,4,6]);
+  // The cache carries the counts.
+  const storage=new Map();
+  const fake={ getItem:key=>storage.get(key) ?? null, setItem:(key,value)=>storage.set(key,value) };
+  identity.setConfiguredLineConfigurations([{line_number:12,display_name:"Line 12",aliases:[],layer_count:3,hopper_counts:[6,4,6],layer_a_position:"outside",hopper_geometry:"cylindrical",hopper_naming_mode:"standard",is_active:true}],{storage:fake});
+  const again=fresh();
+  assert.equal(again.loadCachedLineConfigurations(fake).source,"cache");
+  assert.deepEqual(again.definitionForLine(12).hopperCounts,[6,4,6]);
+  // An unknown line's stub says nothing about hoppers, as it says nothing about layers.
+  assert.equal(identity.getLineConfiguration(77).hopperCounts,null);
+  // Refused: the wrong number of layers, zero, seven, a fraction, a word.
+  const base={line_number:12,display_name:"Line 12",aliases:[],layer_count:3,layer_a_position:"outside",hopper_geometry:"cylindrical",hopper_naming_mode:"standard",is_active:true};
+  for (const counts of [[6,4],[6,4,6,6],[0,6,6],[6,7,6],[6,4.5,6],[6,"four",6]]){
+    const result=identity.validateLineConfigurations([{...base,hopper_counts:counts}]);
+    assert.equal(result.valid,false,JSON.stringify(counts));
+    assert.equal(result.message,"Hoppers per layer must be a whole number from 1 to 6 for every layer.");
+  }
+  assert.equal(identity.validateLineConfigurations([{...base,hopper_counts:[1,6,6]}]).valid,true);
+  assert.deepEqual(identity.defaultHopperCounts(5),[6,6,6,6,6]);
+  assert.deepEqual(identity.defaultHopperCounts("x"),[]);
+});

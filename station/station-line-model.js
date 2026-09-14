@@ -198,6 +198,11 @@
       hopperGeometry: source.hopperGeometry ?? source.hopper_geometry ?? null,
       layers: Array.isArray(source.layers) ? source.layers : null,
       defaultHopperCount: positiveInteger(source.hopperCount ?? source.hoppersPerLayer) || defaultHopperCount(payloads),
+      // The slots a layer's bank is built to, when the line says: the
+      // application's layers are six-slot whatever a layer's hopper count,
+      // so a four-hopper core is drawn in a six-wide bank. Absent, a
+      // layer's slots are its hoppers - a literal config keeps its widths.
+      defaultSlotCount: positiveInteger(source.slotCount ?? source.hopperSlots) || null,
       payloads
     };
   }
@@ -251,6 +256,8 @@
       const declared = byName.get(name) || null;
       const hopperCount = positiveInteger(declared && (declared.hopperCount ?? declared.hoppers_per_layer))
         || config.defaultHopperCount;
+      // Never fewer slots than hoppers: a hopper always has a slot to stand in.
+      const slotCount = Math.max(hopperCount, positiveInteger(declared && declared.slotCount) || config.defaultSlotCount || 0);
       const stackIndex = stackIndexOf(recipeIndex);
       const role = roleForStackIndex(stackIndex, config.layerCount);
       return {
@@ -260,6 +267,7 @@
         role,
         roleLabel: roleLabel(role),
         hopperCount,
+        slotCount,
         equipment: LAYER_EQUIPMENT.map(item => ({ ...item, layer: name })),
         hoppers: Array.from({ length: hopperCount }, (_, index) => ({
           id: hopperId(name, index, config.hopperNamingMode),

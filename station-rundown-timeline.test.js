@@ -372,7 +372,8 @@ test("the scale is chosen on the timeline: 6H | 12H under the Now clock, one pre
   const { root, timeline } = mount({ onWindow: h => windows.push(h) });
   timeline.update(inputsFor(snapshot()));
   const now = byClass(root, "station-rundown__now");
-  assert.deepEqual(now.children.map(n => n.getAttribute("class")), ["station-rundown__now-label", "station-rundown__now-clock", "station-rundown__range"], "under the label and the clock, in the anchor's column");
+  assert.deepEqual(now.children.map(n => n.getAttribute("class")), ["station-rundown__now-label", "station-rundown__now-clock", "station-rundown__tools"], "under the label and the clock, in the anchor's column");
+  assert.deepEqual(byClass(root, "station-rundown__tools").children.map(n => n.getAttribute("class")), ["station-rundown__range", "station-rundown__reset"], "the scale, and RESET under it");
   const range = byClass(root, "station-rundown__range");
   assert.equal(range.getAttribute("role"), "group");
   assert.equal(range.getAttribute("aria-label"), "Timeline range");
@@ -604,7 +605,7 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   assert.ok(!hidden(detail));
   assert.equal(byClass(detail, "station-rundown__detail-resin").textContent, "R-B0");
   const rows = allByClass(detail, "station-rundown__row").map(r => [byClass(r, "station-rundown__term").textContent, byClass(r, "station-rundown__value").textContent]);
-  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Pump off by", "Time remaining", "Empty at", "Run-down"]);
+  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Pump off by", "Time remaining", "Run-down"], "no Empty at: the clock time is Time remaining said again");
   assert.equal(rows[0][1], "B");
   assert.equal(rows[1][1], "400 lb");
   assert.equal(rows[2][1], "60% of layer B (40%)");
@@ -612,7 +613,7 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   // 16:30 less 1h 23m: 3:06 PM, 1h 03m from 14:03.
   assert.match(rows[4][1], /^(3:06 PM|15:06) · in 1h 03m$/);
   assert.equal(rows[5][1], "1h 23m");
-  assert.equal(rows[7][1], "1h 23m");
+  assert.equal(rows[6][1], "1h 23m");
   assert.equal(b1.getAttribute("aria-describedby"), timelineModule.DETAIL_ID);
   assert.equal(detail.getAttribute("role"), "tooltip");
   root.dispatchEvent({ type: "mouseleave", bubbles: false });
@@ -650,6 +651,60 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   assert.ok(hidden(detail));
 });
 
+test("the pointer lands on a marker's dot or label, never on its button: two markers a lane apart at one instant each keep their own hover, and the event still reaches the button", () => {
+  const { root, timeline } = mount();
+  timeline.update(inputsFor(snapshot(s => {
+    // A1 and A2: the same weight, blend and layer, so one instant, two lanes.
+    s.layers[0].hoppers[0].track = true; s.layers[0].hoppers[0].weight = 200; s.layers[0].hoppers[0].pct = 50;
+    s.layers[0].hoppers[1].track = true; s.layers[0].hoppers[1].weight = 200; s.layers[0].hoppers[1].pct = 50;
+  })));
+  const a1 = root.querySelector("[data-hopper='A1']");
+  const a2 = root.querySelector("[data-hopper='A2']");
+  assert.equal(a1.getAttribute("data-lane"), "0");
+  assert.equal(a2.getAttribute("data-lane"), "1");
+  assert.equal(xOf(a1), xOf(a2), "one instant");
+  // A hover that begins on the dot resolves to that dot's marker.
+  const detail = byClass(root, "station-rundown__detail");
+  byClass(a1, "station-rundown__dot").dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.equal(byClass(detail, "station-rundown__detail-head").querySelector(".station-rundown__id").textContent, "A1");
+  byClass(a2, "station-rundown__dot").dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.equal(byClass(detail, "station-rundown__detail-head").querySelector(".station-rundown__id").textContent, "A2");
+  // The stylesheet: the button takes no pointer, the dot (padded to a
+  // target that clears the next lane) and the label do. The lower marker's
+  // stem, which runs through the upper one's dot, is therefore not a target.
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-root \.station-rundown__marker \{\s*pointer-events: none;\s*\}/);
+  assert.match(css, /\.station-rundown__dot,\s*\.station-rundown__label \{\s*pointer-events: auto;\s*\}/);
+  assert.match(css, /\.station-rundown__dot::after \{[^}]*inset: -3px;[^}]*border-radius: 50%;/);
+  assert.match(css, /\.station-rundown__dot \{[^}]*position: relative;/);
+  assert.match(css, /\.station-rundown__marker\[data-lane="1"\] \{ --station-rundown-lane: 34px; \}/, "lanes 16px apart: a 14px target clears the next");
+  assert.doesNotMatch(css, /\.station-rundown__stem \{[^}]*pointer-events: auto/);
+});
+
+test("a late marker pings on the Now line: one ring leaves the dot and the dot flashes, on the marker's pseudo-element so the hit pad and hover ring stand; nothing travels under reduced motion", () => {
+  const { root, timeline } = mount();
+  // A hopper past its pump-off point with the pump running is .is-late; pumped off it is not.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "14:04"; s.job.changeoverSetAt = NOW; })));
+  const late = allByClass(root, "station-rundown__marker").filter(m => m.classList.contains("is-late"));
+  assert.ok(late.length > 0, "a changeover a minute out puts every running marker at Now, late");
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "14:04"; s.job.changeoverSetAt = NOW; s.layers[1].hoppers[0].pumpOff = true; })));
+  assert.ok(!root.querySelector("[data-hopper='B1']").classList.contains("is-late"), "pumped off is done, not late");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  // The ring: the marker's ::before, on the dot at the column's foot, its box animated.
+  assert.match(css, /\.station-rundown__marker\.is-late::before \{[^}]*bottom: 0;[^}]*left: 0;[^}]*border: 1\.5px solid var\(--station-danger\);[^}]*pointer-events: none;[^}]*animation: station-rundown-ping var\(--station-rundown-ping-period\)/);
+  assert.match(css, /@keyframes station-rundown-ping \{[^@]*width: calc\(8px \+ 2 \* var\(--station-rundown-ping-reach\)\);/);
+  assert.doesNotMatch(css, /@keyframes station-rundown-ping \{[^@]*transform:/, "the box grows, not the transform: the stroke stays thin");
+  // The flash: a filter on the dot, never its box-shadow (the hover ring lives there).
+  assert.match(css, /\.station-rundown__marker\.is-late \.station-rundown__dot \{\s*animation: station-rundown-ping-flash/);
+  assert.match(css, /@keyframes station-rundown-ping-flash \{[^@]*filter: brightness/);
+  assert.doesNotMatch(css, /@keyframes station-rundown-ping-flash \{[^@]*box-shadow/);
+  // Insistent: 13px reach, 1.5s, 0.85 peak; and one still ring under reduced motion.
+  assert.match(css, /--station-rundown-ping-reach: 13px;\s*--station-rundown-ping-period: 1\.5s;\s*--station-rundown-ping-peak: 0\.85;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.station-rundown__marker\.is-late::before,\s*\.station-rundown__marker\.is-late \.station-rundown__dot \{\s*animation: none;/);
+  // The hit pad is still the dot's ::after alone.
+  assert.doesNotMatch(css, /\.station-rundown__marker\.is-late::after/);
+});
+
 /* ----------------------------------------------------------------------
  *   Boundaries
  * -------------------------------------------------------------------- */
@@ -679,4 +734,99 @@ test("with no line at all the hint says so and nothing is projected", () => {
   assert.equal(allByClass(root, "station-rundown__marker").length, 0);
   timeline.update(null);
   assert.equal(allByClass(root, "station-rundown__marker").length, 0);
+});
+
+/* ----------------------------------------------------------------------
+ *   RESET, under the scale
+ * -------------------------------------------------------------------- */
+
+test("RESET stands under the scale in the Now column: one word, held until told the reset is offered and something is tracked, its title saying which", () => {
+  const { root, timeline } = mount();
+  const reset = byClass(root, "station-rundown__reset");
+  assert.equal(reset.tagName, "BUTTON");
+  assert.equal(reset.getAttribute("type"), "button");
+  assert.equal(reset.getAttribute("data-action"), "reset-tracking");
+  assert.equal(reset.textContent, "Reset");
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
+  assert.equal(reset.disabled, true, "held until the boot file says the application offers it");
+  assert.equal(reset.getAttribute("title"), "Reset Tracking is not available: no application is connected to Station commands.");
+  assert.ok(reset === timeline.resetButton);
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: false, reason: "the application does not offer a tracking reset from Station.", count: 3 } }));
+  assert.equal(reset.disabled, true);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking is not available: the application does not offer a tracking reset from Station.");
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count: 0 } }));
+  assert.equal(reset.disabled, true);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking · nothing is tracked");
+  timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count: 1 } }));
+  assert.equal(reset.disabled, false);
+  assert.equal(reset.getAttribute("title"), "Reset Tracking · 1 hopper");
+  // An update without `reset` leaves the word as it was.
+  timeline.update(inputsFor(snapshot()));
+  assert.equal(reset.disabled, false);
+  assert.deepEqual(timeline.getReset(), { available: true, reason: "", count: 1 });
+  assert.deepEqual(timelineModule.RESET_TEXT, "Reset");
+  assert.deepEqual(timelineModule.RESET_LABEL, "Reset Tracking");
+});
+
+test("the first click arms RESET - the word unchanged, the colour and the name saying so - and the second confirms as one call; the timeout, a click elsewhere, Escape, the focus leaving and the reset ceasing to be possible each disarm without a call", () => {
+  const calls = [];
+  const { doc, root, timeline, clock } = mount({ onResetTracking: () => calls.push("reset") });
+  // On the document, so a pointer down elsewhere reaches the helper's
+  // click-away listener the way it does in a browser.
+  doc.appendChild(root);
+  const reset = byClass(root, "station-rundown__reset");
+  const live = count => timeline.update(Object.assign(inputsFor(snapshot()), { reset: { available: true, count } }));
+  live(4);
+  const ARM = require("./station/station-armed.js").ARM_DURATION;
+  const pending = () => clock.queue.filter(t => t.at === clock.now + ARM);
+  const before = clock.queue.length;
+  click(reset);
+  assert.deepEqual(calls, [], "the first click resets nothing");
+  assert.equal(timeline.isArmed(), true);
+  assert.equal(reset.getAttribute("data-armed"), "true");
+  assert.ok(reset.classList.contains("is-armed"));
+  assert.equal(reset.textContent, "Reset", "the word does not change");
+  assert.equal(reset.getAttribute("aria-label"), "Confirm: reset tracking for 4 hoppers");
+  assert.match(reset.getAttribute("title"), /^Click again to reset tracking · 4 hoppers untracked, pumps marked running$/);
+  assert.equal(clock.queue.length, before + 1, "the arm started its timer on the timeline's clock");
+  assert.equal(pending().length, 1);
+  click(reset);
+  assert.deepEqual(calls, ["reset"]);
+  assert.equal(timeline.isArmed(), false);
+  assert.equal(reset.getAttribute("data-armed"), null);
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
+  assert.equal(clock.queue.length, before, "the confirming click cleared the timer");
+  // Timeout: the clock advanced past the arm's wait (the tick runs too).
+  click(reset);
+  clock.advance(ARM);
+  assert.equal(timeline.isArmed(), false, "the timeout disarmed it");
+  // A click elsewhere: the pointer down that precedes it, captured on the document.
+  click(reset);
+  const elsewhere = doc.createElement("div");
+  doc.appendChild(elsewhere);
+  elsewhere.dispatchEvent({ type: "pointerdown", bubbles: true });
+  assert.equal(timeline.isArmed(), false, "a click elsewhere disarmed it");
+  click(reset);
+  reset.dispatchEvent({ type: "pointerdown", bubbles: true });
+  assert.equal(timeline.isArmed(), true, "a pointer down on the word itself does not");
+  reset.dispatchEvent({ type: "keydown", key: "Escape", bubbles: true });
+  assert.equal(timeline.isArmed(), false, "Escape disarmed it");
+  click(reset);
+  reset.dispatchEvent({ type: "blur" });
+  assert.equal(timeline.isArmed(), false, "the focus leaving disarmed it");
+  click(reset);
+  live(0);
+  assert.equal(timeline.isArmed(), false, "nothing left to reset disarmed it");
+  assert.equal(reset.disabled, true);
+  click(reset);
+  assert.equal(timeline.isArmed(), false, "a held word never arms");
+  assert.deepEqual(calls, ["reset"], "none of it called anything more");
+  // The stylesheet: the word under the scale in one stretched stack,
+  // centred; armed is the warning colour with a pulse; no colour named.
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-rundown__tools \{[^}]*flex-direction: column;[^}]*align-items: stretch;/);
+  assert.match(css, /\.station-root \.station-rundown__reset \{[^}]*text-align: center;[^}]*text-transform: uppercase;/);
+  assert.match(css, /\.station-root \.station-rundown__reset\.is-armed \{[^}]*color: var\(--station-warning\);[^}]*animation: station-rundown-armed/);
+  assert.match(css, /\.station-root \.station-rundown__reset:disabled \{[^}]*color: var\(--station-text-disabled\);/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\(/i);
 });

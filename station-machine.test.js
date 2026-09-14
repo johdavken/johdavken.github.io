@@ -153,6 +153,41 @@ test("hopper count is per layer and comes from configuration, not a constant", (
   );
 });
 
+test("a layer built to six slots keeps the six-hopper bank, cluster box and blend card whatever its count, its hoppers centred in it", () => {
+  /* The line's spacing and the layer card do not change with a layer's
+   * hopper count: a four-hopper core on a six-slot line is the same bank
+   * as its six-hopper neighbours, the four hoppers standing centred. */
+  const six = layoutFor(literal({ layers: [{ id: "B", hopperCount: 6 }] }));
+  const four = layoutFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 4 }] }));
+  const one = layoutFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 1 }] }));
+  for (const layout of [four, one]) {
+    assert.equal(layout.width, six.width, "the row is as wide");
+    layout.banks.forEach((bank, index) => {
+      const same = six.banks[index];
+      assert.deepEqual([bank.x, bank.width, bank.centerX], [same.x, same.width, same.centerX], `bank ${bank.id} stands where it did`);
+      assert.deepEqual(bank.objects.cluster, same.objects.cluster, `bank ${bank.id}'s cluster box is the same`);
+      assert.deepEqual(bank.objects.train, same.objects.train, `bank ${bank.id}'s train is the same`);
+      assert.deepEqual([bank.cluster.x, bank.cluster.width], [same.cluster.x, same.cluster.width]);
+      assert.deepEqual(parts.blendCardBox(bank), parts.blendCardBox(same), `bank ${bank.id}'s card is the same box`);
+    });
+  }
+  const core = four.banks[1];
+  assert.equal(core.cluster.hoppers.length, 4);
+  const first = core.cluster.hoppers[0];
+  const last = core.cluster.hoppers[core.cluster.hoppers.length - 1];
+  const leftGap = first.x - core.cluster.x;
+  const rightGap = core.cluster.x + core.cluster.width - (last.x + last.width);
+  assert.ok(leftGap > 0 && Math.abs(leftGap - rightGap) < 1e-9, `the four hoppers are centred (${leftGap} vs ${rightGap})`);
+  assert.ok(Math.abs((first.x + last.x + last.width) / 2 - core.centerX) < 1e-9, "over the bank's own centreline");
+  const single = one.banks[1].cluster.hoppers[0];
+  assert.ok(Math.abs(single.x + single.width / 2 - one.banks[1].centerX) < 1e-9, "one hopper stands on the centreline");
+  // Fewer hoppers than slots is drawn as fewer hoppers - the empty slots are empty.
+  assert.equal(allWith(stageFor(literal({ slotCount: 6, layers: [{ id: "B", hopperCount: 4 }] })), "data-role", "hopper").length, 16);
+  // Without a slot count, a layer's bank is its hoppers' - what a literal configuration has always drawn.
+  const literalFour = layoutFor(literal({ layers: [{ id: "B", hopperCount: 4 }] }));
+  assert.ok(literalFour.banks[1].width < six.banks[1].width);
+});
+
 test("a four-hopper layer and a six-hopper layer use the same component", () => {
   /* Same builder, same sub-groups, same classes - only the count differs. If
    * these ever diverge it will be because someone special-cased a count. */
@@ -400,6 +435,34 @@ test("neighbouring extruders never overlap, in any layer count or focus state", 
   }
 });
 
+test("the outer extruders stay on the canvas at the narrowest bank, whatever the layer count", () => {
+  /* The motor end is the outer end of every turned machine, and the outer
+   * pair of a five- or seven-layer line is what limits how big the machines
+   * can be. A three-hopper bank is the narrowest a bank gets (bankMinWidth),
+   * so this is the tightest case: the rear reach of the angled view against
+   * the canvas padding. The 2026-09 growth kept that reach fixed and grew
+   * the barrel inward instead - this is what pins it. */
+  for (const layerCount of [1, 3, 5, 7]) {
+    const layout = layoutFor(literal({ layerCount, hopperCount: 3 }));
+    const first = layout.banks[0].extruder.bounds;
+    const last = layout.banks[layout.banks.length - 1].extruder.bounds;
+    assert.ok(first.left >= 0, `${layerCount} layers: left extruder runs off the canvas (${first.left})`);
+    assert.ok(last.right <= layout.width, `${layerCount} layers: right extruder runs off the canvas (${last.right})`);
+  }
+});
+
+test("every view's feet stay above the readout line in the normal row", () => {
+  /* The stage ends at DIMENSIONS.height and the timeline is a separate row
+   * beneath it, so nothing can overlap the timeline; but a machine can run
+   * off the canvas bottom. The feed lands where the mixer's height puts it,
+   * so this is the machine's height against the room under the mixer. */
+  const d = layoutModule.DIMENSIONS;
+  for (const bank of layoutFor(literal({ layerCount: 5 })).banks) {
+    assert.ok(bank.extruder.bounds.bottom <= d.height - d.extruderLabelGap - 4,
+      `${bank.facing.key}: feet at ${bank.extruder.bounds.bottom} are too low for the canvas`);
+  }
+});
+
 /* ----------------------------------------------------------------------
  *   The equipment train stacks in process order
  * -------------------------------------------------------------------- */
@@ -526,13 +589,76 @@ test("the readout's fourth line is the run-down's weight: whole pounds, digits o
   assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 0 }), 1250, "no effective weight: the entered one");
   assert.equal(parts.shownWeight({ weight: 1250 }), 1250);
   assert.equal(parts.shownWeight(null), 0);
-  // Digits only: the column has room for five characters, so the unit and
-  // the separator are the tooltip's; a weight too wide is fitted, not lied about.
+  // The separator is the tooltip's; a weight too wide is fitted, not lied about.
   // The key carries both weights and whether the shown one is computed.
   assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250||||");
   assert.notEqual(parts.hopperStateKey({ weight: 1250 }), parts.hopperStateKey({ weight: 1300 }), "a weight change redraws the hopper");
   assert.notEqual(parts.hopperStateKey({ weight: 1250, effectiveWeight: 900 }), parts.hopperStateKey({ weight: 1250, effectiveWeight: 950 }), "an effective weight change redraws the hopper");
   assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0||||");
+});
+
+test("the weight carries its unit beside the digits - drawn smaller, the pair centred under the hopper - and a weight too wide for both is drawn alone", () => {
+  /* Two texts, not one with a tspan: the digits stay the weight element's own
+   * text, so what reads the weight reads the number. The pair is centred by
+   * the same glyph estimate fitText() judges the fit by. */
+  const svg = stageFor(literal({ layerCount: 5, hopperCount: 6 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "HX204", pct: 60, weight: 90 },
+      "A:1": { assigned: true, resinName: "LD105", pct: 30, weight: 147 },
+      "A:2": { assigned: true, resinName: "LD106", pct: 10, weight: 1200 },
+      "A:3": { assigned: false, resinName: "", pct: 0, weight: 0 },
+      "A:4": { assigned: true, resinName: "LD107", pct: 0, weight: 12345 },
+      "A:5": { assigned: true, resinName: "LD108", pct: 0, weight: 1234567 }
+    }
+  });
+  const hoppers = hoppersIn(svg).slice(0, 6);
+  const captionOf = h => allWith(h, "data-role", "hopper-caption")[0];
+  const weightOf = h => allWithClassName(captionOf(h), "station-hopper__weight")[0];
+  const unitOf = h => allWithClassName(captionOf(h), "station-hopper__unit")[0] || null;
+  const idOf = h => allWithClassName(captionOf(h), "station-hopper__id")[0];
+
+  assert.deepEqual(hoppers.map(h => weightOf(h).textContent), ["90", "147", "1200", "—", "12345", "1234…"]);
+  assert.deepEqual(hoppers.map(h => unitOf(h) ? unitOf(h).textContent : null), ["lb", "lb", "lb", null, null, null],
+    "up to four digits carry the unit; a dash and a wider weight do not");
+
+  const t = parts.WEIGHT_TYPE;
+  for (const h of hoppers.slice(0, 3)) {
+    const weight = weightOf(h);
+    const unit = unitOf(h);
+    const cx = Number(idOf(h).getAttribute("x"));
+    assert.equal(weight.getAttribute("text-anchor"), "end");
+    assert.equal(unit.getAttribute("text-anchor"), "start");
+    assert.equal(weight.getAttribute("y"), unit.getAttribute("y"), "the unit sits on the weight's line");
+    // Centred: the pair's estimated left edge and right edge straddle the column's centre equally.
+    const digitsWidth = weight.textContent.length * t.digitSize * t.glyph;
+    const unitWidth = t.unit.length * t.unitSize * t.glyph;
+    const left = Number(weight.getAttribute("x")) - digitsWidth;
+    const right = Number(unit.getAttribute("x")) + unitWidth;
+    assert.ok(Math.abs((left + right) / 2 - cx) < 0.02, `${weight.textContent} lb is centred under the hopper`);
+    assert.ok(Math.abs(Number(unit.getAttribute("x")) - Number(weight.getAttribute("x")) - t.unitGap) < 0.02, "a hair between digits and unit");
+    // The pair stays inside the hopper's pitch (36 units) so neighbours never collide.
+    assert.ok(right - left <= 36, `${weight.textContent} lb fits the pitch`);
+  }
+  // A bare line - dash or a wide weight - is centred at the column exactly as before.
+  for (const h of hoppers.slice(3)) {
+    const weight = weightOf(h);
+    assert.equal(weight.getAttribute("text-anchor"), "middle");
+    assert.equal(weight.getAttribute("x"), idOf(h).getAttribute("x"));
+  }
+  // The pair scales with the bank: a focused bank's unit and gap grow with its digits.
+  const doc = fakeDocument();
+  const [big, bigUnit] = parts.weightLine(doc, { weight: 90 }, 100, 50, 60, 2);
+  const [small, smallUnit] = parts.weightLine(doc, { weight: 90 }, 100, 50, 30, 1);
+  assert.ok(Math.abs((Number(bigUnit.getAttribute("x")) - Number(big.getAttribute("x"))) - 2 * (Number(smallUnit.getAttribute("x")) - Number(small.getAttribute("x")))) < 0.02);
+  assert.ok(Math.abs((100 - Number(big.getAttribute("x"))) - 2 * (100 - Number(small.getAttribute("x")))) < 0.02);
+  // The unit is the muted equipment colour and stays so under a computed weight's tint.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  assert.match(css, /\.station-hopper__unit \{[^}]*fill: var\(--station-text-muted\)/);
+  assert.match(css, /\.station-hopper__unit \{[^}]*\* 0\.8 \* var\(--station-bank-scale, 1\)/, "the unit's size is the renderer's 0.8");
+  assert.equal(t.unitSize / t.digitSize, 0.8);
+  assert.doesNotMatch(css, /\.is-smart \.station-hopper__unit/);
 });
 
 test("a weight change alone re-patches only that hopper", () => {

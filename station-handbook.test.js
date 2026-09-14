@@ -188,7 +188,10 @@ test("the launcher is a 64 by 64 SVG drawn in Station's own classes: no emoji, n
   for (const part of ["icon-plate", "icon-page", "icon-spine", "icon-line", "icon-row", "icon-ribbon"]) {
     assert.match(css, new RegExp(`\\.station-handbook__${part}`), `handbook.css does not colour the ${part}`);
   }
-  assert.match(css, /\.station-root \.station-handbook__launcher \{[^}]*width: 64px;[^}]*height: 64px;/);
+  // The launcher's size is one token, so the rail's tiles can be cut to it
+  // (machine-rail.css): the Handbook sets it, the rail reads it.
+  assert.match(fs.readFileSync(path.join(ROOT, "station/styles/tokens.css"), "utf8"), /--station-handbook-launcher: 64px;/);
+  assert.match(css, /\.station-root \.station-handbook__launcher \{[^}]*width: var\(--station-handbook-launcher\);[^}]*height: var\(--station-handbook-launcher\);/);
   const source = fs.readFileSync(path.join(ROOT, "station/station-handbook.js"), "utf8");
   assert.doesNotMatch(source, /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/u, "the launcher uses an emoji");
   assert.doesNotMatch(source, /<img|\.png|\.svg"|background-image/, "the launcher loads an image asset");

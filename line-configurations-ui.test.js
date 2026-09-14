@@ -39,3 +39,13 @@ test("rows present identity first and configuration as quieter secondary text",(
   assert.match(ui,/detail\.textContent = `\$\{line\.layer_count\} layer/);
   assert.match(ui,/className="secondary lineConfigurationEdit"/);
 });
+test("hoppers per layer: one number a layer in the Line layout fieldset, following the Layers field, read into the save and shown on a row only when a layer is not six",()=>{
+  const dialog=html.slice(html.indexOf('id="lineConfigurationDialog"'),html.indexOf('</dialog>',html.indexOf('id="lineConfigurationDialog"')));
+  assert.match(dialog,/<legend>Line layout<\/legend>[\s\S]*id="lineConfigurationHopperCounts" class="lineConfigurationHopperCounts" role="group" aria-label="Hoppers per layer"/);
+  assert.match(ui,/renderHopperCounts\(line\?\.layer_count \?\? 3, line\?\.hopper_counts\)/);
+  assert.match(ui,/renderHopperCounts\(event\.target\.value, hopperCountValues\(\)\)/);
+  assert.match(ui,/hopper_counts:hopperCountValues\(\)/);
+  assert.match(ui,/input\.max = String\(identity\.MAX_HOPPERS_PER_LAYER\)/);
+  assert.match(ui,/\$\{labelHoppers\(line\.hopper_counts\)\}/);
+  assert.match(css,/\.lineConfigurationHopperCounts\{display:flex;flex-wrap:wrap;gap:6px\}/);
+});

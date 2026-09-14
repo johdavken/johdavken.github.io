@@ -1023,6 +1023,9 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
 .lineConfigurationFieldset legend{padding:0 6px;color:var(--title);font-size:12px;font-weight:800}
 .lineConfigurationFieldset label{display:grid;gap:5px}
 .lineConfigurationLabel{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.lineConfigurationHopperCounts{display:flex;flex-wrap:wrap;gap:6px}
+.lineConfigurationHopperCounts label{display:grid;gap:3px;justify-items:center;width:52px;font-size:12px;font-weight:750;color:var(--muted)}
+.lineConfigurationHopperCounts input{width:100%;min-width:0;text-align:center}
 .compactChoice{display:flex;flex-wrap:wrap;gap:5px}
 .compactChoice button{min-height:34px;padding:6px 10px;border:1px solid var(--btn-secondary-border);border-radius:var(--control-radius);background:var(--btn-secondary-bg);color:var(--btn-secondary-text);font:inherit;font-size:12px;font-weight:750}
 .compactChoice button:hover{border-color:var(--focus-border);background:var(--row-bg)}

@@ -578,7 +578,7 @@
     function lineRow(row){
       return {
         id: row?.id, lineNumber: row?.line_number, displayName: row?.display_name, aliases: row?.aliases,
-        layerCount: row?.layer_count, layerAPosition: row?.layer_a_position, hopperGeometry: row?.hopper_geometry,
+        layerCount: row?.layer_count, hopperCounts: row?.hopper_counts, layerAPosition: row?.layer_a_position, hopperGeometry: row?.hopper_geometry,
         hopperNamingMode: row?.hopper_naming_mode, isActive: row?.is_active, metadata: row?.metadata, updatedAt: row?.updated_at
       };
     }

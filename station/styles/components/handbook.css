@@ -7,10 +7,12 @@
  *
  * In the stage's own grid cell, laid over the machine (shell.css puts the
  * slot there). The launcher is an application icon in the cell's lower
- * left corner; the panel it opens stands centred across the lower part of
- * the cell, under the hopper bank - so the hoppers drawn above stay where
- * they are and stay clickable, which is what Blend Edit (switched from the
- * machine rail, machine-rail.css) needs of them.
+ * left corner, with the machine rail's tiles stacked over it
+ * (machine-rail.css: the launcher is the master of their size and make);
+ * the panel it opens stands centred across the lower part of the cell,
+ * under the hopper bank - so the hoppers drawn above stay where they are
+ * and stay clickable, which is what Blend Edit (switched from the rail)
+ * needs of them.
  * Nothing here dims the stage or takes a track of the shell: the Handbook
  * is a surface Station opens out of itself, not a dialog laid over it.
  *
@@ -79,8 +81,8 @@
   position: absolute;
   left: var(--station-space-4);
   bottom: var(--station-space-4);
-  width: 64px;
-  height: 64px;
+  width: var(--station-handbook-launcher);
+  height: var(--station-handbook-launcher);
   padding: 0;
   border-radius: var(--station-radius-lg);
   pointer-events: auto;

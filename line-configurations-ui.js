@@ -23,6 +23,30 @@
   function labelPosition(value){ return value === "inside" ? "A Inside" : value === "outside" ? "A Outside" : "A N/A"; }
   function labelGeometry(value){ return value === "volume" ? "Volume" : "Cylindrical"; }
   function labelNaming(value){ return value === "main-plus-five" ? "Main + 1–5" : "Standard"; }
+  function labelHoppers(counts){
+    const list = Array.isArray(counts) ? counts.map(Number) : [];
+    return list.length && list.some(count=>count !== identity.MAX_HOPPERS_PER_LAYER) ? ` · Hoppers ${list.join("/")}` : "";
+  }
+  // One number per layer, A upward; the rows follow the Layers field, keeping
+  // what was typed and filling a new layer with six.
+  function hopperCountValues(){
+    return Array.from($("lineConfigurationHopperCounts")?.querySelectorAll("input[data-hopper-layer]") || []).map(input=>input.value);
+  }
+  function renderHopperCounts(layerCount, counts){
+    const host = $("lineConfigurationHopperCounts"); if (!host) return;
+    const total = Math.min(9, Math.max(0, Number(layerCount) || 0));
+    host.replaceChildren();
+    for (let index = 0; index < total; index++){
+      const label = document.createElement("label");
+      const name = document.createElement("span"); name.textContent = String.fromCharCode(65 + index);
+      const input = document.createElement("input");
+      input.type = "number"; input.inputMode = "numeric"; input.min = "1"; input.max = String(identity.MAX_HOPPERS_PER_LAYER); input.required = true;
+      input.dataset.hopperLayer = String(index); input.setAttribute("aria-label", `Layer ${name.textContent} hoppers`);
+      const given = counts?.[index];
+      input.value = given === undefined || given === null || given === "" ? String(identity.MAX_HOPPERS_PER_LAYER) : String(given);
+      label.append(name, input); host.append(label);
+    }
+  }
   function render(){
     const host = $("lineConfigurationList"); if (!host) return;
     host.replaceChildren();
@@ -32,7 +56,7 @@
       const info = document.createElement("div"); info.className = "lineConfigurationRowInfo";
       const title = document.createElement("strong"); title.textContent = line.display_name;
       const detail = document.createElement("small");
-      detail.textContent = `${line.layer_count} layer${line.layer_count === 1 ? "" : "s"} · ${labelPosition(line.layer_a_position)} · ${labelGeometry(line.hopper_geometry)} · ${labelNaming(line.hopper_naming_mode)}${line.is_active ? "" : " · Inactive"}`;
+      detail.textContent = `${line.layer_count} layer${line.layer_count === 1 ? "" : "s"} · ${labelPosition(line.layer_a_position)} · ${labelGeometry(line.hopper_geometry)} · ${labelNaming(line.hopper_naming_mode)}${labelHoppers(line.hopper_counts)}${line.is_active ? "" : " · Inactive"}`;
       info.append(title, detail);
       const edit = document.createElement("button"); edit.type="button"; edit.className="secondary lineConfigurationEdit";
       edit.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20ZM13.5 6.5 17 10"/></svg><span>Edit</span>';
@@ -64,6 +88,7 @@
     $("lineConfigurationName").value = line?.display_name || "";
     $("lineConfigurationAliases").value = (line?.aliases || []).join("\n");
     $("lineConfigurationLayers").value = line?.layer_count ?? 3;
+    renderHopperCounts(line?.layer_count ?? 3, line?.hopper_counts);
     setChoice("layer_a_position",line?.layer_a_position ?? "outside");
     setChoice("hopper_geometry",line?.hopper_geometry || "cylindrical");
     setChoice("hopper_naming_mode",line?.hopper_naming_mode || "standard");
@@ -77,7 +102,7 @@
   function values(){
     return { line_number:$("lineConfigurationNumber").value, display_name:$("lineConfigurationName").value,
       aliases:$("lineConfigurationAliases").value.split(/[\n,]+/).map(value=>value.trim()).filter(Boolean),
-      layer_count:$("lineConfigurationLayers").value, layer_a_position:choices.layer_a_position || null,
+      layer_count:$("lineConfigurationLayers").value, hopper_counts:hopperCountValues(), layer_a_position:choices.layer_a_position || null,
       hopper_geometry:choices.hopper_geometry, hopper_naming_mode:choices.hopper_naming_mode,
       is_active:isActive(), metadata:selected?.metadata || {} };
   }
@@ -107,7 +132,7 @@
   $("lineConfigurationActive")?.addEventListener("click",()=>setActive(!isActive()));
   document.querySelectorAll("[data-line-choice]").forEach(button=>button.addEventListener("click",()=>setChoice(button.dataset.lineChoice,button.dataset.value)));
   $("lineConfigurationNumber")?.addEventListener("input",event=>{ if(!selected && (!$("lineConfigurationName").value || /^Line \d+$/.test($("lineConfigurationName").value))) $("lineConfigurationName").value=event.target.value ? `Line ${event.target.value}` : ""; });
-  $("lineConfigurationLayers")?.addEventListener("input",event=>{ if(Number(event.target.value)===1) setChoice("layer_a_position",""); else if(choices.layer_a_position==="") setChoice("layer_a_position","outside"); });
+  $("lineConfigurationLayers")?.addEventListener("input",event=>{ if(Number(event.target.value)===1) setChoice("layer_a_position",""); else if(choices.layer_a_position==="") setChoice("layer_a_position","outside"); renderHopperCounts(event.target.value, hopperCountValues()); });
   $("lineConfigurationDeactivate")?.addEventListener("click",()=>{ if(!selected || !confirm(`Deactivate ${selected.display_name}? Structured workspace identities will still resolve, but names and aliases will no longer match this line.`)) return; setActive(false); save(values()); });
   $("lineConfigurationForm")?.addEventListener("submit",event=>{ event.preventDefault(); save(); });
 })(typeof globalThis !== "undefined" ? globalThis : this);

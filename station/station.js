@@ -40,6 +40,10 @@
   const source = root.PolynStationSource;
   const shell = root.PolynStationShell;
   const transition = root.PolynStationTransition;
+  /* The face turn (station-face-turn.js): a layer's cluster and card
+   * trading places in place, one routine whether one layer turns or all
+   * of them. Without it a turn is instant. */
+  const faceTurn = root.PolynStationFaceTurn || null;
   const focusEditor = root.PolynStationFocusEditor;
   const syncConsole = root.PolynStationSyncConsole || null;
   /* Station's picture (station-avatar.js): the face beside the name in the
@@ -76,12 +80,14 @@
    * is handed; what happens after is the same publish policy the
    * editor's commands run (see openShareEditor). */
   const layerShare = root.PolynStationLayerShare || null;
-  /* The machine utility rail (station-machine-rail.js): the short stack
-   * of controls beside the far-right hopper cluster - Blend Edit's one
-   * switch, and Reset Tracking. A reader that asks: the mode is this
-   * file's (below), the reset goes through the hopper controls' seam on
-   * the bridge, and the rail is told what to show after each. Optional,
-   * as the Handbook is; mounted only when the shell has its slot. */
+  /* The machine utility rail (station-machine-rail.js): the column of
+   * tiles over the Handbook's launcher - the faces' switches and their
+   * children. A reader that asks: the mode is this file's (below), the
+   * plan's moves go through the plan controls' seam on the bridge, and
+   * the rail is told what to show after each. Reset Tracking is the
+   * timeline's (station-rundown-timeline.js), through the hopper
+   * controls' seam. Optional, as the Handbook is; mounted only when the
+   * shell has its slot. */
   const machineRail = root.PolynStationMachineRail || null;
   /* The weight cards (station-weight-cards.js): the cluster's third face,
    * which the rail's Weights control turns every layer over to - the
@@ -313,6 +319,10 @@
    * "weights" (the weight cards) or "next" (the PLANNED recipe's cards -
    * the same blend card, turned to the plan and addressed to it). */
   const blendEdit = { active: false, kind: "blend", flipped: [] };
+  /* How many times the stage has been drawn: a turn that must redraw
+   * once it lands compares against this, and stands down when something
+   * else drew the stage first. */
+  let drawCount = 0;
   /* LAYER COPY - the grid's per-layer Copy / Paste, as presentation state:
    * which layer of which recipe is armed as the source, or none. A live
    * reference, not a snapshot: pasting reads that layer as it stands at
@@ -374,7 +384,10 @@
       hopperState: resolved ? resolved.hopperState : null,
       layerState: resolved ? resolved.layerState : null,
       job: resolved ? resolved.job : null,
-      live: !!(resolved && resolved.live)
+      live: !!(resolved && resolved.live),
+      /* What the timeline's RESET word shows: the offer read off the
+       * bridge, and how many hoppers the reset would touch. */
+      reset: resetStateFor(resolved)
     };
     if (timeline) timeline.update(inputs);
     if (jobPanel) jobPanel.update(inputs);
@@ -481,28 +494,48 @@
     if (mounts.machine.contains(active) && typeof active.blur === "function") active.blur();
   }
 
-  /* The card face that just arrived settles in, as the focus workspace
-   * does: opacity and a little scale over the settle time, on the same
-   * tokens, and nothing when the operator asked for less motion. Which
-   * layers changed face is what the caller says; the stage has already
-   * been rendered. */
-  function settleFaces(ids) {
-    if (!mounts.machine || !ids.length || prefersReducedMotion()) return;
+  /* The layers named turn over, each from one face to the other, in
+   * place: the two faces trade over the settle time on the same tokens
+   * the focus workspace settles on (station-face-turn.js), and nothing
+   * moves when the operator asked for less motion. `from` null is a face
+   * that only arrives - the mode switching faces, the card that was there
+   * already gone. The stage is not redrawn here: both faces are built
+   * (drawStage), and the layer's class is what changes. What comes back
+   * says whether anything is still in flight, and when it is not. */
+  function turnFaces(ids, from, to) {
+    const instant = { animated: false, done: Promise.resolve() };
+    if (!mounts.machine || !ids.length) return instant;
     const timing = stage && typeof stage.getTiming === "function" ? stage.getTiming() : { settle: 120 };
+    const reduced = prefersReducedMotion();
+    const turns = [];
     for (const id of ids) {
       const layer = mounts.machine.querySelector(`[data-role='layer'][data-layer='${id}']`);
       if (!layer) continue;
-      const face = layer.querySelector(isFlipped(id) ? ".station-blend-card" : ".station-hopper-cluster");
-      if (!face) continue;
-      // Through the transition module, the one place Station animates.
-      transition.play(face, [{ opacity: 0, transform: "scaleX(0.92)" }, { opacity: 1, transform: "none" }],
-        { duration: timing.settle, easing: "ease-out", fill: "none" });
+      if (!faceTurn) {
+        // No turn module: the class alone, at once.
+        if (layer.classList) layer.classList.toggle("is-flipped", to === "card");
+        continue;
+      }
+      turns.push(faceTurn.turn(layer, {
+        to,
+        from,
+        timing,
+        reducedMotion: reduced,
+        // Through the transition module's play, the one place Station
+        // animates; the frame callback is the page's own.
+        animate: transition.play
+      }));
     }
+    const flying = turns.filter(t => t.animated);
+    if (!flying.length) return instant;
+    return { animated: true, done: Promise.all(flying.map(t => t.done)) };
   }
 
-  function redrawForBlend(changed) {
+  /* The stage drawn afresh for the mode - entering it, leaving it, a
+   * face switched - with the Handbook and the rail told. A single layer
+   * turning does not come here: that is a class change (turnFaces). */
+  function redrawForBlend() {
     stage.refresh(focusLayerFor());
-    settleFaces(changed || []);
     if (handbookPanel) handbookPanel.update();
     syncRail();
   }
@@ -525,9 +558,9 @@
    * "edit the blends", and a layer the operator wants as hoppers again is
    * one click on its train. The hint says so, on the status line, until
    * the first thing the operator does in the mode replaces it. */
-  const BLEND_EDIT_HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
+  const BLEND_EDIT_HINT = "Current Recipe: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Current Recipe again when done.";
   const WEIGHTS_EDIT_HINT = "Weights: every layer is turned over to its weight card. Enter receiver weights - and, with Smart Hoppers on, each hopper's geometry; click Weights again when done.";
-  const NEXT_EDIT_HINT = "Next Recipe: every layer is turned over to a card of the PLANNED recipe. Edits here change the plan, not the running job; Load Next on the rail makes the plan the running recipe. Click Next Recipe again when done.";
+  const NEXT_EDIT_HINT = "Next Recipe: every layer is turned over to a card of the PLANNED recipe. Edits here change the plan, not the running job; Load Next, beside Current Recipe on the rail, makes the plan the running recipe. Click Next Recipe again when done.";
   const HINT = { blend: BLEND_EDIT_HINT, weights: WEIGHTS_EDIT_HINT, next: NEXT_EDIT_HINT };
   const FACES = ["blend", "weights", "next"];
 
@@ -549,7 +582,12 @@
     blendEdit.active = true;
     blendEdit.kind = face;
     blendEdit.flipped = layerIds();
-    redrawForBlend(blendEdit.flipped.filter(id => !were.includes(id)).concat(were));
+    // Every layer built with both faces; then the ones showing hoppers
+    // turn over to the card, and - on a face switch - the ones already
+    // turned settle their new card in.
+    redrawForBlend();
+    turnFaces(blendEdit.flipped.filter(id => !were.includes(id)), "cluster", "card");
+    turnFaces(were, null, "card");
     say(HINT[face]);
     return true;
   }
@@ -568,7 +606,18 @@
     blendEdit.active = false;
     blendEdit.kind = "blend";
     blendEdit.flipped = [];
-    redrawForBlend(were);
+    /* The cards turn back to hoppers where they stand; the stage is
+     * drawn without them once the turn has landed - at once when nothing
+     * is in flight - unless something else drew it meanwhile, in which
+     * case that drawing is already the mode-off stage. */
+    const turn = turnFaces(were, "card", "cluster");
+    const drawn = drawCount;
+    if (!turn.animated) redrawForBlend();
+    else {
+      if (handbookPanel) handbookPanel.update();
+      syncRail();
+      turn.done.then(() => { if (drawCount === drawn) redrawForBlend(); });
+    }
     // Whatever the mode refused to do is no longer refused.
     say("");
     return true;
@@ -580,7 +629,23 @@
     if (wanted === isFlipped(id)) return false;
     leaveStageControl();
     blendEdit.flipped = wanted ? blendEdit.flipped.concat([id]) : blendEdit.flipped.filter(other => other !== id);
-    redrawForBlend([id]);
+    // The layer's two faces trade in place: no redraw, the same turn the
+    // rail's switch gives every layer at once.
+    turnFaces([id], wanted ? "cluster" : "card", wanted ? "card" : "cluster");
+    /* On the Next face the header's share follows the face: the plan's
+     * value over a card, the running job's over hoppers (stageLayerState).
+     * The redraw used to write it; the value patch writes it now. */
+    if (blendEdit.kind === "next" && current.model && current.resolved) {
+      render.patchStage(mounts.machine, current.model, {
+        hopperState: current.resolved.hopperState,
+        layerState: stageLayerState(current.resolved),
+        focusLayer: null,
+        hopperControls: controlsFor(current.resolved),
+        layerShare: shareFor(current.resolved)
+      });
+    }
+    if (handbookPanel) handbookPanel.update();
+    syncRail();
     say("");
     return true;
   }
@@ -737,7 +802,8 @@
    * The selection is this file's; the cards show it (setBulk) and ask to
    * change it (the badge's click); the rail shows how many and holds the
    * resin until Confirm. Confirm is one setHopperResins over the whole
-   * selection, addressed to the running recipe - the blend face's; the
+   * selection, addressed to the face's recipe - the running recipe under
+   * the Blend face, the plan under the Next face (bulkRecipe); the
    * answer through the same publish policy; said on the status line. */
 
   function bulkKeys() {
@@ -749,8 +815,16 @@
     return { active: true, selected: bulkKeys(), onToggle: index => toggleBulkHopper(layerId, index) };
   }
 
+  /* Bulk Edit is a child of both recipe faces: on the Blend face it
+   * writes to the running recipe, on the Next face to the plan - the
+   * same selection, the same field, the same one setHopperResins,
+   * addressed to the face's recipe. */
+  function bulkRecipe() {
+    return modeIs("next") ? "next" : "current";
+  }
+
   function canBulkEdit() {
-    return modeIs("blend") && !!blendActions && blendActions.can(commandsFor(current.resolved), "resins");
+    return (modeIs("blend") || modeIs("next")) && !!blendActions && blendActions.can(commandsFor(current.resolved), "resins");
   }
 
   function syncBulkCards() {
@@ -783,7 +857,7 @@
     bulk.resin = "";
     syncBulkCards();
     syncRail();
-    say("Bulk Edit: click hopper badges on the cards to select them, then enter the resin above the rail and confirm.");
+    say(`Bulk Edit: click hopper badges on the cards to select them, then enter the resin above the rail and confirm${bulkRecipe() === "next" ? " - the plan is what changes" : ""}.`);
     return true;
   }
 
@@ -836,7 +910,8 @@
     const value = String(bulk.resin || "").trim();
     if (!keys.length) { say("Select at least one hopper on a card first."); return null; }
     if (!value) { say("Enter the resin to write onto the selected hoppers."); return null; }
-    const result = blendActions.applyResins(commandsFor(current.resolved), "current", keys, value);
+    const recipe = bulkRecipe();
+    const result = blendActions.applyResins(commandsFor(current.resolved), recipe, keys, value);
     if (!result || !result.ok) {
       say(result && result.message ? result.message : "The resin could not be applied.");
       return result || null;
@@ -849,7 +924,7 @@
     }
     lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
     onPublish({ own: true });
-    say(`Applied ${value} to ${count} hopper${count === 1 ? "" : "s"}.`);
+    say(`Applied ${value} to ${count} hopper${count === 1 ? "" : "s"}${recipe === "next" ? " in the plan" : ""}.`);
     return result;
   }
 
@@ -859,10 +934,9 @@
    * What the rail shows is read off the state this file already holds and
    * the bridge's offer - never kept in the rail. syncRail runs after
    * anything that could change one of its inputs: a render, a publish, a
-   * flip, a focus change. placeRail runs after every render of the
-   * normal layout and when the stage's cell resizes: the rail stands at
-   * the far-right cluster's outer corner, which the drawn stage declares
-   * (station-machine-rail.js reads it off the SVG). */
+   * flip, a focus change. Where the rail stands is the stylesheet's: the
+   * corner the Handbook's launcher stands in, at every window and every
+   * line - nothing here measures the stage for it. */
 
   /* How many hoppers a reset would touch: tracked, or pump marked off. */
   function trackedHopperCount(resolved) {
@@ -875,10 +949,22 @@
     return count;
   }
 
+  /* The tracking reset's offer and reach, for the timeline's RESET word
+   * (station-rundown-timeline.js): offered by the bridge or not, why not,
+   * and how many hoppers it would touch. */
+  function resetStateFor(resolved) {
+    const commandsNow = commandsFor(resolved);
+    const offered = !!(hopperControls && typeof hopperControls.canReset === "function" && hopperControls.canReset(commandsNow, "current"));
+    return {
+      available: offered,
+      reason: offered || !hopperControls ? "" : hopperControls.resetReason(commandsNow, "current"),
+      count: trackedHopperCount(resolved)
+    };
+  }
+
   function syncRail() {
     if (!railPanel) return;
     const commandsNow = commandsFor(current.resolved);
-    const resetOffered = !!(hopperControls && typeof hopperControls.canReset === "function" && hopperControls.canReset(commandsNow, "current"));
     const smart = weightCards ? weightCards.smartFrom(current.resolved) : null;
     const smartOffered = !!(weightCards && weightCards.canToggleSmart(commandsNow, smart));
     const planned = !!(current.resolved && current.resolved.plan && current.resolved.plan.planned);
@@ -910,23 +996,12 @@
         reason: !blendActions ? "the layer actions module is not loaded." : (blendActions.can(commandsNow, "resins") ? "" : blendActions.reason(commandsNow, "resins")),
         count: bulk.selected.size,
         resin: bulk.resin
-      },
-      reset: {
-        available: resetOffered,
-        reason: resetOffered || !hopperControls ? "" : hopperControls.resetReason(commandsNow, "current"),
-        count: trackedHopperCount(current.resolved)
       }
     });
   }
 
-  function placeRail() {
-    if (!railPanel || !mounts.machine || !mounts.rail || focusLayerFor()) return;
-    const svg = typeof mounts.machine.querySelector === "function" ? mounts.machine.querySelector("svg") : null;
-    if (svg) railPanel.place(svg, mounts.rail);
-  }
-
-  /* The rail's two moves under the Next face, through the plan controls'
-   * seam: the confirmed Load Next, and Copy Current. One command each;
+  /* The rail's two moves - Load Next under the Current face, Copy Current
+   * under the Next face - through the plan controls' seam. One command each;
    * the answer through the same publish policy as every other; what the
    * application did said on the status line either way. */
   function promoteNextRecipe() {
@@ -1685,8 +1760,10 @@
        * "next". The running job's state never reaches these cards. */
       const cardRecipe = blendEdit.kind === "next" ? "next" : recipe;
       const cardHopperState = blendEdit.kind === "next" ? (current.resolved ? current.resolved.nextHopperState : null) : hopperState;
+      /* One card per layer, turned over or not: a layer showing its
+       * hoppers keeps its card built and hidden under them, so turning it
+       * is a class change (turnFaces), never a redraw of the stage. */
       for (const entry of model.layers) {
-        if (!isFlipped(entry.id)) continue;
         /* The Weights face: the same footprint, the weight card in it,
          * handed the same bridge and the same two callbacks. */
         const card = blendEdit.kind === "weights" && weightCards ? weightCards.create(mounts.machine.ownerDocument, {
@@ -1745,8 +1822,10 @@
       workspace: editor ? editor.element : null,
       blendEdit: blendEdit.active && !focusLayer,
       blendCards: cards,
+      flipped: blendEdit.flipped.slice(),
       raiseLayer: extra && extra.raiseLayer
     });
+    drawCount += 1;
     // Which face the turned layers show, for the stylesheet and the tests;
     // the renderer knows only that a layer is turned over.
     if (blendEdit.active && !focusLayer) mounts.machine.setAttribute("data-edit-face", blendEdit.kind);
@@ -1757,9 +1836,6 @@
     // written to it from the projection as it stands (feedJob follows
     // with the fresh one on every path that changes the job).
     applyRundownMarks();
-    // The rail stands against the normal layout as drawn; a focused
-    // layout is not measured (the rail has stepped back for it).
-    if (!focusLayer) placeRail();
     return svg;
   }
 
@@ -1958,6 +2034,10 @@
     if (rundownTimeline && mounts.timeline) {
       timeline = rundownTimeline.create(doc, {
         view: root,
+        /* RESET, under the scale in the Now column: the confirmed click
+         * goes through the hopper controls' seam (resetTracking below);
+         * what the word shows is fed with the job (feedJob). */
+        onResetTracking: resetTracking,
         /* One clock for everything that follows it: the header's
          * readout, the calculator's, and the overdue marks on the
          * hoppers, all from the pass the timeline just made. */
@@ -2003,11 +2083,10 @@
       if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
     }
 
-    /* The machine utility rail, in its own slot over the stage: Blend
-     * Edit's and Weights' switches, Smart Hoppers and Reset Tracking.
-     * Handed the four callbacks and nothing else; told what to show by syncRail, and where to stand by
-     * placeRail after each render of the normal layout and whenever the
-     * stage's cell changes size. */
+    /* The machine utility rail, in its own slot over the stage, stacked
+     * over the Handbook's launcher: the faces' switches with their
+     * children. Handed its callbacks and nothing else; told what to show
+     * by syncRail. */
     /* The bulk field, built once and handed to the rail below: the boot
      * file holds the draft, Enter is the rail's Confirm, Escape the rail's
      * Cancel. */
@@ -2024,7 +2103,6 @@
         onBlendEdit: toggleBlendEdit,
         onWeightsEdit: toggleWeightsEdit,
         onSmartHoppers: toggleSmartHoppers,
-        onResetTracking: resetTracking,
         onNextEdit: toggleNextEdit,
         onPromote: promoteNextRecipe,
         onCopy: copyCurrentToNext,
@@ -2036,16 +2114,8 @@
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
       });
       mounts.rail.appendChild(railPanel.element);
-      if (typeof root.ResizeObserver === "function" && mounts.machine) {
-        try {
-          new root.ResizeObserver(() => placeRail()).observe(mounts.machine);
-        } catch (error) { /* the resize listener below stands in */ }
-      } else if (typeof root.addEventListener === "function") {
-        root.addEventListener("resize", () => placeRail());
-      }
-      // The stage was drawn before the rail existed: told and placed now.
+      // The stage was drawn before the rail existed: told now.
       syncRail();
-      placeRail();
     }
 
     /* The Operator Handbook, in the slot laid over the stage. Built once

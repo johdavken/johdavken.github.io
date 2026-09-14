@@ -45,6 +45,17 @@
 
   const LINE_CONFIGURATION_CACHE_KEY = "polyn.lineConfigurations.v1";
 
+  // Hoppers per layer: most lines run six on every layer, several run four
+  // on the core. Six is the ceiling - the running job and every payload are
+  // six-slot - so a layer may use fewer of its slots, never more. Absent
+  // (a built-in, an older cache, an older row) means six per layer.
+  const MAX_HOPPERS_PER_LAYER = 6;
+
+  function defaultHopperCounts(layerCount){
+    const count = Number(layerCount);
+    return Number.isInteger(count) && count > 0 ? Array.from({ length:count }, ()=>MAX_HOPPERS_PER_LAYER) : [];
+  }
+
   const BUILT_IN_LINE_CONFIGURATIONS = Object.freeze([
     ...[1,2,3,4].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:1, layerAPosition:null, hopperGeometry:"volume", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     ...[5,6].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:3, layerAPosition:"inside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
@@ -53,7 +64,7 @@
     ...[10,11].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:5, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     ...[12,13,14].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:3, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     { lineNumber:15, displayName:"Line 15", aliases:[], layerCount:5, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} }
-  ].map(Object.freeze));
+  ].map(item=>Object.freeze({ ...item, hopperCounts:Object.freeze(defaultHopperCounts(item.layerCount)) })));
 
   let configuredDefinitions = [];
 
@@ -65,9 +76,11 @@
     const layerAPosition = value?.layerAPosition ?? value?.layer_a_position ?? null;
     const hopperGeometry = value?.hopperGeometry ?? value?.hopper_geometry;
     const hopperNamingMode = value?.hopperNamingMode ?? value?.hopper_naming_mode;
+    const givenCounts = value?.hopperCounts ?? value?.hopper_counts;
+    const hopperCounts = Array.isArray(givenCounts) && givenCounts.length ? givenCounts.map(count=>Number(count)) : defaultHopperCounts(layerCount);
     return { id:value?.id || null, lineNumber, displayName, aliases, layerCount,
       layerAPosition:layerAPosition === "n/a" ? null : layerAPosition,
-      hopperGeometry, hopperNamingMode, isActive:value?.isActive ?? value?.is_active ?? true,
+      hopperGeometry, hopperNamingMode, hopperCounts, isActive:value?.isActive ?? value?.is_active ?? true,
       metadata:value?.metadata && typeof value.metadata === "object" && !Array.isArray(value.metadata) ? value.metadata : {},
       createdAt:value?.createdAt ?? value?.created_at ?? null, updatedAt:value?.updatedAt ?? value?.updated_at ?? null };
   }
@@ -82,6 +95,7 @@
       numbers.add(definition.lineNumber);
       if (!definition.displayName || definition.displayName.length > 80) return { valid:false, message:"Display name is required and must be 80 characters or fewer." };
       if (!Number.isInteger(definition.layerCount) || definition.layerCount < 1 || definition.layerCount > 9) return { valid:false, message:"Layers must be a whole number from 1 to 9." };
+      if (definition.hopperCounts.length !== definition.layerCount || definition.hopperCounts.some(count=>!Number.isInteger(count) || count < 1 || count > MAX_HOPPERS_PER_LAYER)) return { valid:false, message:`Hoppers per layer must be a whole number from 1 to ${MAX_HOPPERS_PER_LAYER} for every layer.` };
       if (![null,"inside","outside"].includes(definition.layerAPosition)) return { valid:false, message:"Layer A must be Inside, Outside, or N/A." };
       if (definition.layerCount === 1 && definition.layerAPosition !== null) return { valid:false, message:"A single-layer line must use N/A for Layer A." };
       if (definition.layerCount > 1 && definition.layerAPosition === null) return { valid:false, message:"A multilayer line needs a Layer A orientation." };
@@ -123,7 +137,7 @@
     const configured = new Map(configuredDefinitions.map(item=>[item.lineNumber,item]));
     const merged = BUILT_IN_LINE_CONFIGURATIONS.map(item=>configured.get(item.lineNumber) || item);
     configuredDefinitions.forEach(item=>{ if (!BUILT_IN_LINE_CONFIGURATIONS.some(base=>base.lineNumber === item.lineNumber)) merged.push(item); });
-    return merged.sort((a,b)=>a.lineNumber-b.lineNumber).map(item=>({ ...item, aliases:[...item.aliases], metadata:{...item.metadata}, source:configured.has(item.lineNumber) ? "configured" : "built-in" }));
+    return merged.sort((a,b)=>a.lineNumber-b.lineNumber).map(item=>({ ...item, aliases:[...item.aliases], hopperCounts:[...item.hopperCounts], metadata:{...item.metadata}, source:configured.has(item.lineNumber) ? "configured" : "built-in" }));
   }
 
   function definitionForLine(lineNumber){
@@ -248,7 +262,7 @@
     const definition = definitionForLine(number) || {
       lineNumber:number, displayName:`Line ${number}`, aliases:[], layerCount:null,
       layerAPosition:Object.prototype.hasOwnProperty.call(LAYER_A_POSITION_BY_LINE, number) ? LAYER_A_POSITION_BY_LINE[number] : null,
-      hopperGeometry:null, hopperNamingMode:"standard", isActive:true, metadata:{}, source:"legacy"
+      hopperGeometry:null, hopperNamingMode:"standard", hopperCounts:null, isActive:true, metadata:{}, source:"legacy"
     };
     const layerCount = definition.layerCount;
     const position = definition.layerAPosition;
@@ -322,7 +336,7 @@
     linkedWorkspace, linkedLineNumber, requiredLayerCountForSync,
     LAYER_A_POSITION_BY_LINE, layerAPosition, getLineConfiguration, getLineConfigurationForSync,
     VOLUME_GEOMETRY_LINES, getSmartHopperGeometryMode, getSmartHopperGeometryModeForSync,
-    LINE_CONFIGURATION_CACHE_KEY, BUILT_IN_LINE_CONFIGURATIONS, normalizedDefinition,
+    LINE_CONFIGURATION_CACHE_KEY, BUILT_IN_LINE_CONFIGURATIONS, MAX_HOPPERS_PER_LAYER, defaultHopperCounts, normalizedDefinition,
     validateLineConfigurations, setConfiguredLineConfigurations, loadCachedLineConfigurations,
     getLineConfigurations, definitionForLine, configuredLineNumberForName
   };

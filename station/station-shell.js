@@ -170,13 +170,13 @@
     shell.appendChild(element(doc, "div", "station-utility-slot", { "data-station-mount": "utility" }));
 
     /* The machine utility rail's slot (station-machine-rail.js): the
-     * short stack of controls that stands at the outer edge of the
-     * far-right hopper cluster - Blend Edit and Reset Tracking. The same
-     * cell again, under the two slots above in the stack, so a surface
-     * laid across the stage covers the rail rather than meeting it; the
-     * rail itself is placed by script against the drawn cluster, and
-     * reserves no track and moves nothing. Inert to the pointer itself,
-     * like the others. */
+     * column of tiles stacked over the Handbook's launcher in the stage's
+     * corner - the faces' switches and Reset Tracking. The same cell
+     * again, under the two slots above in the stack, so a surface laid
+     * across the stage covers what reaches under it rather than meeting
+     * it; the rail stands in the launcher's corner by stylesheet alone,
+     * and reserves no track and moves nothing. Inert to the pointer
+     * itself, like the others. */
     shell.appendChild(element(doc, "div", "station-rail-slot", { "data-station-mount": "rail" }));
 
     /* The run-down timeline's row: no heading, no card - the timeline

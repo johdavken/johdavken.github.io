@@ -254,7 +254,8 @@ test("the stylesheet reserves no track for a side column or a strip: one column,
   assert.match(css, /\.station-handbook-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
   assert.match(css, /\.station-utility-slot \{[^}]*grid-area: machine;[^}]*pointer-events: none;/);
   // The rail's slot: the same cell, under the two above in the stack, so a
-  // surface laid across the stage covers the rail rather than meeting it.
+  // surface laid across the stage covers what reaches under it rather than
+  // meeting it (the column itself stands in the launcher's cleared corner).
   assert.match(css, /\.station-rail-slot \{[^}]*grid-area: machine;[^}]*z-index: 4;[^}]*pointer-events: none;/);
   for (const gone of ["sidebar", "inspector", "recipe-strip", "station-nav", "section__heading", "strip"]) {
     assert.doesNotMatch(css, new RegExp(gone), `shell.css still styles ${gone}`);

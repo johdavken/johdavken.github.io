@@ -142,10 +142,50 @@
     return Number.isFinite(runtime.weight) ? runtime.weight : 0;
   }
 
-  /* The caption's weight line: whole pounds, digits only, fitted to the
-   * column; "—" when no weight is entered. */
+  /* The caption's weight line: whole pounds, digits fitted to the column;
+   * "—" when no weight is entered. The unit is weightLine()'s. */
   function weightText(weight, width, scale) {
     return Number.isFinite(weight) && weight > 0 ? fitText(String(Math.round(weight)), width, 9 * scale) : "—";
+  }
+
+  /* The weight line's type, in caption units at scale 1: the digits at the
+   * caption's own size, the unit smaller beside them, a hair between. The
+   * widths are the same estimate fitText() makes (0.58 em per glyph), so
+   * the pair is centred by the rule the fit is judged by. */
+  const WEIGHT_TYPE = Object.freeze({
+    digitSize: 9,
+    unitSize: 7.2,
+    unitGap: 1.5,
+    glyph: 0.58,
+    unit: "lb",
+    // Digits up to this many carry the unit beside them (four digits and
+    // "lb" span about 31 units - the 30-unit column and a hair of its gap).
+    // A wider weight is drawn alone, centred, the unit the tooltip's:
+    // a real weight is never truncated to make room for its unit.
+    unitUpToDigits: 4
+  });
+
+  /* The weight line: the digits, and the unit beside them when they fit.
+   * Two texts rather than one with a tspan, so the digits stay the
+   * weight element's own text - what the tooltip, the tests and any
+   * reader of `.station-hopper__weight` take the weight to be. Anchored
+   * end and start about a centre the pair's estimated width puts under
+   * the hopper; a bare weight (no unit, or "—") is anchored middle at
+   * the column's centre exactly as before. */
+  function weightLine(doc, runtime, cx, y, width, scale) {
+    const digits = weightText(shownWeight(runtime), width, scale);
+    const t = WEIGHT_TYPE;
+    const withUnit = digits !== "—" && /^\d+$/.test(digits) && digits.length <= t.unitUpToDigits;
+    if (!withUnit) return [label(doc, digits, cx, y, "station-hopper__weight")];
+    const digitsWidth = digits.length * t.digitSize * scale * t.glyph;
+    const unitWidth = t.unit.length * t.unitSize * scale * t.glyph;
+    const gap = t.unitGap * scale;
+    const start = cx - (digitsWidth + gap + unitWidth) / 2;
+    const weightX = round(start + digitsWidth);
+    return [
+      label(doc, digits, weightX, y, "station-hopper__weight", "end"),
+      label(doc, t.unit, round(weightX + gap), y, "station-hopper__unit", "start")
+    ];
   }
 
   /* The layer's share of the film structure, as the layer header shows it. */
@@ -534,10 +574,12 @@
      * never shrunk to fit, because an unreadable code is worse than no
      * code. The weight is the run-down's effective weight - the entered
      * receiver weight (the Weights page's value), or Smart Hoppers'
-     * computed one, marked `is-smart` and tinted - in whole pounds and
-     * digits only: the column has room for five characters, so the unit,
-     * the thousands separator and where a computed value came from are the
-     * tooltip's; "—" when there is none. */
+     * computed one, marked `is-smart` and tinted - in whole pounds, with
+     * the unit drawn smaller beside the digits so the number is never read
+     * as anything else. The column has room for four digits and the unit;
+     * a wider weight is drawn alone, and the unit, the thousands separator
+     * and where a computed value came from are the tooltip's; "—" when
+     * there is none. */
     const caption = group(doc, "station-hopper__caption", "hopper-caption");
     let y = geometry.captionTop;
     caption.appendChild(label(doc, geometry.id, cx, y, "station-hopper__id"));
@@ -552,7 +594,7 @@
         cx, y, "station-hopper__resin"));
     }
     y += 12 * scale;
-    caption.appendChild(label(doc, weightText(shownWeight(runtime), w, scale), cx, y, "station-hopper__weight"));
+    for (const line of weightLine(doc, runtime, cx, y, w, scale)) caption.appendChild(line);
     drawing.appendChild(caption);
 
     return g;
@@ -889,13 +931,17 @@
     if (bank.emphasis === "focused") classes.push("is-focused");
     if (bank.emphasis === "dimmed") classes.push("is-dimmed");
     /* Blend Edit: every normal bank can be turned over while the mode is
-     * on; a bank whose card was handed in is - its cluster still built,
-     * and hidden (hopper.css), so a patch finds the hoppers it expects
-     * and the layer comes back exactly as it was. */
+     * on. A bank handed a card carries it beside its cluster - both built,
+     * one shown (hopper.css) - and which one is `flipped`: the card when
+     * the caller says so, or says nothing (a card handed is a card shown);
+     * the cluster when the caller says not, the card waiting hidden under
+     * it. Either way a patch finds the hoppers it expects and the layer
+     * turns over without being redrawn (station-face-turn.js). */
     const flippable = !!settings.blendEdit && bank.emphasis === "normal";
     const card = flippable && settings.blendCard ? settings.blendCard : null;
+    const flipped = !!card && (settings.flipped === undefined || settings.flipped === null || !!settings.flipped);
     if (flippable) classes.push("is-flippable");
-    if (card) classes.push("is-flipped");
+    if (flipped) classes.push("is-flipped");
     /* "Running" means the layer has a recipe to mix. Derived from the state
      * already on screen - no new field, no timer - and it is what gates the
      * agitator's motion, so an unconfigured layer sits still. */
@@ -987,7 +1033,7 @@
   }
 
   return {
-    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, shareText,
+    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
     shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
   };

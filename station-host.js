@@ -86,6 +86,9 @@
     "station/station-machine-parts.js",
     "station/station-render.js",
     "station/station-transition.js",
+    // The face turn: a layer's cluster and card trading places in place,
+    // on the transition module's timing.
+    "station/station-face-turn.js",
     "station/station-focus-editor.js",
     "station/station-hopper-controls.js",
     // The plan controls: the seam for the rail's two moves under the Next
@@ -100,6 +103,7 @@
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
     // far-right cluster. After the hopper controls, whose reset it asks for.
+    "station/station-armed.js",
     "station/station-machine-rail.js",
     // The run-down projection before the two that read it: the timeline
     // and the header's job controls.
@@ -134,7 +138,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.47.2";
+  const VERSION = "0.54.2";
 
   function requested() {
     try {

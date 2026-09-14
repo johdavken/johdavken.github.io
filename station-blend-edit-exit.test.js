@@ -2,8 +2,8 @@
 
 /* Entering and leaving Blend Edit from the machine utility rail.
  *
- * The mode's one switch stands on the rail beside the far-right hopper
- * cluster (station-machine-rail.js): one click turns every layer over to
+ * The mode's one switch stands on the rail over the Handbook's launcher
+ * in the stage's corner (station-machine-rail.js): one click turns every layer over to
  * its blend card, the next turns them all back. Escape on the stage,
  * with nothing open, is the same exit. The Operator Handbook has no part
  * in it any more: it opens, closes and turns its pages the same with the
@@ -347,7 +347,8 @@ function boot(options) {
     blendSwitch: () => rail.querySelector("[data-action='blend-edit']"),
     weightsSwitch: () => rail.querySelector("[data-action='weights-edit']"),
     smartSwitch: () => rail.querySelector("[data-action='smart-hoppers']"),
-    resetControl: () => rail.querySelector("[data-action='reset-tracking']"),
+    /* RESET: the timeline's word, under the 6H | 12H scale in its Now column. */
+    resetControl: () => doc.querySelector(".station-rundown__reset"),
     clickBlend: () => { api.blendSwitch().click(); return api.blendSwitch(); },
     clickWeights: () => { api.weightsSwitch().click(); return api.weightsSwitch(); },
     clickSmart: () => { api.smartSwitch().click(); return api.smartSwitch(); },
@@ -385,7 +386,14 @@ function boot(options) {
     clickAction: name => { const button = api.action(name); assert.ok(button, `no action ${name}`); button.click(); return button; },
     target: (name, layer) => machine.querySelectorAll(`[data-station-target='${name}']`).find(n => n.getAttribute("data-layer") === layer) || null,
     clickTarget: (name, layer) => { const el = api.target(name, layer); assert.ok(el, `no ${name} on layer ${layer}`); el.click(); return el; },
-    cards: () => machine.querySelectorAll("[data-role='blend-card']"),
+    /* The cards SHOWN: every layer carries a card while the mode is on
+     * (hidden under its hoppers when turned back - hopper.css), and the
+     * one a layer shows is the one in a turned-over layer. */
+    cards: () => machine.querySelectorAll("[data-role='blend-card']").filter(c => {
+      const layer = machine.querySelectorAll("[data-role='layer']").find(n => n.getAttribute("data-layer") === c.getAttribute("data-layer"));
+      return !!layer && layer.classList.contains("is-flipped");
+    }),
+    builtCards: () => machine.querySelectorAll("[data-role='blend-card']"),
     chips: () => machine.querySelectorAll("[data-station-target='flip']"),
     /* Turning a layer over or back is its own train's click while the
      * mode is on: the layer's extruder, the same target an operator
@@ -446,7 +454,7 @@ function boot(options) {
   return api;
 }
 
-const HINT = "Blend Edit: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Blend Edit again when done.";
+const HINT = "Current Recipe: every layer is turned over to its blend card. Click a layer's mixer or extruder to show its hoppers; click Current Recipe again when done.";
 const count = (text, needle) => text.split(needle).length - 1;
 
 /* A stage back to normal: no mode attribute, no card, no chip, no turned
@@ -465,7 +473,7 @@ function assertModeCleared(s) {
   assert.equal(s.face(), null, "the mount names no face");
   assert.equal(s.blendControls(), null, "the Handbook has no Blend Edit controls");
   assert.equal(s.action("blend-edit"), null, "nor a Blend Edit action");
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/, "no Blend Edit notice is left on the status line");
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/, "no Current Recipe notice is left on the status line");
   assert.ok(s.shareEditor() === null, "no share field is left in a header");
   assert.ok(s.machine.querySelector(".is-editing") === null, "no header is still marked as being edited");
   assert.equal(s.machine.contains(s.doc.activeElement), false, "nothing on the stage keeps the focus");
@@ -479,7 +487,7 @@ test("one click on the rail enters the mode with every layer turned over; the sw
   const s = boot();
   const stageBefore = s.machine.querySelector("svg").attributes;
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "false");
-  assert.equal(s.blendSwitch().getAttribute("title"), "Blend Edit");
+  assert.equal(s.blendSwitch().getAttribute("title"), "Current Recipe");
   assert.equal(s.blendSwitch().disabled, false);
   s.clickBlend();
   assert.equal(s.modeOn(), true);
@@ -487,7 +495,7 @@ test("one click on the rail enters the mode with every layer turned over; the sw
   assert.equal(s.cards().length, 3);
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "true");
   assert.ok(s.blendSwitch().classList.contains("is-active"));
-  assert.match(s.blendSwitch().getAttribute("title"), /^Blend Edit · on/);
+  assert.match(s.blendSwitch().getAttribute("title"), /^Current Recipe · on/);
   assert.ok(s.status.textContent.startsWith(HINT), "the mode says how to leave it");
   assert.equal(s.isHandbookOpen(), false, "the Handbook was not opened to get here");
   assert.deepEqual(s.calls, []);
@@ -625,7 +633,7 @@ test("the Handbook carries nothing of the mode: no Blend Edit action, no control
   assert.equal(s.blendControls(), null);
   assert.ok(!s.panel.querySelector(".station-book__toolbar").hidden, "the book's toolbar is showing, not given way");
   assert.ok(!s.panel.querySelector(".station-book__columns").hidden);
-  assert.doesNotMatch(s.panel.textContent, /Blend Edit|Edit all|Show all hoppers/);
+  assert.doesNotMatch(s.panel.textContent, /Current Recipe|Blend Edit|Edit all|Show all hoppers/);
 });
 
 /* ----------------------------------------------------------------------
@@ -641,12 +649,66 @@ test("normal interactions work at once after the exit: the train opens a layer, 
   const editor = s.machine.querySelector("[data-role='focus-editor']");
   assert.ok(editor, "the focused editor opened");
   assert.equal(editor.getAttribute("data-variant"), "full");
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/);
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/);
   s.escapeOnStage();
   assert.equal(s.machine.querySelector("[data-role='focus-editor']"), null, "Escape closed it again");
   // A hopper's tracking control goes to the application as it always did.
   s.clickTarget("tracking", "B");
   assert.deepEqual(s.calls.map(c => c.command), ["setHopperTracking"]);
+});
+
+test("a layer turning over or back is a class change on the stage that stands, not a redraw: every card stays built, the same elements, and one turn looks like every turn", () => {
+  const s = boot().enterBlendEdit();
+  assert.equal(s.builtCards().length, 3, "every layer carries a card while the mode is on");
+  const svgBefore = s.machine.querySelector("svg");
+  const cardB = s.builtCards().find(c => c.getAttribute("data-layer") === "B");
+  const clusterB = s.machine.querySelectorAll(".station-hopper-cluster").find(c => c.getAttribute("data-layer") === "B");
+  s.flipLayer("B");
+  assert.deepEqual(s.flipped(), ["A", "C"]);
+  assert.ok(s.machine.querySelector("svg") === svgBefore, "the stage was redrawn for one layer's turn");
+  assert.equal(s.builtCards().length, 3, "the card is kept, hidden under the hoppers");
+  assert.ok(s.builtCards().find(c => c.getAttribute("data-layer") === "B") === cardB, "B's card is the same element");
+  assert.ok(s.machine.querySelectorAll(".station-hopper-cluster").find(c => c.getAttribute("data-layer") === "B") === clusterB, "and its cluster");
+  assert.equal(s.cards().length, 2, "two cards are shown");
+  // No half-turn is left on the layer: the fake nodes cannot animate, so
+  // the turn is instant.
+  assert.equal(s.machine.querySelectorAll(".is-turning").length, 0);
+  s.flipLayer("B");
+  assert.ok(s.machine.querySelector("svg") === svgBefore);
+  assert.deepEqual(s.flipped(), ["A", "B", "C"]);
+  // Out of the mode, the stage is drawn afresh and carries no card.
+  s.clickBlend();
+  assert.ok(s.machine.querySelector("svg") !== svgBefore, "leaving the mode draws the stage without the cards");
+  assert.equal(s.builtCards().length, 0);
+  assertModeCleared(s);
+});
+
+test("a draft on one card survives another layer's turn: the field it was in is left along its own path, and the card is not rebuilt around it", () => {
+  const s = boot().enterBlendEdit();
+  const input = s.draftOnCard("A", 33);
+  s.flipLayer("C");
+  // Leaving the stage's control commits the draft (leaveStageControl), as
+  // it always did; the card the operator was on is the same element.
+  assert.deepEqual(s.calls.map(c => c.command), ["setHopperBlend"]);
+  assert.equal(s.calls[0].args.pct, 33);
+  assert.ok(s.builtCards().find(c => c.getAttribute("data-layer") === "A").contains(input), "A's card - and the field in it - were rebuilt");
+});
+
+test("on the Next face the header's share follows the face when a layer turns: the plan's over a card, the running job's over hoppers - written by the value patch, on the stage that stands", () => {
+  const s = boot();
+  s.rail.querySelector("[data-action='next-edit']").click();
+  assert.equal(s.face(), "next");
+  const shareOf = layer => s.machine.querySelectorAll(".station-layer__share-value").find(n => n.parentNode && n.parentNode.getAttribute("data-layer") === layer).textContent;
+  // Nothing is planned: a turned-over layer reads the plan's empty share.
+  assert.equal(shareOf("B"), "—");
+  const svg = s.machine.querySelector("svg");
+  s.flipLayer("B");
+  assert.ok(s.machine.querySelector("svg") === svg, "the turn redrew the stage");
+  assert.equal(shareOf("B"), "40%", "B shows its hoppers, and the running job's share");
+  assert.equal(shareOf("A"), "—", "A is still the plan's");
+  s.flipLayer("B");
+  assert.equal(shareOf("B"), "—", "turned over again, B is the plan's again");
+  assert.deepEqual(s.calls, [], "nothing was dispatched for it");
 });
 
 test("Blend Edit state is fully cleared: entering again turns every layer over afresh, whatever was turned back before the exit", () => {
@@ -725,7 +787,7 @@ test("a valid interaction clears the hint: a flip, a share edit, and the mode's 
   s.escapeOnStage();
   s.escapeOnStage();
   assertModeCleared(s);
-  assert.doesNotMatch(s.status.textContent, /Blend Edit/);
+  assert.doesNotMatch(s.status.textContent, /Current Recipe|Blend Edit/);
 });
 
 /* ----------------------------------------------------------------------
@@ -896,16 +958,25 @@ test("the status line is one notice ahead of the line's own parts: said again it
   assert.doesNotMatch(bootSource, /mounts\.status\.textContent = `\$\{message\}/, "no other line prepends to the status bar either");
   assert.match(bootSource, /host\.textContent = \(notice \? \[notice\] : \[\]\)\.concat\(parts\)\.join\(" · "\);/);
   const exit = bootSource.slice(bootSource.indexOf("function exitBlendEdit() {"), bootSource.indexOf("\n  }\n", bootSource.indexOf("function exitBlendEdit() {")) + 4);
-  assert.match(exit, /redrawForBlend\(were\);\n[^\n]*\n\s+say\(""\);/, "the exit clears the notice after the stage is back");
+  // The cards turn back where they stand and the stage is drawn without
+  // them - at once when nothing animates - before the notice is cleared.
+  assert.match(exit, /const turn = turnFaces\(were, "card", "cluster"\);\n\s+const drawn = drawCount;\n\s+if \(!turn\.animated\) redrawForBlend\(\);/);
+  assert.match(exit, /turn\.done\.then\(\(\) => \{ if \(drawCount === drawn\) redrawForBlend\(\); \}\);\n\s+\}\n[^\n]*\n\s+say\(""\);/, "the exit clears the notice after the stage is back");
 });
 
 /* ----------------------------------------------------------------------
- *   The rail, booted: Reset Tracking, and where the rail stands
+ *   Reset, booted: the timeline's word; and where the rail stands
  * -------------------------------------------------------------------- */
 
-test("Reset Tracking is armed by one click and confirmed by the next: one resetTracking through the executor, every hopper untracked, the stage patched, the status line saying so", () => {
+test("RESET stands in the timeline's Now column under the scale, not on the rail; armed by one click and confirmed by the next: one resetTracking through the executor, every hopper untracked, the stage patched, the status line saying so", () => {
   const s = boot();
   const reset = s.resetControl();
+  assert.ok(reset, "the timeline draws the reset");
+  assert.ok(reset.closest(".station-rundown__now"), "in the Now column");
+  assert.ok(reset.closest(".station-rundown__tools") && reset.closest(".station-rundown__tools").querySelector(".station-rundown__range"), "in one stack with the 6H | 12H scale");
+  assert.equal(s.rail.querySelector("[data-action='reset-tracking']"), null, "and not on the rail");
+  assert.equal(reset.textContent, "Reset");
+  assert.equal(reset.getAttribute("aria-label"), "Reset Tracking");
   assert.equal(reset.disabled, true, "nothing tracked: nothing to reset");
   assert.match(reset.getAttribute("title"), /nothing is tracked/);
   // Two hoppers tracked, through the drawn controls as an operator does it.
@@ -917,6 +988,8 @@ test("Reset Tracking is armed by one click and confirmed by the next: one resetT
   assert.equal(s.machine.querySelectorAll(".station-hopper.is-tracking").length, 2);
   reset.click();
   assert.equal(reset.getAttribute("data-armed"), "true");
+  assert.equal(reset.textContent, "Reset", "the word stays: the arm is the colour, the title and the name");
+  assert.equal(reset.getAttribute("aria-label"), "Confirm: reset tracking for 2 hoppers");
   assert.deepEqual(s.calls.map(c => c.command), ["setHopperTracking", "setHopperTracking"], "arming asks the application nothing");
   assert.ok(s.state().layers[0].hoppers[0].track, "and changes nothing");
   reset.click();
@@ -947,7 +1020,7 @@ test("an armed reset that is not confirmed resets nothing: a click elsewhere on 
   assert.ok(s.state().layers[2].hoppers[0].track, "C is still tracked");
   reset.click();
   assert.equal(reset.getAttribute("data-armed"), "true");
-  const armTimer = s.timers.find(t => t.ms === s.window.PolynStationMachineRail.ARM_DURATION);
+  const armTimer = s.timers.find(t => t.ms === s.window.PolynStationArmed.ARM_DURATION);
   assert.ok(armTimer, "the arm started its timer on the host's clock");
   armTimer.fn();
   assert.equal(reset.getAttribute("data-armed"), null, "the timeout disarmed it");
@@ -991,26 +1064,31 @@ test("the rail steps back while a layer is open and returns when it closes; ente
   assertModeCleared(s);
 });
 
-test("the rail is placed against the drawn stage on every render of the normal layout, from the far-right cluster the SVG declares, in its own slot over the stage", () => {
+test("the rail stands in the Handbook launcher's corner by stylesheet alone, in its own slot over the stage: nothing measured, nothing placed, nothing written to its style", () => {
   const s = boot();
   const rail = s.rail;
   assert.equal(rail.parent.getAttribute("data-station-mount"), "rail");
-  assert.ok(rail.classList.contains("is-placed"), "placed after the first draw");
-  const svg = s.machine.querySelector("svg");
+  assert.ok(!rail.classList.contains("is-placed"));
+  assert.equal(rail.style.left, undefined);
+  assert.equal(rail.style.top, undefined);
+  assert.equal(rail.style.height, undefined);
+  assert.ok(!rail.hasAttribute("data-room"));
   const railModule = s.window.PolynStationMachineRail;
-  const read = railModule.readStage(svg);
-  assert.equal(read.clusters.length, 3, "three normal clusters declared");
-  const expected = railModule.anchor({ viewBox: read.viewBox, clusters: read.clusters, stage: svg.getBoundingClientRect(), host: rail.parent.getBoundingClientRect(), rail: rail.getBoundingClientRect() });
-  assert.equal(rail.style.left, `${expected.left}px`);
-  assert.equal(rail.style.top, `${expected.top}px`);
-  assert.equal(rail.style.height, `${expected.height}px`);
-  // Blend Edit redraws the stage in the same geometry: the same place.
+  assert.ok(!("anchor" in railModule) && !("readStage" in railModule) && !("place" in railModule.create(s.doc, {})));
+  // Every tile is the launcher's: the same 64-unit plate under the glyph.
+  const launcherPlate = s.launcher.querySelector(".station-handbook__icon-plate");
+  for (const control of rail.querySelectorAll(".station-rail__control")) {
+    const svg = control.children[0];
+    assert.equal(svg.getAttribute("viewBox"), s.launcher.children[0].getAttribute("viewBox"));
+    const plate = svg.querySelector(".station-rail__glyph-plate");
+    for (const name of ["x", "y", "width", "height", "rx"]) assert.equal(plate.getAttribute(name), launcherPlate.getAttribute(name), `the tile's plate differs from the launcher's in ${name}`);
+  }
+  // Blend Edit redraws the stage: the rail is told, not moved.
   s.clickBlend();
-  assert.equal(rail.style.left, `${expected.left}px`);
-  assert.equal(rail.style.top, `${expected.top}px`);
-  assert.equal(rail.style.height, `${expected.height}px`);
+  assert.equal(rail.style.left, undefined);
   s.clickBlend();
   // The rail never enters the stage's SVG and the stage never grows for it.
+  const svg = s.machine.querySelector("svg");
   assert.equal(s.machine.querySelector("[data-role='machine-rail']"), null);
   assert.equal(s.machine.querySelector("svg").getAttribute("viewBox"), svg.getAttribute("viewBox"));
 });

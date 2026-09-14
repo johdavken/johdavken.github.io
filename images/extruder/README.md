@@ -12,7 +12,7 @@ Suggested left-to-right layouts: `0°` for one layer; `−30°, 0°, +30°` for 
 
 Open `index.html` for a 1/3/5-layer preview with a light/dark background switch. `preview.svg` is a self-contained vector contact sheet.
 
-The individual SVGs have transparent backgrounds, no fonts, scripts, external resources or embedded bitmaps. They share a 545-unit viewBox height and a common physical scale. Set the **same image height**, with automatic width, to preserve machine scale. Each root contains `data-outlet-x` and `data-outlet-y` in its viewBox coordinates for positioning a die connection. The feed flange above the rear housing provides the mixer connection. Path `data-part` attributes identify editable components. Gradient IDs are unique per angle; if inserting multiple copies of the same SVG inline, prefix IDs per instance (ordinary `<img>` usage needs no changes).
+The individual SVGs have transparent backgrounds, no fonts, scripts, external resources or embedded bitmaps. They share a 610-unit viewBox height and a common physical scale. The machine's proportion (cross-section scale, and the barrel stretch ahead of the feed flange that keeps the motor end fixed) is set by the constants at the top of `generate.py`. Set the **same image height**, with automatic width, to preserve machine scale. Each root contains `data-outlet-x` and `data-outlet-y` in its viewBox coordinates for positioning a die connection. The feed flange above the rear housing provides the mixer connection. Path `data-part` attributes identify editable components. Gradient IDs are unique per angle; if inserting multiple copies of the same SVG inline, prefix IDs per instance (ordinary `<img>` usage needs no changes).
 
 Regenerate the SVGs and contact sheet from the repository root:
 

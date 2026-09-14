@@ -95,6 +95,22 @@ test("a layer with no declared hopper count falls back to the line default, not 
   assert.deepEqual(built.layers.map(layer => layer.hoppers.length), [5, 2, 5]);
 });
 
+test("a layer's slots are its hoppers unless the line or the layer says more - never fewer than its hoppers", () => {
+  // Nothing said: slots are hoppers, so a literal configuration keeps its widths.
+  const plain = model.buildLineModel(literal({ layers: [{ id: "A", hopperCount: 4 }, { id: "B", hopperCount: 6 }] }));
+  assert.deepEqual(plain.layers.map(layer => layer.slotCount), [4, 6, payloads.HOPPERS_PER_LAYER]);
+  // A line-wide slot count: every layer is built to it, its hoppers however many.
+  const line = model.buildLineModel(literal({ slotCount: 6, layers: [{ id: "A", hopperCount: 4 }, { id: "C", hopperCount: 3 }] }));
+  assert.deepEqual(line.layers.map(layer => [layer.hopperCount, layer.slotCount]), [[4, 6], [6, 6], [3, 6]]);
+  assert.deepEqual(line.layers.map(layer => layer.hoppers.length), [4, 6, 3], "slots are not hoppers: nothing is drawn or addressed in an empty slot");
+  assert.equal(model.totalHopperCount(line), 13);
+  // A layer's own slot count wins over the line's; one smaller than its hoppers is raised to them.
+  const own = model.buildLineModel(literal({ slotCount: 6, layers: [{ id: "A", hopperCount: 4, slotCount: 8 }, { id: "B", hopperCount: 6, slotCount: 2 }] }));
+  assert.deepEqual(own.layers.map(layer => layer.slotCount), [8, 6, 6]);
+  assert.equal(model.buildLineModel(literal({ hopperSlots: 7 })).layers[0].slotCount, 7, "hopperSlots is the same line-wide word");
+  assert.equal(model.buildLineModel(literal({ slotCount: "x" })).layers[0].slotCount, payloads.HOPPERS_PER_LAYER, "a slot count that is not a whole number says nothing");
+});
+
 /* ----------------------------------------------------------------------
  *   Physical order and roles
  * -------------------------------------------------------------------- */

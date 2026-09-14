@@ -596,6 +596,22 @@ test("the line block is filled from the resolved line configuration", () => {
   assert.equal(snapshot.line.linked, true);
   // The live session's own layer count, not the catalog's.
   assert.equal(snapshot.line.layerCount, 3);
+  // No count configured: null, never a guess.
+  assert.equal(snapshot.line.hopperCounts, null);
+});
+
+test("the line's hoppers per layer cross as configured - one integer a layer, frozen - and as null when the line does not say", () => {
+  const snapshot = bridgeModule.project(appState(), {
+    lineConfiguration: { lineNumber: 12, displayName: "Line 12", layerAPosition: "outside", hopperNamingMode: "standard", hopperGeometry: "cylindrical", hopperCounts: [6, "4", 6] }
+  });
+  assert.deepEqual(snapshot.line.hopperCounts, [6, 4, 6]);
+  assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: null } }).line.hopperCounts, null);
+  assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: "6,4,6" } }).line.hopperCounts, null);
+  assert.deepEqual(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: [6, "x", 6] } }).line.hopperCounts, [6, null, 6]);
+  // Through the bridge the list is frozen with the rest of the snapshot.
+  const handle = bridgeModule.connect({ read: () => bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: [6, 4, 6] } }) });
+  assert.ok(Object.isFrozen(bridgeModule.getSnapshot().line.hopperCounts));
+  handle.disconnect();
 });
 
 test("an unlinked session is reported as unlinked rather than as a guess", () => {

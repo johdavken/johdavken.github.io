@@ -53,7 +53,8 @@
   </div>
 </main>
 <script>
-  const assets = { 0: ['front', 246], 30: ['intermediate', 479.04], 60: ['angled', 660.19] };
+  // viewBox widths from generate.py's output; all three share a 610-unit height.
+  const assets = { 0: ['front', 277.5], 30: ['intermediate', 553.29], 60: ['angled', 770.45] };
   const arrangements = { 1: [0], 3: [-30, 0, 30], 5: [-60, -30, 0, 30, 60] };
   const bank = document.getElementById('bank');
   function render(count) {
@@ -61,7 +62,7 @@
       const [name, width] = assets[Math.abs(angle)];
       const figure = document.createElement('figure');
       figure.className = 'machine';
-      figure.style.setProperty('--ratio', width / 545);
+      figure.style.setProperty('--ratio', width / 610);
       const img = document.createElement('img');
       img.src = `extruder-${name}.svg`;
       img.alt = `${Math.abs(angle)} degree ${angle < 0 ? 'left' : angle > 0 ? 'right' : 'front'} extruder view`;

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Copy Current into Next, as it would stand on the Next flyout: the source is a hopper on the right, the arrow leaves it through an opening in its wall and points left, at the Next switch. Same shaft and head as load-next.svg. -->
+  <path class="face" d="M 10.6 13 L 11.5 16.5 L 14 16.5 L 15 12.5 L 18 3 L 7.5 3 L 8.8 7"/>
+  <path class="shaft" d="M 10.5 10 L 2 10"/>
+  <path class="head" d="M 4.8 7.2 L 2 10 L 4.8 12.8"/>
+</svg>

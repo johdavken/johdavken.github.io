@@ -910,10 +910,35 @@
 
 .station-sudo-lines__layer {
   display: grid;
-  grid-template-columns: 1.5em minmax(0, 1fr);
+  grid-template-columns: 1.5em auto minmax(0, 1fr);
   align-items: center;
   column-gap: var(--station-space-2);
   min-height: calc(var(--station-space-4) + var(--station-space-2));
+}
+
+/* The layer's hopper count, set: a one-digit field and its unit. Most
+   layers run six; the core of several lines runs four. */
+.station-sudo-lines__layer-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-1);
+}
+
+.station-sudo-lines__layer-count .station-sudo-lines__input[data-width="short"] {
+  /* Room for one digit and the field's own padding: the width is the whole
+     box, so the horizontal padding is taken out of it here. */
+  --station-field-width: 3em;
+  --station-field-padding: var(--station-space-1) 0;
+  text-align: center;
+}
+
+.station-sudo-lines__layer-count-unit {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .station-sudo-lines__layer-key {

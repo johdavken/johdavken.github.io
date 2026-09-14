@@ -647,7 +647,7 @@ test("with the commands not on offer the menu's items are held and say why, and 
  *   Bulk Edit from the rail
  * -------------------------------------------------------------------- */
 
-test("Bulk Edit unfolds beside Blend Edit while the blend face is on; its click turns every badge into a selection toggle and swaps the control for Confirm / Cancel; nothing is dispatched", () => {
+test("Bulk Edit unfolds beside Current Recipe while the blend face is on; its click turns every badge into a selection toggle and swaps the control for Confirm / Cancel; nothing is dispatched", () => {
   const s = boot();
   const group = s.rail.querySelector("[data-role='blend-group']");
   assert.equal(group.getAttribute("data-open"), "false");
@@ -763,7 +763,7 @@ test("Enter in the field confirms; Cancel, Escape in the field, and Escape on th
   assert.equal(layerCalls(s).length, 1);
 });
 
-test("the mode's exit and a face change end a selection in progress; Bulk Edit is the blend face's alone - held under Weights and absent under Next", () => {
+test("the mode's exit and a face change end a selection in progress; Bulk Edit is the two recipe faces' - absent under Weights, and under Next it is the same row moved to the Next bracket", () => {
   const s = boot();
   s.enterBlendEdit();
   s.bulkControl().click();
@@ -782,8 +782,49 @@ test("the mode's exit and a face change end a selection in progress; Bulk Edit i
   s.rail.querySelector("[data-action='next-edit']").click();
   assert.equal(s.face(), "next");
   assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-open"), "false");
-  assert.equal(s.badge("A", 1).tagName, "SPAN", "the Next face's badges are not toggles");
+  assert.equal(s.badge("A", 1).tagName, "SPAN", "the Next face's badges are not toggles until Bulk Edit is asked");
+  assert.ok(s.bulkControl().closest("[data-role='next-group']"), "the bulk row stands in the Next group");
+  assert.equal(s.rail.querySelector("[data-role='next-group']").getAttribute("data-bulk"), "false");
   assert.deepEqual(layerCalls(s), []);
+});
+
+test("on the Next face Bulk Edit is the same row on the Next bracket: the selection is on the plan's cards, Confirm is ONE setHopperResins naming next, the running recipe untouched", () => {
+  const s = boot();
+  s.rail.querySelector("[data-action='next-edit']").click();
+  assert.equal(s.face(), "next");
+  const nextGroup = s.rail.querySelector("[data-role='next-group']");
+  const flyout = nextGroup.querySelector(".station-rail__flyout");
+  const nextRow = flyout.querySelector("[data-role='next-row']");
+  assert.deepEqual(flyout.children.map(n => n.getAttribute("data-role")), ["next-row"], "the Next flyout's one row");
+  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "copy-current"], "the bulk set at the head of the row, before Copy Current");
+  assert.equal(s.bulkControl().disabled, false);
+  assert.match(s.bulkControl().getAttribute("title"), /in the plan$/);
+  s.bulkControl().click();
+  assert.equal(nextGroup.getAttribute("data-bulk"), "true");
+  assert.match(s.status.textContent, /the plan is what changes/);
+  assert.equal(s.badge("A", 1).tagName, "BUTTON", "the plan's badges are toggles");
+  s.badge("A", 2).click();
+  s.badge("B", 1).click();
+  assert.equal(s.fieldShown(), true);
+  assert.ok(s.resinField().closest("[data-role='next-group']"), "the field stands over the Next group's row");
+  s.resinInput().value = "PP77";
+  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
+  s.confirmControl().click();
+  assert.deepEqual(layerCalls(s), [{ command: "setHopperResins", args: { recipe: "next", resins: [
+    { layer: "A", index: 2, resin: "PP77" }, { layer: "B", index: 1, resin: "PP77" }
+  ] }, handbookOpen: false }]);
+  // (The harness's executor writes wherever it is told; what the
+  // application does with `recipe: "next"` is its own - the boot file's
+  // part is to name the plan, which the call above pins.)
+  assert.match(s.status.textContent, /Applied PP77 to 2 hoppers in the plan/);
+  assert.equal(nextGroup.getAttribute("data-bulk"), "false");
+  assert.equal(s.badge("A", 2).tagName, "SPAN");
+  // Back to the Blend face: the row goes with it, and the write is to the
+  // running recipe again.
+  s.enterBlendEdit();
+  assert.ok(s.bulkControl().closest("[data-role='blend-group']"));
+  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action")), ["copy-current"], "Copy Current alone on the Next row again");
+  assert.deepEqual(s.rail.querySelector("[data-role='blend-row']").children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "promote-next"], "the set back at the head of the Current row, Load Next at its end");
 });
 
 test("a selection survives a structural publish from elsewhere: the rebuilt cards keep the selected badges pressed, and a value publish rebuilds nothing", async () => {
@@ -862,6 +903,7 @@ test("the boot file routes every layer action through the blend actions' seam, d
     assert.match(fn, /clearLayerCopy\(\);\s+endBulk\(\);/, `${name} clears the arming and the selection`);
   }
   const confirm = between("function confirmBulk() {", "\n  }\n");
-  assert.match(confirm, /applyResins\(commandsFor\(current\.resolved\), "current", keys, value\)/, "Bulk Edit addresses the running recipe");
+  assert.match(confirm, /const recipe = bulkRecipe\(\);\s+const result = blendActions\.applyResins\(commandsFor\(current\.resolved\), recipe, keys, value\)/, "Bulk Edit addresses the face's recipe");
+  assert.match(boot, /function bulkRecipe\(\) \{\s+return modeIs\("next"\) \? "next" : "current";/);
   assert.doesNotMatch(boot, /commands\.dispatch\(\s*"(copyLayer|clearLayer|setHopperResins)"/, "no direct dispatch of a layer command");
 });

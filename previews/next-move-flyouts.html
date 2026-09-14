@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Next moves on their destination flyouts</title>
+<style>
+  :root{--bg:#11171b;--panel:#20282d;--line:#42515a;--text:#e6edf1;--muted:#a7b6be;--blue:#8db8d8}
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 56px;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+  main{max-width:1180px;margin:auto}
+  h1{margin:0;font-size:26px;letter-spacing:-.03em}
+  h2{margin:34px 0 10px;font-size:15px;font-weight:750;color:var(--blue);letter-spacing:.04em;text-transform:uppercase}
+  p.lede{max-width:780px;margin:8px 0 24px;color:var(--muted);line-height:1.55;font-size:14px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:18px 20px;box-shadow:0 10px 28px #0004}
+  .cap{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin:0 0 12px}
+  .note{margin-top:22px;padding:14px 16px;border-left:3px solid var(--blue);background:#192329;color:var(--muted);font-size:13px;line-height:1.6}
+  .note b{color:var(--text)}
+
+  /* ---- a corner of the stage, with the rail's tokens ---- */
+  .stage{position:relative;height:330px;border-radius:12px;background:var(--s-bg);overflow:hidden;
+    --space-2:8px;--space-3:12px;--space-4:16px;--tile:64px;--stroke:1px}
+  .stage.gruvbox{--s-bg:#1d2021;--s-surface:#282828;--s-raised:#3c3836;--s-text:#ebdbb2;--s-muted:#d5c4a1;--s-border:#665c54;--s-accent:#fe8019;--s-accent-soft:rgba(254,128,25,.17);--s-warning:#fabd2f;--s-upcoming:#a89984;--s-page:#fbf1c7;--s-core:#b8bb26;--s-inside:#83a598}
+  .stage.industrial-light{--s-bg:#d8dee2;--s-surface:#e5e9eb;--s-raised:#f0f2f2;--s-text:#202a32;--s-muted:#485762;--s-border:#7d8c97;--s-accent:#245f86;--s-accent-soft:rgba(43,111,153,.14);--s-warning:#7a4f0e;--s-upcoming:#52636f;--s-page:#fbfcfc;--s-core:#4f7d2a;--s-inside:#1f5f8b}
+  .stage .label{position:absolute;top:12px;left:16px;font-size:11px;letter-spacing:.1em;font-weight:800;color:var(--s-muted);opacity:.8}
+  .dock{position:absolute;left:var(--space-4);bottom:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)}
+  .group{position:relative;display:flex;flex-direction:column;--stem:var(--s-accent)}
+  .group.next{--stem:var(--s-upcoming)}
+  .control{--plate:var(--s-raised);--edge:var(--s-border);display:grid;place-items:center;width:var(--tile);height:var(--tile);border:0;padding:0;background:transparent;color:var(--s-muted)}
+  .control.is-active{--plate:var(--s-accent-soft);--edge:var(--s-accent);color:var(--s-accent)}
+  .group.next .control.is-active{--edge:var(--s-upcoming);color:var(--s-upcoming)}
+  .control.is-armed{--edge:var(--s-warning);color:var(--s-warning);animation:armed 1.2s ease-in-out infinite}
+  @keyframes armed{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 4px var(--s-warning))}}
+  .flyout{position:absolute;bottom:0;left:100%;display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);margin-left:var(--space-2);padding-left:var(--space-2);border-left:var(--stroke) solid var(--stem)}
+  .flyout::before{content:"";position:absolute;bottom:calc(var(--tile)/2);right:100%;width:var(--space-2);border-top:var(--stroke) solid var(--stem)}
+  .flyout .control{--edge:var(--stem)}
+  .flyout .control.is-armed{--edge:var(--s-warning)}
+  .row{position:relative;display:flex;align-items:center;gap:var(--space-2)}
+  .tile{display:block;width:var(--tile);height:var(--tile)}
+  .tile .plate{fill:var(--plate);stroke:var(--edge);stroke-width:1.5}
+  .tile path,.tile circle,.tile rect:not(.plate){stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;fill:none}
+  .tile .face{fill:var(--s-surface);stroke-width:.75}
+  .tile .stroke{stroke-width:.75}
+  .tile .back{stroke-width:.65;opacity:.55}
+  .tile .row{stroke-width:.7}
+  .tile .hopper{stroke-width:.65}
+  .tile .dot{fill:currentColor;stroke:none}
+  /* the Handbook launcher, as handbook.css colours it */
+  .launcher .page{fill:var(--s-page);stroke:var(--s-border);stroke-width:1.5}
+  .launcher .spine,.launcher .line{stroke:var(--s-border);stroke-width:1.5;fill:none}
+  .launcher .line{stroke-width:1.2;opacity:.7}
+  .launcher .r0{fill:var(--s-accent);stroke:none}.launcher .r1{fill:var(--s-core);stroke:none}.launcher .r2{fill:var(--s-inside);stroke:none}
+  .launcher .ribbon{fill:var(--s-accent);stroke:none}
+  .legend{margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.5}.legend b{color:var(--text);font-weight:650}
+
+  /* the glyph strip */
+  .strip{display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap}
+  .strip figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .strip figcaption{font-size:11px;color:var(--muted)}
+  .strip svg{display:block;fill:none;stroke:currentColor;stroke-width:.75;stroke-linecap:round;stroke-linejoin:round}
+  .strip svg .face{fill:#1a2226}
+  .strip svg .hopper{stroke-width:.65}
+  .strip .sizes{display:flex;gap:10px;align-items:flex-end;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#1a2226}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>The two moves on their destination flyouts</h1>
+  <p class="lede">Today both moves stand on the Next face. Proposed: each stands on the face it writes to - Load Next on Blend View (renamed from Blend Edit), Copy Current on Next Recipe - so the switch tile to the left of the flyout is the destination, and the icon only has to name the source: the Next sheet, or the hopper. Both arrows point the same way, at the switch. Each corner below is drawn to the rail's own layout: 64px tiles, 8px gaps, the stem and bracket, flyouts growing upward from the switch's row.</p>
+
+  <h2>Today</h2>
+  <div class="cols">
+    <div class="card"><p class="cap">GRUVBOX DARK - NEXT FACE ON</p><div class="stage gruvbox" data-mode="today" data-face="next"></div></div>
+    <div class="card"><p class="cap">INDUSTRIAL LIGHT - NEXT FACE ON</p><div class="stage industrial-light" data-mode="today" data-face="next"></div></div>
+  </div>
+
+  <h2>Proposed</h2>
+  <div class="cols">
+    <div class="card"><p class="cap">GRUVBOX DARK - BLEND VIEW ON</p><div class="stage gruvbox" data-mode="proposed" data-face="blend"></div></div>
+    <div class="card"><p class="cap">GRUVBOX DARK - NEXT FACE ON</p><div class="stage gruvbox" data-mode="proposed" data-face="next"></div></div>
+    <div class="card"><p class="cap">INDUSTRIAL LIGHT - BLEND VIEW ON</p><div class="stage industrial-light" data-mode="proposed" data-face="blend"></div></div>
+    <div class="card"><p class="cap">INDUSTRIAL LIGHT - BLEND VIEW ON, LOAD NEXT ARMED</p><div class="stage industrial-light" data-mode="proposed" data-face="blend" data-armed="true"></div></div>
+  </div>
+
+  <h2>The four glyphs, at size</h2>
+  <div class="card"><div class="strip" id="strip"></div></div>
+
+  <div class="note">
+    <b>The vocabulary:</b> hopper = Current, sheet = Next, arrow = into this switch. Blend View's tile is the hopper; Next Recipe's is the folded sheet (the planned dot still on its corner). Each move draws the <i>other</i> face's object, stood right, with one shaft and head pointing at the switch; the two moves share every arrow coordinate. The switch objects are the move objects at the same size, centred, with no opening. The card-turning-over glyph and the sheet's three rows are gone; the old pair is kept in the Today corners for comparison.
+  </div>
+</main>
+<script>
+  const G = {
+    blend: [["face","M 4.75 3 L 15.25 3 L 12.25 12.5 L 11.25 16.5 L 8.75 16.5 L 7.75 12.5 Z"]],
+    next:  [["face","M 4.75 2.5 L 11.75 2.5 L 15.25 6 L 15.25 17.5 L 4.75 17.5 Z"],["stroke","M 11.75 2.5 L 11.75 6 L 15.25 6"],["dot","circle",{cx:15.95,cy:3.8,r:2.2}]],
+    blendOld: [["back","rect",{x:7.5,y:2.5,width:10,height:12,rx:1.5}],["face","rect",{x:2.5,y:5.5,width:10,height:12,rx:1.5}],
+            ["row","M 5 9 L 10 9"],["row","M 5 11.6 L 8.5 11.6"],["row","M 5 14.2 L 10 14.2"],["stroke","M 14 0.9 L 16 2.5 L 14 4.1"]],
+    nextOld:  [["face","M 5 2.5 L 12 2.5 L 15.5 6 L 15.5 17.5 L 5 17.5 Z"],["stroke","M 12 2.5 L 12 6 L 15.5 6"],
+            ["row","M 7.5 9.2 L 12.5 9.2"],["row","M 7.5 11.8 L 11 11.8"],["row","M 7.5 14.4 L 12.5 14.4"],["dot","circle",{cx:16.2,cy:3.8,r:2.2}]],
+    weights:[["stroke","M 7.4 6.2 A 2.6 2.6 0 0 1 12.6 6.2"],["face","M 6.2 6.6 L 13.8 6.6 L 16 17 L 4 17 Z"],["row","M 7.6 13.5 L 12.4 13.5"]],
+    bulk:  [["back","rect",{x:2.5,y:2.5,width:7,height:4.4,rx:1.2}],["row","M 11.5 4.7 L 17.5 4.7"],
+            ["face","rect",{x:2.5,y:7.9,width:7,height:4.4,rx:1.2}],["stroke","M 4.4 10.2 L 5.6 11.3 L 7.8 9"],["row","M 11.5 10.1 L 17.5 10.1"],
+            ["face","rect",{x:2.5,y:13.3,width:7,height:4.4,rx:1.2}],["stroke","M 4.4 15.6 L 5.6 16.7 L 7.8 14.4"],["row","M 11.5 15.5 L 17.5 15.5"]],
+    promoteOld:[["face","M 11.5 1.5 L 16 1.5 L 18 3.5 L 18 9 L 11.5 9 Z"],["stroke","M 12 11 L 7.5 15.5 M 7.5 11.5 L 7.5 15.5 L 11.5 15.5"],["hopper","M 1.6 10.4 L 7.2 10.4 L 5.8 14.6 L 5.2 16.6 L 3.6 16.6 L 3 14.6 Z"]],
+    copyOld:[["hopper","M 1.6 2.4 L 7.2 2.4 L 5.8 6.6 L 5.2 8.6 L 3.6 8.6 L 3 6.6 Z"],["stroke","M 7.5 9 L 12 4.5 M 8 4.5 L 12 4.5 L 12 8.5"],["face","M 11.5 11 L 16 11 L 18 13 L 18 18.5 L 11.5 18.5 Z"]],
+    promote:[["face","M 7 13 L 7 17.5 L 17.5 17.5 L 17.5 6 L 14 2.5 L 7 2.5 L 7 7"],["stroke","M 14 2.5 L 14 6 L 17.5 6"],["stroke","M 10.5 10 L 2 10"],["stroke","M 4.8 7.2 L 2 10 L 4.8 12.8"]],
+    copy:   [["face","M 10.6 13 L 11.5 16.5 L 14 16.5 L 15 12.5 L 18 3 L 7.5 3 L 8.8 7"],["stroke","M 10.5 10 L 2 10"],["stroke","M 4.8 7.2 L 2 10 L 4.8 12.8"]]
+  };
+  const attrs = o => Object.entries(o).map(([k,v]) => `${k}="${v}"`).join(" ");
+  function parts(defs) {
+    return defs.map(([cls, a, b]) => {
+      if (a === "rect") return `<rect class="${cls}" ${attrs(b)}/>`;
+      if (a === "circle") return `<circle class="${cls}" ${attrs(b)}/>`;
+      return `<path class="${cls}" d="${a}"/>`;
+    }).join("");
+  }
+  function tile(name, title, cls = "", planned = false) {
+    return `<button class="control ${cls}" title="${title}" type="button"><svg class="tile" viewBox="0 0 64 64" aria-hidden="true"><rect class="plate" x="1.5" y="1.5" width="61" height="61" rx="14"/><g transform="translate(12 12) scale(2)" ${planned ? 'style="--dot:1"' : ""}>${parts(G[name]).replace('class="dot"', `class="dot" style="opacity:${planned?1:0}"`)}</g></svg></button>`;
+  }
+  const launcher = `<button class="control launcher" title="Operator Handbook" type="button"><svg class="tile" viewBox="0 0 64 64" aria-hidden="true"><rect class="plate" x="1.5" y="1.5" width="61" height="61" rx="14"/>
+    <path class="page" d="M 31 18 C 26 14.5 18 14 11 15.5 L 11 46 C 18 44.5 26 45 31 48.5 Z"/><path class="page" d="M 33 18 C 38 14.5 46 14 53 15.5 L 53 46 C 46 44.5 38 45 33 48.5 Z"/><path class="spine" d="M 32 18 L 32 49"/>
+    <path class="line" d="M 15.5 23 L 27.5 23.6"/><path class="line" d="M 15.5 28.5 L 27.5 29.1"/><path class="line" d="M 15.5 34 L 27.5 34.6"/><path class="line" d="M 15.5 39.5 L 22.5 40.1"/>
+    <rect class="r0" x="37" y="22" width="12" height="3.5" rx="1.5"/><rect class="r1" x="37" y="29" width="8" height="3.5" rx="1.5"/><rect class="r2" x="37" y="36" width="10" height="3.5" rx="1.5"/>
+    <path class="ribbon" d="M 45 15 L 50 15 L 50 27 L 47.5 24.5 L 45 27 Z"/></svg></button>`;
+
+  function stage(el) {
+    const mode = el.dataset.mode, face = el.dataset.face, armed = el.dataset.armed === "true";
+    const blendLabel = mode === "today" ? "Blend Edit" : "Blend View";
+    const blendOn = face === "blend", nextOn = face === "next";
+    let blendFly = "", nextFly = "";
+    if (blendOn) {
+      blendFly = `<div class="flyout"><div class="row">${tile("bulk","Bulk Edit")}${mode === "proposed" ? tile("promote", armed ? "Confirm: load Next into Current" : "Load Next into Current", armed ? "is-armed" : "") : ""}</div></div>`;
+    }
+    if (nextOn) {
+      nextFly = mode === "today"
+        ? `<div class="flyout"><div class="row">${tile("bulk","Bulk Edit")}</div><div class="row">${tile("promoteOld","Load Next into Current")}${tile("copyOld","Copy Current into Next")}</div></div>`
+        : `<div class="flyout"><div class="row">${tile("bulk","Bulk Edit")}${tile("copy","Copy Current into Next")}</div></div>`;
+    }
+    el.innerHTML = `<span class="label">${mode.toUpperCase()}</span>
+      <div class="dock">
+        <div class="group">${tile(mode === "today" ? "blendOld" : "blend", blendLabel, blendOn ? "is-active" : "")}${blendFly}</div>
+        <div class="group next">${tile(mode === "today" ? "nextOld" : "next", "Next Recipe", nextOn ? "is-active" : "", true)}${nextFly}</div>
+        <div class="group">${tile("weights", "Weights")}</div>
+        ${launcher}
+      </div>`;
+    const titles = [...el.querySelectorAll(".flyout .control")].map(b => `<b>${b.title}</b>`).join(" · ");
+    el.insertAdjacentHTML("afterend", `<p class="legend">Flyout: ${titles}</p>`);
+  }
+  document.querySelectorAll(".stage").forEach(stage);
+
+  const strip = document.getElementById("strip");
+  for (const [name, title] of [["blend","Blend View (switch)"],["promote","Load Next - on Blend View"],["next","Next Recipe (switch)"],["copy","Copy Current - on Next Recipe"]]) {
+    const sizes = [16, 24, 48].map(px => `<svg viewBox="0 0 20 20" width="${px}" height="${px}">${parts(G[name])}</svg>`).join("");
+    strip.insertAdjacentHTML("beforeend", `<figure><div class="sizes">${sizes}</div><figcaption>${title}</figcaption></figure>`);
+  }
+</script>
+</body>
+</html>

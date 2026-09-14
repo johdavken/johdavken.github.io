@@ -20,7 +20,21 @@
  *
  *   window      6 or 12 hours - a scale, not a fact about the job. Chosen
  *               on the timeline itself: the 6H | 12H selector under the
- *               Now clock, the one control here that is not a marker
+ *               Now clock
+ *   reset       what the boot file last said of a tracking reset - offered
+ *               or not, why not, and how many hoppers it would touch - and
+ *               whether the RESET word under the selector is armed. The
+ *               one control here that acts on the job: every hopper
+ *               untracked and its pump marked running, as the floor UI's
+ *               Reset tracking (one resetTracking command, through the
+ *               boot file's callback - this module dispatches nothing).
+ *               Easy to do by accident and slow to undo by hand, so it is
+ *               two clicks in place (station-armed.js): the first ARMS
+ *               the word, which turns the warning colour and waits; the
+ *               second confirms. A pause, a click anywhere else, Escape
+ *               or the focus leaving all disarm it. It stands in the Now
+ *               column, under the scale, because this row is where the
+ *               tracking it resets is explained
  *   observed    slot -> { weight, at }: when this screen last saw each
  *               tracked hopper's weight change, which anchors its estimate
  *               so the marker moves with the clock (see station-rundown.js
@@ -42,13 +56,19 @@
   const rundown = typeof require === "function"
     ? require("./station-rundown.js")
     : (root && root.PolynStationRundown);
-  const api = factory(rundown);
+  const armed = typeof require === "function"
+    ? require("./station-armed.js")
+    : (root && root.PolynStationArmed);
+  const api = factory(rundown, armed);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationRundownTimeline = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule, armedModule) {
   "use strict";
 
   const TICK_MS = 20 * 1000;
+  /* The reset's word on the row, and its name to a reader and on hover. */
+  const RESET_TEXT = "Reset";
+  const RESET_LABEL = "Reset Tracking";
   /* What the layout works with when the track has not been laid out yet
    * (a first render before the stylesheet, or a test document). */
   const FALLBACK_WIDTH = 1000;
@@ -149,6 +169,8 @@
    * @param {function} [options.onTick]    told after every clock pass, so a
    *        sibling readout (the header's changeover) can follow the clock
    *        without a clock of its own
+   * @param {function} [options.onResetTracking]  RESET's confirming click
+   * @param {number}   [options.armDuration]  ms an armed RESET waits
    */
   function create(doc, options) {
     const settings = options || {};
@@ -159,6 +181,7 @@
     const tickMs = Number.isFinite(settings.tickMs) && settings.tickMs >= 1000 ? settings.tickMs : TICK_MS;
     const onTick = typeof settings.onTick === "function" ? settings.onTick : null;
     const onWindow = typeof settings.onWindow === "function" ? settings.onWindow : () => {};
+    const onResetTracking = typeof settings.onResetTracking === "function" ? settings.onResetTracking : () => {};
 
     const state = {
       window: rundown.WINDOWS.includes(settings.window) ? settings.window : rundown.DEFAULT_WINDOW,
@@ -166,6 +189,7 @@
       observed: {},        // slot -> { weight, at }
       detail: null,        // { key, pinned }
       timer: null,
+      reset: { available: false, reason: "", count: 0 },
       layout: null,        // the last layout, for inspection
       entries: [],
       width: 0
@@ -194,8 +218,51 @@
       rangeButtons[hours] = button;
       rangeEl.appendChild(button);
     }
-    nowEl.appendChild(rangeEl);
+    /* The scale and the reset share one narrow stack at the column's
+     * edge, so the word is centred under the segments. */
+    const toolsEl = element(doc, "div", "station-rundown__tools");
+    toolsEl.appendChild(rangeEl);
+    const resetButton = text(doc, "button", "station-rundown__reset", RESET_TEXT, {
+      type: "button", "data-action": "reset-tracking", "aria-label": RESET_LABEL, title: RESET_LABEL
+    });
+    toolsEl.appendChild(resetButton);
+    nowEl.appendChild(toolsEl);
     rootEl.appendChild(nowEl);
+
+    /* ---- Reset: armed, then confirmed ---- */
+
+    const arming = armedModule ? armedModule.create({
+      doc, controls: { reset: resetButton }, onChange: () => drawReset(),
+      setTimeout: timers && timers.setTimeout, clearTimeout: timers && timers.clearTimeout, armDuration: settings.armDuration
+    }) : { arm: () => false, disarm: () => false, armed: () => null };
+
+    /* The word stays RESET, armed or not: the arm is said by the colour
+     * and the pulse (rundown.css), and by the title and the name a reader
+     * is given. */
+    function drawReset() {
+      const reset = state.reset;
+      const count = reset.count;
+      const hoppers = `${count} hopper${count === 1 ? "" : "s"}`;
+      const isArmed = arming.armed() === "reset";
+      resetButton.disabled = !reset.available || count === 0;
+      resetButton.classList.toggle("is-armed", isArmed);
+      if (isArmed) resetButton.setAttribute("data-armed", "true");
+      else resetButton.removeAttribute("data-armed");
+      resetButton.setAttribute("aria-label", isArmed ? `Confirm: reset tracking for ${hoppers}` : RESET_LABEL);
+      resetButton.setAttribute("title", isArmed
+        ? `Click again to reset tracking · ${hoppers} untracked, pumps marked running`
+        : (!reset.available
+          ? `${RESET_LABEL} is not available: ${reset.reason || "no application is connected to Station commands."}`
+          : (count === 0 ? `${RESET_LABEL} · nothing is tracked` : `${RESET_LABEL} · ${hoppers}`)));
+    }
+
+    resetButton.addEventListener("click", () => {
+      if (resetButton.disabled) return;
+      if (arming.armed() !== "reset") { arming.arm("reset"); return; }
+      arming.disarm();
+      onResetTracking();
+    });
+    drawReset();
 
     const track = element(doc, "div", "station-rundown__track");
     const zone = element(doc, "div", "station-rundown__zone", { hidden: "" });
@@ -513,8 +580,10 @@
             `${rundown.formatClock(entry.pumpOffBy)}${late ? " · late" : entry.pumpOff ? "" : ` · in ${rundown.formatRemaining(entry.untilMs)}`}`,
             late ? "is-late" : ""));
         }
+        /* Time remaining is the run-down as a duration; the clock time it
+         * ends at is said in the marker's spoken description (describe)
+         * and not repeated here as a row. */
         list.appendChild(detailRow("Time remaining", entry.past ? "Estimated empty" : rundown.formatRemaining(entry.remainingMs), entry.past ? "is-past" : ""));
-        list.appendChild(detailRow("Empty at", rundown.formatClock(entry.emptyAt), entry.past ? "is-past" : ""));
         if (Number.isFinite(entry.durationMs)) list.appendChild(detailRow("Run-down", rundown.formatRemaining(entry.durationMs)));
       }
       if (entry.pumpOff) list.appendChild(detailRow("Pump", "Pump off", "is-pump-off"));
@@ -627,8 +696,24 @@
 
     /* ---- The surface ---- */
 
+    /**
+     * @param {object} inputs  { model, hopperState, layerState, job, live,
+     *        reset? }; reset = { available, reason, count } is what the
+     *        RESET word shows (left as it was when absent)
+     */
     function update(inputs) {
       state.inputs = inputs || null;
+      const reset = inputs && inputs.reset && typeof inputs.reset === "object" ? inputs.reset : null;
+      if (reset) {
+        state.reset = {
+          available: !!reset.available,
+          reason: typeof reset.reason === "string" ? reset.reason : "",
+          count: Number.isInteger(reset.count) && reset.count > 0 ? reset.count : 0
+        };
+      }
+      // A reset that stopped being possible while armed is not armed.
+      if (arming.armed() === "reset" && (!state.reset.available || state.reset.count === 0)) arming.disarm();
+      else drawReset();
       observe(state.inputs, now());
       render();
     }
@@ -662,6 +747,10 @@
       tick,
       wake,
       setWindow,
+      resetButton,
+      isArmed: () => arming.armed() === "reset",
+      disarm: () => arming.disarm(),
+      getReset: () => Object.assign({}, state.reset),
       getWindow: () => state.window,
       getLayout: () => state.layout,
       getEntries: () => state.entries.slice(),
@@ -678,5 +767,5 @@
   function root_setTimeout(fn, ms) { return setTimeout(fn, ms); }
   function root_clearTimeout(id) { return clearTimeout(id); }
 
-  return Object.freeze({ TICK_MS, SIDE_LIMIT, DETAIL_ID, create });
+  return Object.freeze({ TICK_MS, SIDE_LIMIT, DETAIL_ID, RESET_TEXT, RESET_LABEL, create });
 });

@@ -17,6 +17,10 @@
 .station-rundown {
   --station-rundown-axis-y: 30px;
   --station-rundown-lane: 18px;
+  /* The late marker's ping (see "Late, and saying so", below). */
+  --station-rundown-ping-reach: 13px;
+  --station-rundown-ping-period: 1.5s;
+  --station-rundown-ping-peak: 0.85;
   position: relative;
   display: grid;
   grid-template-columns: var(--station-timeline-now-width) minmax(0, 1fr) auto;
@@ -52,15 +56,25 @@
   line-height: var(--station-line-tight);
 }
 
-/* ---- The scale: 6H | 12H ---- */
+/* ---- The scale: 6H | 12H, and RESET under it ---- */
 
 /* Under the clock, in the anchor's column: two segments on one hairline in
  * the rail's own colour, the pressed one lit in the Now colour and carrying
  * a rule beneath it - weight and a mark, not colour alone. Sized to the
- * column: the mono digits of the tick labels, no box of their own. */
-.station-rundown__range {
-  display: inline-flex;
+ * column: the mono digits of the tick labels, no box of their own. The
+ * segments and the reset word stand in one narrow stack (tools) at the
+ * column's edge, each as wide as the other, so the word is centred under
+ * the segments. */
+.station-rundown__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   margin-top: var(--station-space-1);
+}
+
+.station-rundown__range {
+  display: flex;
+  justify-content: flex-end;
   border-top: var(--station-stroke) solid var(--station-timeline-rail);
 }
 
@@ -83,6 +97,50 @@
   color: var(--station-timeline-current);
   font-weight: 700;
   border-bottom-color: var(--station-timeline-current);
+}
+
+/* The reset: one small spaced word, centred under the scale, in the
+   column's muted colour until the pointer finds it. Held (nothing
+   tracked, or the command not offered) it is the disabled text and no
+   target. Armed it is the warning colour with a pulse round it - the one
+   moment this row looks like something is about to happen. */
+.station-root .station-rundown__reset {
+  margin-top: var(--station-space-1);
+  padding: 2px var(--station-space-1);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-timeline-muted);
+  font-size: var(--station-text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+  line-height: var(--station-line-tight);
+  transition: color var(--station-motion-ack) ease-out;
+}
+
+.station-root .station-rundown__reset:hover:not(:disabled) {
+  color: var(--station-timeline-label);
+}
+
+.station-root .station-rundown__reset:disabled {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+.station-root .station-rundown__reset.is-armed {
+  color: var(--station-warning);
+  animation: station-rundown-armed 1.2s ease-in-out infinite;
+}
+
+@keyframes station-rundown-armed {
+  0%, 100% { box-shadow: 0 0 0 0 var(--station-warning); }
+  50% { box-shadow: 0 0 0 3px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-rundown__reset.is-armed {
+    animation: none;
+  }
 }
 
 /* ---- Track ---- */
@@ -266,12 +324,37 @@
 }
 
 .station-rundown__dot {
+  position: relative;
   flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--station-layer-accent, var(--station-text-muted));
   box-shadow: 0 0 0 2px var(--station-surface);
+}
+
+/* What takes the pointer. The button is the stem, the dot and the label
+   in one column, and two markers a lane apart at the same instant share
+   that column: the lower one's stem runs through the upper one's dot, and
+   whichever is later in the DOM took the hover. So the button itself takes
+   nothing - the pointer lands on the dot, padded 3px all round to a 14px
+   target that clears the next lane's by 2px, or on the label, and the
+   event bubbles to the button as before (station-rundown-timeline.js:
+   keyOf). Keyboard focus and the name stay on the button. */
+.station-root .station-rundown__marker {
+  pointer-events: none;
+}
+
+.station-rundown__dot,
+.station-rundown__label {
+  pointer-events: auto;
+}
+
+.station-rundown__dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
 }
 
 .station-rundown__label {
@@ -332,6 +415,71 @@
 
 .station-rundown__marker.is-past.is-pump-off .station-rundown__dot {
   background: var(--station-layer-accent, var(--station-text-muted));
+}
+
+/* Late, and saying so: a hopper whose pump-off point is behind Now with
+   the pump still running (.is-late) pings on the Now line. Sonar, from
+   tools/station-ping: one hairline ring leaves the dot, grows 13px past
+   its edge and fades, and the dot itself brightens the instant the ring
+   leaves - the contact flash before the sweep. Every 1.5s, ring and flash
+   together, then a short rest.
+
+   The ring is the MARKER's ::before, anchored on the dot at the column's
+   foot, so the dot's own ::after stays the hit pad and no element is
+   added. Its box grows (width/height/margin), not its transform, so the
+   stroke stays thin as it travels. The flash is a filter on the dot, not
+   a box-shadow, so the hover ring above still shows on a late dot. */
+.station-rundown__marker.is-late::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--station-danger);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: station-rundown-ping var(--station-rundown-ping-period) cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+.station-rundown__marker.is-late .station-rundown__dot {
+  animation: station-rundown-ping-flash var(--station-rundown-ping-period) ease-out infinite;
+}
+
+@keyframes station-rundown-ping {
+  0% {
+    width: 8px;
+    height: 8px;
+    margin: 0;
+    opacity: var(--station-rundown-ping-peak);
+  }
+  70%, 100% {
+    width: calc(8px + 2 * var(--station-rundown-ping-reach));
+    height: calc(8px + 2 * var(--station-rundown-ping-reach));
+    margin: 0 0 calc(-1 * var(--station-rundown-ping-reach)) calc(-1 * var(--station-rundown-ping-reach));
+    opacity: 0;
+  }
+}
+
+@keyframes station-rundown-ping-flash {
+  0% { filter: brightness(1.7) drop-shadow(0 0 4px var(--station-danger)); }
+  30%, 100% { filter: none; }
+}
+
+/* Still: nothing travels; a late dot wears one ring at rest. */
+@media (prefers-reduced-motion: reduce) {
+  .station-rundown__marker.is-late::before,
+  .station-rundown__marker.is-late .station-rundown__dot {
+    animation: none;
+  }
+
+  .station-rundown__marker.is-late::before {
+    width: 14px;
+    height: 14px;
+    margin: 0 0 -3px -3px;
+    opacity: calc(var(--station-rundown-ping-peak) * 0.8);
+  }
 }
 
 /* Pumped off: the application's "done" - the estimate stands, subdued. */

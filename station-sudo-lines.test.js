@@ -136,7 +136,7 @@ function producer(overrides) {
     ],
     devices: { "w-8": [{ memberId: "anon-desk-a-000000", label: "Desk A", role: "owner", lastSeenAt: "", thisDevice: true }], "w-12": [] },
     lines: [
-      line("l-12", 12, 3, "outside"),
+      line("l-12", 12, 3, "outside", { hopperCounts: [6, 4, 6] }),
       line("l-8", 8, 3, "inside", { hopperGeometry: "volume", metadata: { note: "kept" } }),
       line("l-1", 1, 1, null, { hopperGeometry: "volume" }),
       line("l-10", 10, 5, "outside"),
@@ -425,7 +425,7 @@ test("Save Changes is one request carrying the definition - the id, every field,
   assert.ok(save, "one save request");
   assert.equal(save.args.id, "l-8");
   assert.deepEqual(save.args.line, {
-    lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, layerAPosition: "outside",
+    lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, hopperCounts: [6, 6, 6], layerAPosition: "outside",
     hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }
   });
   assert.deepEqual(calls(s), ["listWorkspaces", "listLineConfigurations", "saveLineConfiguration", "listLineConfigurations"]);
@@ -435,6 +435,78 @@ test("Save Changes is one request carrying the definition - the id, every field,
   assert.equal(noteOf(s.root).textContent, "Line 8 saved. This Station follows it now; other devices on the line use it when they next reload.");
   assert.equal(noteOf(s.root).getAttribute("data-kind"), "ok");
   assert.match(pane.querySelector(".station-sudo-ws__detail-meta").textContent, /Also Eight, L8/);
+});
+
+test("hoppers per layer: each layer row asks for its count, read from the line; typing one changes the ids that follow in place; the save carries the counts; a layer count change keeps what was typed and starts a new layer at six", async () => {
+  const s = await onLines();
+  const pane = paneFor(s.root, "lines");
+  click(rows(s.root)[4]);
+  const counts = () => Array.from(pane.querySelectorAll("[data-role='hopper-count']")).map(input => input.value);
+  assert.deepEqual(counts(), ["6", "4", "6"], "Line 12's four-hopper core, as read");
+  assert.equal(pane.querySelector("[data-role='hoppers']").textContent, "A1–A6 · B1–B4 · C1–C6");
+  assert.equal(s.lines.getState().dirty, false, "reading a line's counts is not a change");
+  click(rows(s.root)[1]);
+  assert.deepEqual(counts(), ["6", "6", "6"], "a line without a stored count reads as six a layer");
+  typeInto(pane.querySelector("[data-field='hopperCount:1']"), "4");
+  assert.equal(pane.querySelector("[data-role='hoppers']").textContent, "A1–A6 · B1–B4 · C1–C6", "the ids follow the count as typed");
+  assert.equal(s.lines.getState().dirty, true);
+  assert.equal(s.lines.getState().draft.hopperCounts.join(","), "6,4,6");
+  click(pane.querySelector("[data-choice='layerCount'][data-value='5']"));
+  assert.deepEqual(counts(), ["6", "4", "6", "6", "6"], "two more layers, at six; B's four kept");
+  click(pane.querySelector("[data-choice='layerCount'][data-value='3']"));
+  assert.deepEqual(counts(), ["6", "4", "6"]);
+  click(byAction(pane, "save"));
+  await tick();
+  const save = s.env.calls.find(c => c.name === "saveLineConfiguration");
+  assert.deepEqual(save.args.line.hopperCounts, [6, 4, 6]);
+  assert.equal(s.lines.getState().dirty, false);
+  assert.deepEqual(counts(), ["6", "4", "6"], "the saved line's counts, as the server returned them");
+});
+
+test("a count is typed over, not into: with a digit already there, the digit typed next replaces it, and the field offers its digit up on focus", async () => {
+  const s = await onLines();
+  const pane = paneFor(s.root, "lines");
+  click(rows(s.root)[1]);
+  const input = pane.querySelector("[data-field='hopperCount:1']");
+  assert.equal(input.getAttribute("maxlength"), null, "no maxlength to block the next digit");
+  // The caret beside the 6, and a 4 typed after it: the 4 wins.
+  typeInto(input, "64");
+  assert.equal(input.value, "4");
+  assert.deepEqual(s.lines.getState().draft.hopperCounts, [6, 4, 6]);
+  assert.equal(pane.querySelector("[data-role='hoppers']").textContent, "A1–A6 · B1–B4 · C1–C6");
+  typeInto(input, "4x");
+  assert.equal(input.value, "4", "a letter is dropped, the digit stays");
+  let selected = false;
+  input.select = () => { selected = true; };
+  input.dispatchEvent({ type: "focusin", bubbles: true });
+  assert.equal(selected, true, "focus selects the digit");
+  pane.querySelector("[data-field='displayName']").select = () => { throw new Error("only a count field is selected on focus"); };
+  pane.querySelector("[data-field='displayName']").dispatchEvent({ type: "focusin", bubbles: true });
+});
+
+test("a count outside 1 to 6, or none, is refused before anything is asked, in line-identity's words, and every count field is marked", async () => {
+  const s = await onLines();
+  const pane = paneFor(s.root, "lines");
+  click(rows(s.root)[1]);
+  typeInto(pane.querySelector("[data-field='hopperCount:1']"), "7");
+  click(byAction(pane, "save"));
+  await tick();
+  assert.equal(s.env.calls.filter(c => c.name === "saveLineConfiguration").length, 0, "nothing was asked");
+  assert.equal(noteOf(s.root).textContent, "Hoppers per layer must be a whole number from 1 to 6 for every layer.");
+  assert.equal(noteOf(s.root).getAttribute("data-kind"), "error");
+  assert.equal(pane.querySelector("[data-field='hopperCount:1']").getAttribute("aria-invalid"), "true");
+  assert.equal(pane.querySelector("[data-field='hopperCount:0']").getAttribute("aria-invalid"), null, "a count within range is not marked");
+  typeInto(pane.querySelector("[data-field='hopperCount:1']"), "");
+  assert.equal(pane.querySelector("[data-role='hoppers']").textContent, "A1–A6 · B? · C1–C6");
+  click(byAction(pane, "save"));
+  await tick();
+  assert.equal(s.env.calls.filter(c => c.name === "saveLineConfiguration").length, 0);
+  assert.equal(noteOf(s.root).getAttribute("data-kind"), "error");
+  typeInto(pane.querySelector("[data-field='hopperCount:1']"), "4");
+  click(byAction(pane, "save"));
+  await tick();
+  assert.equal(s.env.calls.filter(c => c.name === "saveLineConfiguration").length, 1);
+  assert.equal(pane.querySelector("[data-field='hopperCount:1']").getAttribute("aria-invalid"), null);
 });
 
 test("an invalid definition is refused here, before anything is asked, in line-identity's words: no number, no name, a duplicate number, a name another line owns", async () => {
@@ -510,7 +582,7 @@ test("Add Line is a definition, not a workspace: a fresh draft whose name follow
   const save = s.env.calls.find(c => c.name === "saveLineConfiguration");
   assert.equal(save.args.id, "");
   assert.deepEqual(save.args.line, {
-    lineNumber: 16, displayName: "Line 16", aliases: [], layerCount: 5, layerAPosition: "outside",
+    lineNumber: 16, displayName: "Line 16", aliases: [], layerCount: 5, hopperCounts: [6, 6, 6, 6, 6], layerAPosition: "outside",
     hopperGeometry: "cylindrical", hopperNamingMode: "standard", isActive: true, metadata: {}
   });
   assert.equal(s.lines.getState().focusId, "l-100", "the saved line is the chosen one");
@@ -634,6 +706,19 @@ test("layerRows() is the line model's derivation: A first always, the roles from
   }
   assert.equal(linesModule.hopperRange("A", "standard"), "A1–A6");
   assert.equal(linesModule.hopperRange("B", "main-plus-five"), "BM, B1–B5");
+  assert.equal(linesModule.hopperRange("B", "standard", 4), "B1–B4");
+  assert.equal(linesModule.hopperRange("B", "standard", "4"), "B1–B4");
+  assert.equal(linesModule.hopperRange("B", "standard", 1), "B1");
+  assert.equal(linesModule.hopperRange("B", "main-plus-five", 4), "BM, B1–B3");
+  assert.equal(linesModule.hopperRange("B", "main-plus-five", 2), "BM, B1");
+  assert.equal(linesModule.hopperRange("B", "main-plus-five", 1), "BM");
+  assert.equal(linesModule.hopperRange("B", "standard", ""), "B?", "a count still being typed is a question, not a range");
+  assert.equal(linesModule.hopperSummary(3, "standard", ["6", "4", "6"]), "A1–A6 · B1–B4 · C1–C6");
+  assert.equal(linesModule.hopperSummary(3, "standard"), "A1–A6 · B1–B6 · C1–C6", "no counts given reads as six a layer");
+  assert.deepEqual(linesModule.hopperCountsFor(5, [6, 4, 6]), ["6", "4", "6", "6", "6"], "a new layer starts at six; what was typed is kept");
+  assert.deepEqual(linesModule.hopperCountsFor(1, ["6", "4", "6"]), ["6"], "a dropped layer's count goes with it");
+  assert.deepEqual(linesModule.hopperCountsFor(3, null), ["6", "6", "6"]);
+  assert.deepEqual(linesModule.hopperCountsFor(0, null), []);
   assert.deepEqual(linesModule.layerCountChoices(3), [1, 3, 5]);
   assert.deepEqual(linesModule.layerCountChoices(7), [1, 3, 5, 7], "a count the backend allows but the app does not offer is kept, not rewritten");
 });
