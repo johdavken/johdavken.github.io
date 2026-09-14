@@ -675,20 +675,118 @@ test("a weight change alone re-patches only that hopper", () => {
   assert.deepEqual(textOf(mount, "station-hopper__weight").slice(0, 2), ["1000", "650"]);
 });
 
-test("resin codes are dropped in the dense view and shown where there is room", () => {
-  /* Never shrunk to fit: an unreadable code is worse than no code. Five layers
-   * is the dense case; one layer has the width for it. */
-  const dense = stageFor(literal({ layerCount: 5, hopperCount: 6 }), {
-    hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60 } }
-  });
-  assert.deepEqual(textOf(dense, "station-hopper__resin"), [],
-    "the five-layer overview is drawing resin codes it has no room for");
+test("the resin code is on the drum, whole, at every layer count - and the caption has no line for it", () => {
+  /* The drum is four times as tall as it is wide: a code the caption's
+   * horizontal line could show five characters of is shown whole down the
+   * vessel, in the dense five-layer view as much as the roomy one. */
+  for (const config of [
+    literal({ layerCount: 5, hopperCount: 6 }),
+    literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 })
+  ]) {
+    const svg = stageFor(config, { hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60 } } });
+    assert.deepEqual(textOf(svg, "station-hopper__label-text"), ["HX204"]);
+    assert.deepEqual(textOf(svg, "station-hopper__resin"), [], "the caption still draws a resin line");
+  }
+});
 
-  const roomy = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }), {
-    hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60 } }
+test("the label is a plate down the drum's centreline, hung under the top band, the code turned to run down it", () => {
+  const config = literal({ layerCount: 3, hopperCount: 2 });
+  const state = {
+    "A:0": { assigned: true, resinName: "lldpe 2045g", pct: 60, usableHeight: 30 },
+    "A:1": { assigned: true, resinName: "HX204", pct: 40, usableHeight: 30 }
+  };
+  for (const focusLayer of [null, "A", "C"]) {
+    const layout = layoutFor(config, { focusLayer, hopperState: state });
+    const svg = stageFor(config, { focusLayer, hopperState: state });
+    const bank = layout.banks[0];
+    for (const geometry of bank.cluster.hoppers) {
+      const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
+      const mark = allWith(hopper, "data-role", "hopper-label")[0];
+      assert.ok(mark, `${geometry.id} has no label`);
+      // Inside the inert drawing, after the hardware - so it is drawn over it.
+      const drawing = allWith(hopper, "data-role", "hopper-drawing")[0];
+      const order = drawing.children.map(c => c.getAttribute("data-role"));
+      assert.ok(order.indexOf("hopper-label") > order.indexOf("hopper-details"));
+      assert.ok(order.indexOf("hopper-label") < order.indexOf("hopper-caption"));
+
+      const [plate, text] = mark.children;
+      assert.equal(plate.nodeName, "rect");
+      assert.equal(text.nodeName, "text");
+      const w = geometry.width;
+      const rim = w * 0.095;
+      const cx = geometry.x + w / 2;
+      const near = (a, b) => Math.abs(a - b) < 0.02;
+      // Centred on the drum, sized by the bank's scale like the caption's type.
+      const plateWidth = (parts.LABEL_TYPE + 5) * bank.scale;
+      assert.ok(near(Number(plate.getAttribute("x")) + Number(plate.getAttribute("width")) / 2, cx), "plate is off the centreline");
+      assert.ok(near(Number(plate.getAttribute("width")), plateWidth), "plate width does not follow the bank's scale");
+      // Hung from under the top clamp band, never past the bottom one.
+      const laneTop = geometry.vesselTop + rim * 2.6;
+      const laneBottom = geometry.coneTop - rim * 2.6;
+      assert.ok(near(Number(plate.getAttribute("y")), laneTop));
+      assert.ok(Number(plate.getAttribute("y")) + Number(plate.getAttribute("height")) <= laneBottom + 0.02, "plate runs into the bottom band");
+      // The code, uppercased, turned a quarter clockwise about its own anchor.
+      assert.equal(text.textContent, state[`A:${geometry.index}`].resinName.toUpperCase());
+      assert.equal(text.getAttribute("text-anchor"), "middle");
+      assert.equal(text.getAttribute("transform"), `rotate(90 ${text.getAttribute("x")} ${text.getAttribute("y")})`);
+      assert.ok(near(Number(text.getAttribute("y")), Number(plate.getAttribute("y")) + Number(plate.getAttribute("height")) / 2), "code is not centred along the plate");
+      // A long code makes a long plate; a short one a short plate.
+    }
+    const plates = allWithClassName(svg, "station-hopper__label-plate").slice(0, 2).map(p => Number(p.getAttribute("height")));
+    assert.ok(plates[0] > plates[1], "the plate is not sized to its code");
+  }
+});
+
+test("a code longer than the drum is truncated by the caption's rule, never shrunk; no resin, no plate", () => {
+  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }), {
+    hopperState: {
+      "A:0": { assigned: true, resinName: "EVA 3325 MASTERBATCH WHITE CONCENTRATE", pct: 60, usableHeight: 30 },
+      "A:1": { assigned: true, resinName: "MB711", pct: 40, usableHeight: 8 },
+      "A:2": { assigned: false, resinName: "", pct: 0 }
+    }
   });
-  assert.ok(textOf(roomy, "station-hopper__resin").includes("HX204"),
-    "a one-layer line has the width for a resin code and should show it");
+  const codes = textOf(svg, "station-hopper__label-text");
+  assert.equal(codes.length, 2, "an unassigned hopper carries a plate");
+  assert.match(codes[0], /…$/);
+  assert.ok(codes[0].length < "EVA 3325 MASTERBATCH WHITE CONCENTRATE".length);
+  // The shortest profile the layout allows still shows a short code whole.
+  assert.equal(codes[1], "MB711");
+  assert.equal(allWith(svg, "data-role", "hopper-label").length, 2);
+  // The type is one size: the stylesheet's, at the caption's own, scaled by the bank.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
+  assert.match(css, /\.station-hopper__label-text \{[^}]*font-size: calc\(var\(--station-text-2xs\) \* var\(--station-bank-scale, 1\)\)/);
+  assert.match(css, /\.station-hopper__label-plate \{[^}]*fill: var\(--station-hopper-label\)/);
+  assert.match(css, /--station-hopper-label: var\(--station-surface\)/);
+  assert.match(css, /--station-hopper-label-ink: var\(--station-accent\)/);
+  assert.doesNotMatch(css, /\.station-hopper__resin/, "the caption's resin rule outlived the line");
+  assert.equal(parts.LABEL_TYPE, 9);
+});
+
+test("the label is not a control: it lies inside the vessel's tracking hit, so a click on the code tracks the hopper", () => {
+  const config = literal({ layerCount: 3, hopperCount: 2 });
+  const state = { "B:0": { assigned: true, resinName: "HX204", pct: 60, usableHeight: 30 } };
+  const svg = stageFor(config, { hopperState: state, hopperControls: { tracking: true, pump: true } });
+  const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === "B1");
+  const mark = allWith(hopper, "data-role", "hopper-label")[0];
+  const drawing = allWith(hopper, "data-role", "hopper-drawing")[0];
+  assert.ok(drawing.children.includes(mark), "the label is outside the inert drawing");
+  walk(mark, node => {
+    for (const attr of ["data-station-target", "data-hopper", "data-layer", "tabindex", "pointer-events", "style"]) {
+      assert.equal(node.getAttribute(attr), null, `the label carries ${attr}`);
+    }
+  });
+  const tracking = allWith(hopper, "data-station-target", "tracking")[0];
+  const hit = tracking.children[1];
+  const plate = mark.children[0];
+  const n = k => Number(plate.getAttribute(k));
+  const h = k => Number(hit.getAttribute(k));
+  assert.ok(n("x") >= h("x") && n("x") + n("width") <= h("x") + h("width"));
+  assert.ok(n("y") >= h("y") && n("y") + n("height") <= h("y") + h("height"));
+  // And the pump's hit does not reach it: a click on the code never marks a pump.
+  const pump = allWith(hopper, "data-station-target", "pump")[0].children[1];
+  assert.ok(Number(pump.getAttribute("y")) + Number(pump.getAttribute("height")) <= n("y"));
 });
 
 test("resin identity stays reachable on hover even where the code is dropped", () => {
@@ -966,7 +1064,8 @@ test("rigid scaling is the whole mechanism: every length in the dimensions scale
   // Anchors move away from the pivot by the same factor.
   assert.equal(scaled.vesselBottom, 350 + (d.vesselBottom - 350) * 2);
   // Ratios and canvas numbers are untouched.
-  assert.equal(scaled.resinVisibleRatio, d.resinVisibleRatio);
+  assert.equal(scaled.minAspect, d.minAspect);
+  assert.equal(scaled.focusScale, d.focusScale);
   // Physical inches are facts about the vessel, not lengths on the canvas.
   assert.equal(scaled.vesselCircumferenceIn, d.vesselCircumferenceIn);
   assert.equal(scaled.defaultUsableHeightIn, d.defaultUsableHeightIn);
