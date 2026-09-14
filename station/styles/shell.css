@@ -41,7 +41,12 @@
   gap: var(--station-space-3);
   padding: 0 var(--station-space-4);
   /* No surface and no rule under it: the name, the ribbon and the line
-     console stand on the root's own canvas, the way the stage does. */
+     console stand in the stage's own room, which reaches up behind them
+     (.station-machine, below). Painted over that cell, above the slots
+     laid over the machine row, so the header's own panels - which stack
+     inside it - still open over everything on the stage. */
+  position: relative;
+  z-index: 6;
 }
 
 /* The picture's slot, before the name: no width of its own, and none
@@ -113,17 +118,25 @@
  * more hoppers) gets smaller rather than overflowing. */
 .station-machine {
   grid-area: machine;
+  /* The cell reaches up under the header's row as well: the header has
+     no surface of its own, so the room the theme paints here (below)
+     stands behind the name and the ribbon too, and does not stop at a
+     line under them. The header is painted over it (above); the top
+     padding keeps the machine itself where it was, in the machine row,
+     so nothing drawn moves and the slots laid over the machine row
+     (the Handbook, the rail, the utility surfaces) are where they were. */
+  grid-row: header-start / machine-end;
   display: flex;
   min-width: 0;
   min-height: 0;
-  padding: var(--station-space-4);
+  padding: calc(var(--station-header-height) + var(--station-space-4)) var(--station-space-4) var(--station-space-4);
   overflow: hidden;
   /* The stage atmosphere (tokens.css), or none: the room the theme stands
-     the machine in. It is the stage cell's and not the root's because it
-     is sized to the stage - the horizon is a fraction of this cell - and
-     because the rail, the Handbook and the utility surfaces, the glass
-     that needs it behind them, all sit over this one cell. The root keeps
-     the drafting grid. */
+     the machine in. It is this cell's and not the root's because it is
+     sized to the stage - the horizon is a fraction of this cell, corrected
+     for the header's share of it (tokens.css) - and because the rail, the
+     Handbook and the utility surfaces, the glass that needs it behind
+     them, all sit over this cell. The root keeps the drafting grid. */
   background-image: var(--station-stage-atmosphere);
 }
 

@@ -67,7 +67,12 @@
    * horizon's height is a fraction of the stage cell (shell.css spends
    * this on .station-machine), where the extruder's base stands. CSS
    * gradients, not an image: nothing to download. */
-  --station-atmosphere-horizon-y: 88%;
+  /* The stage cell reaches up behind the header (shell.css), so its
+     box is the header's height taller than the stage the machine stands
+     in. The horizon is held where it was on that stage - 88% of the way
+     down it, at the extruder's base - by adding the header's share:
+     88% of the taller box falls short of that by 12% of the header. */
+  --station-atmosphere-horizon-y: calc(88% + 0.12 * var(--station-header-height));
   --station-atmosphere:
     radial-gradient(ellipse 62% 50% at 50% 36%, var(--station-atmosphere-glow), transparent 72%),
     linear-gradient(to bottom,
