@@ -148,6 +148,11 @@
     return Number.isFinite(weight) && weight > 0 ? fitText(String(Math.round(weight)), width, 9 * scale) : "—";
   }
 
+  /* The resin label's type, in caption units at scale 1: the caption's own
+   * size, so the code on the drum and the readout under it are one voice.
+   * The stylesheet sizes the text (hopper.css); this is the fit's measure. */
+  const LABEL_TYPE = 9;
+
   /* The weight line's type, in caption units at scale 1: the digits at the
    * caption's own size, the unit smaller beside them, a hair between. The
    * widths are the same estimate fitText() makes (0.58 em per glyph), so
@@ -568,11 +573,53 @@
     }));
     drawing.appendChild(details);
 
+    /* ---- Resin label ----
+     * The resin's code on the drum itself: a plate down the vessel's
+     * centreline, hung from under the top clamp band, the code running
+     * down it from the top - read the way a spine is read on a shelf.
+     * The drum is four times as tall as it is wide, so a code that a
+     * horizontal caption line could show five characters of is shown
+     * whole here, at the caption's own type size; a code longer than the
+     * drum's usable height is truncated by the caption's own rule, never
+     * shrunk. The plate is the surface colour and the code the accent
+     * (hopper.css), so it reads as a marking on the equipment and not as
+     * part of the steel. Drawn over the hardware and over the run-down
+     * flow, which passes behind it like everything else on the drum.
+     * Nothing to click: it is artwork, in the pointer-inert drawing, and
+     * the tracking hit under it is the vessel's - a click on the code is
+     * a click on the hopper. No resin, no plate. */
+    if (runtime && runtime.resinName) {
+      const labelSize = LABEL_TYPE * scale;
+      const labelPad = 4 * scale;
+      const plateWidth = labelSize + 5 * scale;
+      const laneTop = top + rim * 2.6;
+      const laneBottom = bottom - rim * 2.6;
+      const lane = Math.max(0, laneBottom - laneTop);
+      if (lane > labelSize + labelPad * 2) {
+        const code = fitText(String(runtime.resinName).toUpperCase(), lane - labelPad * 2, labelSize);
+        const plateLength = Math.min(lane, code.length * labelSize * 0.58 + labelPad * 2);
+        const mark = group(doc, "station-hopper__label", "hopper-label");
+        mark.appendChild(node(doc, "rect", "station-hopper__label-plate", {
+          x: round(cx - plateWidth / 2), y: round(laneTop),
+          width: round(plateWidth), height: round(plateLength), rx: round(plateWidth * 0.28)
+        }));
+        /* A quarter turn clockwise about the text's own anchor: the glyphs'
+         * tops face right, and the caps stand from the baseline rightward
+         * by about 0.7 em, so the baseline is set left of the centreline by
+         * half that and the letters sit centred on the plate. */
+        const baselineX = cx - labelSize * 0.35;
+        const middleY = laneTop + plateLength / 2;
+        const text = label(doc, code, round(baselineX), round(middleY), "station-hopper__label-text");
+        text.setAttribute("transform", `rotate(90 ${round(baselineX)} ${round(middleY)})`);
+        mark.appendChild(text);
+        drawing.appendChild(mark);
+      }
+    }
+
     /* ---- Readout ----
-     * Identity, contribution, and the receiver weight. The resin code joins
-     * them when the hopper is wide enough to draw it at full size; it is
-     * never shrunk to fit, because an unreadable code is worse than no
-     * code. The weight is the run-down's effective weight - the entered
+     * Identity, contribution, and the receiver weight. The resin code is
+     * on the drum (above), where it fits whole; the caption has no line
+     * for it. The weight is the run-down's effective weight - the entered
      * receiver weight (the Weights page's value), or Smart Hoppers'
      * computed one, marked `is-smart` and tinted - in whole pounds, with
      * the unit drawn smaller beside the digits so the number is never read
@@ -587,12 +634,6 @@
     caption.appendChild(label(doc,
       runtime && runtime.pct ? `${round(runtime.pct)}%` : "—",
       cx, y, "station-hopper__pct"));
-    if (geometry.showResin) {
-      y += 12 * scale;
-      caption.appendChild(label(doc,
-        runtime && runtime.resinName ? fitText(runtime.resinName, w, 9 * scale) : "",
-        cx, y, "station-hopper__resin"));
-    }
     y += 12 * scale;
     for (const line of weightLine(doc, runtime, cx, y, w, scale)) caption.appendChild(line);
     drawing.appendChild(caption);
@@ -1033,7 +1074,7 @@
   }
 
   return {
-    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, shareText,
+    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, LABEL_TYPE, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
     shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
   };

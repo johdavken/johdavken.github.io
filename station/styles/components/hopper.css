@@ -27,6 +27,11 @@
   --station-hopper-metal: color-mix(in srgb, var(--station-steel-light) 72%, var(--station-hopper-stroke));
   --station-hopper-metal-lit: color-mix(in srgb, var(--station-steel-light) 66%, var(--station-text-muted));
   --station-hopper-material-color: var(--station-hopper-fill);
+  /* The resin label on the drum: a plate in the surface colour, the code
+     on it in the accent - a marking on the equipment, not a part of it.
+     Two tokens so a theme can re-ink the label without touching the steel. */
+  --station-hopper-label: var(--station-surface);
+  --station-hopper-label-ink: var(--station-accent);
 }
 
 /* ---------------------------------------------------------------------
@@ -193,6 +198,27 @@
 }
 
 /* ---------------------------------------------------------------------
+ *   Resin label, on the drum
+ * -------------------------------------------------------------------
+ * The code down the vessel's centreline, in the caption's type and at the
+ * caption's size (sized by the bank's scale like the rest of the
+ * readout), so it reads whole where the caption's line could show five
+ * characters. Rotated by the renderer; nothing here moves it. No pointer
+ * rules: it is in the drawing, which is inert, and the vessel's tracking
+ * hit is under it - a click on the code is a click on the hopper. */
+
+.station-hopper__label-plate {
+  fill: var(--station-hopper-label);
+}
+
+.station-hopper__label-text {
+  fill: var(--station-hopper-label-ink);
+  font-family: var(--station-font-mono);
+  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
+  letter-spacing: 0.02em;
+}
+
+/* ---------------------------------------------------------------------
  *   Compact recipe readout
  * -------------------------------------------------------------------
  * Sized against the bank's scale (--station-bank-scale, set by the
@@ -201,12 +227,6 @@
 
 .station-hopper__id {
   fill: var(--station-text-muted);
-  font-family: var(--station-font-mono);
-  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
-}
-
-.station-hopper__resin {
-  fill: var(--station-text);
   font-family: var(--station-font-mono);
   font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
 }
@@ -327,7 +347,6 @@
   stroke: var(--station-pump-off);
 }
 
-.station-hopper.is-unassigned .station-hopper__resin,
 .station-hopper.is-unassigned .station-hopper__pct,
 .station-hopper.is-unassigned .station-hopper__id {
   fill: var(--station-text-faint);

@@ -98,16 +98,12 @@
     spoutHeight: 12,
     // The hose's outside diameter, drawn on the vessel's own inch scale.
     hoseDiameterIn: 3,
-    // The compact readout under each hopper: id, blend, resin when wide,
-    // and the receiver weight (four lines at 13/12/12 units).
+    // The compact readout under each hopper: id, blend and the receiver
+    // weight (three lines at 13/12 units). The resin code is on the drum
+    // itself (station-machine-parts.js), not in the caption. The height
+    // keeps the room the fourth line had: it is the blend card's box too.
     hopperCaptionGap: 12,
     hopperCaptionHeight: 46,
-    /* A resin code only appears when the hopper is at least this fraction of
-     * the canvas width. The canvas is scaled to fit, so this is a proxy for how
-     * big the hopper will actually be drawn - which is the thing that decides
-     * whether a code is readable. Below it the code is dropped rather than
-     * shrunk; it stays available on hover and in the expanded view. */
-    resinVisibleRatio: 0.032,
 
     // --- Bank -----------------------------------------------------------
     bankPadding: 14,
@@ -442,10 +438,8 @@
    * cluster (with the header) by `cluster`, the train (mixer, throat,
    * extruder, readout) by `train`, each {dx, dy} from where the bank would
    * put them. That is the whole of the focus composition: two objects
-   * carried to new places, unchanged. `showResin` carries the normal row's
-   * decision about the resin caption into the other layouts, so a bank is
-   * the same drawing wherever it is. */
-  function layoutBank(layer, x, d, emphasis, index, layerCount, hopperState, canvasWidth, composition) {
+   * carried to new places, unchanged. */
+  function layoutBank(layer, x, d, emphasis, index, layerCount, hopperState, composition) {
     const scale = d.bankScale === undefined ? 1 : d.bankScale;
     const hopperWidth = d.hopperWidth;
     const hopperGap = d.hopperGap;
@@ -502,14 +496,6 @@
       labelGap: d.extruderLabelGap
     });
 
-    /* A resin code is only legible when the hopper is a reasonable share of the
-     * canvas, and the canvas is scaled to fit. Below the threshold the code is
-     * dropped rather than shrunk - it stays on hover and in the expanded view. */
-    const effectiveCanvas = canvasWidth || d.height * d.minAspect;
-    const showResin = move.showResin !== undefined
-      ? move.showResin
-      : hopperWidth / effectiveCanvas >= d.resinVisibleRatio;
-
     // The vessel's inch scale for this bank: true proportions at this width.
     const inchScale = unitsPerInch(d);
     const hoppers = layer.hoppers.map((hopper, hopperIndex) => {
@@ -547,8 +533,7 @@
         spoutTop: coneTop + d.coneHeight,
         spoutHeight: d.spoutHeight,
         captionTop: coneTop + d.coneHeight + d.spoutHeight + d.hopperCaptionGap,
-        captionHeight: d.hopperCaptionHeight,
-        showResin
+        captionHeight: d.hopperCaptionHeight
       };
     });
 
@@ -645,7 +630,7 @@
     let cursor = d.padding + offset;
 
     model.layers.forEach((layer, index) => {
-      const bank = layoutBank(layer, cursor, bankD, "normal", index, layerCount, hopperState, canvasWidth);
+      const bank = layoutBank(layer, cursor, bankD, "normal", index, layerCount, hopperState);
       banks.push(bank);
       cursor += bank.width + d.bankGap;
     });
@@ -684,12 +669,7 @@
      * its column and centred on the canvas height. */
     const focusedD = bankDimensions(d, d.focusScale, pivotY);
     const layer = model.layers[focusIndex];
-    const showResin = index => normal.banks[index].cluster.hoppers.length
-      ? normal.banks[index].cluster.hoppers[0].showResin : false;
-    // (The resin decision is carried from the normal row, so the canvas
-    // width passed here is immaterial.)
-    const probe = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState, normal.width,
-      { showResin: showResin(focusIndex) });
+    const probe = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState);
     const train = probe.objects.train;
     const cluster = probe.objects.cluster;
     /* The train column is as wide as the widest VIEW of the train, not this
@@ -708,10 +688,9 @@
     const canvasWidth = Math.max(d.height * stageAspect, workspaceLeft + d.workspaceMin + d.focusPadding);
     const offset = (canvasWidth - normal.width) / 2;
     const centreOn = box => pivotY - (box.y + box.height / 2);
-    const focused = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState, canvasWidth, {
+    const focused = layoutBank(layer, normal.banks[focusIndex].x, focusedD, "focused", focusIndex, layerCount, hopperState, {
       cluster: { dx: clusterLeft - cluster.x, dy: centreOn(cluster) },
-      train: { dx: trainLeft - train.x, dy: centreOn(train) },
-      showResin: showResin(focusIndex)
+      train: { dx: trainLeft - train.x, dy: centreOn(train) }
     });
 
     const banks = new Array(layerCount);
@@ -725,8 +704,7 @@
       // layer on the side it is already on.
       const away = index < focusIndex ? -d.focusRetreat : d.focusRetreat;
       const x = offset + was.centerX - width / 2 + away;
-      banks[index] = layoutBank(other, x, ghostD, "dimmed", index, layerCount, hopperState, canvasWidth,
-        { showResin: showResin(index) });
+      banks[index] = layoutBank(other, x, ghostD, "dimmed", index, layerCount, hopperState);
     });
 
     const left = Math.min(...banks.map(bank => bank.x));

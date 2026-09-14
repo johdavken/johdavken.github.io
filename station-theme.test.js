@@ -336,9 +336,24 @@ test("the rendered dark pair stands the machine in a lit room; the other four st
   for (const name of ["atmosphere-glow", "atmosphere-horizon", "atmosphere-floor", "atmosphere-vignette", "atmosphere-horizon-y"]) {
     assert.ok(composed.includes(`var(--station-${name})`), `--station-atmosphere does not spend --station-${name}`);
   }
-  assert.match(tokens, /--station-atmosphere-horizon-y:\s*\d+%;/);
+  /* The stage cell reaches up behind the header, which has no surface of
+   * its own, so the room stands behind the name and the ribbon too. The
+   * horizon is held on the stage the machine stands in - a fraction of
+   * the cell, corrected for the header's share of it - and the header is
+   * stacked over the cell, above the slots laid over the machine row. */
+  const horizon = (tokens.match(/--station-atmosphere-horizon-y:\s*([^;]+);/) || [])[1];
+  const fraction = Number((horizon.match(/^calc\((\d+)% \+ ([0-9.]+) \* var\(--station-header-height\)\)$/) || [])[1]);
+  assert.ok(fraction > 0 && fraction < 100, `the horizon is not a fraction of the stage corrected for the header: ${horizon}`);
+  assert.equal(Number(horizon.match(/\+ ([0-9.]+) \*/)[1]), (100 - fraction) / 100, "the header correction is not the horizon's complement");
   const shell = fs.readFileSync(path.join(ROOT, "station/styles/shell.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(shell, /\.station-machine \{[^}]*background-image: var\(--station-stage-atmosphere\);/);
+  assert.match(shell, /\.station-machine \{[^}]*grid-row: header-start \/ machine-end;/);
+  assert.match(shell, /\.station-machine \{[^}]*padding: calc\(var\(--station-header-height\) \+ var\(--station-space-4\)\) var\(--station-space-4\) var\(--station-space-4\);/);
+  assert.match(shell, /\.station-header \{[^}]*position: relative;[^}]*z-index: 6;/);
+  assert.doesNotMatch(shell, /\.station-header \{[^}]*(background|border-bottom):/, "the header has a surface or a rule under it again");
+  for (const slot of ["handbook", "utility", "rail"]) {
+    assert.match(shell, new RegExp(`\\.station-${slot}-slot \\{[^}]*grid-area: machine;[^}]*z-index: [45];`), `${slot} slot left the machine row or rose over the header`);
+  }
   const base = fs.readFileSync(path.join(ROOT, "station/styles/base.css"), "utf8");
   assert.doesNotMatch(base, /stage-atmosphere/);
 });
