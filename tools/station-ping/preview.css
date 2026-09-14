@@ -1,0 +1,173 @@
+/* Page chrome, after tools/station-rail-type/preview.css; then the board
+ * of mock tracks, then the CANDIDATE ping rules. The candidates are written
+ * the way they would ship in rundown.css - one style's block, minus the
+ * [data-ping-style] gate, is the port. */
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#e5e8e8;background:#101314;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0}
+.page{max-width:1280px;margin:auto;padding:0 56px}
+a{color:inherit;text-decoration:none}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em}
+.page-header{height:90px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3334}
+.project-name{font-size:15px;font-weight:750;letter-spacing:2px}
+.project-name span,.edition,.eyebrow,.section-heading>p,.detail-number,.page-footer,.cell__tag{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.project-name span{margin-left:18px;font-size:10px;color:#919c9f;letter-spacing:1px;font-weight:400}
+.edition{font-size:10px;color:#9fa9ab;letter-spacing:1px}
+.intro{display:flex;align-items:flex-end;justify-content:space-between;padding:60px 0 36px}
+.eyebrow{font-size:10px;letter-spacing:1.5px;font-weight:500;margin:0 0 16px;color:#a2adaf}
+h1{font-size:44px;line-height:1.12;letter-spacing:-1.7px;font-weight:500;margin:0}
+.intro-note{font-size:13px;line-height:1.8;color:#a2adaf;margin:0 0 3px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:22px;padding:18px 0;border-top:1px solid #2d3334;border-bottom:1px solid #2d3334;font-size:12px;color:#a2adaf}
+.controls label{display:flex;align-items:center;gap:10px}
+select{border:1px solid #374144;background:#1a2022;color:#e5e8e8;padding:7px 26px 7px 10px;font:inherit;border-radius:4px}
+input[type=checkbox]{accent-color:#8ebac3;width:15px;height:15px;margin:0}
+a:focus-visible,select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid #9bd2de;outline-offset:3px}
+.section-heading{display:flex;justify-content:space-between;align-items:flex-end;margin:52px 0 22px}
+.section-heading .eyebrow{margin-bottom:10px}
+.section-heading h2{font-size:24px;font-weight:450;letter-spacing:-.5px;margin:0}
+.section-heading>p{font-size:10px;color:#a2adaf;margin:0 0 3px}
+.details{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;padding:8px 0 48px}
+.detail-number{font-size:10px;color:#8c999b}
+.details h3{font-size:14px;font-weight:550;margin:14px 0 9px}
+.details p{font-size:12px;line-height:1.8;color:#a2adaf;margin:0}
+.page-footer{display:flex;justify-content:space-between;border-top:1px solid #2d3334;padding:25px 0 30px;color:#8c999b;font-size:9px;letter-spacing:1px}
+
+/* ---- The board ---- */
+
+.board{--board-scale:1;display:grid;grid-template-columns:96px repeat(3,minmax(0,1fr));gap:10px 14px;align-items:stretch}
+/* Scale: the cells grow (CSS zoom, so every px in them grows with it) and
+ * the board stacks one intensity per row once three no longer fit. */
+.board[style*="--board-scale: 2"],.board[style*="--board-scale: 3"]{grid-template-columns:96px 1fr}
+.board[style*="--board-scale: 2"] .board__head:not(:first-child),.board[style*="--board-scale: 3"] .board__head:not(:first-child){display:none}
+.board[style*="--board-scale: 2"] .cell,.board[style*="--board-scale: 3"] .cell{grid-column:2}
+.cell.station-root{zoom:var(--board-scale)}
+.cell .cell__tag{zoom:calc(1 / var(--board-scale))}
+.board__head{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;letter-spacing:1.5px;color:#a2adaf;align-self:end;padding-bottom:6px}
+.board__row{font-size:13px;font-weight:550;align-self:center}
+.board__row small{display:block;font-weight:400;font-size:11px;color:#a2adaf;margin-top:4px}
+
+/* A cell is a station root of its own: the theme's tokens, base reset and
+ * the real rundown component, in a box the size of the real row. */
+.cell.station-root{min-height:0;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,.08);position:relative}
+.cell .station-rundown{grid-template-columns:var(--station-timeline-now-width) minmax(0,1fr);padding:0 12px 0 0}
+.cell .station-rundown__now{display:flex;flex-direction:column;justify-content:center;padding-left:6px}
+.cell .station-rundown__now-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--station-timeline-current)}
+.cell .station-rundown__now-clock{font-family:var(--station-font-mono);color:var(--station-timeline-label);white-space:nowrap}
+.cell__tag{position:absolute;top:6px;right:8px;font-size:9px;letter-spacing:1px;color:var(--station-text-muted);opacity:.7}
+
+/* Preview switches: a forced hover ring on the first marker, and the
+ * outline of everything that takes the pointer. */
+.cell.is-hover .station-rundown__marker:first-child .station-rundown__dot{
+  box-shadow:0 0 0 2px var(--station-surface),0 0 0 4px color-mix(in srgb,var(--station-layer-accent,var(--station-text-muted)) 45%,transparent)}
+.cell.is-hitbox .station-rundown__dot::after,
+.cell.is-hitbox .station-rundown__label{outline:1px dashed color-mix(in srgb,var(--station-text) 55%,transparent);outline-offset:0}
+
+/* =====================================================================
+ * CANDIDATE: the hit target. Ships as-is.
+ *
+ * The button is the stem, the dot and the label in one column, and two
+ * markers a lane apart at the same instant share that column: the lower
+ * one's stem runs through the upper one's dot, and whichever is later in
+ * the DOM takes the pointer. So the button itself takes nothing - the
+ * pointer lands on the dot (padded by 3 px all round, a 14 px target) and
+ * on the label, and the event bubbles to the button as before. Keyboard
+ * focus and the aria name stay on the button.
+ * ===================================================================== */
+.cell .station-rundown__marker{pointer-events:none}
+.cell .station-rundown__dot,
+.cell .station-rundown__label{pointer-events:auto}
+.cell .station-rundown__dot{position:relative}
+.cell .station-rundown__dot::after{content:"";position:absolute;inset:-3px;border-radius:50%}
+
+/* =====================================================================
+ * CANDIDATE: the ping.
+ *
+ * A late marker (its pump-off point behind Now with the pump still
+ * running - .is-late, on the Now line) rings. The rings are the MARKER's
+ * pseudo-elements, anchored on the dot at the column's foot, so the dot's
+ * own ::after stays the hit pad and no element is added for them. The
+ * ring's box is animated (inset), not its transform, so the stroke stays
+ * a hairline as it grows.
+ *
+ * Intensity is three custom properties; the values below are the study's
+ * three columns.
+ * ===================================================================== */
+.cell{
+  --station-ping-ink: var(--station-danger);
+  --station-ping-reach: 9px;     /* how far past the dot's edge the ring travels */
+  --station-ping-period: 2.2s;
+  --station-ping-peak: 0.6;      /* the ring's opacity as it leaves */
+  --station-ping-stroke: 1px;
+}
+.cell[data-colour="accent"]{--station-ping-ink:var(--station-layer-accent,var(--station-danger))}
+.cell[data-intensity="whisper"]{--station-ping-reach:5.5px;--station-ping-period:3s;--station-ping-peak:.35}
+.cell[data-intensity="standard"]{--station-ping-reach:9px;--station-ping-period:2.2s;--station-ping-peak:.6}
+.cell[data-intensity="insistent"]{--station-ping-reach:13px;--station-ping-period:1.5s;--station-ping-peak:.85;--station-ping-stroke:1.5px}
+
+.cell .station-rundown__marker.is-late::before,
+.cell .station-rundown__marker.is-late::after{
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  border:var(--station-ping-stroke) solid var(--station-ping-ink);
+  opacity:0;
+  pointer-events:none;
+}
+.cell .station-rundown__marker.is-late::after{display:none}
+
+/* The ring, from the dot's edge out to its reach, gone before it gets there. */
+@keyframes station-ping-ring{
+  0%   { width:8px; height:8px; margin:0; opacity:var(--station-ping-peak); }
+  70%, 100% { width:calc(8px + 2 * var(--station-ping-reach)); height:calc(8px + 2 * var(--station-ping-reach)); margin:0 0 calc(-1 * var(--station-ping-reach)) calc(-1 * var(--station-ping-reach)); opacity:0; }
+}
+/* The dot's own flash, for sonar: bright as the ring leaves. A filter, not
+ * a box-shadow, so the hover ring still shows on a late dot. */
+@keyframes station-ping-flash{
+  0%   { filter:brightness(1.7) drop-shadow(0 0 4px var(--station-ping-ink)); }
+  30%, 100% { filter:none; }
+}
+/* The halo: the dot's outer shadow swells and settles, no ring travels. */
+@keyframes station-ping-halo{
+  0%, 100% { box-shadow:0 0 0 2px var(--station-surface),0 0 0 2px transparent; }
+  45%      { box-shadow:0 0 0 2px var(--station-surface),0 0 calc(var(--station-ping-reach) * .6) calc(var(--station-ping-reach) * .3) color-mix(in srgb,var(--station-ping-ink) calc(var(--station-ping-peak) * 60%),transparent); }
+}
+
+/* 01 Radar - one ring. */
+.cell[data-style="radar"] .station-rundown__marker.is-late::before{
+  animation:station-ping-ring var(--station-ping-period) cubic-bezier(.2,.6,.3,1) infinite}
+
+/* 02 Double ring - two, half a period apart. */
+.cell[data-style="double"] .station-rundown__marker.is-late::before,
+.cell[data-style="double"] .station-rundown__marker.is-late::after{
+  display:block;
+  animation:station-ping-ring var(--station-ping-period) cubic-bezier(.2,.6,.3,1) infinite}
+.cell[data-style="double"] .station-rundown__marker.is-late::after{
+  animation-delay:calc(var(--station-ping-period) / -2)}
+
+/* 03 Sonar - the ring, and the dot flashes as it leaves. */
+.cell[data-style="sonar"] .station-rundown__marker.is-late::before{
+  animation:station-ping-ring var(--station-ping-period) cubic-bezier(.2,.6,.3,1) infinite}
+.cell[data-style="sonar"] .station-rundown__marker.is-late .station-rundown__dot{
+  animation:station-ping-flash var(--station-ping-period) ease-out infinite}
+
+/* 04 Halo - no ring; the dot breathes. */
+.cell[data-style="halo"] .station-rundown__marker.is-late .station-rundown__dot{
+  animation:station-ping-halo var(--station-ping-period) ease-in-out infinite}
+
+/* Still: one ring at rest, a little out from the dot. */
+@media (prefers-reduced-motion: reduce){
+  .cell .station-rundown__marker.is-late::before,
+  .cell .station-rundown__marker.is-late::after,
+  .cell .station-rundown__marker.is-late .station-rundown__dot{animation:none !important}
+  .cell .station-rundown__marker.is-late::before{display:block;width:14px;height:14px;margin:0 0 -3px -3px;opacity:calc(var(--station-ping-peak) * .8)}
+  .cell .station-rundown__marker.is-late::after{display:none}
+}
+.board.is-still .cell .station-rundown__marker.is-late::before,
+.board.is-still .cell .station-rundown__marker.is-late::after,
+.board.is-still .cell .station-rundown__marker.is-late .station-rundown__dot{animation:none !important}
+.board.is-still .cell .station-rundown__marker.is-late::before{display:block;width:14px;height:14px;margin:0 0 -3px -3px;opacity:calc(var(--station-ping-peak) * .8)}
+.board.is-still .cell .station-rundown__marker.is-late::after{display:none}

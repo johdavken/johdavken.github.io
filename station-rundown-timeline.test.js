@@ -605,7 +605,7 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   assert.ok(!hidden(detail));
   assert.equal(byClass(detail, "station-rundown__detail-resin").textContent, "R-B0");
   const rows = allByClass(detail, "station-rundown__row").map(r => [byClass(r, "station-rundown__term").textContent, byClass(r, "station-rundown__value").textContent]);
-  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Pump off by", "Time remaining", "Empty at", "Run-down"]);
+  assert.deepEqual(rows.map(r => r[0]), ["Layer", "Weight", "Blend", "Consumption", "Pump off by", "Time remaining", "Run-down"], "no Empty at: the clock time is Time remaining said again");
   assert.equal(rows[0][1], "B");
   assert.equal(rows[1][1], "400 lb");
   assert.equal(rows[2][1], "60% of layer B (40%)");
@@ -613,7 +613,7 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   // 16:30 less 1h 23m: 3:06 PM, 1h 03m from 14:03.
   assert.match(rows[4][1], /^(3:06 PM|15:06) · in 1h 03m$/);
   assert.equal(rows[5][1], "1h 23m");
-  assert.equal(rows[7][1], "1h 23m");
+  assert.equal(rows[6][1], "1h 23m");
   assert.equal(b1.getAttribute("aria-describedby"), timelineModule.DETAIL_ID);
   assert.equal(detail.getAttribute("role"), "tooltip");
   root.dispatchEvent({ type: "mouseleave", bubbles: false });
@@ -649,6 +649,60 @@ test("a marker is inspectable by pointer, keyboard focus and click; the detail i
   timeline.update(inputsFor(snapshot(s => { s.layers[1].hoppers[2].track = false; })));
   assert.equal(timeline.getDetail(), null);
   assert.ok(hidden(detail));
+});
+
+test("the pointer lands on a marker's dot or label, never on its button: two markers a lane apart at one instant each keep their own hover, and the event still reaches the button", () => {
+  const { root, timeline } = mount();
+  timeline.update(inputsFor(snapshot(s => {
+    // A1 and A2: the same weight, blend and layer, so one instant, two lanes.
+    s.layers[0].hoppers[0].track = true; s.layers[0].hoppers[0].weight = 200; s.layers[0].hoppers[0].pct = 50;
+    s.layers[0].hoppers[1].track = true; s.layers[0].hoppers[1].weight = 200; s.layers[0].hoppers[1].pct = 50;
+  })));
+  const a1 = root.querySelector("[data-hopper='A1']");
+  const a2 = root.querySelector("[data-hopper='A2']");
+  assert.equal(a1.getAttribute("data-lane"), "0");
+  assert.equal(a2.getAttribute("data-lane"), "1");
+  assert.equal(xOf(a1), xOf(a2), "one instant");
+  // A hover that begins on the dot resolves to that dot's marker.
+  const detail = byClass(root, "station-rundown__detail");
+  byClass(a1, "station-rundown__dot").dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.equal(byClass(detail, "station-rundown__detail-head").querySelector(".station-rundown__id").textContent, "A1");
+  byClass(a2, "station-rundown__dot").dispatchEvent({ type: "mouseover", bubbles: true });
+  assert.equal(byClass(detail, "station-rundown__detail-head").querySelector(".station-rundown__id").textContent, "A2");
+  // The stylesheet: the button takes no pointer, the dot (padded to a
+  // target that clears the next lane) and the label do. The lower marker's
+  // stem, which runs through the upper one's dot, is therefore not a target.
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-root \.station-rundown__marker \{\s*pointer-events: none;\s*\}/);
+  assert.match(css, /\.station-rundown__dot,\s*\.station-rundown__label \{\s*pointer-events: auto;\s*\}/);
+  assert.match(css, /\.station-rundown__dot::after \{[^}]*inset: -3px;[^}]*border-radius: 50%;/);
+  assert.match(css, /\.station-rundown__dot \{[^}]*position: relative;/);
+  assert.match(css, /\.station-rundown__marker\[data-lane="1"\] \{ --station-rundown-lane: 34px; \}/, "lanes 16px apart: a 14px target clears the next");
+  assert.doesNotMatch(css, /\.station-rundown__stem \{[^}]*pointer-events: auto/);
+});
+
+test("a late marker pings on the Now line: one ring leaves the dot and the dot flashes, on the marker's pseudo-element so the hit pad and hover ring stand; nothing travels under reduced motion", () => {
+  const { root, timeline } = mount();
+  // A hopper past its pump-off point with the pump running is .is-late; pumped off it is not.
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "14:04"; s.job.changeoverSetAt = NOW; })));
+  const late = allByClass(root, "station-rundown__marker").filter(m => m.classList.contains("is-late"));
+  assert.ok(late.length > 0, "a changeover a minute out puts every running marker at Now, late");
+  timeline.update(inputsFor(snapshot(s => { s.job.changeoverTime = "14:04"; s.job.changeoverSetAt = NOW; s.layers[1].hoppers[0].pumpOff = true; })));
+  assert.ok(!root.querySelector("[data-hopper='B1']").classList.contains("is-late"), "pumped off is done, not late");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/rundown.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  // The ring: the marker's ::before, on the dot at the column's foot, its box animated.
+  assert.match(css, /\.station-rundown__marker\.is-late::before \{[^}]*bottom: 0;[^}]*left: 0;[^}]*border: 1\.5px solid var\(--station-danger\);[^}]*pointer-events: none;[^}]*animation: station-rundown-ping var\(--station-rundown-ping-period\)/);
+  assert.match(css, /@keyframes station-rundown-ping \{[^@]*width: calc\(8px \+ 2 \* var\(--station-rundown-ping-reach\)\);/);
+  assert.doesNotMatch(css, /@keyframes station-rundown-ping \{[^@]*transform:/, "the box grows, not the transform: the stroke stays thin");
+  // The flash: a filter on the dot, never its box-shadow (the hover ring lives there).
+  assert.match(css, /\.station-rundown__marker\.is-late \.station-rundown__dot \{\s*animation: station-rundown-ping-flash/);
+  assert.match(css, /@keyframes station-rundown-ping-flash \{[^@]*filter: brightness/);
+  assert.doesNotMatch(css, /@keyframes station-rundown-ping-flash \{[^@]*box-shadow/);
+  // Insistent: 13px reach, 1.5s, 0.85 peak; and one still ring under reduced motion.
+  assert.match(css, /--station-rundown-ping-reach: 13px;\s*--station-rundown-ping-period: 1\.5s;\s*--station-rundown-ping-peak: 0\.85;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.station-rundown__marker\.is-late::before,\s*\.station-rundown__marker\.is-late \.station-rundown__dot \{\s*animation: none;/);
+  // The hit pad is still the dot's ::after alone.
+  assert.doesNotMatch(css, /\.station-rundown__marker\.is-late::after/);
 });
 
 /* ----------------------------------------------------------------------

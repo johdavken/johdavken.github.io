@@ -81,8 +81,10 @@
  *                    stylesheet owns: the bulk set, then Copy Current.
  *   Copy Current     the Next face's move: the running recipe becomes the
  *                    plan - Load Current Recipe, as one copyCurrentToNext.
- *                    One click: the plan it overwrites is a draft, and the
- *                    title says so.
+ *                    Armed and confirmed exactly as Load Next is: the plan
+ *                    it overwrites may be an afternoon's work, and one
+ *                    stray click on an unfolded row should not cost it.
+ *                    The armed title says what is replaced.
  *
  * WHERE IT STANDS
  *
@@ -115,8 +117,8 @@
  * WHAT IT HOLDS
  *
  * Presentation state only: what each control was last told to show, and
- * whether Load Next is armed (station-armed.js keeps the timer and the
- * click-away listener). It reads no job, keeps no mode of its own and dispatches
+ * whether Load Next or Copy Current is armed (station-armed.js keeps the
+ * timer and the click-away listener). It reads no job, keeps no mode of its own and dispatches
  * nothing: every click is handed to the boot file through the callbacks
  * it was built with, and what the stage then shows is the boot file's to
  * tell it (update()).
@@ -131,8 +133,8 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
-  /* How long an armed Load Next waits for its confirming click: the
-   * helper's own, so the timeline's reset waits the same. */
+  /* How long an armed Load Next or Copy Current waits for its confirming
+   * click: the helper's own, so the timeline's reset waits the same. */
   const ARM_DURATION = armedModule ? armedModule.ARM_DURATION : 5000;
   /* The tile: the Handbook launcher's 64 by 64 (station-handbook.js,
    * handbook.css). The plate is drawn in that space exactly as the
@@ -321,7 +323,7 @@
    *        boot file asks the application and tells the rail what it holds
    * @param {function} [options.onNextEdit]     () => void; the Next face's switch
    * @param {function} [options.onPromote]      () => void; Load Next's confirming click
-   * @param {function} [options.onCopy]         () => void; Copy Current's click
+   * @param {function} [options.onCopy]         () => void; Copy Current's confirming click
    * @param {function} [options.onBulkEdit]     () => void; Bulk Edit's click - the
    *        boot file starts the selection and tells the rail
    * @param {function} [options.onBulkConfirm]  () => void; Confirm - the boot file
@@ -331,7 +333,7 @@
    *        above the Current row while the selection is on
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
    * @param {function} [options.clearTimeout]
-   * @param {number}   [options.armDuration]    ms an armed Load Next waits
+   * @param {number}   [options.armDuration]    ms an armed move waits
    */
   function create(doc, options) {
     const settings = options || {};
@@ -470,10 +472,11 @@
     rootEl.appendChild(nextGroup);
     rootEl.appendChild(weightsGroup);
 
-    /* Load Next armed and confirmed: the helper keeps which control is
-     * armed and what disarms it; the rail draws the state. */
+    /* Load Next and Copy Current armed and confirmed: the helper keeps
+     * which control is armed (one at a time) and what disarms it; the
+     * rail draws the state. */
     const arming = armedModule ? armedModule.create({
-      doc, controls: { promote: promoteButton }, onChange: () => draw(),
+      doc, controls: { promote: promoteButton, copy: copyButton }, onChange: () => draw(),
       setTimeout: settings.setTimeout, clearTimeout: settings.clearTimeout, armDuration: settings.armDuration
     }) : { arm: () => false, disarm: () => false, armed: () => null };
 
@@ -552,10 +555,19 @@
             : (bulkOn
               ? `${LABEL.promote} · finish or cancel the bulk edit first`
               : `${LABEL.promote} · ${state.promote.summary || "the plan becomes the running recipe"}`))));
+      const copyArmed = arming.armed() === "copy";
       copyButton.disabled = !state.copy.available;
-      copyButton.setAttribute("title", !state.copy.available
-        ? `${LABEL.copy} is not available: ${state.copy.reason || "no application is connected to Station commands."}`
-        : `${LABEL.copy} · the running recipe becomes the plan${state.next.planned ? ", replacing what is planned" : ""}; the running job is untouched`);
+      copyButton.classList.toggle("is-armed", copyArmed);
+      if (copyArmed) copyButton.setAttribute("data-armed", "true");
+      else copyButton.removeAttribute("data-armed");
+      copyButton.setAttribute("aria-label", copyArmed
+        ? `Confirm: copy the running recipe into Next${state.next.planned ? ", replacing what is planned" : ""}`
+        : LABEL.copy);
+      copyButton.setAttribute("title", copyArmed
+        ? `Click again to copy the running recipe into Next${state.next.planned ? " · what is planned is replaced" : ""} · the running job is untouched`
+        : (!state.copy.available
+          ? `${LABEL.copy} is not available: ${state.copy.reason || "no application is connected to Station commands."}`
+          : `${LABEL.copy} · the running recipe becomes the plan${state.next.planned ? ", replacing what is planned" : ""}; the running job is untouched`));
     }
 
     /* The bulk set, in its two states. At rest Bulk Edit is the one
@@ -628,6 +640,7 @@
     });
     copyButton.addEventListener("click", () => {
       if (copyButton.disabled) return;
+      if (arming.armed() !== "copy") { arming.arm("copy"); return; }
       disarm();
       onCopy();
     });
@@ -708,10 +721,12 @@
         };
       }
       // A control that stopped being possible while armed is not armed:
-      // Load Next stands on the Current face, and a bulk selection holds it.
+      // Load Next stands on the Current face and Copy Current on the Next
+      // face, and a bulk selection starting on either drops the arming.
       const bulkOn = state.bulk.active && (state.blend.active || state.next.active);
       const promoteGone = arming.armed() === "promote" && (!state.promote.available || !state.next.planned || !state.blend.active || bulkOn);
-      if (arming.armed() && (promoteGone || state.hidden || state.withdrawn)) disarm();
+      const copyGone = arming.armed() === "copy" && (!state.copy.available || !state.next.active || bulkOn);
+      if (arming.armed() && (promoteGone || copyGone || state.hidden || state.withdrawn)) disarm();
       else draw();
     }
 

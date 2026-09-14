@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STATION — Late-marker ping study</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../station/styles/tokens.css">
+<link rel="stylesheet" href="../../station/styles/base.css">
+<link rel="stylesheet" href="../../station/styles/themes/industrial-dark.css">
+<link rel="stylesheet" href="../../station/styles/themes/industrial-light.css">
+<link rel="stylesheet" href="../../station/styles/themes/gruvbox-dark.css">
+<link rel="stylesheet" href="../../station/styles/themes/gruvbox-light.css">
+<link rel="stylesheet" href="../../station/styles/themes/blueprint.css">
+<link rel="stylesheet" href="../../station/styles/themes/engineering-paper.css">
+<link rel="stylesheet" href="../../station/styles/components/rundown.css">
+<link rel="stylesheet" href="preview.css">
+</head>
+<body>
+<div class="page">
+<header class="page-header"><a href="#" class="project-name">STATION <span>/ LATE-MARKER PING STUDY</span></a><span class="edition">03 — AT THE NOW LINE</span></header>
+<main>
+<section class="intro"><div><p class="eyebrow">RUN-DOWN TIMELINE</p><h1>Late, and<br>saying so.</h1></div><p class="intro-note">A hopper past its pump-off point parks on the Now line.<br>Four ways for its dot to ping, at three intensities. Pick one.</p></section>
+
+<div class="controls" aria-label="Preview controls">
+  <label>Theme <select id="theme">
+    <option value="industrial-dark">Industrial Dark</option>
+    <option value="industrial-light">Industrial Light</option>
+    <option value="gruvbox-dark" selected>Gruvbox Dark</option>
+    <option value="gruvbox-light">Gruvbox Light</option>
+    <option value="blueprint">Blueprint</option>
+    <option value="engineering-paper">Engineering Paper</option>
+  </select></label>
+  <label>Ring colour <select id="colour">
+    <option value="danger" selected>Danger</option>
+    <option value="accent">Layer accent</option>
+  </select></label>
+  <label>Scene <select id="scene">
+    <option value="stack" selected>Two late, stacked (A3 / B3)</option>
+    <option value="one">One late</option>
+    <option value="crowd">Three late, three lanes</option>
+  </select></label>
+  <label>Scale <select id="scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="3">3×</option></select></label>
+  <label><input type="checkbox" id="hover"> Show hover ring on the top dot</label>
+  <label><input type="checkbox" id="hitbox"> Show hit targets</label>
+  <label><input type="checkbox" id="motion" checked> Motion</label>
+</div>
+
+<div class="section-heading"><div><p class="eyebrow">THE BOARD</p><h2>Styles down, intensity across</h2></div><p>each cell is the real rundown.css markup</p></div>
+<div class="board" id="board"></div>
+
+<div class="section-heading"><div><p class="eyebrow">NOTES</p><h2>What each one is</h2></div></div>
+<section class="details">
+  <div><span class="detail-number">01</span><h3>Radar</h3><p>One thin ring leaves the dot, grows, and fades. The stroke stays hairline as it grows (the ring's box is animated, not its transform). One breath, a pause, again.</p></div>
+  <div><span class="detail-number">02</span><h3>Double ring</h3><p>Two rings half a cycle apart, so one is always on its way out. Busier; reads at a glance from across the room.</p></div>
+  <div><span class="detail-number">03</span><h3>Sonar</h3><p>The radar ring, and the dot itself brightens the instant the ring leaves - the "contact" flash before the sweep.</p></div>
+  <div><span class="detail-number">04</span><h3>Halo</h3><p>No ring travels. The dot's own halo swells and settles, the way the RESET word breathes when it is armed. The quietest of the four.</p></div>
+  <div><span class="detail-number">—</span><h3>Intensity</h3><p><b>Whisper</b> 19 px reach · 3 s · 35 %. <b>Standard</b> 26 px · 2.2 s · 60 %. <b>Insistent</b> 34 px · 1.5 s · 85 %. Lanes are 16 px apart, so Standard's ring just crosses the neighbour's dot before it is gone.</p></div>
+  <div><span class="detail-number">—</span><h3>Reduced motion</h3><p>With <code>prefers-reduced-motion: reduce</code> (or Motion off, above) nothing travels: a late dot wears one still ring at rest.</p></div>
+</section>
+</main>
+<footer class="page-footer"><span>PREVIEW ONLY — NOTHING HERE IS SHIPPED</span><span>tools/station-ping</span></footer>
+</div>
+<script src="preview.js"></script>
+</body>
+</html>

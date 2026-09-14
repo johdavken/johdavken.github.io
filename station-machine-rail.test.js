@@ -449,7 +449,7 @@ test("the Next switch shows the face and whether a plan exists, hands every clic
   assert.equal(next.disabled, false);
 });
 
-test("Load Next arms then confirms as one call, worded by the summary it was told; it is held with no plan, no offer, or a bulk selection open; Copy Current is one click, worded by what it replaces", () => {
+test("Load Next arms then confirms as one call, worded by the summary it was told; it is held with no plan, no offer, or a bulk selection open; Copy Current arms and confirms the same way, worded by what it replaces", () => {
   const { rail, promote, copy, calls, timers, live, doc } = build();
   live();
   // Load Next stands under the Current face; Copy Current under Next. The
@@ -487,9 +487,37 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.equal(rail.isArmed(), false);
   assert.equal(promote.getAttribute("data-armed"), null);
   assert.ok(timers[0].cleared, "the confirming click cleared the arm timer");
+  // Copy Current: the same two clicks, under the Next face.
+  rail.update({ blend: { active: false, available: true }, next: { active: true, available: true, planned: true } });
+  copy.click();
+  assert.deepEqual(calls, ["promote"], "the first click arms, and calls nothing");
+  assert.equal(rail.armedControl(), "copy");
+  assert.equal(copy.getAttribute("data-armed"), "true");
+  assert.ok(copy.classList.contains("is-armed"));
+  assert.equal(copy.getAttribute("aria-label"), "Confirm: copy the running recipe into Next, replacing what is planned");
+  assert.equal(copy.getAttribute("title"), "Click again to copy the running recipe into Next · what is planned is replaced · the running job is untouched");
+  assert.equal(timers.length, 2, "one arm timer for it");
   copy.click();
   assert.deepEqual(calls, ["promote", "copy"]);
-  assert.equal(rail.isArmed(), false, "a copy never arms");
+  assert.equal(rail.isArmed(), false);
+  assert.equal(copy.getAttribute("data-armed"), null);
+  assert.equal(copy.getAttribute("aria-label"), "Copy Current into Next");
+  assert.ok(timers[1].cleared, "the confirming click cleared the arm timer");
+  // With nothing planned the armed words say nothing is replaced.
+  rail.update({ next: { active: true, available: true, planned: false } });
+  copy.click();
+  assert.equal(copy.getAttribute("aria-label"), "Confirm: copy the running recipe into Next");
+  assert.equal(copy.getAttribute("title"), "Click again to copy the running recipe into Next · the running job is untouched");
+  rail.disarm();
+  // One control is armed at a time: arming one disarms the other.
+  rail.update({ blend: { active: true, available: true }, next: { active: true, available: true, planned: true } });
+  promote.click();
+  assert.equal(rail.armedControl(), "promote");
+  copy.click();
+  assert.equal(rail.armedControl(), "copy", "the last clicked is the armed one");
+  assert.equal(promote.getAttribute("data-armed"), null);
+  rail.disarm();
+  rail.update({ blend: { active: true, available: true }, next: { active: false, available: true, planned: true } });
   // Held: no offer.
   rail.update({ promote: { available: false, reason: "the application does not offer Load Next into Current from Station." } });
   assert.equal(promote.disabled, true);
@@ -500,7 +528,50 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.equal(copy.disabled, true);
   copy.click();
   assert.deepEqual(calls, ["promote", "copy"]);
+  assert.equal(rail.isArmed(), false, "a held control takes no click and never arms");
   assert.equal(typeof doc, "object");
+});
+
+test("an armed copy disarms on its timeout, a click elsewhere, Escape, the focus leaving, the offer vanishing, the Next face closing, a bulk selection starting and the rail stepping back - each without a call", () => {
+  const { rail, copy, calls, timers, live, doc } = build();
+  const on = () => rail.update({ blend: { active: false, available: true }, next: { active: true, available: true, planned: true }, copy: { available: true }, bulk: { active: false, available: true } });
+  live(); on();
+  copy.click();
+  assert.equal(rail.armedControl(), "copy");
+  timers[0].fn();
+  assert.equal(rail.isArmed(), false, "the timeout disarmed it");
+  copy.click();
+  const elsewhere = doc.createElement("div");
+  doc.body.appendChild(elsewhere);
+  elsewhere.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
+  assert.equal(rail.isArmed(), false, "a click elsewhere disarmed it");
+  copy.click();
+  copy.dispatchEvent(makeEvent("pointerdown", { bubbles: true }));
+  assert.equal(rail.isArmed(), true, "a pointer down on the control itself does not");
+  const escape = makeEvent("keydown", { key: "Escape", bubbles: true });
+  copy.dispatchEvent(escape);
+  assert.equal(rail.isArmed(), false, "Escape disarmed it");
+  copy.focus();
+  copy.click();
+  copy.blur();
+  assert.equal(rail.isArmed(), false, "the focus leaving disarmed it");
+  copy.click();
+  rail.update({ copy: { available: false, reason: "gone" } });
+  assert.equal(rail.isArmed(), false, "the offer vanishing disarmed it");
+  on(); copy.click();
+  rail.update({ next: { active: false, available: true, planned: true } });
+  assert.equal(rail.isArmed(), false, "the Next face closing disarmed it");
+  on(); copy.click();
+  rail.update({ bulk: { active: true, available: true, count: 0, resin: "" } });
+  assert.equal(rail.isArmed(), false, "a bulk selection starting disarmed it");
+  on(); copy.click();
+  rail.update({ withdrawn: true });
+  assert.equal(rail.isArmed(), false, "the rail stepping back disarmed it");
+  rail.update({ withdrawn: false }); on(); copy.click();
+  rail.update({ next: { active: true, available: true, planned: false } });
+  assert.equal(rail.isArmed(), true, "the plan vanishing does not: a copy needs no plan");
+  rail.disarm();
+  assert.deepEqual(calls, [], "none of it called anything");
 });
 
 test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, the face closing, and a bulk selection starting - each without a call; the arming is the shared helper's", () => {

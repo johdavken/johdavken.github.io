@@ -25,8 +25,9 @@
  * No glass, no panel around them, no words on them - each says what it
  * is on hover and to a reader. Every colour is a token. Current Recipe
  * on is the accent, quietly: an accent edge and glyph, a wash of the
- * accent on the plate. An armed Load Next is the warning colour, the one
- * moment the rail is allowed to look like something is about to happen;
+ * accent on the plate. An armed move - Load Next, Copy Current - is the
+ * warning colour, the one moment the rail is allowed to look like
+ * something is about to happen;
  * at rest it is as quiet as the launcher beside it.
  *
  * The plate's colours are handed down as two custom properties the
@@ -116,8 +117,9 @@
   color: var(--station-accent-hover);
 }
 
-/* Load Next, armed: the warning colour on the edge and the glyph, and a
-   pulse of the same round the tile while it waits for its second click. */
+/* Load Next or Copy Current, armed: the warning colour on the edge and
+   the glyph, and a pulse of the same round the tile while it waits for
+   its second click. */
 .station-root .station-rail__control.is-armed {
   --station-rail-plate-edge: var(--station-warning);
   color: var(--station-warning);

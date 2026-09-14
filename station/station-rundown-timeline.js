@@ -580,8 +580,10 @@
             `${rundown.formatClock(entry.pumpOffBy)}${late ? " · late" : entry.pumpOff ? "" : ` · in ${rundown.formatRemaining(entry.untilMs)}`}`,
             late ? "is-late" : ""));
         }
+        /* Time remaining is the run-down as a duration; the clock time it
+         * ends at is said in the marker's spoken description (describe)
+         * and not repeated here as a row. */
         list.appendChild(detailRow("Time remaining", entry.past ? "Estimated empty" : rundown.formatRemaining(entry.remainingMs), entry.past ? "is-past" : ""));
-        list.appendChild(detailRow("Empty at", rundown.formatClock(entry.emptyAt), entry.past ? "is-past" : ""));
         if (Number.isFinite(entry.durationMs)) list.appendChild(detailRow("Run-down", rundown.formatRemaining(entry.durationMs)));
       }
       if (entry.pumpOff) list.appendChild(detailRow("Pump", "Pump off", "is-pump-off"));

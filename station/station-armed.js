@@ -5,9 +5,9 @@
  * click anywhere else, Escape on the control or the focus leaving it all
  * disarm it. One control is armed at a time, whichever was clicked last.
  *
- * Shared by the machine rail (station-machine-rail.js: Load Next) and the
- * run-down timeline (station-rundown-timeline.js: Reset), so the two
- * behave the same. This module draws nothing and dispatches nothing:
+ * Shared by the machine rail (station-machine-rail.js: Load Next, Copy
+ * Current) and the run-down timeline (station-rundown-timeline.js: Reset),
+ * so they all behave the same. This module draws nothing and dispatches nothing:
  * it keeps which control is armed and the timer and the click-away
  * listener that disarm it, and tells its owner (onChange) whenever that
  * changes, so the owner draws the word, the colour and the title.
