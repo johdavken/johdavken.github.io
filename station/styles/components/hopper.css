@@ -27,11 +27,6 @@
   --station-hopper-metal: color-mix(in srgb, var(--station-steel-light) 72%, var(--station-hopper-stroke));
   --station-hopper-metal-lit: color-mix(in srgb, var(--station-steel-light) 66%, var(--station-text-muted));
   --station-hopper-material-color: var(--station-hopper-fill);
-  /* The resin label on the drum: a plate in the surface colour, the code
-     on it in the accent - a marking on the equipment, not a part of it.
-     Two tokens so a theme can re-ink the label without touching the steel. */
-  --station-hopper-label: var(--station-surface);
-  --station-hopper-label-ink: var(--station-accent);
 }
 
 /* ---------------------------------------------------------------------
@@ -195,27 +190,6 @@
   fill: var(--station-hose-clear);
   stroke: var(--station-hose-edge);
   stroke-width: var(--station-line-hairline);
-}
-
-/* ---------------------------------------------------------------------
- *   Resin label, on the drum
- * -------------------------------------------------------------------
- * The code down the vessel's centreline, in the caption's type and at the
- * caption's size (sized by the bank's scale like the rest of the
- * readout), so it reads whole where the caption's line could show five
- * characters. Rotated by the renderer; nothing here moves it. No pointer
- * rules: it is in the drawing, which is inert, and the vessel's tracking
- * hit is under it - a click on the code is a click on the hopper. */
-
-.station-hopper__label-plate {
-  fill: var(--station-hopper-label);
-}
-
-.station-hopper__label-text {
-  fill: var(--station-hopper-label-ink);
-  font-family: var(--station-font-mono);
-  font-size: calc(var(--station-text-2xs) * var(--station-bank-scale, 1));
-  letter-spacing: 0.02em;
 }
 
 /* ---------------------------------------------------------------------
@@ -417,6 +391,35 @@
    clicks the same place to bring the pump back. */
 .station-hopper.is-pump-off .station-hopper__receiver-drawing {
   opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------------
+ *   The next recipe changes this hopper's resin
+ * -------------------------------------------------------------------
+ * The receiver cap and its lid in the warning colour, edged in the same:
+ * the planned recipe puts a different resin here, or empties it
+ * (station-source.js, nextDiffers) - the hopper an operator will want to
+ * track down. Static: no motion, no glow; the run-down flow stays the
+ * one animation on a hopper. Every theme's warning is an amber that
+ * stands off its steel. The cone under the cap keeps its own colour, so
+ * the pump's state is still read where it always was. */
+.station-hopper.is-next-changes .station-hopper__cap,
+.station-hopper.is-next-changes .station-hopper__receiver-lid {
+  fill: var(--station-warning);
+  stroke: var(--station-warning);
+}
+
+/* The lit strip on the cap: in the warning's family, not the steel's. */
+.station-hopper.is-next-changes .station-hopper__receiver-face {
+  fill: color-mix(in srgb, var(--station-warning) 60%, var(--station-hopper-metal-lit));
+}
+
+/* A stopped receiver steps back (above); a cap that says the plan changes
+   the resin must still read, so the receiver stands at full strength
+   while both are true - the cone is steel and the hose tinted, which is
+   how pump-off is still said. */
+.station-hopper.is-pump-off.is-next-changes .station-hopper__receiver-drawing {
+  opacity: 1;
 }
 
 /* The hover cue, on a receiver whose command is on offer: the cone's edge

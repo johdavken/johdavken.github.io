@@ -99,9 +99,9 @@
     // The hose's outside diameter, drawn on the vessel's own inch scale.
     hoseDiameterIn: 3,
     // The compact readout under each hopper: id, blend and the receiver
-    // weight (three lines at 13/12 units). The resin code is on the drum
-    // itself (station-machine-parts.js), not in the caption. The height
-    // keeps the room the fourth line had: it is the blend card's box too.
+    // weight (three lines at 13/12 units). No resin line: the resin is
+    // said by the hover panel and the editor. The height keeps the room
+    // the fourth line had: it is the blend card's box too.
     hopperCaptionGap: 12,
     hopperCaptionHeight: 46,
 

@@ -580,21 +580,17 @@ test("the readout's fourth line is the run-down's weight: whole pounds, digits o
   // and the timeline never disagree; an unassigned hopper has one too,
   // and a runtime with no effective weight falls back to the entered one.
   assert.deepEqual(textOf(svg, "station-hopper__weight").slice(0, 3), ["900", "500", "75"]);
-  const own = h => h.children.find(c => c.nodeName === "title").textContent;
-  const titles = hoppersIn(svg).slice(0, 3).map(own);
-  assert.match(titles[0], /· 900 lb/);
-  assert.match(titles[1], /· 500 lb/);
-  assert.match(titles[2], /no resin assigned · 75 lb/);
+  // The unit and the separator are the hover panel's (station-hopper-info.js).
   assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 900 }), 900);
   assert.equal(parts.shownWeight({ weight: 1250, effectiveWeight: 0 }), 1250, "no effective weight: the entered one");
   assert.equal(parts.shownWeight({ weight: 1250 }), 1250);
   assert.equal(parts.shownWeight(null), 0);
   // The separator is the tooltip's; a weight too wide is fitted, not lied about.
   // The key carries both weights and whether the shown one is computed.
-  assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250||||");
+  assert.equal(parts.hopperStateKey({ weight: 1250 }), "|||||1250|||||");
   assert.notEqual(parts.hopperStateKey({ weight: 1250 }), parts.hopperStateKey({ weight: 1300 }), "a weight change redraws the hopper");
   assert.notEqual(parts.hopperStateKey({ weight: 1250, effectiveWeight: 900 }), parts.hopperStateKey({ weight: 1250, effectiveWeight: 950 }), "an effective weight change redraws the hopper");
-  assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0||||");
+  assert.equal(parts.hopperStateKey({ weight: 0 }), "|||||0|||||");
 });
 
 test("the weight carries its unit beside the digits - drawn smaller, the pair centred under the hopper - and a weight too wide for both is drawn alone", () => {
@@ -675,133 +671,43 @@ test("a weight change alone re-patches only that hopper", () => {
   assert.deepEqual(textOf(mount, "station-hopper__weight").slice(0, 2), ["1000", "650"]);
 });
 
-test("the resin code is on the drum, whole, at every layer count - and the caption has no line for it", () => {
-  /* The drum is four times as tall as it is wide: a code the caption's
-   * horizontal line could show five characters of is shown whole down the
-   * vessel, in the dense five-layer view as much as the roomy one. */
+test("no hopper draws its resin: no label on the drum, no resin line in the caption - the name is the hover panel's and the editor's", () => {
   for (const config of [
     literal({ layerCount: 5, hopperCount: 6 }),
     literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 })
   ]) {
     const svg = stageFor(config, { hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60 } } });
-    assert.deepEqual(textOf(svg, "station-hopper__label-text"), ["HX204"]);
-    assert.deepEqual(textOf(svg, "station-hopper__resin"), [], "the caption still draws a resin line");
+    assert.equal(allWith(svg, "data-role", "hopper-label").length, 0, "a resin label is drawn on the drum");
+    assert.deepEqual(textOf(svg, "station-hopper__resin"), [], "the caption draws a resin line");
+    const texts = [];
+    walk(svg, node => { if (node.nodeName === "text") texts.push(node.textContent); });
+    assert.ok(!texts.includes("HX204") && !texts.includes("hx204"), "the resin's code is drawn somewhere on the stage");
   }
-});
-
-test("the label is a plate down the drum's centreline, hung under the top band, the code turned to run down it", () => {
-  const config = literal({ layerCount: 3, hopperCount: 2 });
-  const state = {
-    "A:0": { assigned: true, resinName: "lldpe 2045g", pct: 60, usableHeight: 30 },
-    "A:1": { assigned: true, resinName: "HX204", pct: 40, usableHeight: 30 }
-  };
-  for (const focusLayer of [null, "A", "C"]) {
-    const layout = layoutFor(config, { focusLayer, hopperState: state });
-    const svg = stageFor(config, { focusLayer, hopperState: state });
-    const bank = layout.banks[0];
-    for (const geometry of bank.cluster.hoppers) {
-      const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === geometry.id);
-      const mark = allWith(hopper, "data-role", "hopper-label")[0];
-      assert.ok(mark, `${geometry.id} has no label`);
-      // Inside the inert drawing, after the hardware - so it is drawn over it.
-      const drawing = allWith(hopper, "data-role", "hopper-drawing")[0];
-      const order = drawing.children.map(c => c.getAttribute("data-role"));
-      assert.ok(order.indexOf("hopper-label") > order.indexOf("hopper-details"));
-      assert.ok(order.indexOf("hopper-label") < order.indexOf("hopper-caption"));
-
-      const [plate, text] = mark.children;
-      assert.equal(plate.nodeName, "rect");
-      assert.equal(text.nodeName, "text");
-      const w = geometry.width;
-      const rim = w * 0.095;
-      const cx = geometry.x + w / 2;
-      const near = (a, b) => Math.abs(a - b) < 0.02;
-      // Centred on the drum, sized by the bank's scale like the caption's type.
-      const plateWidth = (parts.LABEL_TYPE + 5) * bank.scale;
-      assert.ok(near(Number(plate.getAttribute("x")) + Number(plate.getAttribute("width")) / 2, cx), "plate is off the centreline");
-      assert.ok(near(Number(plate.getAttribute("width")), plateWidth), "plate width does not follow the bank's scale");
-      // Hung from under the top clamp band, never past the bottom one.
-      const laneTop = geometry.vesselTop + rim * 2.6;
-      const laneBottom = geometry.coneTop - rim * 2.6;
-      assert.ok(near(Number(plate.getAttribute("y")), laneTop));
-      assert.ok(Number(plate.getAttribute("y")) + Number(plate.getAttribute("height")) <= laneBottom + 0.02, "plate runs into the bottom band");
-      // The code, uppercased, turned a quarter clockwise about its own anchor.
-      assert.equal(text.textContent, state[`A:${geometry.index}`].resinName.toUpperCase());
-      assert.equal(text.getAttribute("text-anchor"), "middle");
-      assert.equal(text.getAttribute("transform"), `rotate(90 ${text.getAttribute("x")} ${text.getAttribute("y")})`);
-      assert.ok(near(Number(text.getAttribute("y")), Number(plate.getAttribute("y")) + Number(plate.getAttribute("height")) / 2), "code is not centred along the plate");
-      // A long code makes a long plate; a short one a short plate.
-    }
-    const plates = allWithClassName(svg, "station-hopper__label-plate").slice(0, 2).map(p => Number(p.getAttribute("height")));
-    assert.ok(plates[0] > plates[1], "the plate is not sized to its code");
-  }
-});
-
-test("a code longer than the drum is truncated by the caption's rule, never shrunk; no resin, no plate", () => {
-  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }), {
-    hopperState: {
-      "A:0": { assigned: true, resinName: "EVA 3325 MASTERBATCH WHITE CONCENTRATE", pct: 60, usableHeight: 30 },
-      "A:1": { assigned: true, resinName: "MB711", pct: 40, usableHeight: 8 },
-      "A:2": { assigned: false, resinName: "", pct: 0 }
-    }
-  });
-  const codes = textOf(svg, "station-hopper__label-text");
-  assert.equal(codes.length, 2, "an unassigned hopper carries a plate");
-  assert.match(codes[0], /…$/);
-  assert.ok(codes[0].length < "EVA 3325 MASTERBATCH WHITE CONCENTRATE".length);
-  // The shortest profile the layout allows still shows a short code whole.
-  assert.equal(codes[1], "MB711");
-  assert.equal(allWith(svg, "data-role", "hopper-label").length, 2);
-  // The type is one size: the stylesheet's, at the caption's own, scaled by the bank.
   const fs = require("node:fs");
   const path = require("node:path");
   const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8");
-  assert.match(css, /\.station-hopper__label-text \{[^}]*font-size: calc\(var\(--station-text-2xs\) \* var\(--station-bank-scale, 1\)\)/);
-  assert.match(css, /\.station-hopper__label-plate \{[^}]*fill: var\(--station-hopper-label\)/);
-  assert.match(css, /--station-hopper-label: var\(--station-surface\)/);
-  assert.match(css, /--station-hopper-label-ink: var\(--station-accent\)/);
-  assert.doesNotMatch(css, /\.station-hopper__resin/, "the caption's resin rule outlived the line");
-  assert.equal(parts.LABEL_TYPE, 9);
+  assert.doesNotMatch(css, /__label|hopper-label|__resin\b/, "hopper.css still styles a resin label or caption line");
+  assert.equal(parts.LABEL_TYPE, undefined);
 });
 
-test("the label is not a control: it lies inside the vessel's tracking hit, so a click on the code tracks the hopper", () => {
-  const config = literal({ layerCount: 3, hopperCount: 2 });
-  const state = { "B:0": { assigned: true, resinName: "HX204", pct: 60, usableHeight: 30 } };
-  const svg = stageFor(config, { hopperState: state, hopperControls: { tracking: true, pump: true } });
-  const hopper = hoppersIn(svg).find(h => h.getAttribute("data-hopper") === "B1");
-  const mark = allWith(hopper, "data-role", "hopper-label")[0];
-  const drawing = allWith(hopper, "data-role", "hopper-drawing")[0];
-  assert.ok(drawing.children.includes(mark), "the label is outside the inert drawing");
-  walk(mark, node => {
-    for (const attr of ["data-station-target", "data-hopper", "data-layer", "tabindex", "pointer-events", "style"]) {
-      assert.equal(node.getAttribute(attr), null, `the label carries ${attr}`);
-    }
-  });
-  const tracking = allWith(hopper, "data-station-target", "tracking")[0];
-  const hit = tracking.children[1];
-  const plate = mark.children[0];
-  const n = k => Number(plate.getAttribute(k));
-  const h = k => Number(hit.getAttribute(k));
-  assert.ok(n("x") >= h("x") && n("x") + n("width") <= h("x") + h("width"));
-  assert.ok(n("y") >= h("y") && n("y") + n("height") <= h("y") + h("height"));
-  // And the pump's hit does not reach it: a click on the code never marks a pump.
-  const pump = allWith(hopper, "data-station-target", "pump")[0].children[1];
-  assert.ok(Number(pump.getAttribute("y")) + Number(pump.getAttribute("height")) <= n("y"));
-});
-
-test("resin identity stays reachable on hover even where the code is dropped", () => {
-  // A <title> is the native SVG tooltip and what a screen reader announces.
+test("the hopper group carries no <title> of its own - the hover panel is the reading, and a native tooltip would stack on it - while its label says the identity and every control keeps its title", () => {
   const svg = stageFor(literal({ layerCount: 5, hopperCount: 6 }), {
     hopperState: { "A:0": { assigned: true, resinName: "HX204", pct: 60, source: "SILO 3" } }
   });
-  // The hopper's own title is a direct child of its group; the two
-  // controls on it carry titles of their own (tested with the controls).
-  const titles = hoppersIn(svg).map(hopper => hopper.children.filter(node => node.nodeName === "title"));
-  assert.ok(titles.every(own => own.length === 1),
-    "every hopper needs a title, or hover is the only place the resin lives and it is missing");
-  const texts = titles.map(own => own[0].textContent);
-  assert.ok(texts.some(t => /HX204/.test(t) && /SILO 3/.test(t)));
-  assert.ok(texts.some(t => /no resin assigned/.test(t)));
+  for (const hopper of hoppersIn(svg)) {
+    assert.equal(hopper.children.filter(node => node.nodeName === "title").length, 0, "the hopper has a tooltip of its own");
+    for (const kind of ["pump", "tracking"]) {
+      const control = allWith(hopper, "data-station-target", kind)[0];
+      assert.equal(control.children[0].nodeName, "title", `the ${kind} control lost its tooltip`);
+    }
+  }
+  const labels = hoppersIn(svg).map(hopper => hopper.getAttribute("aria-label"));
+  assert.equal(labels[0], "A1 · HX204");
+  assert.equal(labels[1], "A2 · no resin assigned");
+  // The name is nowhere else on the drawing.
+  const texts = [];
+  walk(svg, node => { if (node.nodeName === "text" || node.nodeName === "title") texts.push(node.textContent); });
+  assert.ok(!texts.some(t => /HX204/.test(t)));
 });
 
 test("the same hopper is taller when its profile says it is taller", () => {
@@ -2280,10 +2186,11 @@ test("the controls say the state as drawn and whether they may act, and their to
   assert.equal(controlOf(p1, "pump").getAttribute("data-able"), "false");
   assert.equal(controlOf(p1, "pump").children[0].textContent, "A1 · pump running", "no action offered, none promised");
 
-  // The hopper's own title carries the state too, so hover anywhere says it.
-  const own = h => h.children.find(c => c.nodeName === "title").textContent;
-  assert.equal(own(a1), "A1 · HX204 · 60% · tracked");
-  assert.equal(own(a2), "A2 · LD105 · 40% · pump off");
+  // The hopper's own label says the identity; its state is the controls'
+  // tooltips' and the hover panel's, never a second tooltip on the group.
+  assert.equal(a1.getAttribute("aria-label"), "A1 · HX204");
+  assert.equal(a2.getAttribute("aria-label"), "A2 · LD105");
+  assert.equal(a1.children.filter(c => c.nodeName === "title").length, 0);
 });
 
 test("tracking draws nothing on the receiver's head: no halo, no icon - the state is the vessel's wash and its run-down flow", () => {
@@ -2389,8 +2296,8 @@ test("a change in the offer alone redraws a hopper's controls: the data-state ca
   assert.deepEqual(hoppersIn(mount).map(h => [controlOf(h, "tracking").getAttribute("data-able"), controlOf(h, "pump").getAttribute("data-able")]), [["true", "false"], ["true", "false"]]);
   // Same state, same offer: nothing is redrawn.
   assert.deepEqual(render.patchStage(mount, model, { document: doc, hopperState: state, hopperControls: { tracking: true, pump: false }, stageAspect: 1.6 }), { hoppers: 0, layers: 1 });
-  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t||||||||" + "|TP");
-  assert.equal(parts.hopperStateKey({ track: true }), "t|||||||||");
+  assert.equal(parts.hopperStateKey({ track: true }, { tracking: true, pump: true }), "t|||||||||" + "|TP");
+  assert.equal(parts.hopperStateKey({ track: true }), "t||||||||||");
 });
 
 /* ----------------------------------------------------------------------
@@ -2408,10 +2315,8 @@ test("a hopper whose weight Smart Hoppers computed is marked is-smart, shows the
   const hoppers = hoppersIn(svg).slice(0, 3);
   assert.deepEqual(hoppers.map(h => /\bis-smart\b/.test(h.getAttribute("class"))), [true, false, true]);
   assert.deepEqual(textOf(svg, "station-hopper__weight").slice(0, 3), ["813", "500", "10"]);
-  const own = h => h.children.find(c => c.nodeName === "title").textContent;
-  assert.match(own(hoppers[0]), /· 813 lb \(computed from HX204's bulk density, 35 lb\/ft³\)/);
-  assert.doesNotMatch(own(hoppers[1]), /computed/);
-  assert.match(own(hoppers[2]), /· 10 lb \(computed\)/, "a result without its parts is still said to be computed");
+  // Where it came from is the hover panel's (station-hopper-info.js: "computed")
+  // and the Weights cards' to say; the drawing marks it and shows the number.
   // The key tells a computed weight from an entered one of the same value.
   assert.notEqual(parts.hopperStateKey({ weight: 800, effectiveWeight: 800, smartWeight: { value: 800 } }), parts.hopperStateKey({ weight: 800, effectiveWeight: 800, smartWeight: null }));
   const fs = require("node:fs");
@@ -2425,4 +2330,69 @@ test("a hopper whose weight Smart Hoppers computed is marked is-smart, shows the
     const smart = sheet.match(/--station-smart: (#[0-9a-f]{6});/);
     assert.notEqual(smart[1], tracking[1], `${theme}: computed is not the tracking colour`);
   }
+});
+
+/* ----------------------------------------------------------------------
+ *   The next recipe changes this hopper's resin: the receiver cap says so
+ * -------------------------------------------------------------------- */
+
+test("a hopper the plan re-resins carries is-next-changes, and no other does - the fact is in the state key, so a plan-only publish redraws it", () => {
+  const state = {
+    "A:0": { assigned: true, resinName: "HX", pct: 60, nextResinName: "LD", nextDiffers: true },
+    "A:1": { assigned: true, resinName: "LD", pct: 40, nextResinName: "LD", nextDiffers: false },
+    "A:2": { assigned: false, resinName: "", pct: 0, nextResinName: "MB", nextDiffers: true }
+  };
+  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 }), { hopperState: state });
+  const classesOf = id => String(hoppersIn(svg).find(h => h.getAttribute("data-hopper") === id).getAttribute("class")).split(/\s+/);
+  assert.deepEqual(classesOf("A1"), ["station-hopper", "is-next-changes", "is-unprofiled"]);
+  assert.deepEqual(classesOf("A2"), ["station-hopper", "is-unprofiled"]);
+  assert.deepEqual(classesOf("A3"), ["station-hopper", "is-unassigned", "is-next-changes", "is-unprofiled"]);
+  // The name is not drawn - only whether it differs is in the key.
+  assert.equal(parts.hopperStateKey({ nextDiffers: true }), "|||||||||n|");
+  assert.equal(parts.hopperStateKey({ nextDiffers: true, nextResinName: "LD" }), parts.hopperStateKey({ nextDiffers: true, nextResinName: "MB" }));
+  assert.notEqual(parts.hopperStateKey({ nextDiffers: true }), parts.hopperStateKey({ nextDiffers: false }));
+
+  // Patched: the plan changes its mind about A1 alone.
+  const doc = fakeDocument();
+  const mount = doc.createElement("div");
+  mount.ownerDocument = doc;
+  const config = literal({ layerCount: 1, layerAPosition: null, hopperCount: 3 });
+  const lineModel = model.buildLineModel(config);
+  render.mountStage(mount, lineModel, { document: doc, hopperState: state, stageAspect: 1.6 });
+  walk(mount, node => { node.replaceChild = (fresh, old) => { node.children[node.children.indexOf(old)] = fresh; return old; }; });
+  const settled = Object.assign({}, state, { "A:0": Object.assign({}, state["A:0"], { nextResinName: "HX", nextDiffers: false }) });
+  assert.deepEqual(render.patchStage(mount, lineModel, { document: doc, hopperState: settled, stageAspect: 1.6 }), { hoppers: 1, layers: 1 });
+  const a1 = hoppersIn(mount).find(h => h.getAttribute("data-hopper") === "A1");
+  assert.ok(!String(a1.getAttribute("class")).split(/\s+/).includes("is-next-changes"));
+  assert.deepEqual(render.patchStage(mount, lineModel, { document: doc, hopperState: state, stageAspect: 1.6 }), { hoppers: 1, layers: 1 });
+  assert.ok(String(hoppersIn(mount).find(h => h.getAttribute("data-hopper") === "A1").getAttribute("class")).split(/\s+/).includes("is-next-changes"));
+});
+
+test("the receiver's lid and lit strip carry a receiver-only class beside the shared one; the vessel's do not; the stylesheet lights the cap in the warning, statically, over pump-off", () => {
+  const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }));
+  const hopper = hoppersIn(svg)[0];
+  const receiver = allWith(hopper, "data-role", "hopper-receiver-drawing")[0];
+  const details = allWith(hopper, "data-role", "hopper-details")[0];
+  const classes = node => String(node.getAttribute("class") || "").split(/\s+/);
+  const receiverLid = receiver.children.find(n => n.nodeName === "ellipse" && classes(n).includes("station-hopper__lid"));
+  assert.deepEqual(classes(receiverLid), ["station-hopper__lid", "station-hopper__receiver-lid"]);
+  const receiverFace = receiver.children.find(n => classes(n).includes("station-hopper__metal-face"));
+  assert.deepEqual(classes(receiverFace), ["station-hopper__metal-face", "station-hopper__receiver-face"]);
+  const vesselLid = details.children.find(n => n.nodeName === "ellipse" && classes(n).includes("station-hopper__lid"));
+  assert.deepEqual(classes(vesselLid), ["station-hopper__lid"]);
+  assert.equal(allWithClassName(hopper, "station-hopper__receiver-lid").length, 1);
+  assert.equal(allWithClassName(hopper, "station-hopper__receiver-face").length, 1);
+
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__cap,\s*\.station-hopper\.is-next-changes \.station-hopper__receiver-lid \{\s*fill: var\(--station-warning\);\s*stroke: var\(--station-warning\);\s*\}/);
+  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__receiver-face \{\s*fill: color-mix\(in srgb, var\(--station-warning\) 60%, var\(--station-hopper-metal-lit\)\);\s*\}/);
+  assert.match(css, /\.station-hopper\.is-pump-off\.is-next-changes \.station-hopper__receiver-drawing \{\s*opacity: 1;\s*\}/);
+  // After pump-off's own cap and receiver rules, so it wins at equal specificity.
+  assert.ok(css.indexOf(".station-hopper.is-next-changes .station-hopper__cap") > css.indexOf(".station-hopper.is-pump-off .station-hopper__cap {"));
+  assert.ok(css.indexOf(".station-hopper.is-pump-off.is-next-changes") > css.indexOf(".station-hopper.is-pump-off .station-hopper__receiver-drawing {"));
+  // Static, and the cone is not touched: pump state stays readable there.
+  assert.doesNotMatch(css, /is-next-changes[^{]*\{[^}]*(animation|filter|transition)/);
+  assert.doesNotMatch(css, /is-next-changes[^{]*(receiver-cone|__fill\b|hose|__shell)/);
 });

@@ -111,6 +111,8 @@
    * scheduling.js is). Optional, as the Handbook is; it sets the deadline
    * only through the job controls' apply, so it dispatches nothing. */
   const changeoverCalculator = root.PolynStationChangeover || null;
+  // The hopper info panel: what a hopper runs, under it on hover.
+  const hopperInfo = root.PolynStationHopperInfo || null;
   const changeoverEstimate = root.PolynChangeoverEstimate || null;
   /* The Operator Handbook (station-handbook.js) and its first section, the
    * Recipe Book (station-recipe-book.js), and the bridge the book reads
@@ -337,6 +339,13 @@
    * face; ends with it. The resin to write is the rail's field's until
    * Confirm hands it over. */
   const bulk = { active: false, selected: new Set(), resin: "" };
+  /* Which cards show the OTHER recipe's resin under their rows - the
+   * plan's on the running face, the running job's on the Next face - by
+   * layer id: the eye at each card's foot. Session-only presentation,
+   * never persisted; cleared when the face changes (an entry means the
+   * other thing) and when the mode ends; pruned with the flipped list;
+   * kept across a rebuilt stage so a card comes back as it was. */
+  const showOther = new Set();
   /* The bulk field's handle, once built (start()) and handed to the rail;
    * told the selection's state by syncBulkField. */
   let bulkField = null;
@@ -377,6 +386,10 @@
   /* The Changeover Calculator's handle, once mounted: fed the same job
    * the header is, and told the clock moved. */
   let changeoverPanel = null;
+  /* The hopper info panel's handle, once mounted in the utility slot:
+   * shown beside the hopper under the pointer, hidden whenever the
+   * drawing under the pointer is replaced. */
+  let infoPanel = null;
 
   function feedJob(model, resolved) {
     const inputs = {
@@ -575,9 +588,11 @@
     // The open layer closes: the two modes do not share the stage.
     focus = null;
     // A face change is a different recipe under the same layer names:
-    // nothing armed carries across, and no selection either.
+    // nothing armed carries across, and no selection either - nor which
+    // cards show the other recipe, which is the other thing there.
     clearLayerCopy();
     endBulk();
+    showOther.clear();
     const were = blendEdit.active ? blendEdit.flipped.slice() : [];
     blendEdit.active = true;
     blendEdit.kind = face;
@@ -602,6 +617,7 @@
     leaveStageControl();
     clearLayerCopy();
     endBulk();
+    showOther.clear();
     const were = blendEdit.flipped.slice();
     blendEdit.active = false;
     blendEdit.kind = "blend";
@@ -628,6 +644,9 @@
     const wanted = on === undefined ? !isFlipped(id) : !!on;
     if (wanted === isFlipped(id)) return false;
     leaveStageControl();
+    // The hoppers under the pointer are about to go under glass (or come
+    // out from it); the panel does not outlive what it stood beside.
+    if (infoPanel) infoPanel.hide();
     blendEdit.flipped = wanted ? blendEdit.flipped.concat([id]) : blendEdit.flipped.filter(other => other !== id);
     // The layer's two faces trade in place: no redraw, the same turn the
     // rail's switch gives every layer at once.
@@ -808,6 +827,17 @@
 
   function bulkKeys() {
     return Array.from(bulk.selected);
+  }
+
+  /* The OTHER recipe's resin beside each hopper of the face the cards
+   * show (station-source.js otherResins): the plan's on the running face,
+   * the running job's on the Next face. Null on the Weights face, and
+   * whenever nothing is planned - then no card has an entry or an eye. */
+  function otherResinsFor(resolved) {
+    if (!source || typeof source.otherResins !== "function" || !resolved) return null;
+    if (blendEdit.kind === "next") return source.otherResins(resolved, "next");
+    if (blendEdit.kind === "blend") return source.otherResins(resolved, "current");
+    return null;
   }
 
   function bulkOptionsFor(layerId) {
@@ -1122,6 +1152,39 @@
     const layer = el.getAttribute("data-layer");
     if (!layer || layer !== stage.getState().focusLayer) return null;
     return { layer, hopper: el.getAttribute("data-hopper") };
+  }
+
+  /* The DRAWN hopper under the pointer, on any layer: the info panel is
+   * not a focused-view behaviour. Null off the drawing - the editor's
+   * rows carry data-hopper too, but not this role. */
+  function drawnHopperAt(target) {
+    const el = target && target.closest ? target.closest("[data-role='hopper']") : null;
+    return el && el.getAttribute("data-layer") ? el : null;
+  }
+
+  /* What the panel says of a drawn hopper, from the resolved state: the
+   * resin, and the run-down's three factors - line output, the layer's
+   * share, the hopper's - with the weight the run-down uses
+   * (parts.shownWeight: the entered receiver weight, or Smart Hoppers'
+   * computed one, said as computed). */
+  function hopperInfoEntry(el) {
+    const r = current.resolved;
+    if (!r) return null;
+    const parts = root.PolynStationMachineParts;
+    const layer = el.getAttribute("data-layer");
+    const index = el.getAttribute("data-hopper-index");
+    const runtime = (r.hopperState || {})[`${layer}:${index}`] || {};
+    const share = r.layerState && r.layerState[layer] ? r.layerState[layer].layerPct : 0;
+    return {
+      id: el.getAttribute("data-hopper"),
+      layer,
+      resinName: runtime.resinName || "",
+      pct: Number(runtime.pct) || 0,
+      layerPct: Number(share) || 0,
+      lineRate: r.job && Number.isFinite(r.job.lineRate) ? r.job.lineRate : 0,
+      weight: parts && typeof parts.shownWeight === "function" ? parts.shownWeight(runtime) : (Number(runtime.effectiveWeight) || 0),
+      computed: !!runtime.smartWeight
+    };
   }
 
   function highlight(key) {
@@ -1485,6 +1548,7 @@
     // turned over, and a line with no layers has nothing to be in the
     // mode with.
     blendEdit.flipped = blendEdit.flipped.filter(id => !!model && model.layers.some(layer => layer.id === id));
+    for (const id of Array.from(showOther)) if (!model || !model.layers.some(layer => layer.id === id)) showOther.delete(id);
     if (blendEdit.active && (!model || !model.layers.length)) blendEdit.active = false;
     // Nor an armed source, or a selected hopper, on a layer that is gone.
     if (layerCopy.layer && (!model || !model.layers.some(layer => layer.id === layerCopy.layer))) { layerCopy.recipe = null; layerCopy.layer = null; }
@@ -1547,7 +1611,13 @@
 
     const shown = stage.getState().shown;
     const openLayerGone = !!shown && (!model || !model.layers.some(layer => layer.id === shown));
-    if (kind === "values" && !openLayerGone && stage.getState().phase !== "opening" && stage.getState().phase !== "closing") {
+    /* A plan coming into being, or going, under the cards is structural
+     * for them: each card has an entry and an eye only while there is
+     * another recipe to show, and the value path cannot add or take a
+     * foot control. So it takes the full path, as a changed line does. */
+    const planTurned = blendEdit.active && blendEdit.kind !== "weights"
+      && !!otherResinsFor(current.resolved) !== !!otherResinsFor(resolved);
+    if (kind === "values" && !openLayerGone && stage.getState().phase !== "opening" && stage.getState().phase !== "closing" && !planTurned) {
       current = { model, resolved };
       render.patchStage(mounts.machine, model, {
         hopperState: resolved.hopperState,
@@ -1557,13 +1627,17 @@
         hopperControls: controlsFor(resolved),
         layerShare: shareFor(resolved)
       });
+      // A patched hopper is a new element; the one the panel stood beside
+      // may be gone, and its facts may have changed either way.
+      if (infoPanel) infoPanel.hide();
       if (editorHandle) editorHandle.update({ hopperState: resolved.hopperState });
       // The cards are editors too: the same update, around whatever
       // control is active in each.
       for (const id of Object.keys(cardHandles)) {
         cardHandles[id].update({
           hopperState: blendEdit.kind === "next" ? resolved.nextHopperState : resolved.hopperState,
-          smartHoppers: resolved.smartHoppers
+          smartHoppers: resolved.smartHoppers,
+          otherResins: otherResinsFor(resolved)
         });
       }
       // A patched hopper is a new element; the classes the boot file owns
@@ -1705,6 +1779,8 @@
    * what a recipe is. */
   function drawStage(focusLayer, extra) {
     highlighted = null;
+    // A render replaces every drawn hopper: nothing the panel stood beside survives it.
+    if (infoPanel) infoPanel.hide();
     // A render replaces the editor, so no control can still be active.
     editing = null;
     shareHandle = null;
@@ -1794,6 +1870,14 @@
            * rail's Bulk Edit, when on: the badges as toggles. */
           actions: menuFor(entry.id),
           bulk: bulkOptionsFor(entry.id),
+          /* The other recipe's resin beside each row - the plan's on the
+           * running face, the running job's on the Next face - and
+           * whether this card shows it: the eye's state, kept here so a
+           * rebuilt stage shows what the operator opened. */
+          otherResins: otherResinsFor(current.resolved),
+          otherRecipe: cardRecipe === "next" ? "current" : "next",
+          showOther: showOther.has(entry.id),
+          onShowOther: on => { if (on) showOther.add(entry.id); else showOther.delete(entry.id); },
           onEditing: record => {
             editing = record ? Object.assign({
               recipe: cardRecipe,
@@ -1971,6 +2055,24 @@
       if (!hopperAt(event.relatedTarget)) highlight(null);
     });
 
+    /* The info panel follows the pointer from drawn hopper to drawn
+     * hopper, on any layer, and leaves with it: a target that is not a
+     * hopper - the stage between them, a mixer - hides it, as does the
+     * pointer leaving the stage. It hangs from the hopper's caption and
+     * keeps clear of the rail. Nothing is held: the panel is told the
+     * hopper's facts each time. */
+    mounts.machine?.addEventListener("mouseover", event => {
+      if (!infoPanel) return;
+      const el = drawnHopperAt(event.target);
+      if (el) {
+        infoPanel.show(hopperInfoEntry(el), el, {
+          anchor: el.querySelector("[data-role='hopper-caption']"),
+          clear: railPanel ? railPanel.element : null
+        });
+      } else infoPanel.hide();
+    });
+    mounts.machine?.addEventListener("mouseleave", () => { if (infoPanel) infoPanel.hide(); });
+
     // Escape leaves whatever is open, which is the exit people try first -
     // including a layer that is still on its way open, which turns around.
     doc.addEventListener("keydown", event => {
@@ -2081,6 +2183,13 @@
         onOpenChange: open => jobPanel.setLaunched(open)
       });
       if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
+    }
+
+    /* The hopper info panel, in the same slot: laid over the stage, inert
+     * to the pointer, placed beside whichever hopper the pointer rests on. */
+    if (hopperInfo && mounts.utility) {
+      infoPanel = hopperInfo.create(doc, { mount: mounts.utility });
+      if (infoPanel) mounts.utility.appendChild(infoPanel.element);
     }
 
     /* The machine utility rail, in its own slot over the stage, stacked

@@ -800,6 +800,114 @@
   border-radius: var(--station-radius-sm);
 }
 
+/* ---------------------------------------------------------------------
+ *   The other recipe's resin, under the row's own
+ * -------------------------------------------------------------------
+ * "NEXT MS0400" under a running row, "CURRENT …" under a planned one,
+ * "—" where the other recipe leaves the hopper empty: the grid's
+ * cross-resin overlay (styles-hoppers.css, .splitCellCrossResin), on the
+ * card. Every row carries the entry (station-focus-editor.js); it is
+ * seen only where the two recipes differ AND the card's eye is open -
+ * two attributes, and this rule. The tag is the timeline's "upcoming"
+ * on the running face; on the Next face, where the entry is the running
+ * job's, the muted text. */
+
+.station-editor__other {
+  display: none;
+  align-items: baseline;
+  gap: var(--station-space-1);
+  min-width: 0;
+  line-height: var(--station-line-tight);
+}
+
+.station-editor[data-show-other="true"] .station-editor__other[data-differs="true"] {
+  display: flex;
+}
+
+.station-editor__other-tag {
+  flex: none;
+  color: var(--station-timeline-upcoming, var(--station-info));
+  font-size: var(--station-text-2xs);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-editor[data-recipe="next"] .station-editor__other-tag {
+  color: var(--station-text-muted);
+}
+
+.station-editor__other-code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- The eye: the second quiet control at the foot, on the right ----
+ * The layer menu's recipe - faded until the card is hovered, focused or
+ * the eye is open - pushed to the foot's far side. Two spans draw it:
+ * the lens, an outline; the pupil, a dot; open, the lens fills. */
+
+.station-root .station-editor__eye {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2em;
+  min-height: 1.6em;
+  margin: 0 calc(-1 * var(--station-space-1)) 0 auto;
+  padding: var(--station-space-1) var(--station-space-2);
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  background: none;
+  color: var(--station-text-muted);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out, background-color var(--station-motion-ack) ease-out;
+}
+
+.station-editor:hover .station-editor__eye,
+.station-root .station-editor__eye:hover,
+.station-root .station-editor__eye:focus-visible {
+  opacity: 1;
+  color: var(--station-text);
+}
+
+.station-root .station-editor__eye:hover {
+  background: var(--station-handbook-control-active, var(--station-accent-soft));
+}
+
+/* Open: lit in the entries' own colour, and the lens fills. */
+.station-root .station-editor__eye[aria-pressed="true"] {
+  opacity: 1;
+  color: var(--station-timeline-upcoming, var(--station-info));
+  --station-eye-fill: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.station-editor__eye-lens {
+  display: block;
+  width: 1.1em;
+  height: 0.62em;
+  border: var(--station-stroke) solid currentColor;
+  border-radius: 100% / 100%;
+  background: var(--station-eye-fill, transparent);
+}
+
+.station-editor__eye-pupil {
+  position: absolute;
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .station-layer-menu {
   position: relative;
   display: inline-flex;

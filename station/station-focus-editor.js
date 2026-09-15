@@ -217,12 +217,20 @@
    * belongs to a resin - the application's rule, applied to what is shown
    * as well as to what may be set - so a hopper with no resin shows none.
    */
-  function blendFor(layer, hopperState) {
+  function blendFor(layer, hopperState, otherResins) {
     if (!layer) return null;
     const rows = layer.hoppers.map(hopper => {
-      const runtime = (hopperState && hopperState[`${layer.id}:${hopper.index}`]) || {};
+      const key = `${layer.id}:${hopper.index}`;
+      const runtime = (hopperState && hopperState[key]) || {};
       const pct = Number.isFinite(runtime.pct) ? runtime.pct : 0;
       const resin = runtime.resinName || "";
+      /* The OTHER recipe's resin for this slot, when the caller hands the
+       * map (station-source.js otherResins): the plan's beside a running
+       * row, the running one beside a planned row. Null means the feature
+       * is absent from this editor, not that nothing differs. */
+      const other = otherResins && typeof otherResins === "object"
+        ? { resin: (otherResins[key] && otherResins[key].resin) || "", differs: !!(otherResins[key] && otherResins[key].differs) }
+        : null;
       return {
         id: hopper.id,
         index: hopper.index,
@@ -233,7 +241,8 @@
         // Runtime state, carried beside the recipe values so the inspector
         // can say it; not part of what "assigned" means.
         track: !!runtime.track,
-        pumpOff: !!runtime.pumpOff
+        pumpOff: !!runtime.pumpOff,
+        other
       };
     });
     const total = rows.reduce((sum, row) => sum + row.pct, 0);
@@ -702,6 +711,23 @@
     resinBlock.appendChild(resinButton);
     main.appendChild(resinBlock);
 
+    /* The other recipe's resin, under the row's own: "next MS0400" on the
+     * running face, "current …" on the Next face, "—" where the other
+     * recipe leaves the hopper empty. Built on every row whenever the
+     * editor has the map, so a fresh card and a patched one are the same
+     * DOM; whether it is SEEN is two attributes' - the row's data-differs
+     * and the card's data-show-other, the eye's - and the stylesheet's
+     * (focus-editor.css). Text, not a control: a drag from it is a drag
+     * of the row. */
+    if (entry.other) {
+      const other = element(doc, "div", "station-editor__other");
+      other.appendChild(text(doc, "em", "station-editor__other-tag", deps.otherRecipe));
+      other.appendChild(text(doc, "b", "station-editor__other-code", ""));
+      writeOther(other, entry);
+      row.other = other;
+      main.appendChild(other);
+    }
+
     /* The source, under the resin: secondary, quiet when absent. Only a
      * hopper that has a resin can have a source - the application's rule,
      * and what setSource refuses - so a hopper without one does not get a
@@ -870,7 +896,18 @@
     row.item.classList.toggle("is-movable", !!(deps.able.move && entry.assigned));
     writeResinButton(doc, row.resinButton, entry, deps.able.resin);
     if (row.sourceButton) writeSourceButton(row.sourceButton, entry, deps.able.source);
+    if (row.other && entry.other) writeOther(row.other, entry);
     if (row.pctInput && protect !== "pct") row.pctInput.value = String(round(entry.pct));
+  }
+
+  /* The other recipe's entry: the code, and whether it differs from the
+   * row's own - which is the only case it is shown in. */
+  function writeOther(node, entry) {
+    const differs = !!(entry.other && entry.other.differs);
+    node.setAttribute("data-differs", differs ? "true" : "false");
+    if (differs) node.removeAttribute("aria-hidden");
+    else node.setAttribute("aria-hidden", "true");
+    node.children[1].textContent = (entry.other && entry.other.resin) || "—";
   }
 
   const SLOT_LABEL = { resin: "resin", pct: "percentage", source: "source", move: "arrangement" };
@@ -1044,13 +1081,32 @@
    *        the rail's Bulk Edit. While active every badge is a selection
    *        toggle; `selected` lists "<layer>:<index>" keys; onToggle(index)
    *        is the badge's click. The handle's setBulk() changes it in place.
-   * @returns {{ element: Element, blend: object, note: function, update: function, setBulk: function, able: object, variant: string }}
+   * @param {object} [options.otherResins] the OTHER recipe's resin by
+   *        "<layer>:<index>" - { resin, differs } - as station-source.js
+   *        otherResins() answers it: the plan's beside a running card, the
+   *        running job's beside a planned one. Compact face only. Given,
+   *        every row carries the entry and the card's foot carries the eye
+   *        that shows it; absent or null, neither exists.
+   * @param {string} [options.otherRecipe] "next" | "current": the word on
+   *        the entry and in the eye's label. Default "next".
+   * @param {boolean} [options.showOther] whether the entries start shown:
+   *        session state the boot file keeps, so a rebuilt card shows what
+   *        the operator opened.
+   * @param {function} [options.onShowOther] (boolean) the eye was clicked.
+   * @returns {{ element: Element, blend: object, note: function, update: function, setBulk: function, setShowOther: function, showOther: function, able: object, variant: string }}
    */
   function create(doc, options) {
     const settings = options || {};
-    const blend = blendFor(settings.layer, settings.hopperState);
+    const variant = settings.variant === "compact" ? "compact" : "full";
+    // The other recipe is the compact face's alone: the full editor stands
+    // in the workspace, where the plan has its own face.
+    const otherResins = variant === "compact" && settings.otherResins && typeof settings.otherResins === "object"
+      ? settings.otherResins
+      : null;
+    const otherRecipe = settings.otherRecipe === "current" ? "current" : "next";
+    const blend = blendFor(settings.layer, settings.hopperState, otherResins);
     if (!blend) return null;
-    const state = { layer: blend.layer, blend };
+    const state = { layer: blend.layer, blend, otherResins };
 
     /* The list stays inside the <foreignObject> that carries the editor.
      *
@@ -1071,7 +1127,6 @@
       return measureRect(box);
     };
 
-    const variant = settings.variant === "compact" ? "compact" : "full";
     const recipe = settings.recipe === "current" || settings.recipe === "next" ? settings.recipe : null;
     /* The compact editor is a face of the layer's card, and the card is
      * the console's glass (glass.css) - the material the Handbook and the
@@ -1118,6 +1173,8 @@
       reason: offer.reason,
       // The source line is the full editor's; the compact face has none.
       withSource: variant !== "compact",
+      // The word on the other recipe's entry.
+      otherRecipe,
       /* Every command from this editor is addressed here, once: the recipe
        * the boot file named, and this layer. A row adds its hopper. */
       dispatch: (command, args) => commands.dispatch(command, Object.assign({ recipe, layer: blend.layer.id }, args))
@@ -1362,19 +1419,44 @@
     rootEl.appendChild(note);
     /* The actions slot: whatever the caller built to stand at the card's
      * foot (the layer menu), placed last so it takes the room the rows
-     * leave. Nothing here reads it. */
-    if (settings.actions && typeof settings.actions === "object") {
+     * leave, and - when the editor has the other recipe - the eye at the
+     * foot's right that shows or hides its entries. Nothing here reads
+     * the caller's element. */
+    const eye = otherResins ? buildEye(doc, rootEl, otherRecipe, settings) : null;
+    if (otherResins) rootEl.setAttribute("data-show-other", settings.showOther ? "true" : "false");
+    if ((settings.actions && typeof settings.actions === "object") || eye) {
       const actions = element(doc, "div", "station-editor__actions");
-      actions.appendChild(settings.actions);
+      if (settings.actions && typeof settings.actions === "object") actions.appendChild(settings.actions);
+      if (eye) actions.appendChild(eye);
       rootEl.appendChild(actions);
     }
     rootEl.classList.toggle("is-selectable", deps.bulk.active);
+
+    /* The eye's state, on the card: the attribute the stylesheet reveals
+     * the entries by, the button's pressed state and its label. */
+    function setShowOther(on) {
+      if (!otherResins) return;
+      rootEl.setAttribute("data-show-other", on ? "true" : "false");
+      if (eye) {
+        eye.setAttribute("aria-pressed", on ? "true" : "false");
+        const label = `${on ? "Hide" : "Show"} ${otherRecipe} resin`;
+        eye.setAttribute("aria-label", label);
+        eye.setAttribute("title", label);
+      }
+    }
+    function showOther() { return rootEl.getAttribute("data-show-other") === "true"; }
+    if (eye) setShowOther(!!settings.showOther);
 
     /* Apply new canonical values to the rows that exist. See the header:
      * the active control keeps its live value, and a row whose shape must
      * change under an active control waits until the control is left. */
     function update(next) {
-      const fresh = blendFor(state.layer, next && next.hopperState);
+      // The other recipe's map travels with the state; a publish that
+      // does not carry it keeps the one the card has.
+      if (next && "otherResins" in next && otherResins) {
+        state.otherResins = next.otherResins && typeof next.otherResins === "object" ? next.otherResins : {};
+      }
+      const fresh = blendFor(state.layer, next && next.hopperState, otherResins ? state.otherResins : null);
       if (!fresh) return null;
       state.blend = fresh;
       fresh.rows.forEach((entry, index) => { if (rows[index]) refreshRow(doc, rows[index], entry, state, deps); });
@@ -1418,7 +1500,36 @@
       }
     }
 
-    return { element: rootEl, blend, note: deps.note, update, setBulk, able: offer.able, variant };
+    return { element: rootEl, blend, note: deps.note, update, setBulk, setShowOther, showOther, able: offer.able, variant };
+  }
+
+  /* The eye: a quiet control at the card's foot, beside the layer menu,
+   * that shows the other recipe's entries on every row that differs.
+   * Drawn by the stylesheet from two spans, like the menu's dots; its
+   * state is the card's data-show-other, which setShowOther keeps with
+   * the pressed state and the label. Session-only: the boot file is told
+   * and keeps it for a rebuilt card, and nothing is persisted. */
+  function buildEye(doc, rootEl, otherRecipe, settings) {
+    const eye = element(doc, "button", "station-editor__eye", {
+      type: "button",
+      "data-action": "show-other",
+      "aria-pressed": "false",
+      "aria-label": `Show ${otherRecipe} resin`,
+      title: `Show ${otherRecipe} resin`
+    });
+    eye.appendChild(element(doc, "span", "station-editor__eye-lens", { "aria-hidden": "true" }));
+    eye.appendChild(element(doc, "span", "station-editor__eye-pupil", { "aria-hidden": "true" }));
+    eye.addEventListener("click", event => {
+      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+      const on = rootEl.getAttribute("data-show-other") !== "true";
+      rootEl.setAttribute("data-show-other", on ? "true" : "false");
+      eye.setAttribute("aria-pressed", on ? "true" : "false");
+      const label = `${on ? "Hide" : "Show"} ${otherRecipe} resin`;
+      eye.setAttribute("aria-label", label);
+      eye.setAttribute("title", label);
+      if (typeof settings.onShowOther === "function") settings.onShowOther(on);
+    });
+    return eye;
   }
 
   return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };

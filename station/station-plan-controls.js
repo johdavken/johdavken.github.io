@@ -87,7 +87,9 @@
    * nextHopperState, keyed "<layer>:<index>") and the two layer-share
    * maps. The application's own summary (next-recipe.js) decides what a
    * promotion does; this only words the rail's confirmation. Null when
-   * nothing is planned.
+   * nothing is planned. Counts literal writes - a code that differs only
+   * in case is still written - where the drawing's "next differs" and the
+   * cards' entry (station-source.js, sameResin) read the two as one resin.
    */
   function summarize(resolved) {
     const r = resolved || {};

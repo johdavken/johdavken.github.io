@@ -38,9 +38,9 @@
   <link rel="stylesheet" href="styles/base.css?v=0.5.0">
   <link rel="stylesheet" href="styles/shell.css?v=0.12.1">
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/components/hopper.css?v=0.26.0">
+  <link rel="stylesheet" href="styles/components/hopper.css?v=0.27.0">
   <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.15.0">
-  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.11.0">
+  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.12.0">
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.1">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.6.1">
   <link rel="stylesheet" href="styles/components/job-controls.css?v=0.4.0">
@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="styles/components/handbook.css?v=0.9.1">
   <link rel="stylesheet" href="styles/components/weights.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
+  <link rel="stylesheet" href="styles/components/hopper-info.css?v=0.2.0">
   <!-- Sudo: the Handbook's administrator page, in the Handbook's language. -->
   <link rel="stylesheet" href="styles/components/sudo.css?v=0.1.3">
   <!-- The machine utility rail over the Handbook's launcher: the recipe
@@ -125,16 +126,16 @@
        in tools/station-extruder/ and tools/station-mixer/. -->
   <script src="station-extruder-assets.js?v=0.3.0" defer></script>
   <script src="station-mixer-assets.js?v=0.2.0" defer></script>
-  <script src="station-machine-layout.js?v=0.18.0" defer></script>
-  <script src="station-machine-parts.js?v=0.28.0" defer></script>
+  <script src="station-machine-layout.js?v=0.18.1" defer></script>
+  <script src="station-machine-parts.js?v=0.29.0" defer></script>
   <script src="station-render.js?v=0.11.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
   <script src="station-face-turn.js?v=0.2.0" defer></script>
-  <script src="station-focus-editor.js?v=0.8.1" defer></script>
+  <script src="station-focus-editor.js?v=0.9.0" defer></script>
   <script src="station-hopper-controls.js?v=0.2.0" defer></script>
   <!-- The plan controls: the seam for the rail's two moves under the Next
        face - promote the plan, copy the running recipe into it. -->
-  <script src="station-plan-controls.js?v=0.1.0" defer></script>
+  <script src="station-plan-controls.js?v=0.1.1" defer></script>
   <!-- The blend actions: the seam for a card's Copy / Paste / Reset and
        the rail's Bulk Edit; the layer menu each blend card carries. -->
   <script src="station-blend-actions.js?v=0.1.0" defer></script>
@@ -150,6 +151,8 @@
   <script src="station-machine-rail.js?v=0.7.1" defer></script>
   <script src="station-rundown.js?v=0.4.0" defer></script>
   <script src="station-rundown-timeline.js?v=0.5.1" defer></script>
+  <!-- The hopper info panel: the run-down's arithmetic beside a hopper on hover. -->
+  <script src="station-hopper-info.js?v=0.2.0" defer></script>
   <script src="station-job-controls.js?v=0.3.0" defer></script>
   <!-- The Changeover Calculator: the header readout's open form. -->
   <script src="station-changeover.js?v=0.2.0" defer></script>
@@ -173,7 +176,7 @@
   <script src="station-sudo.js?v=0.2.2" defer></script>
   <script src="station-handbook.js?v=0.3.0" defer></script>
   <script src="station-demo-lines.js?v=0.3.4" defer></script>
-  <script src="station-source.js?v=0.10.0" defer></script>
+  <script src="station-source.js?v=0.11.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
        and deliberately NOT by station-host.js, so the real application cannot
        reach it. Delete this tag and the file to remove it. -->
@@ -181,7 +184,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.28.4" defer></script>
+  <script src="station.js?v=0.29.1" defer></script>
 </head>
 <body>
 
