@@ -729,7 +729,14 @@ test("the grip is drawn in tokens on the panel's top edge, takes the pointer for
 
 test("the Handbook exists only inside Station: loaded by the host and the harness, never by index.html, and its CSS names nothing of the floor UI", () => {
   const indexHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
-  assert.doesNotMatch(indexHtml, /station-handbook|station-recipe-book|handbook\.css|Operator Handbook|station-book/);
+  // The Changelog panel is prose about the feature, not a load of it, and is
+  // the one place index.html may say the Handbook's name. Everything outside
+  // that panel must still carry no module, stylesheet or markup of it.
+  const changelogStart = indexHtml.indexOf('<details class="block card workspacePanel" id="changelogBlock">');
+  assert.notEqual(changelogStart, -1, "expected the Changelog panel");
+  const changelogEnd = indexHtml.indexOf("</details>", changelogStart);
+  const outsideChangelog = indexHtml.slice(0, changelogStart) + indexHtml.slice(changelogEnd);
+  assert.doesNotMatch(outsideChangelog, /station-handbook|station-recipe-book|handbook\.css|Operator Handbook|station-book/);
   const host = fs.readFileSync(path.join(ROOT, "station-host.js"), "utf8");
   assert.match(host, /"station\/station-handbook\.js"/);
   // The host loads Station only under ?view=station, and Station's shell

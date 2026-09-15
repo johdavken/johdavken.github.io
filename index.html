@@ -495,7 +495,7 @@
       <small id="sudoAccessStatus">Administrator sign-in</small>
     </button>
     <div class="workspaceNavFooter">
-      <small class="desktopRailVersion" aria-label="App version">v1.1.25</small>
+      <small class="desktopRailVersion" aria-label="App version">v1.1.26</small>
       <div class="workspaceNavFooterDivider" role="separator" aria-hidden="true"></div>
       <!-- Station is the same document with ?view=station (station-host.js);
            a plain relative link is the whole route, the mirror of Station's
@@ -1404,7 +1404,24 @@
 
     <div class="blockBody">
       <div class="changelogBody">
-        <h3>(v1.1.25) (September 8, 2026) - Confluence identity &amp; the Ayu theme family</h3>
+        <h3>(v1.1.26) (September 9-15, 2026) - Station (Beta)</h3>
+        <ul>
+          <li><strong>Station (Beta)</strong> is a new desktop console for the line, opened from the <strong>Station (Beta)</strong> link at the foot of the side rail; the <strong>Legacy</strong> link beside its name is the way back. It draws the line as it stands on the floor &mdash; every layer&rsquo;s hoppers at true proportion from the vessel circumference, with flat bottoms and a clear 3&Prime; discharge hose, under their mixer and extruder &mdash; over the same active job, recipes, receiver weights and RT Sync workspace the rest of the app uses. It replaces the desktop-only <strong>Dashboard</strong> overview, which is removed.</li>
+          <li>The drawn hopper is the control: click the vessel to track it and the receiver to mark it pumped off. A tracked hopper shows material flowing down the drum; one past its start-by time with the pump still running turns the danger colour. The caption carries the receiver weight in pounds (tinted when Smart Hoppers computed it), and hovering it opens a small panel with the hopper&rsquo;s resin, output, blend and weight.</li>
+          <li>A run-down <strong>timeline</strong> across the foot of the stage marks where each tracked hopper is expected to run empty and where the changeover falls, at a <strong>6H</strong> or <strong>12H</strong> scale; a marker that has passed Now with the pump still running pings. <strong>RESET</strong> under the scale clears tracking on a confirming second click.</li>
+          <li>The header reads <strong>OUTPUT</strong> and <strong>CHANGEOVER</strong> as one ribbon. The changeover readout opens a <strong>Changeover Calculator</strong> that shares the wizard&rsquo;s inputs, with a manual deadline override; the line console at the right shows the connected line, sync status and device count and offers refresh, reconnect and a join code / QR through the app&rsquo;s own RT Sync.</li>
+          <li>The <strong>machine rail</strong> docks in the stage&rsquo;s corner. <strong>Current Recipe</strong> turns every layer over to a glass blend card: edit resin and blend in place, drag rows to swap, Copy / Paste / Reset a layer from the card&rsquo;s menu, or <strong>Bulk Edit</strong> one resin into selected hoppers. <strong>Next Recipe</strong> does the same over the planned recipe, with <strong>Load Next into Current</strong> and <strong>Copy Current into Next</strong> beside it. <strong>Weights</strong> turns the layers to weight cards, with the <strong>Smart Hoppers</strong> switch on the rail. Layer percentages edit in place in the layer header, and Hopper 1 stays automatic.</li>
+          <li>The next recipe is read against the current: wherever the next resin differs, that hopper&rsquo;s receiver cap turns the warning colour, and an eye on the blend card reveals the NEXT (or CURRENT) resin under each row.</li>
+          <li>The <strong>Operator Handbook</strong> opens over the lower stage and can be dragged taller. Its pages: <strong>Recipe Book</strong> (the workspace&rsquo;s shared recipes &mdash; Save Current, Load into Current or Next, Update, Rename, Duplicate, Delete), <strong>Weights</strong> (Save Current Weights and the line&rsquo;s Weight Profiles), <strong>Resin Totals</strong> (production, scrap and per-material totals from the app&rsquo;s own calculation), <strong>Appearance</strong>, and <strong>Sudo</strong>.</li>
+          <li><strong>Sudo</strong> carries three administrator tools behind the same admin sign-in the rest of the app uses &mdash; <strong>Workspaces</strong> (Workspace Management), <strong>Line Configuration</strong>, and <strong>Resin Database</strong>. Each change is confirmed in place and runs through the app&rsquo;s existing services.</li>
+          <li>Six Station themes in three families &mdash; <strong>Industrial Light / Dark</strong>, <strong>Gruvbox Light / Dark</strong>, and <strong>Engineering Paper / Blueprint</strong> &mdash; chosen from a gallery of miniature Stations under Appearance. Station&rsquo;s own theme is separate from the app theme.</li>
+          <li>Every Station edit runs through one command path in the app, so RT Sync, undo history, automatic Hopper 1 and Smart Hoppers behave exactly as they do in Recipe Setup; Station writes nothing to the cloud on its own.</li>
+          <li><strong>Line Configuration</strong> gains <strong>Hoppers per layer</strong>, in both the Sudo tool and the desktop dialog: a line that runs four hoppers on a core layer is recorded that way, and Station draws the four centred in a bank that keeps its six-slot width.</li>
+          <li>Desktop status bar: a small refresh button beside the RT Sync readout forces a sync refresh while connected, and clicking the <strong>Output</strong> or <strong>Changeover</strong> readout reveals its input again (it had blanked until reload since v1.1.25).</li>
+          <li>The desktop side-rail mark is 25% larger and the <strong>Confluence</strong> logo animates. The public Privacy Policy and Delete Data pages follow Industrial Slate&rsquo;s body-text colour.</li>
+        </ul>
+
+        <h3>(v1.1.25) (September 4-8, 2026) - Confluence identity, the Ayu theme family &amp; Recipe grid Copy / Paste</h3>
         <ul>
           <li>New <strong>Confluence</strong> app mark replaces the Layer Stack logo in the desktop side rail and the mobile header: five resin streams converging on a layered coextrusion die, inside a calibration ring. It is drawn from one shared inline symbol, so both marks stay identical and recolor themselves to whichever theme is active.</li>
           <li>Every app icon follows it &mdash; the browser tab favicon, the installed <strong>PWA</strong> and <strong>iOS Home Screen</strong> icons, and the <strong>Android</strong> launcher icon (adaptive foreground and legacy raster alike). The tab favicon now follows your system&rsquo;s light or dark setting.</li>
@@ -1414,6 +1431,10 @@
           <li><strong>Station Console</strong> buttons read as blue-slate rather than graphite on Ayu Light&rsquo;s near-white surfaces, at equal or slightly better contrast than before.</li>
           <li>The public <strong>Privacy Policy</strong> and <strong>data deletion</strong> pages carry the new mark too, so the app and its documents match.</li>
           <li>The desktop side rail now lays out identically in every theme. <strong>Gruvbox</strong>, <strong>Gruvbox Light</strong>, <strong>Industrial Slate</strong> and <strong>Dark</strong> were quietly drawing it with larger icons, wider letter-spacing and their own rail padding, which pushed <strong>Resin Totals</strong> onto a second line and shortened the foldaway rows. Those four themes now recolor the rail without resizing it.</li>
+          <li>Tablet and desktop Recipe grid: the per-layer <strong>Match X</strong> button is replaced by <strong>Copy / Paste / Cancel</strong>. Every layer reads COPY; arm one and it reads CANCEL while every other layer reads PASTE, so any layer can be pasted into any other. Pasting into a 3-layer line&rsquo;s core carries the resins only and leaves its percentages alone.</li>
+          <li>New <strong>Recipe layer headers</strong> display setting, <strong>Left</strong> or <strong>Top</strong>, for the tablet and desktop Recipe panel. <strong>Print Recipe</strong> now asks for Current, Next, or Both; the layer percentage rides beside the layer letter, and the printout follows the on-screen header orientation. Fixed a table-layout bug that collapsed transposed layer headers into one stacked column.</li>
+          <li><strong>Promote to Current</strong> is renamed <strong>Load Next Recipe</strong>. The Edit toolbar&rsquo;s right group is one pill &mdash; Rearrange / Undo / Redo / Clear / Empty / Reset &mdash; and the inset ring on tracked cells is dropped; the hopper badge is the sole tracked marker.</li>
+          <li>Mobile Recipe: hopper badge and blend % share the cell&rsquo;s top line with the resin name full-width below; the first layer&rsquo;s percentage is automatic (100 minus the rest), as Hopper 1 is; tracked hoppers take a full-cell tint. Scan / Load Next / Edit are 48&times;44 station-console keys, tabs are taller with larger icons, and <strong>Copy hoppers / Paste hoppers</strong> in the Edit toolbar replace the per-layer Match button. The Recipe Book gets a Load / Update / Rename / Duplicate / Delete key row for the selected recipe in place of per-row buttons.</li>
         </ul>
 
         <h3>(v1.1.24a) (September 3, 2026) - Recipe Setup rework</h3>
@@ -2337,7 +2358,7 @@
   <a class="mobileFooterMetaLink" href="https://resin.tools/privacy" target="_blank" rel="noopener">Privacy Policy</a>
   <span class="mobileFooterMetaSep" aria-hidden="true">·</span>
   <a class="mobileFooterMetaLink" href="https://resin.tools/privacy/delete-data/" target="_blank" rel="noopener">Delete Data</a>
-  <span class="mobileFooterVersion" aria-label="App version">v1.1.25</span>
+  <span class="mobileFooterVersion" aria-label="App version">v1.1.26</span>
 </div>
 <footer class="footerBar" aria-label="App navigation">
   <button type="button" id="appFooterDisplay" class="appDockControl" aria-expanded="false" aria-controls="displaySheet" aria-label="Display settings">
