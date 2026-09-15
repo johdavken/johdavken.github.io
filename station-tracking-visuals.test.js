@@ -275,8 +275,9 @@ test("an untracked hopper draws no flow; a tracked one draws a column of large, 
   const details = tracked.g.querySelector("[data-role='hopper-details']");
   assert.ok(details.querySelector(".station-hopper__port") && details.querySelector(".station-hopper__fill-valve") && details.querySelector(".station-hopper__clamp") && details.querySelector(".station-hopper__band"),
     "the ports, the fill valve, the clamps and the bands are the hardware painted over the flow");
-  // The hopper's title still says tracked; the state key still carries it.
-  assert.match(tracked.g.querySelector("title").textContent, /· tracked/);
+  // The tracking control's tooltip still says tracked (the hopper has no
+  // title of its own: the hover panel is the reading); the state key still carries it.
+  assert.match(tracked.g.querySelector("[data-station-target='tracking']").querySelector("title").textContent, /· tracked/);
   assert.match(tracked.g.getAttribute("data-state"), /^t\|/);
   // The drawing is inert to the pointer as a whole (hopper.css covers descendants).
   assert.equal(tracked.g.querySelector(".station-hopper__drawing").getAttribute("pointer-events"), "none");
@@ -840,4 +841,19 @@ test("the boot file writes the marks from the timeline's projection and nothing 
   const renderer = read("station/station-render.js").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(renderer, /changeover|Date\.now|hopperRundown|is-late/);
   assert.match(renderer, /for \(const carried of \["is-highlighted", "is-overdue"\]\)/);
+});
+
+test("the receiver cap that says the next recipe changes the resin is the theme's warning, defined in every theme and never the danger overdue owns, and holds against the receiver's steel", () => {
+  const css = read("station/styles/components/hopper.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(css, /is-next-changes[^{]*\{[^}]*--station-danger/, "the cap borrows overdue's colour");
+  assert.doesNotMatch(css, /is-next-changes[^{]*\{[^}]*(animation|@keyframes|filter)/);
+  for (const theme of fs.readdirSync(path.join(ROOT, "station/styles/themes")).filter(n => n.endsWith(".css"))) {
+    const sheet = read(`station/styles/themes/${theme}`);
+    const token = name => { const m = new RegExp(`${name}: (#[0-9a-f]{6});`, "i").exec(sheet); assert.ok(m, `${theme} lacks ${name}`); return m[1]; };
+    const warning = token("--station-warning");
+    // The cap is drawn in the hopper's metal (hopper.css: steel-light 72%, hopper-stroke 28%).
+    const metal = mixHex(token("--station-steel-light"), token("--station-hopper-stroke"), 0.72);
+    assert.ok(contrast(warning, metal) >= 2, `${theme}: the warning (${warning}) at ${contrast(warning, metal).toFixed(2)}:1 against the receiver's steel`);
+    assert.notEqual(warning.toLowerCase(), token("--station-danger").toLowerCase(), `${theme}: the warning is the danger`);
+  }
 });

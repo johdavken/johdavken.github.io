@@ -1,0 +1,89 @@
+/* The hopper info panel (station-hopper-info.js): what a hopper is
+ * running, said beside it while the pointer rests on it.
+ *
+ * A small glass card - the console's one material (glass.css), worn as a
+ * class; nothing of it is restated here - placed from the hopper's own
+ * screen box: under its caption, centred on its column, or above the
+ * hopper where there is no room under it - never beside it, where a
+ * bank's other hoppers stand. Its rows are the timeline detail's rows
+ * (rundown.css) at the timeline detail's type, so the same fact reads
+ * the same in both places. Inert to the pointer, container and panel
+ * both: the pointer never leaves the hopper for the panel, and the
+ * panel never blocks the click under it.
+ */
+
+.station-hopper-info {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.station-hopper-info__panel {
+  position: absolute;
+  top: var(--station-info-y, 0);
+  left: var(--station-info-x, 0);
+  z-index: 6;
+  width: 248px;
+  padding: var(--station-space-2) var(--station-space-3);
+  color: var(--station-text);
+  font-family: var(--station-font);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+  pointer-events: none;
+}
+
+.station-hopper-info__head {
+  display: flex;
+  gap: var(--station-space-2);
+  align-items: baseline;
+  margin-bottom: var(--station-space-1);
+  padding-bottom: var(--station-space-1);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-glass-border);
+  font-size: var(--station-text-md);
+}
+
+.station-hopper-info__id {
+  font-family: var(--station-font-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.station-hopper-info__resin {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-hopper-info__resin.is-empty {
+  color: var(--station-text-faint);
+  font-family: var(--station-font);
+}
+
+.station-hopper-info__list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.station-hopper-info__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--station-space-2);
+}
+
+.station-hopper-info__term {
+  color: var(--station-text-muted);
+}
+
+.station-hopper-info__value {
+  margin: 0;
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-hopper-info__value.is-missing {
+  color: var(--station-warning);
+}

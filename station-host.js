@@ -70,6 +70,7 @@
     "station/styles/components/handbook.css",
     "station/styles/components/weights.css",
     "station/styles/components/changeover.css",
+    "station/styles/components/hopper-info.css",
     "station/styles/components/sudo.css",
     "station/styles/components/machine-rail.css",
     "station/styles/components/weight-cards.css",
@@ -109,6 +110,8 @@
     // and the header's job controls.
     "station/station-rundown.js",
     "station/station-rundown-timeline.js",
+    // The hopper info panel: the run-down's arithmetic beside a hopper.
+    "station/station-hopper-info.js",
     "station/station-job-controls.js",
     // The Changeover Calculator: after the job controls it applies through.
     "station/station-changeover.js",
@@ -138,7 +141,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.56.1";
+  const VERSION = "0.57.1";
 
   function requested() {
     try {

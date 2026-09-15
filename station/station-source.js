@@ -27,6 +27,17 @@
   const MODE_AUTO = "auto";
   const MODE_DEMO = "demo";
 
+  /* Two resin names are the same resin when they differ only by case or
+   * by surrounding whitespace - the recipe grid's own rule (app.js,
+   * normName). "" and null are the same nothing. */
+  function normalizeResin(name) {
+    return String(name || "").trim().toLowerCase();
+  }
+
+  function sameResin(a, b) {
+    return normalizeResin(a) === normalizeResin(b);
+  }
+
   /* Runtime hopper state, keyed by physical slot rather than by label.
    * "A:0" survives a hopper naming mode change; "A1"/"AM" does not, and the
    * existing Timeline code matches on position for exactly this reason.
@@ -44,6 +55,10 @@
       && typeof snapshot.sources.current === "object"
       ? snapshot.sources.current
       : {};
+    // The plan beside the job, slot for slot, so each running hopper can
+    // say whether promoting the plan would change what is in it.
+    const next = nextHopperStateFrom(snapshot);
+    const planned = planFrom(snapshot).planned;
     for (const layer of snapshot.layers) {
       if (!layer || !Array.isArray(layer.hoppers)) continue;
       for (const hopper of layer.hoppers) {
@@ -78,11 +93,38 @@
           // show a stale silo against a resin that is no longer in that hopper.
           source: hookups && typeof hookups.sourceForPosition === "function"
             ? hookups.sourceForPosition(sources, key, hopper.resinName || "")
-            : ""
+            : "",
+          /* The PLANNED recipe's resin for this slot, beside the running
+           * one, and whether promoting the plan would change it: "" and
+           * false when nothing is planned. Current -> none counts as a
+           * change - the hopper will be emptied. The drawing marks the
+           * receiver from nextDiffers (station-machine-parts.js); the
+           * cards say the name (otherResins, below). */
+          nextResinName: planned && next[key] ? next[key].resinName : "",
+          nextDiffers: planned && !sameResin(hopper.resinName || "", next[key] ? next[key].resinName : "")
         };
       }
     }
     return bySlot;
+  }
+
+  /* The OTHER recipe's resin beside each hopper of a face - for the
+   * Current face ("current") the plan's, for the Next face ("next") the
+   * running job's - keyed by slot: { resin, differs }, differs by the
+   * same rule the drawing uses. Null when nothing is planned: with no
+   * plan there is no other recipe to show. */
+  function otherResins(resolved, face) {
+    const r = resolved || {};
+    if (!r.plan || !r.plan.planned) return null;
+    const shown = face === "next" ? r.nextHopperState || {} : r.hopperState || {};
+    const other = face === "next" ? r.hopperState || {} : r.nextHopperState || {};
+    const out = {};
+    for (const key of new Set([...Object.keys(shown), ...Object.keys(other)])) {
+      const mine = shown[key] ? shown[key].resinName || "" : "";
+      const theirs = other[key] ? other[key].resinName || "" : "";
+      out[key] = { resin: theirs, differs: !sameResin(mine, theirs) };
+    }
+    return out;
   }
 
   /* The PLANNED recipe's hopper state - the Next Recipe as the bridge
@@ -324,7 +366,8 @@
        * state, and a demo line is not running a job. */
       hopperState: demoSnapshot ? hopperStateFrom(demoSnapshot) : {},
       layerState: demoSnapshot ? layerStateFrom(demoSnapshot) : {},
-      // A demo line plans nothing, either.
+      // A demo line plans nothing, either: every hopper's nextDiffers is
+      // false and nextResinName "".
       nextHopperState: nextHopperStateFrom(demoSnapshot),
       nextLayerState: nextLayerStateFrom(demoSnapshot),
       plan: planFrom(demoSnapshot),
@@ -390,5 +433,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, normalizeResin, sameResin, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, otherResins, planFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
 });

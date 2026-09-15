@@ -124,6 +124,10 @@
       Number.isFinite(r.effectiveWeight) ? r.effectiveWeight : "",
       r.smartWeight ? "s" : "",
       r.source || "",
+      // Whether the planned recipe changes this hopper's resin: the
+      // receiver cap is drawn from it, so a plan-only publish redraws
+      // the hopper (station-source.js, nextDiffers).
+      r.nextDiffers ? "n" : "",
       // Which of the hopper's controls may act: written on the drawing, so
       // a change in the offer alone redraws the controls as a change in
       // state does.
@@ -147,11 +151,6 @@
   function weightText(weight, width, scale) {
     return Number.isFinite(weight) && weight > 0 ? fitText(String(Math.round(weight)), width, 9 * scale) : "—";
   }
-
-  /* The resin label's type, in caption units at scale 1: the caption's own
-   * size, so the code on the drum and the readout under it are one voice.
-   * The stylesheet sizes the text (hopper.css); this is the fit's measure. */
-  const LABEL_TYPE = 9;
 
   /* The weight line's type, in caption units at scale 1: the digits at the
    * caption's own size, the unit smaller beside them, a hair between. The
@@ -219,6 +218,9 @@
       if (runtime.assigned === false) classes.push("is-unassigned");
       // The caption's weight is Smart Hoppers' computed one, not entered.
       if (runtime.smartWeight) classes.push("is-smart");
+      // The planned recipe puts a different resin in this hopper (or
+      // empties it): the receiver cap wears the warning, static (hopper.css).
+      if (runtime.nextDiffers) classes.push("is-next-changes");
     }
     if (!geometry.profiled) classes.push("is-unprofiled");
     // Selected in the focused editor, or by a click on the hopper itself.
@@ -245,22 +247,16 @@
     const ellipse = (className, cy, rx, ry) => node(doc, "ellipse", className, { cx, cy, rx, ry });
     const arc = y => `M ${round(x)} ${round(y)} Q ${round(cx)} ${round(y + rim * 2)} ${round(right)} ${round(y)}`;
 
-    /* ---- Resin identity, for hover and assistive technology ----
-     * The dense view drops the resin code because it cannot be drawn legibly
-     * in a narrow column, so it has to remain reachable some other way. A
-     * <title> is the native mechanism: it is the SVG tooltip and it is what a
-     * screen reader announces for the group. */
-    const name = doc.createElementNS
-      ? doc.createElementNS(SVG_NS, "title")
-      : doc.createElement("title");
-    name.textContent = (runtime && runtime.resinName
-      ? `${geometry.id} · ${runtime.resinName}${runtime.pct ? ` · ${round(runtime.pct)}%` : ""}` +
-        `${runtime.source ? ` · from ${runtime.source}` : ""}`
-      : `${geometry.id} · no resin assigned`) +
-      (runtime && shownWeight(runtime) > 0 ? ` · ${Math.round(shownWeight(runtime)).toLocaleString("en-US")} lb` : "") +
-      (runtime && runtime.smartWeight ? ` (computed${runtime.smartWeight.resinCode ? ` from ${runtime.smartWeight.resinCode}'s bulk density` : ""}${runtime.smartWeight.bulkDensity ? `, ${runtime.smartWeight.bulkDensity} lb/ft³` : ""})` : "") +
-      (runtime && runtime.track ? " · tracked" : "") + (runtime && runtime.pumpOff ? " · pump off" : "");
-    g.appendChild(name);
+    /* ---- Resin identity, for assistive technology ----
+     * No <title> on the group: the hover panel (station-hopper-info.js)
+     * says the resin, the output and the weight beside the hopper, and a
+     * native tooltip on top of it would stack two readings of the same
+     * thing. The controls keep their own titles, which say what a click
+     * does. What a screen reader announces for the group is the label:
+     * the hopper's id and the resin in it. */
+    g.setAttribute("aria-label", runtime && runtime.resinName
+      ? `${geometry.id} · ${runtime.resinName}`
+      : `${geometry.id} · no resin assigned`);
 
     /* Interaction geometry is independent of the equipment silhouette.
      * The drawing below is pointer-inert; what a click means is said by
@@ -349,10 +345,14 @@
     receiver.appendChild(node(doc, "rect", "station-hopper__cap", {
       x: x + w * 0.09, y: geometry.receiverTop, width: w * 0.82, height: capHeight, rx: rim
     }));
-    receiver.appendChild(node(doc, "rect", "station-hopper__metal-face", {
+    /* The receiver's lit strip and its lid carry a second, receiver-only
+     * class beside the one they share with the vessel's, so a state that
+     * is the receiver's alone (is-next-changes) can reach them in two
+     * selector steps. */
+    receiver.appendChild(node(doc, "rect", "station-hopper__metal-face station-hopper__receiver-face", {
       x: x + w * 0.23, y: geometry.receiverTop + rim, width: w * 0.3, height: capHeight - rim, rx: rim / 2
     }));
-    receiver.appendChild(ellipse("station-hopper__lid", geometry.receiverTop + rim / 2, w * 0.43, rim));
+    receiver.appendChild(ellipse("station-hopper__lid station-hopper__receiver-lid", geometry.receiverTop + rim / 2, w * 0.43, rim));
     receiver.appendChild(path("station-hopper__receiver-cone",
       `M ${round(x)} ${round(shoulder)} Q ${round(cx)} ${round(shoulder - rim)} ${round(right)} ${round(shoulder)} ` +
       `L ${round(right - w * 0.06)} ${round(shoulder + rim * 2)} L ${round(cx + w * 0.1)} ${round(receiverBottom)} ` +
@@ -573,53 +573,11 @@
     }));
     drawing.appendChild(details);
 
-    /* ---- Resin label ----
-     * The resin's code on the drum itself: a plate down the vessel's
-     * centreline, hung from under the top clamp band, the code running
-     * down it from the top - read the way a spine is read on a shelf.
-     * The drum is four times as tall as it is wide, so a code that a
-     * horizontal caption line could show five characters of is shown
-     * whole here, at the caption's own type size; a code longer than the
-     * drum's usable height is truncated by the caption's own rule, never
-     * shrunk. The plate is the surface colour and the code the accent
-     * (hopper.css), so it reads as a marking on the equipment and not as
-     * part of the steel. Drawn over the hardware and over the run-down
-     * flow, which passes behind it like everything else on the drum.
-     * Nothing to click: it is artwork, in the pointer-inert drawing, and
-     * the tracking hit under it is the vessel's - a click on the code is
-     * a click on the hopper. No resin, no plate. */
-    if (runtime && runtime.resinName) {
-      const labelSize = LABEL_TYPE * scale;
-      const labelPad = 4 * scale;
-      const plateWidth = labelSize + 5 * scale;
-      const laneTop = top + rim * 2.6;
-      const laneBottom = bottom - rim * 2.6;
-      const lane = Math.max(0, laneBottom - laneTop);
-      if (lane > labelSize + labelPad * 2) {
-        const code = fitText(String(runtime.resinName).toUpperCase(), lane - labelPad * 2, labelSize);
-        const plateLength = Math.min(lane, code.length * labelSize * 0.58 + labelPad * 2);
-        const mark = group(doc, "station-hopper__label", "hopper-label");
-        mark.appendChild(node(doc, "rect", "station-hopper__label-plate", {
-          x: round(cx - plateWidth / 2), y: round(laneTop),
-          width: round(plateWidth), height: round(plateLength), rx: round(plateWidth * 0.28)
-        }));
-        /* A quarter turn clockwise about the text's own anchor: the glyphs'
-         * tops face right, and the caps stand from the baseline rightward
-         * by about 0.7 em, so the baseline is set left of the centreline by
-         * half that and the letters sit centred on the plate. */
-        const baselineX = cx - labelSize * 0.35;
-        const middleY = laneTop + plateLength / 2;
-        const text = label(doc, code, round(baselineX), round(middleY), "station-hopper__label-text");
-        text.setAttribute("transform", `rotate(90 ${round(baselineX)} ${round(middleY)})`);
-        mark.appendChild(text);
-        drawing.appendChild(mark);
-      }
-    }
-
     /* ---- Readout ----
-     * Identity, contribution, and the receiver weight. The resin code is
-     * on the drum (above), where it fits whole; the caption has no line
-     * for it. The weight is the run-down's effective weight - the entered
+     * Identity, contribution, and the receiver weight. The resin's name is
+     * not drawn on the hopper at all: it is the hover panel's
+     * (station-hopper-info.js) and the editor's, so the column stays three
+     * lines at every layer count. The weight is the run-down's effective weight - the entered
      * receiver weight (the Weights page's value), or Smart Hoppers'
      * computed one, marked `is-smart` and tinted - in whole pounds, with
      * the unit drawn smaller beside the digits so the number is never read
@@ -1074,7 +1032,7 @@
   }
 
   return {
-    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, LABEL_TYPE, shareText,
+    SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
     shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
   };

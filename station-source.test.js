@@ -542,3 +542,81 @@ test("a change in the plan alone is a value change - the Next face's cards are p
   assert.equal(source.classifyChange(b, c), "values");
   assert.equal(source.classifyChange(b, resolvedFor(plannedState())), "none");
 });
+
+/* ----------------------------------------------------------------------
+ *   The plan beside each running hopper: does promoting it change the resin?
+ * -------------------------------------------------------------------- */
+
+test("two names are the same resin when they differ only by case or by surrounding whitespace", () => {
+  assert.equal(source.sameResin("HX204", " hx204 "), true);
+  assert.equal(source.sameResin("", ""), true);
+  assert.equal(source.sameResin(null, undefined), true);
+  assert.equal(source.sameResin("HX204", ""), false);
+  assert.equal(source.sameResin("HX204", "HX205"), false);
+  assert.equal(source.normalizeResin("  LLDPE 2045G "), "lldpe 2045g");
+});
+
+test("each running hopper says the plan's resin for its slot and whether promoting the plan would change it - emptying counts, a case-only spelling does not", () => {
+  const resolved = resolvedFor(plannedState());
+  // A:0 runs RESIN-X and the plan puts PLAN-A there.
+  assert.equal(resolved.hopperState["A:0"].nextResinName, "PLAN-A");
+  assert.equal(resolved.hopperState["A:0"].nextDiffers, true);
+  // A:1 runs nothing and the plan fills it.
+  assert.equal(resolved.hopperState["A:1"].nextResinName, "PLAN-B");
+  assert.equal(resolved.hopperState["A:1"].nextDiffers, true);
+  // A:2 runs nothing and the plan leaves it empty.
+  assert.equal(resolved.hopperState["A:2"].nextResinName, "");
+  assert.equal(resolved.hopperState["A:2"].nextDiffers, false);
+  // The same resin spelt differently is the same resin.
+  const same = resolvedFor(plannedState({ nextRecipe: {
+    line_type: 5,
+    layers: ["A", "B", "C", "D", "E"].map(name => ({ name, layer_pct: 20, hoppers: Array.from({ length: 6 }, (_, index) => ({ pct: index === 0 ? 100 : 0, resin_name: index === 0 ? " resin-x " : "" })) }))
+  } }));
+  assert.equal(same.hopperState["A:0"].nextDiffers, false);
+  assert.equal(same.hopperState["A:0"].nextResinName, " resin-x ", "the plan's own spelling is carried, not the normalised one");
+  // A running hopper the plan empties will be emptied: that is a change.
+  const emptied = resolvedFor(plannedState({ nextRecipe: {
+    line_type: 5,
+    layers: ["A", "B", "C", "D", "E"].map(name => ({ name, layer_pct: 20, hoppers: Array.from({ length: 6 }, () => ({ pct: 0, resin_name: "" })) }))
+  } }));
+  assert.equal(emptied.hopperState["A:0"].nextResinName, "");
+  assert.equal(emptied.hopperState["A:0"].nextDiffers, true);
+  // The plan's own map is untouched by any of this.
+  assert.deepEqual(Object.keys(resolved.nextHopperState["A:0"]).sort(), ["assigned", "pct", "resinName", "source"]);
+});
+
+test("with nothing planned no hopper differs, live or demo", () => {
+  for (const resolved of [resolvedFor(liveState()), source.resolveSource({ snapshot: null, demoLines, demoId: "three-layer" })]) {
+    for (const slot of Object.values(resolved.hopperState)) {
+      assert.equal(slot.nextResinName, "");
+      assert.equal(slot.nextDiffers, false);
+    }
+  }
+});
+
+test("otherResins: the plan's resin beside the running face, the running resin beside the Next face, differing by the one rule - and nothing without a plan", () => {
+  const resolved = resolvedFor(plannedState());
+  const current = source.otherResins(resolved, "current");
+  assert.deepEqual(current["A:0"], { resin: "PLAN-A", differs: true });
+  assert.deepEqual(current["A:1"], { resin: "PLAN-B", differs: true });
+  assert.deepEqual(current["A:2"], { resin: "", differs: false });
+  const next = source.otherResins(resolved, "next");
+  assert.deepEqual(next["A:0"], { resin: "RESIN-X", differs: true });
+  assert.deepEqual(next["A:1"], { resin: "", differs: true });
+  assert.deepEqual(next["A:2"], { resin: "", differs: false });
+  // Every slot of either map is answered, so a card never looks up a missing key.
+  assert.deepEqual(Object.keys(current).sort(), Object.keys(resolved.hopperState).sort());
+  assert.equal(source.otherResins(resolvedFor(liveState()), "current"), null);
+  assert.equal(source.otherResins(null, "current"), null);
+});
+
+test("a plan that changes one hopper's resin is a value change that flips that hopper's nextDiffers - what re-draws its receiver", () => {
+  const before = resolvedFor(plannedState());
+  const after = resolvedFor(plannedState({ nextRecipe: {
+    line_type: 5,
+    layers: ["A", "B", "C", "D", "E"].map(name => ({ name, layer_pct: 20, hoppers: Array.from({ length: 6 }, (_, index) => ({ pct: index === 0 ? 100 : 0, resin_name: index === 0 ? "RESIN-X" : "" })) }))
+  } }));
+  assert.equal(source.classifyChange(before, after), "values");
+  assert.equal(before.hopperState["A:0"].nextDiffers, true);
+  assert.equal(after.hopperState["A:0"].nextDiffers, false);
+});

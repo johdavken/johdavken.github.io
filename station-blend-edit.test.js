@@ -687,7 +687,26 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   assert.match(draw, /blendCards: cards,/);
   // The value path updates every card in place, as it does the editor.
   const publish = body("onPublish");
-  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) \{\n\s+cardHandles\[id\]\.update\(\{\n\s+hopperState: blendEdit\.kind === "next" \? resolved\.nextHopperState : resolved\.hopperState,\n\s+smartHoppers: resolved\.smartHoppers\n\s+\}\);\n\s+\}/);
+  assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) \{\n\s+cardHandles\[id\]\.update\(\{\n\s+hopperState: blendEdit\.kind === "next" \? resolved\.nextHopperState : resolved\.hopperState,\n\s+smartHoppers: resolved\.smartHoppers,\n\s+otherResins: otherResinsFor\(resolved\)\n\s+\}\);\n\s+\}/);
+  // The other recipe's resin rides beside each card: the plan's on the
+  // running face, the job's on the Next face, nothing on Weights - and
+  // which cards show it is the boot file's session state, so a rebuilt
+  // stage shows what the operator opened.
+  assert.match(draw, /otherResins: otherResinsFor\(current\.resolved\),\n\s+otherRecipe: cardRecipe === "next" \? "current" : "next",\n\s+showOther: showOther\.has\(entry\.id\),\n\s+onShowOther: on => \{ if \(on\) showOther\.add\(entry\.id\); else showOther\.delete\(entry\.id\); \},/);
+  const other = body("otherResinsFor");
+  assert.match(other, /if \(blendEdit\.kind === "next"\) return source\.otherResins\(resolved, "next"\);/);
+  assert.match(other, /if \(blendEdit\.kind === "blend"\) return source\.otherResins\(resolved, "current"\);/);
+  assert.match(other, /return null;\s*\}$/);
+  assert.doesNotMatch(draw.slice(draw.indexOf("weightCards.create("), draw.indexOf("weightCards.create(") + 900), /otherResins|showOther/, "the Weights face has an eye");
+  // A plan appearing or going under the cards takes the full path: the
+  // value path cannot add or take a card's eye.
+  assert.match(publish, /const planTurned = blendEdit\.active && blendEdit\.kind !== "weights"\n\s+&& !!otherResinsFor\(current\.resolved\) !== !!otherResinsFor\(resolved\);/);
+  assert.match(publish, /if \(kind === "values" && !openLayerGone && stage\.getState\(\)\.phase !== "opening" && stage\.getState\(\)\.phase !== "closing" && !planTurned\) \{/);
+  // Session-only: cleared on a face change and on leaving the mode, pruned with the flipped list, never stored.
+  assert.match(body("enterBlendEdit"), /showOther\.clear\(\);/);
+  assert.match(body("exitBlendEdit"), /showOther\.clear\(\);/);
+  assert.match(body("renderAll"), /for \(const id of Array\.from\(showOther\)\) if \(!model \|\| !model\.layers\.some\(layer => layer\.id === id\)\) showOther\.delete\(id\);/);
+  assert.doesNotMatch(boot, /showOther[^\n]*(localStorage|sessionStorage|setItem)/);
   // A layer that vanished is dropped from the mode; a line with no layers ends it.
   const all = body("renderAll");
   assert.match(all, /blendEdit\.flipped = blendEdit\.flipped\.filter\(id => !!model && model\.layers\.some\(layer => layer\.id === id\)\);/);
