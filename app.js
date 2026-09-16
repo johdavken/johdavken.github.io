@@ -4459,12 +4459,13 @@
           : (isNextRecipePage() ? "recipePageTabNext" : "recipePageTabCurrent");
       if (panel) panel.setAttribute("aria-labelledby", labelledBy);
       const viewToggle = $("recipeViewToggle");
-      // Summary/Edit has nothing left to switch between above the compact
-      // mobile breakpoint - the reworked grid is always live (see
-      // reworkedGrid in renderSplitsArea). This function is the single
+      // Summary/Edit has nothing left to switch between on the desktop
+      // shell - its reworked grid is always live (see modelessGrid in
+      // renderSplitsArea); every touch surface, compact and wide, keeps
+      // the axis (see wideTouch there). This function is the single
       // owner of the control's visibility, so the condition belongs here
       // rather than being set from a renderer that runs before it.
-      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage() || !layoutModeQueries.compactRecipe.matches;
+      if (viewToggle) viewToggle.hidden = isSavedRecipesPage() || isWeightsPage() || isDesktopLayout();
       const headerControls = $("recipeHeaderControls");
       if (headerControls) headerControls.hidden = isSavedRecipesPage();
       const headerActions = $("recipeHeaderActions");
@@ -4734,6 +4735,20 @@
       // Current, and selection alone raises the edit toolbar. Compact
       // mobile keeps both modes exactly as they are.
       const reworkedGrid = !compactMobileRecipe;
+      // The wide touch shell - a tablet, or an unfolded Fold: above the
+      // compact breakpoint with a coarse pointer (see layoutModeQueries) -
+      // keeps the reworked grid's transposed layout and its live fields,
+      // but takes the phone's mode axis over it rather than desktop's
+      // "always live, select on click, track on the dot". On a touch
+      // surface the per-cell clock is a target too small to find, so
+      // Summary makes the whole cell the tracking target (fields inert),
+      // Edit raises the toolbar and makes the cell select, and the page's
+      // actions become the phone's icon keys in the header. Only a real
+      // pointer keeps desktop's modeless grid.
+      const wideTouch = reworkedGrid && !isDesktopLayout();
+      // Desktop's modeless grid: everything below that says "reworkedGrid
+      // but not wide touch" means exactly that surface.
+      const modelessGrid = reworkedGrid && !wideTouch;
       // On the compact phone view the first layer's % is auto (see
       // recomputeAutoFirstLayerPct). Recompute once per render, before the
       // layer headers read L.layerPct, so every entry path - edit, recipe
@@ -4745,13 +4760,13 @@
       // `reworkedGrid` continues to own interaction/toolbars, while this flag
       // owns only which axis receives the shared headers and hopper cells.
       const layersLeft = reworkedGrid && state.recipeLayerOrientation !== "top";
-      const summaryView = reworkedGrid ? false : viewMode === "summary";
+      const summaryView = modelessGrid ? false : viewMode === "summary";
       // Summary's one interaction. Tracking is runtime state that the
       // planned recipe structurally cannot hold (see next-recipe.js), so
       // Next stays a read-only preview with nothing to toggle - on the
       // reworked grid the track control is simply absent there.
-      const trackingView = !isNextRecipePage() && (reworkedGrid || summaryView);
-      let bulkMode = reworkedGrid ? true : viewMode === "edit";
+      const trackingView = !isNextRecipePage() && (modelessGrid || summaryView);
+      let bulkMode = modelessGrid ? true : viewMode === "edit";
       // Typing directly into a cell needs a precise pointer. On touch it
       // never felt right at hopper-cell size, so every touch surface -
       // phones and the wide-but-touch tablet band alike - edits through the
@@ -4786,8 +4801,12 @@
       // cluster (the gutter corner the pointer grid uses is hidden on the
       // phone), and a cell only carries the line where the other recipe
       // actually differs - see crossDiffers in buildCell.
+      // Which surfaces carry the page's actions as icon keys in the header
+      // (scan / load / compare / pencil) rather than as desktop's text
+      // buttons and corner toggle: every touch surface, compact and wide.
+      const iconKeyHeader = compactMobileRecipe || wideTouch;
       const crossOverlayCompact = compactMobileRecipe && summaryView;
-      const crossOverlayAvailable = reworkedGrid || cellsTypeable || crossOverlayCompact;
+      const crossOverlayAvailable = iconKeyHeader ? summaryView : (reworkedGrid || cellsTypeable);
       const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
       area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
       // The compact band's arrow gives way to the code. A band is measured
@@ -5268,7 +5287,7 @@
       // are moved (not rebuilt), so every existing handler stays intact.
       // Print is dropped entirely on mobile - a phone can't print - and
       // stays a desktop-only header action below.
-      if (compactMobileRecipe){
+      if (iconKeyHeader){
         scanRecipeButton.classList.remove("rearrangeDesktopOnly", "recipeScanHideDesktop");
         scanRecipeButton.classList.add("mobileScanIconAction");
         headerActions?.append(scanRecipeButton);
@@ -5302,7 +5321,7 @@
             '<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/>' +
             '<circle cx="12" cy="12" r="3"/>' +
           '</svg>';
-        const compareUsable = crossOverlayCompact && (isNextRecipePage() || hasPlannedRecipe());
+        const compareUsable = summaryView && (isNextRecipePage() || hasPlannedRecipe());
         compareButton.disabled = !compareUsable;
         compareButton.setAttribute("aria-disabled", String(!compareUsable));
         const syncCompareButton = ()=>{
@@ -5313,7 +5332,7 @@
           compareButton.setAttribute("aria-label", label);
           compareButton.title = compareUsable
             ? label
-            : (crossOverlayCompact ? "Plan a Next Recipe to compare against" : "Compare is available in Summary view");
+            : (summaryView ? "Plan a Next Recipe to compare against" : "Compare is available in Summary view");
         };
         syncCompareButton();
         compareButton.addEventListener("click", ()=>{
@@ -5441,7 +5460,7 @@
       // On the typeable grid the corner instead holds the overlay toggle for
       // the cross-resin overlay (replacing the "Select row" caption, which is
       // only ever a label - the numbered buttons below still select).
-      if (crossOverlayAvailable && !crossOverlayCompact){
+      if (crossOverlayAvailable && !iconKeyHeader){
         const overlayToggle = document.createElement("button");
         overlayToggle.type = "button";
         overlayToggle.className = "splitCrossOverlayToggle";
@@ -6116,7 +6135,7 @@
       const pointerVerb = isDesktopLayout() ? "click" : "tap";
       // The reworked grid does both at once, so it names both rather than
       // whichever mode happens to be on.
-      const interactionAction = reworkedGrid
+      const interactionAction = modelessGrid
         ? (trackingView ? "select · click its dot to track" : "select")
         : (viewMode === "edit" ? "edit" : (trackingView ? "track" : "view"));
       const interactionCommand = document.createElement("strong");
@@ -6139,7 +6158,7 @@
       function updateInteractionHint(){
         // Rearrange's hint is a fixed sentence, not a running count.
         if (rearranging) return;
-        if (reworkedGrid){
+        if (modelessGrid){
           const parts = [];
           if (selected.size) parts.push(`${selected.size} selected`);
           if (trackingView) parts.push(`${trackedHopperCount()} tracked`);
@@ -6329,7 +6348,7 @@
         // it costs the grid no movement, and a toolbar that appears and
         // disappears on every selection is harder to aim at than one that is
         // simply always there.
-        toolbar.classList.toggle("hide", reworkedGrid ? false : !bulkMode);
+        toolbar.classList.toggle("hide", modelessGrid ? false : !bulkMode);
         modeButton.textContent = bulkMode ? "Done bulk editing" : "Bulk edit";
         if(compactMobileRecipe){
           modeButton.setAttribute("aria-expanded", String(bulkMode));

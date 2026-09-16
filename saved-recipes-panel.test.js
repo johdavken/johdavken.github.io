@@ -88,7 +88,7 @@ test("splitsBulkModeActive and splitsSavedRecipesOpen persist at module scope (l
   // it survives only as the value setBulkMode writes back for Android Back.
   // The reworked wide grid is always selectable; compact mobile still
   // resolves it from the Summary/Edit view.
-  assert.match(app, /let bulkMode = reworkedGrid \? true : viewMode === "edit";/);
+  assert.match(app, /let bulkMode = modelessGrid \? true : viewMode === "edit";/);
 });
 
 test("opening Rearrange closes Bulk edit and Saved Recipes", () => {

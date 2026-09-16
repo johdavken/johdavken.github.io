@@ -71,13 +71,13 @@ test("leaving Edit cancels an in-progress rearrangement rather than stranding it
  *   View resolution, and mobile staying out of it
  * -------------------------------------------------------------------- */
 
-test("Summary/Edit survives on compact mobile only - the reworked wide grid has no mode axis at all", () => {
+test("Summary/Edit survives on every touch surface - only desktop's modeless grid has no mode axis", () => {
   assert.match(splitsArea, /const viewMode = splitsViewMode;/);
   // One flag decides it: above the compact-mobile breakpoint the grid is
   // always live, always selectable, and never in Summary.
   assert.match(splitsArea, /const reworkedGrid = !compactMobileRecipe;/);
-  assert.match(splitsArea, /const summaryView = reworkedGrid \? false : viewMode === "summary";/);
-  assert.match(splitsArea, /let bulkMode = reworkedGrid \? true : viewMode === "edit";/);
+  assert.match(splitsArea, /const summaryView = modelessGrid \? false : viewMode === "summary";/);
+  assert.match(splitsArea, /let bulkMode = modelessGrid \? true : viewMode === "edit";/);
   assert.match(splitsArea, /area\.dataset\.recipeView = summaryView \? "summary" : "edit";/);
   // The new grid's CSS hangs off its own attribute rather than overloading
   // data-recipe-view, so the stacked mobile rules stay untouched.
@@ -85,7 +85,7 @@ test("Summary/Edit survives on compact mobile only - the reworked wide grid has 
   // Nothing left to switch between, so the control goes away with the mode -
   // set by syncRecipePageUI, which owns that flag and runs after the
   // renderer, alongside the other pages that hide it.
-  assert.match(app, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
+  assert.match(app, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| isDesktopLayout\(\);/);
 });
 
 test("the reworked grid types in the cell on tablet too; compact mobile still edits through the panel", () => {
@@ -118,8 +118,8 @@ test("the compact mobile grid keeps .bulk-editing to itself, so desktop presenta
  *   Tracking is Summary's one interaction, and never on Next
  * -------------------------------------------------------------------- */
 
-test("tracking is Current-only - the plan cannot carry tracking at all - and no longer needs Summary on the reworked grid", () => {
-  assert.match(splitsArea, /const trackingView = !isNextRecipePage\(\) && \(reworkedGrid \|\| summaryView\);/);
+test("tracking is Current-only - the plan cannot carry tracking at all - and needs Summary only where a mode axis exists", () => {
+  assert.match(splitsArea, /const trackingView = !isNextRecipePage\(\) && \(modelessGrid \|\| summaryView\);/);
   assert.match(splitsArea, /area\.classList\.toggle\("recipeTrackingView", trackingView\);/);
   // One condition, every surface - no per-platform special case left.
   assert.match(splitsArea, /if \(!trackingView \|\| bulkMode \|\| hopperRearrangement\?\.active\) return;/);
@@ -241,7 +241,7 @@ test("every recipe view ends with a quiet, layout-aware hopper-action reminder",
   // The reworked grid selects and tracks at the same time, so it names both
   // rather than whichever mode happens to be on; compact mobile keeps the
   // one-mode-at-a-time wording.
-  assert.match(splitsArea, /const interactionAction = reworkedGrid\s*\?\s*\(trackingView \? "select · click its dot to track" : "select"\)\s*:\s*\(viewMode === "edit" \? "edit" : \(trackingView \? "track" : "view"\)\);/);
+  assert.match(splitsArea, /const interactionAction = modelessGrid\s*\?\s*\(trackingView \? "select · click its dot to track" : "select"\)\s*:\s*\(viewMode === "edit" \? "edit" : \(trackingView \? "track" : "view"\)\);/);
   assert.match(splitsArea, /interactionCommand\.className = "recipeInteractionHintCommand";/);
   assert.match(splitsArea, /interactionCommand\.textContent = interactionVerb;/);
   assert.match(splitsArea, /document\.createTextNode\(` a hopper to \$\{interactionAction\}`\),/);
@@ -288,7 +288,7 @@ test("Recipe Book is a page replacement, so Edit controls and the matrix cannot 
   assert.match(setter, /if \(next === "saved" \|\| next === "weights"\)\{\s*splitsBulkModeActive = false;/);
   assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
   const sync = functionBody("syncRecipePageUI");
-  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
+  assert.match(sync, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| isDesktopLayout\(\);/);
 });
 
 /* ----------------------------------------------------------------------

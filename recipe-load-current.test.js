@@ -63,7 +63,7 @@ test("desktop puts it in the header where Load Next Recipe sits on the other pag
 
 test("mobile moves the real button into the tab-row cluster (#recipeHeaderActions), next to Scan - the same shape Load Next gets on Current", () => {
   const editor = recipeEditor();
-  const block = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
+  const block = editor.slice(editor.indexOf("if (iconKeyHeader){"), editor.indexOf("}else{", editor.indexOf("if (iconKeyHeader){")));
   assert.match(block, /\}else if \(loadCurrentButton\)\{\s*\n\s*loadCurrentButton\.classList\.add\("recipeHeaderMobileAction"\);\s*\n\s*headerActions\?\.append\(loadCurrentButton\);/);
   // The real element and its real click handler move - nothing is rebuilt.
   assert.match(editor, /loadCurrentButton\.addEventListener\("click", openLoadCurrentRecipeDialog\);/);

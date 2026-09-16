@@ -56,7 +56,7 @@ test("the key zeroes the global summary{gap:12px} so the glyph sits centred, not
 test("the cluster carries no Print - a phone can't print", () => {
   assert.doesNotMatch(styles, /mobilePrintIconAction/);
   const editor = recipeEditor();
-  const branch = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
+  const branch = editor.slice(editor.indexOf("if (iconKeyHeader){"), editor.indexOf("}else{", editor.indexOf("if (iconKeyHeader){")));
   assert.doesNotMatch(branch, /printButton/);
 });
 
@@ -67,7 +67,7 @@ test("Scan's popup opens downward and right-aligned from the header - it sits ne
 
 test("one shared branch routes Scan + the page's Load button into headerActions for both pages - no separate row, no mobileMoreButton", () => {
   const editor = recipeEditor();
-  const branchStart = editor.indexOf("if (compactMobileRecipe){");
+  const branchStart = editor.indexOf("if (iconKeyHeader){");
   assert.notEqual(branchStart, -1);
   const branch = editor.slice(branchStart, editor.indexOf("}else{", branchStart));
   assert.match(branch, /scanRecipeButton\.classList\.remove\("rearrangeDesktopOnly", "recipeScanHideDesktop"\);/);

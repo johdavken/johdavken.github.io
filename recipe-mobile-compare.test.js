@@ -34,7 +34,7 @@ function recipeEditor() {
 
 function compactHeaderBranch() {
   const editor = recipeEditor();
-  const start = editor.indexOf("if (compactMobileRecipe){\n        scanRecipeButton.classList.remove(");
+  const start = editor.indexOf("if (iconKeyHeader){\n        scanRecipeButton.classList.remove(");
   assert.ok(start > 0, "the compact header branch should relocate the Scan key");
   const end = editor.indexOf("}else{", start);
   return editor.slice(start, end);
@@ -62,7 +62,7 @@ function phoneOnly(fragment) {
 test("compare is available on the compact grid in Summary only, through the shared overlay flag", () => {
   const editor = recipeEditor();
   assert.match(editor, /const crossOverlayCompact = compactMobileRecipe && summaryView;/);
-  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable \|\| crossOverlayCompact;/);
+  assert.match(editor, /const crossOverlayAvailable = iconKeyHeader \? summaryView : \(reworkedGrid \|\| cellsTypeable\);/);
   // Edit never builds it: the attribute is derived from availability, so a
   // flag left on from Summary reveals nothing in Edit and comes back on
   // return - no second flag, no persistence.
@@ -75,7 +75,7 @@ test("compare is available on the compact grid in Summary only, through the shar
 
 test("the pointer grid's corner toggle is not built for the compact grid", () => {
   const editor = recipeEditor();
-  assert.match(editor, /if \(crossOverlayAvailable && !crossOverlayCompact\)\{\s*\n\s*const overlayToggle = document\.createElement\("button"\);/);
+  assert.match(editor, /if \(crossOverlayAvailable && !iconKeyHeader\)\{\s*\n\s*const overlayToggle = document\.createElement\("button"\);/);
 });
 
 /* ============================================================
@@ -111,7 +111,7 @@ test("the eye is an eye: one almond, one pupil, stroked like the other keys", ()
 
 test("the eye is disabled in Edit and on Current without a plan; Next always has the live recipe to compare", () => {
   const branch = compactHeaderBranch();
-  assert.match(branch, /const compareUsable = crossOverlayCompact && \(isNextRecipePage\(\) \|\| hasPlannedRecipe\(\)\);/);
+  assert.match(branch, /const compareUsable = summaryView && \(isNextRecipePage\(\) \|\| hasPlannedRecipe\(\)\);/);
   assert.match(branch, /compareButton\.disabled = !compareUsable;/);
   assert.match(branch, /compareButton\.setAttribute\("aria-disabled", String\(!compareUsable\)\);/);
   // The disabled look already exists for every header key.

@@ -279,9 +279,9 @@ test("the standalone rearrange bar is no longer built at all", () => {
   assert.doesNotMatch(body, /rearrangeModeMessage|rearrangeModeActions/);
 });
 
-test("the edit toolbar is always present on the reworked grid, never raised and dropped", () => {
+test("the edit toolbar is always present on desktop's modeless grid, never raised and dropped", () => {
   const body = functionBody("setBulkMode");
-  assert.match(body, /toolbar\.classList\.toggle\("hide", reworkedGrid \? false : !bulkMode\);/);
+  assert.match(body, /toolbar\.classList\.toggle\("hide", modelessGrid \? false : !bulkMode\);/);
   // And the selection no longer toggles it either.
   const selection = functionBody("renderSplitsArea");
   assert.doesNotMatch(selection, /if \(reworkedGrid\) toolbar\.classList\.toggle\("hide", selected\.size === 0\);/);
@@ -353,7 +353,7 @@ test("touch tightens the grid's minimums so six positions fit a tablet outright"
   assert.match(styles, /body\[data-shell="touch"\][\s\S]{0,400}?\.splitLayerHeader\{\s*\n\s*min-width:92px;/);
   // The resin code is the value that has to survive, so the percentage field
   // beside it gives up the room rather than the code.
-  assert.match(styles, /body\[data-shell="touch"\] #splitsArea\[data-recipe-layout="transposed"\] \.splitPctControl input\{\s*\n\s*width:30px;/);
+  assert.match(styles, /body\[data-shell="touch"\] #splitsArea\[data-recipe-layout="transposed"\] \.splitPctControl input\{[\s\S]*?width:2\.9em;/);
 });
 
 /* Recipe Book / Weight Profiles headers, and the Weights grid on the touch
