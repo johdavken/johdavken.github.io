@@ -4861,6 +4861,13 @@
         const control = target.closest("input,button,label,a,select,textarea");
         if (!control) return false;
         if (control.tagName === "LABEL") return cellFieldsTypeable;
+        // An inert field is cell surface. In Summary the resin and
+        // percentage fields are pointer-events:none, so a tap should never
+        // reach them - but a touch shell that still targets the field (an
+        // inert, disabled control under the finger) must not turn the tap
+        // into a no-op. Only a field that can actually be typed into, or a
+        // real control (the selector checkbox, a button), keeps the tap.
+        if (control.tagName === "INPUT" && !cellFieldsTypeable && control.type !== "checkbox") return false;
         return true;
       }
 

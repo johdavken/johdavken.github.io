@@ -731,9 +731,14 @@
     border-left:0;
   }
   body[data-shell="touch"] #splitsBlock .recipeHeaderRow .recipeHeaderActions:empty{ display:none; }
+  /* The pencil's resting selector carries [aria-pressed="false"] on purpose:
+     button-styling.css's Wide Touch console block (later in the cascade,
+     same specificity otherwise) paints this button in ink at rest, which
+     read as "Edit is on" while it was not. Pressed is the latched rule
+     further down; the two never both match. */
   body[data-shell="touch"] #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
   body[data-shell="touch"] #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction,
-  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"]{
+  body[data-shell="touch"] #splitsBlock #recipeHeaderActionPill .recipeViewToggle button[data-recipe-view="edit"][aria-pressed="false"]{
     display:inline-flex;
     align-items:center;
     justify-content:center;

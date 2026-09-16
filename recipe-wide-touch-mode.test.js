@@ -61,6 +61,15 @@ test("the mode axis: Summary/Edit on every touch surface, only desktop is modele
   assert.match(app, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| isDesktopLayout\(\);/);
 });
 
+test("in Summary an inert field is cell surface: a tap that reaches it still tracks", () => {
+  const editor = recipeEditor();
+  const fn = editor.slice(editor.indexOf("function isOwnCellInteraction(target){"), editor.indexOf("function toggleSelection(keys){"));
+  assert.match(fn, /if \(control\.tagName === "LABEL"\) return cellFieldsTypeable;/);
+  assert.match(fn, /if \(control\.tagName === "INPUT" && !cellFieldsTypeable && control\.type !== "checkbox"\) return false;/);
+  // Desktop's typeable Edit fields and the selector checkbox keep the tap.
+  assert.match(fn, /return true;\s*\n\s*\}/);
+});
+
 test("the toolbar is raised by Edit on touch and always present only on desktop; the hint uses the phone's wording", () => {
   const editor = recipeEditor();
   assert.match(editor, /toolbar\.classList\.toggle\("hide", modelessGrid \? false : !bulkMode\);/);
