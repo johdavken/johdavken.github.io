@@ -159,13 +159,29 @@ test("a compact cell carries the line only where the other recipe differs, by ke
   assert.match(app, /function keyName\(s\)\{ return normName\(s\)\.toUpperCase\(\); \}/);
 });
 
-test("the compact band's tag is short enough to share a five-layer cell with the code", () => {
+test("the compact band's tag is an arrow - to on Current, from on Next - and the code takes the room", () => {
   const editor = recipeEditor();
   assert.match(editor, /tag\.textContent = crossOverlayLabel;/);
-  assert.match(editor, /if \(crossOverlayCompact && crossOverlayLabel === "current"\) tag\.textContent = "now";/);
+  assert.match(editor, /if \(crossOverlayCompact\) tag\.textContent = crossOverlayLabel === "current" \? "\\u2190" : "\\u2192";/);
   const code = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot b{");
   assert.match(code, /flex:1 1 auto;/);
   assert.match(code, /text-align:right;/);
+  const tag = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot em{");
+  assert.doesNotMatch(tag, /text-transform/);
+});
+
+test("where the code would still ellipsise beside the arrow, the band goes tight and the arrow is dropped", () => {
+  const editor = recipeEditor();
+  assert.match(editor, /function fitCompactCompareBands\(\)\{\s*\n\s*if \(!crossOverlayCompact \|\| area\.dataset\.crossOverlay !== "on"\) return;/);
+  assert.match(editor, /if \(code && code\.scrollWidth > code\.clientWidth\) band\.classList\.add\("is-tight"\);/);
+  // Measured on the eye's click and once after a render that shows bands; never a re-render.
+  const click = editor.slice(editor.indexOf('compareButton.addEventListener("click"'), editor.indexOf("headerActions?.append(compareButton);"));
+  assert.match(click, /fitCompactCompareBands\(\);/);
+  assert.match(editor, /area\.append\(interactionHint\);\s*\n\s*if \(crossOverlayCompact && recipeShowCrossResinOverlay\) requestAnimationFrame\(fitCompactCompareBands\);/);
+  const fit = editor.slice(editor.indexOf("function fitCompactCompareBands(){"), editor.indexOf("// Which parts of a cell keep an interaction"));
+  assert.doesNotMatch(fit, /renderSplitsArea/);
+  const tight = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot.is-tight em{");
+  assert.match(tight, /display:none;/);
 });
 
 test("an emptied hopper reads as the empty cell's own placeholder", () => {
@@ -198,7 +214,6 @@ test("the band is accent-tinted and bleeds to the cell's padding edge; never war
   const cell = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe td.splitMatrixCell{");
   assert.match(cell, /padding:5px 3px;/, "the band's negative margins mirror the cell padding");
   const tag = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot em{");
-  assert.match(tag, /text-transform:uppercase;/);
   assert.match(tag, /color:var\(--focus-border\);/);
   const code = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot b{");
   assert.match(code, /font-size:10px;/);

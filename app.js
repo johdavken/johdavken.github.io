@@ -4790,6 +4790,20 @@
       const crossOverlayAvailable = reworkedGrid || cellsTypeable || crossOverlayCompact;
       const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
       area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
+      // The compact band's arrow gives way to the code. A band is measured
+      // only while it is shown (display:none has no widths to read): where
+      // the code would ellipsise beside the arrow, the band goes tight and
+      // CSS hides the arrow, so the code alone is what the operator reads.
+      // Runs on the eye's click and once after a render that shows bands;
+      // a plain layout read per band, nothing is re-rendered.
+      function fitCompactCompareBands(){
+        if (!crossOverlayCompact || area.dataset.crossOverlay !== "on") return;
+        area.querySelectorAll(".splitCellCrossResin--foot").forEach(band=>{
+          band.classList.remove("is-tight");
+          const code = band.querySelector("b");
+          if (code && code.scrollWidth > code.clientWidth) band.classList.add("is-tight");
+        });
+      }
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -5307,6 +5321,7 @@
           recipeShowCrossResinOverlay = !recipeShowCrossResinOverlay;
           area.dataset.crossOverlay = recipeShowCrossResinOverlay ? "on" : "off";
           syncCompareButton();
+          fitCompactCompareBands();
         });
         headerActions?.append(compareButton);
       }else{
@@ -5746,11 +5761,13 @@
             const tag = document.createElement("em");
             tag.textContent = crossOverlayLabel;
             // The compact band shares one line with the code in a cell ~76px
-            // wide at five layers, and "CURRENT" alone eats half of it. "NOW"
-            // says the same thing - what is on the line now - in three
-            // letters; "NEXT" already fits. The accessible label and title
-            // keep the full word.
-            if (crossOverlayCompact && crossOverlayLabel === "current") tag.textContent = "now";
+            // wide at five layers, and even "NEXT" pushed a six-letter code
+            // into an ellipsis on a real phone. The tag is an arrow instead:
+            // "\u2192 MS0400" on Current is where the hopper is going,
+            // "\u2190 A0301" on Next is where it is coming from. The title and
+            // the eye's label keep the full words. If the code still cannot
+            // fit beside the arrow, fitCompactCompareBands drops the arrow.
+            if (crossOverlayCompact) tag.textContent = crossOverlayLabel === "current" ? "\u2190" : "\u2192";
             const value = document.createElement("b");
             // An emptied hopper reads "next —", the empty cell's own placeholder.
             value.textContent = crossResin || "\u2014";
@@ -6134,6 +6151,7 @@
       }
       updateInteractionHint();
       area.append(interactionHint);
+      if (crossOverlayCompact && recipeShowCrossResinOverlay) requestAnimationFrame(fitCompactCompareBands);
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
