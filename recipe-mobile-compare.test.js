@@ -150,10 +150,10 @@ test("four keys fit beside four tabs: the Current/Next pages step the keys and t
  *   The per-cell band
  * ============================================================ */
 
-test("a compact cell carries the line only where the other recipe differs, by keyName on both sides", () => {
+test("every surface carries the line only where the other recipe differs, by keyName on both sides", () => {
   const editor = recipeEditor();
   assert.match(editor, /const crossDiffers = crossOverlayAvailable && keyName\(crossResin\) !== keyName\(hopper\.resinName\);/);
-  assert.match(editor, /if \(crossOverlayAvailable && \(crossOverlayCompact \? crossDiffers : crossResin\)\)\{/);
+  assert.match(editor, /let crossOverlay = null;\s*\n\s*if \(crossDiffers\)\{/);
   // keyName trims, collapses whitespace and uppercases: a case-only
   // respelling is not a change; an emptied or newly filled hopper is.
   assert.match(app, /function keyName\(s\)\{ return normName\(s\)\.toUpperCase\(\); \}/);
@@ -225,6 +225,31 @@ test("the differs class is styled nowhere outside the phone block, and the compa
   if (styles.includes("cross-differs")) phoneOnly("cross-differs");
   const cell = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitMatrixCell{");
   assert.match(cell, /min-height:52px;/);
+});
+
+/* ============================================================
+ *   The pointer grid's chip (tablet and desktop)
+ * ============================================================ */
+
+test("on the pointer grid the differing hopper's line is an accent chip inside the badge slot - same accent, no size change", () => {
+  const { occurrences } = require("./css-media");
+  const base = occurrences(styles, ".splitCellCrossResin{").find(o => !o.condition);
+  assert.ok(base, "the base rule lives outside any media query");
+  assert.match(base.body, /padding:2px 5px;/);
+  assert.match(base.body, /border-radius:5px;/);
+  assert.match(base.body, /background:color-mix\(in srgb, var\(--focus-border\) 14%, transparent\);/);
+  assert.match(base.body, /box-shadow:inset 0 0 0 1px color-mix\(in srgb, var\(--focus-border\) 30%, transparent\);/);
+  assert.match(base.body, /line-height:1;/);
+  assert.doesNotMatch(base.body, /--warn|--bad|min-height|(^|[^-])height:/);
+  const tag = occurrences(styles, ".splitCellCrossResin em{").find(o => !o.condition);
+  assert.match(tag.body, /font-size:7\.5px;/);
+  assert.match(tag.body, /color:var\(--focus-border\);/);
+  const code = occurrences(styles, ".splitCellCrossResin b{").find(o => !o.condition);
+  assert.match(code.body, /font-size:9\.5px;/);
+  assert.match(code.body, /color:var\(--title\);/);
+  // The phone band squares the chip off again - it is a band, not a pill.
+  const band = phoneBody("#splitsArea[data-recipe-cells=\"static\"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot{");
+  assert.match(band, /border-radius:0;/);
 });
 
 /* ============================================================

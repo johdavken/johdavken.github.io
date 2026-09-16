@@ -122,13 +122,12 @@ test("the overlay toggle's accessible label names the counterpart recipe, not a 
   assert.match(editor, /const label = `\$\{on \? "Hide" : "Show"\} \$\{crossOverlayLabel\} resin`;/);
 });
 
-test("on the pointer grid the overlay shows the other page's resin only - a differing cell gets no badge highlight", () => {
-  // The warn-tinted hopper badge that flagged current-vs-next mismatches was
-  // removed: with the overlay already printing the other page's code in the
-  // cell, the second signal was clutter. The overlay text itself stays. The
-  // differs flag now exists (compact Summary prints only the differing
-  // hoppers), but it is a class on the cell that only the phone block
-  // styles - nothing outside a phone media query may read it.
+test("on the pointer grid the overlay prints only the differing hoppers, and the hopper badge itself takes no highlight", () => {
+  // The warn-tinted hopper badge that once flagged current-vs-next mismatches
+  // stays gone: the overlay line is now built only where the resin differs
+  // and carries its own accent chip, so the badge has nothing to add. The
+  // differs flag is a class on the cell that only the phone block may style
+  // - nothing outside a phone media query may read it.
   const { occurrences, PHONE } = require("./css-media");
   assert.match(app, /const crossDiffers = crossOverlayAvailable && keyName\(crossResin\) !== keyName\(hopper\.resinName\);/);
   assert.match(app, /td\.classList\.toggle\("cross-differs", crossDiffers\);/);

@@ -5741,20 +5741,22 @@
           // Whether the two recipes differ here is decided by keyName() on
           // both sides - the same trim/collapse/uppercase the grid keys its
           // own resins by - so a case-only respelling is not a change, and
-          // an emptied or newly filled hopper is. The pointer grid keeps
-          // printing every counterpart code and takes no highlight from the
-          // flag (with the code already in the cell, a second signal read
-          // as clutter). Compact Summary prints ONLY the differing ones,
-          // as a band at the cell's foot, so unchanged hoppers stay exactly
-          // as they render today and the changes are what stands out. The
-          // flag is fixed at build time: in compact Summary nothing in the
-          // cell is typeable, so no path changes a resin without the
-          // re-render that rebuilds the cell.
+          // an emptied or newly filled hopper is. Every surface prints ONLY
+          // the differing hoppers - on the pointer grid as an accent chip in
+          // the header slot it already owned, on compact Summary as a band
+          // at the cell's foot - so unchanged hoppers render exactly as
+          // they do with the overlay off, and the changes are what stands
+          // out. (The pointer grid once printed every counterpart code with
+          // no highlight; read across a whole line, that made the changes
+          // the hardest thing to find.) The flag is fixed at build time: on
+          // the typeable grid a resin typed into a cell is followed by the
+          // re-render that rebuilds it, and in compact Summary nothing in
+          // the cell is typeable.
           const crossResin = crossOverlayAvailable ? otherRecipeResinAt(li, hi) : "";
           const crossDiffers = crossOverlayAvailable && keyName(crossResin) !== keyName(hopper.resinName);
           td.classList.toggle("cross-differs", crossDiffers);
           let crossOverlay = null;
-          if (crossOverlayAvailable && (crossOverlayCompact ? crossDiffers : crossResin)){
+          if (crossDiffers){
             crossOverlay = document.createElement("span");
             crossOverlay.className = crossOverlayCompact ? "splitCellCrossResin splitCellCrossResin--foot" : "splitCellCrossResin";
             crossOverlay.setAttribute("aria-hidden", "true");
