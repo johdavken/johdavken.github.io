@@ -62,6 +62,16 @@
         "8798"
       ],
       "port": 8798
+    },
+    {
+      "name": "app-compare",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/serve.js",
+        "--port",
+        "8799"
+      ],
+      "port": 8799
     }
   ]
 }

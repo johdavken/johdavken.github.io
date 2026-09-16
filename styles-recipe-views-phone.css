@@ -141,14 +141,38 @@
     outline:var(--focus-outline);
     outline-offset:2px;
   }
-  /* Scan popup open reads as a pressed key. */
+  /* Scan popup open reads as a pressed key; so does Compare while it is
+     showing the other recipe (aria-pressed is its state, the same way the
+     pointer grid's corner toggle carries one). */
   #splitsBlock .recipeHeaderActions .mobileScanIconAction[open] > summary,
-  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"]{
+  #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction[aria-expanded="true"],
+  #splitsBlock .recipeHeaderActions .mobileCompareAction[aria-pressed="true"]{
     background:var(--btnstyle-ink);
     color:var(--panel);
     box-shadow:none;
   }
   #splitsBlock .recipeHeaderActions .recipeHeaderMobileAction:disabled{ opacity:.5; cursor:default; }
+  /* Current and Next carry four keys (scan / load / compare / pencil) beside
+     four tabs. At 48px keys and 12px tab padding that is 4px too wide for a
+     412px phone and the Recipe Book tab slides under the Scan key, so on
+     those two pages only the keys step down to 44px (still the tap
+     guidance), the key gaps to 6px and the tab padding to 10px. Weights and
+     Recipe Book keep the established sizes - they never show four keys. */
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderRow,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderRow{ gap:8px; }
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderRow #recipeHeaderActionPill,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderRow #recipeHeaderActionPill,
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderRow .recipeHeaderActions,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderRow .recipeHeaderActions{ gap:6px; }
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction{
+    width:44px;
+    min-width:44px;
+  }
+  body[data-recipe-page="current"] #splitsBlock .recipePageTab,
+  body[data-recipe-page="next"] #splitsBlock .recipePageTab{ padding-inline:10px; }
   /* This scan sits near the top of the panel, so its popup opens downward
      (over the matrix, within .blockBody's bounds) and hugs the right edge
      so a 220px panel never runs off-screen. */
@@ -884,6 +908,54 @@
     min-height:52px;
     cursor:pointer;
   }
+  /* Compare mode's band: the other recipe's resin for this hopper, printed
+     only where it differs (buildCell's crossDiffers), as a full-width strip
+     across the foot of the cell. It is the cell grid's third row, implicit
+     rather than declared in grid-template-areas: while the overlay is off
+     the span is display:none, so no track exists and no row-gap is spent -
+     turning compare off leaves the grid exactly as it was. Negative margins
+     bleed the strip to the cell's padding edge (5px 3px, above) so it reads
+     as the cell's lower band, not a chip inside it. Accent-tinted, not
+     warn: a planned change is information to read, not a fault to fix, and
+     the tracked cell's --ok fill underneath still shows through. ~13px
+     tall, so a one-line resin name (18 + 2 + 15 = 35px of content) still
+     fits inside the 52px minimum and the row does not grow. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot{
+    grid-column:1 / -1;
+    flex-direction:row;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:4px;
+    max-width:none;
+    margin:0 -3px -5px;
+    padding:2px 4px 3px;
+    border-radius:0;
+    background:color-mix(in srgb, var(--focus-border) 14%, transparent);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, var(--focus-border) 30%, transparent);
+    text-align:left;
+  }
+  /* The tag is an arrow (buildCell): the code's own size, in the accent. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot em{
+    flex:0 0 auto;
+    font-size:10px;
+    letter-spacing:0;
+    color:var(--focus-border);
+    opacity:1;
+  }
+  /* Where even the arrow would cost the code its last letters, the code
+     alone (fitCompactCompareBands marks the band). */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot.is-tight em{
+    display:none;
+  }
+  /* The code is the value; it takes whatever the tag leaves and ellipsises
+     last, right-aligned so it ends flush against the cell edge like the %. */
+  #splitsArea[data-recipe-cells="static"] .splitsMatrix.compactMobileRecipe .splitCellCrossResin--foot b{
+    flex:1 1 auto;
+    min-width:0;
+    font-size:10px;
+    color:var(--title);
+    text-align:right;
+  }
   @keyframes compactRecipeTrackPulse{
     0%,100%{ transform:scale(1); box-shadow:0 0 0 1px color-mix(in srgb,var(--focus-border) 70%,transparent); }
     50%{ transform:scale(1.06); box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-border) 24%,transparent); }
@@ -1278,6 +1350,23 @@
    back to the nearest "@media ". */
 @media (max-width: 384px){
   #splitsBlock .recipePageTab{ padding-inline:7px; }
+  /* The four-key pages (see the <=700px block): the page-scoped 10px above
+     outranks the 7px here, so it is restated at the same specificity, and
+     the keys step down once more - a 375px row is 351px, and 4x44 keys
+     with four 37px tabs is 3px too many. 42px keys at 5px gaps leave 12px. */
+  body[data-recipe-page="current"] #splitsBlock .recipePageTab,
+  body[data-recipe-page="next"] #splitsBlock .recipePageTab{ padding-inline:7px; }
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderRow #recipeHeaderActionPill,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderRow #recipeHeaderActionPill,
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderRow .recipeHeaderActions,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderRow .recipeHeaderActions{ gap:5px; }
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderActions > .mobileScanIconAction > summary,
+  body[data-recipe-page="current"] #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction,
+  body[data-recipe-page="next"] #splitsBlock .recipeHeaderActions > .recipeHeaderMobileAction{
+    width:42px;
+    min-width:42px;
+  }
 }
 
 .hopperBadge{

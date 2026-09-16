@@ -4772,15 +4772,38 @@
       // Summary/Edit's control is hidden by syncRecipePageUI(), which owns
       // that flag and runs after this renderer; setRecipeViewMode behind it
       // stays in place for compact mobile, which still has both modes.
-      // The cross-resin overlay only exists on the typeable (pointer) grid,
-      // on both pages: it shows the other page's resin per cell so Current
-      // and the plan can be read against each other. The overlay toggle and
+      // The cross-resin overlay exists on the typeable (pointer) grid, on
+      // both pages: it shows the other page's resin per cell so Current and
+      // the plan can be read against each other. The overlay toggle and
       // per-cell spans are always built when available; recipeShowCrossResinOverlay
       // only reveals them, so toggling never needs a re-render. The label
       // names whichever recipe is being overlaid.
-      const crossOverlayAvailable = reworkedGrid || cellsTypeable;
+      //
+      // Compact mobile has it too, in Summary only ("compare mode"): Edit
+      // already fills the cell with its own marks, and reading the two
+      // recipes against each other is a tracking-time activity, which is
+      // what Summary is for. There the trigger is an eye key in the header
+      // cluster (the gutter corner the pointer grid uses is hidden on the
+      // phone), and a cell only carries the line where the other recipe
+      // actually differs - see crossDiffers in buildCell.
+      const crossOverlayCompact = compactMobileRecipe && summaryView;
+      const crossOverlayAvailable = reworkedGrid || cellsTypeable || crossOverlayCompact;
       const crossOverlayLabel = isNextRecipePage() ? "current" : "next";
       area.dataset.crossOverlay = (crossOverlayAvailable && recipeShowCrossResinOverlay) ? "on" : "off";
+      // The compact band's arrow gives way to the code. A band is measured
+      // only while it is shown (display:none has no widths to read): where
+      // the code would ellipsise beside the arrow, the band goes tight and
+      // CSS hides the arrow, so the code alone is what the operator reads.
+      // Runs on the eye's click and once after a render that shows bands;
+      // a plain layout read per band, nothing is re-rendered.
+      function fitCompactCompareBands(){
+        if (!crossOverlayCompact || area.dataset.crossOverlay !== "on") return;
+        area.querySelectorAll(".splitCellCrossResin--foot").forEach(band=>{
+          band.classList.remove("is-tight");
+          const code = band.querySelector("b");
+          if (code && code.scrollWidth > code.clientWidth) band.classList.add("is-tight");
+        });
+      }
 
       // Which parts of a cell keep an interaction of their own, and which
       // are just cell surface. Everything editable lives inside a field or
@@ -5262,6 +5285,45 @@
           loadCurrentButton.classList.add("recipeHeaderMobileAction");
           headerActions?.append(loadCurrentButton);
         }
+        // Compare: the phone's cross-resin overlay toggle, an eye between
+        // Load and the pencil. Built on every compact render - Edit included,
+        // where it is merely disabled - so the key row never reflows when
+        // the mode flips. Same flag and same data attribute as the pointer
+        // grid's corner toggle, so the two never disagree, and like it the
+        // click reveals what is already built rather than re-rendering.
+        // On Current it needs a plan to compare against; on Next the live
+        // recipe is always a valid counterpart.
+        const compareButton = document.createElement("button");
+        compareButton.type = "button";
+        compareButton.id = "mobileCompareRecipeButton";
+        compareButton.className = "recipeHeaderMobileAction mobileCompareAction";
+        compareButton.innerHTML =
+          '<svg class="recipeActionIcon" viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/>' +
+            '<circle cx="12" cy="12" r="3"/>' +
+          '</svg>';
+        const compareUsable = crossOverlayCompact && (isNextRecipePage() || hasPlannedRecipe());
+        compareButton.disabled = !compareUsable;
+        compareButton.setAttribute("aria-disabled", String(!compareUsable));
+        const syncCompareButton = ()=>{
+          const on = crossOverlayAvailable && recipeShowCrossResinOverlay;
+          const label = `${on ? "Hide" : "Show"} ${crossOverlayLabel} resin`;
+          compareButton.classList.toggle("on", on);
+          compareButton.setAttribute("aria-pressed", String(on));
+          compareButton.setAttribute("aria-label", label);
+          compareButton.title = compareUsable
+            ? label
+            : (crossOverlayCompact ? "Plan a Next Recipe to compare against" : "Compare is available in Summary view");
+        };
+        syncCompareButton();
+        compareButton.addEventListener("click", ()=>{
+          if (!compareUsable) return;
+          recipeShowCrossResinOverlay = !recipeShowCrossResinOverlay;
+          area.dataset.crossOverlay = recipeShowCrossResinOverlay ? "on" : "off";
+          syncCompareButton();
+          fitCompactCompareBands();
+        });
+        headerActions?.append(compareButton);
       }else{
         // Current/Next and Print are ordinary app buttons in the header.
         // The left border on recipeHeaderActions separates page actions from
@@ -5379,7 +5441,7 @@
       // On the typeable grid the corner instead holds the overlay toggle for
       // the cross-resin overlay (replacing the "Select row" caption, which is
       // only ever a label - the numbered buttons below still select).
-      if (crossOverlayAvailable){
+      if (crossOverlayAvailable && !crossOverlayCompact){
         const overlayToggle = document.createElement("button");
         overlayToggle.type = "button";
         overlayToggle.className = "splitCrossOverlayToggle";
@@ -5675,18 +5737,45 @@
           // the overlay is available and that position holds something; CSS
           // reveals it only while the overlay toggle is on
           // (#splitsArea[data-cross-overlay="on"]).
+          //
+          // Whether the two recipes differ here is decided by keyName() on
+          // both sides - the same trim/collapse/uppercase the grid keys its
+          // own resins by - so a case-only respelling is not a change, and
+          // an emptied or newly filled hopper is. Every surface prints ONLY
+          // the differing hoppers - on the pointer grid as an accent chip in
+          // the header slot it already owned, on compact Summary as a band
+          // at the cell's foot - so unchanged hoppers render exactly as
+          // they do with the overlay off, and the changes are what stands
+          // out. (The pointer grid once printed every counterpart code with
+          // no highlight; read across a whole line, that made the changes
+          // the hardest thing to find.) The flag is fixed at build time: on
+          // the typeable grid a resin typed into a cell is followed by the
+          // re-render that rebuilds it, and in compact Summary nothing in
+          // the cell is typeable.
           const crossResin = crossOverlayAvailable ? otherRecipeResinAt(li, hi) : "";
-          if (crossOverlayAvailable && crossResin){
-            const crossOverlay = document.createElement("span");
-            crossOverlay.className = "splitCellCrossResin";
+          const crossDiffers = crossOverlayAvailable && keyName(crossResin) !== keyName(hopper.resinName);
+          td.classList.toggle("cross-differs", crossDiffers);
+          let crossOverlay = null;
+          if (crossDiffers){
+            crossOverlay = document.createElement("span");
+            crossOverlay.className = crossOverlayCompact ? "splitCellCrossResin splitCellCrossResin--foot" : "splitCellCrossResin";
             crossOverlay.setAttribute("aria-hidden", "true");
             const tag = document.createElement("em");
             tag.textContent = crossOverlayLabel;
+            // The compact band shares one line with the code in a cell ~76px
+            // wide at five layers, and even "NEXT" pushed a six-letter code
+            // into an ellipsis on a real phone. The tag is an arrow instead:
+            // "\u2192 MS0400" on Current is where the hopper is going,
+            // "\u2190 A0301" on Next is where it is coming from. The title and
+            // the eye's label keep the full words. If the code still cannot
+            // fit beside the arrow, fitCompactCompareBands drops the arrow.
+            if (crossOverlayCompact) tag.textContent = crossOverlayLabel === "current" ? "\u2190" : "\u2192";
             const value = document.createElement("b");
-            value.textContent = crossResin;
+            // An emptied hopper reads "next —", the empty cell's own placeholder.
+            value.textContent = crossResin || "\u2014";
             crossOverlay.append(tag, value);
-            crossOverlay.title = `${crossOverlayLabel === "current" ? "Currently loaded" : "Planned"} in ${hopperBadgeLabel(L.name, hi)}: ${crossResin}`;
-            cellHeader.append(crossOverlay);
+            crossOverlay.title = `${crossOverlayLabel === "current" ? "Currently loaded" : "Planned"} in ${hopperBadgeLabel(L.name, hi)}: ${crossResin || "nothing"}`;
+            if (!crossOverlayCompact) cellHeader.append(crossOverlay);
           }
 
           const editor = document.createElement("div");
@@ -5802,6 +5891,10 @@
           const cellInner = document.createElement("div");
           cellInner.className = "splitCellInner";
           cellInner.append(cellHeader, editor);
+          // The compact compare band is the grid's third, implicit row -
+          // full width under the resin name - so it lives beside the
+          // header and editor rather than inside the header's badge slot.
+          if (crossOverlay && crossOverlayCompact) cellInner.append(crossOverlay);
           td.append(cellInner);
 
           function refreshCellState(){
@@ -6060,6 +6153,7 @@
       }
       updateInteractionHint();
       area.append(interactionHint);
+      if (crossOverlayCompact && recipeShowCrossResinOverlay) requestAnimationFrame(fitCompactCompareBands);
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;
