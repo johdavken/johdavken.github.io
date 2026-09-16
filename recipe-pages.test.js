@@ -51,16 +51,18 @@ test("Rearrange is parameterized rather than duplicated per page", () => {
  *   Cross-resin overlay (both pages, mirror of each other)
  * ============================================================ */
 
-test("the cross-resin overlay is on both pages, pointer-only, one shared off-by-default flag", () => {
+test("the cross-resin overlay is on both pages, pointer grid plus compact Summary, one shared off-by-default flag", () => {
   const editor = recipeEditor();
   // One shared flag, module level so it survives re-renders, never persisted.
   assert.match(app, /let recipeShowCrossResinOverlay = false;/);
   const snapshot = app.slice(app.indexOf("function snapshotPayload(){"), app.indexOf("function applySharedActiveJob("));
   assert.doesNotMatch(snapshot, /recipeShowCrossResinOverlay/);
-  // Available on the reworked wide grid (tablet included) and on any
-  // typeable pointer grid - Current or Next - and the label names whichever
-  // recipe is being overlaid.
-  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable;/);
+  // Available on the reworked wide grid (tablet included), on any typeable
+  // pointer grid, and on the compact phone grid in Summary only (compare
+  // mode, see recipe-mobile-compare.test.js) - Current or Next - and the
+  // label names whichever recipe is being overlaid.
+  assert.match(editor, /const crossOverlayCompact = compactMobileRecipe && summaryView;/);
+  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable \|\| crossOverlayCompact;/);
   assert.match(editor, /const crossOverlayLabel = isNextRecipePage\(\) \? "current" : "next";/);
   assert.match(editor, /area\.dataset\.crossOverlay = \(crossOverlayAvailable && recipeShowCrossResinOverlay\) \? "on" : "off";/);
 });
@@ -73,12 +75,15 @@ test("the overlay reads the OTHER page's recipe through its own accessor", () =>
   assert.match(app, /isNextRecipePage\(\)\s*\n\s*\? state\.layers\s*\n\s*: \(window\.PolynNextRecipe\?\.normalize\(state\.nextRecipe\)\?\.layers \|\| \[\]\)/);
   assert.match(app, /hopper\.resinName \?\? hopper\.resin_name/);
   assert.match(editor, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
-  assert.match(editor, /crossOverlay\.className = "splitCellCrossResin"/);
+  assert.match(editor, /crossOverlay\.className = crossOverlayCompact \? "splitCellCrossResin splitCellCrossResin--foot" : "splitCellCrossResin";/);
   assert.match(editor, /tag\.textContent = crossOverlayLabel;/);
 });
 
 test("the overlay toggle flips the overlay without a re-render", () => {
   const editor = recipeEditor();
+  // The corner toggle belongs to the pointer grid; the phone's gutter corner
+  // is hidden in Summary, so compact mode gets its own header key instead.
+  assert.match(editor, /if \(crossOverlayAvailable && !crossOverlayCompact\)\{/);
   assert.match(editor, /overlayToggle\.className = "splitCrossOverlayToggle"/);
   assert.match(editor, /corner\.appendChild\(overlayToggle\);/);
   assert.match(editor, /\} else \{\s*\n\s*corner\.textContent = summaryView \? "" : "Select row";/);
@@ -117,14 +122,23 @@ test("the overlay toggle's accessible label names the counterpart recipe, not a 
   assert.match(editor, /const label = `\$\{on \? "Hide" : "Show"\} \$\{crossOverlayLabel\} resin`;/);
 });
 
-test("the overlay shows the other page's resin only - a differing cell gets no badge highlight", () => {
+test("on the pointer grid the overlay shows the other page's resin only - a differing cell gets no badge highlight", () => {
   // The warn-tinted hopper badge that flagged current-vs-next mismatches was
   // removed: with the overlay already printing the other page's code in the
-  // cell, the second signal was clutter. The overlay text itself stays.
+  // cell, the second signal was clutter. The overlay text itself stays. The
+  // differs flag now exists (compact Summary prints only the differing
+  // hoppers), but it is a class on the cell that only the phone block
+  // styles - nothing outside a phone media query may read it.
+  const { occurrences, PHONE } = require("./css-media");
+  assert.match(app, /const crossDiffers = crossOverlayAvailable && keyName\(crossResin\) !== keyName\(hopper\.resinName\);/);
+  assert.match(app, /td\.classList\.toggle\("cross-differs", crossDiffers\);/);
   assert.doesNotMatch(app, /crossResinDiffers/);
-  assert.doesNotMatch(styles, /crossResinDiffers/);
+  for (const hit of occurrences(styles, "cross-differs", { anywhere: true })){
+    assert.ok(hit.condition && PHONE.test(hit.condition), `cross-differs styled outside the phone block at ${hit.index}`);
+  }
+  assert.doesNotMatch(app, /\.splitCellHopperName[^\n]*cross-differs|cross-differs[^\n]*splitCellHopperName/);
   assert.match(app, /const crossResin = crossOverlayAvailable \? otherRecipeResinAt\(li, hi\) : "";/);
-  assert.match(app, /crossOverlay\.className = "splitCellCrossResin";/);
+  assert.match(app, /if \(!crossOverlayCompact\) cellHeader\.append\(crossOverlay\);/);
   assert.match(styles, /#splitsArea\[data-cross-overlay="on"\]/);
 });
 

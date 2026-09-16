@@ -297,7 +297,10 @@ test("Recipe Book is a page replacement, so Edit controls and the matrix cannot 
  * -------------------------------------------------------------------- */
 
 test("buildCell wraps the header + editor in a plain .splitCellInner div (a <td> cannot host the grid without ceasing to be a table cell)", () => {
-  assert.match(splitsArea, /cellInner\.className = "splitCellInner";\s*\n\s*cellInner\.append\(cellHeader, editor\);\s*\n\s*td\.append\(cellInner\);/);
+  // Compare mode may slot its band in as a third grid item between the two
+  // appends (recipe-mobile-compare.test.js pins that); the wrapper itself
+  // stays a plain div holding header + editor.
+  assert.match(splitsArea, /cellInner\.className = "splitCellInner";\s*\n\s*cellInner\.append\(cellHeader, editor\);[\s\S]{0,400}?\n\s*td\.append\(cellInner\);/);
 });
 
 test("on the compact/touch grid, .splitCellInner is a two-row grid: badge + % share the top line, resin spans the row below", () => {
