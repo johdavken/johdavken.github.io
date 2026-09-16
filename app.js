@@ -4815,6 +4815,28 @@
       // CSS hides the arrow, so the code alone is what the operator reads.
       // Runs on the eye's click and once after a render that shows bands;
       // a plain layout read per band, nothing is re-rendered.
+      // Wide Touch: the resin name must show in full at whatever size the
+      // device draws text. A tablet's system font scale enlarges the text
+      // inside a column whose width is fixed by the six-across table, and
+      // an <input> clips rather than wraps or ellipsises - the last letter
+      // of "MS1200" was the first to go. So after a render the field is
+      // measured against its column and its font stepped down (never below
+      // 10px) until the whole code fits: the cell keeps its size, the name
+      // keeps its letters. The inline size is cleared first so a wider
+      // column on the next render gets the full size back.
+      function fitWideTouchResinNames(){
+        if (!wideTouch) return;
+        area.querySelectorAll(".splitMatrixCell .resinNameInput").forEach(input=>{
+          input.style.removeProperty("font-size");
+          if (!input.value) return;
+          let size = parseFloat(getComputedStyle(input).fontSize) || 0;
+          let guard = 24;
+          while (guard-- > 0 && size > 10 && input.scrollWidth > input.clientWidth){
+            size = Math.max(10, size - 0.5);
+            input.style.fontSize = `${size}px`;
+          }
+        });
+      }
       function fitCompactCompareBands(){
         if (!crossOverlayCompact || area.dataset.crossOverlay !== "on") return;
         area.querySelectorAll(".splitCellCrossResin--foot").forEach(band=>{
@@ -6173,6 +6195,7 @@
       updateInteractionHint();
       area.append(interactionHint);
       if (crossOverlayCompact && recipeShowCrossResinOverlay) requestAnimationFrame(fitCompactCompareBands);
+      if (wideTouch) requestAnimationFrame(fitWideTouchResinNames);
 
       function showMobileLayer(layerName){
         activeMobileLayer = layerName;

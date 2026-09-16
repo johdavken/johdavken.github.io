@@ -101,6 +101,19 @@ test("wide touch drops the per-cell clock and makes Summary's live fields inert,
   assert.ok(reenable > 0 && clock.index > reenable && inert.index > reenable);
 });
 
+test("the resin name is fitted to its column after a render - font stepped down, never below 10px, cell size untouched", () => {
+  const editor = recipeEditor();
+  const fit = editor.slice(editor.indexOf("function fitWideTouchResinNames(){"), editor.indexOf("function fitCompactCompareBands(){"));
+  assert.match(fit, /if \(!wideTouch\) return;/);
+  assert.match(fit, /input\.style\.removeProperty\("font-size"\);/);
+  assert.match(fit, /size > 10 && input\.scrollWidth > input\.clientWidth/);
+  assert.match(fit, /size = Math\.max\(10, size - 0\.5\);/);
+  assert.doesNotMatch(fit, /renderSplitsArea|height|width\s*=/);
+  assert.match(editor, /if \(wideTouch\) requestAnimationFrame\(fitWideTouchResinNames\);/);
+  const pad = touchRule('body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{');
+  assert.match(pad.body, /padding-inline:0;/);
+});
+
 test("the percentage field is sized in ems so a decimal never clips", () => {
   const pct = touchRule('body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{');
   assert.match(pct.body, /width:2\.9em;/);

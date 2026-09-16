@@ -659,6 +659,13 @@ body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recip
   color:var(--title);
   -webkit-text-fill-color:var(--title);
 }
+/* Every pixel of the column goes to the letters: the field's own inline
+   padding is chrome the inert/typing hybrid does not need, and
+   fitWideTouchResinNames (app.js) steps the font down only after this
+   room is used. */
+body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
+  padding-inline:0;
+}
 body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
   width:2.6em;
 }
