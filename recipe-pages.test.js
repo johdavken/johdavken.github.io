@@ -62,7 +62,7 @@ test("the cross-resin overlay is on both pages, pointer grid plus compact Summar
   // mode, see recipe-mobile-compare.test.js) - Current or Next - and the
   // label names whichever recipe is being overlaid.
   assert.match(editor, /const crossOverlayCompact = compactMobileRecipe && summaryView;/);
-  assert.match(editor, /const crossOverlayAvailable = iconKeyHeader \? summaryView : \(reworkedGrid \|\| cellsTypeable\);/);
+  assert.match(editor, /const crossOverlayAvailable = reworkedGrid \|\| cellsTypeable \|\| crossOverlayCompact;/);
   assert.match(editor, /const crossOverlayLabel = isNextRecipePage\(\) \? "current" : "next";/);
   assert.match(editor, /area\.dataset\.crossOverlay = \(crossOverlayAvailable && recipeShowCrossResinOverlay\) \? "on" : "off";/);
 });
@@ -83,7 +83,7 @@ test("the overlay toggle flips the overlay without a re-render", () => {
   const editor = recipeEditor();
   // The corner toggle belongs to the pointer grid; the phone's gutter corner
   // is hidden in Summary, so compact mode gets its own header key instead.
-  assert.match(editor, /if \(crossOverlayAvailable && !iconKeyHeader\)\{/);
+  assert.match(editor, /if \(crossOverlayAvailable && !crossOverlayCompact\)\{/);
   assert.match(editor, /overlayToggle\.className = "splitCrossOverlayToggle"/);
   assert.match(editor, /corner\.appendChild\(overlayToggle\);/);
   assert.match(editor, /\} else \{\s*\n\s*corner\.textContent = summaryView \? "" : "Select row";/);
@@ -261,7 +261,7 @@ test("aria-selected, the panel label, and the view control follow every workspac
   assert.match(body, /const labelledBy = isSavedRecipesPage\(\)[\s\S]*?"recipePageTabSaved"[\s\S]*?isWeightsPage\(\)[\s\S]*?"recipePageTabWeights"[\s\S]*?"recipePageTabNext" : "recipePageTabCurrent"/);
   // Plus every width above compact mobile, where the reworked grid is
   // always live and Summary/Edit has nothing left to switch between.
-  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| isDesktopLayout\(\);/);
+  assert.match(body, /viewToggle\.hidden = isSavedRecipesPage\(\) \|\| isWeightsPage\(\) \|\| !layoutModeQueries\.compactRecipe\.matches;/);
   assert.match(body, /headerControls\.hidden = isSavedRecipesPage\(\);/);
 });
 

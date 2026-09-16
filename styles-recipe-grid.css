@@ -628,43 +628,9 @@ body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatr
   letter-spacing:0;
 }
 body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitPctControl input{
-  /* Sized in ems of its own font so "59.5" fits at every size the
-     responsive clamp hands it: 30px clipped the decimal on a tablet. */
-  width:2.9em;
-  min-width:2.9em;
+  width:30px;
+  min-width:30px;
   font-size:13px;
-}
-
-/* Wide Touch (a tablet, the unfolded Fold) keeps this grid but runs the
-   phone's mode axis over it (see wideTouch in renderSplitsArea):
-   - no per-cell clock: a touch target that small is one an operator will
-     not find, and in Summary the whole cell is the tracking target;
-   - in Summary the live fields are inert and read as plain text, so a tap
-     anywhere in the cell reaches the cell (the pointer rules above, which
-     re-enable the fields for desktop's modeless grid, are outranked here);
-   - Edit is the desktop hybrid: fields type, the rest of the cell selects. */
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitTrackControl{ display:none; }
-/* With the clock gone the compare chip is the tallest thing on the header
-   line; without vertical padding it stays inside the line the badge sets, so
-   turning compare on moves no row here either. */
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitCellCrossResin{ padding:0 5px; }
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-view="summary"] .splitMatrixCell input,
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-view="summary"] .splitLayerPct input{
-  pointer-events:none;
-  border-color:transparent;
-  background:transparent;
-  box-shadow:none;
-}
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"][data-recipe-view="summary"] .splitMatrixCell .resinNameInput{
-  color:var(--title);
-  -webkit-text-fill-color:var(--title);
-}
-/* Every pixel of the column goes to the letters: the field's own inline
-   padding is chrome the inert/typing hybrid does not need, and
-   fitWideTouchResinNames (app.js) steps the font down only after this
-   room is used. */
-body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitMatrixCell .resinNameInput{
-  padding-inline:0;
 }
 body[data-shell="touch"] #splitsArea[data-recipe-layout="transposed"] .splitLayerPct input{
   width:2.6em;

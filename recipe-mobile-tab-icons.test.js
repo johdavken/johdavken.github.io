@@ -133,8 +133,8 @@ test("Scan and Load are square icon-only buttons; Edit/Done collapses to its pen
 test("no Print on mobile - it is only appended in the desktop header branch", () => {
   assert.doesNotMatch(styles, /mobilePrintIconAction/);
   const editor = app.slice(app.indexOf("function renderSplitsArea(){"), app.indexOf("function renderResinCalculator(){"));
-  const compact = editor.slice(editor.indexOf("if (iconKeyHeader){"), editor.indexOf("}else{", editor.indexOf("if (iconKeyHeader){")));
+  const compact = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
   assert.doesNotMatch(compact, /printButton/);
-  const desktop = editor.slice(editor.indexOf("}else{", editor.indexOf("if (iconKeyHeader){")));
+  const desktop = editor.slice(editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
   assert.match(desktop, /headerActions\?\.append\(printButton\);/);
 });

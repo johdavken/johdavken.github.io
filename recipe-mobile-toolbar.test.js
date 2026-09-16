@@ -35,10 +35,10 @@ test("desktop's header actions stay out of the matrix while the shared Edit tool
   assert.doesNotMatch(editor, /area\.append\(modeBar\)/);
 });
 
-/** The if(iconKeyHeader){...}else{...} block that routes the Scan /
+/** The if(compactMobileRecipe){...}else{...} block that routes the Scan /
  *  Load buttons either into the mobile tab-row cluster or the desktop
  *  header pill - anchored on its own lead comment so the bare
- *  "if (iconKeyHeader){" (which also matches earlier, unrelated
+ *  "if (compactMobileRecipe){" (which also matches earlier, unrelated
  *  branches) isn't picked up. */
 function mobileVsDesktopBlock(editor){
   const start = editor.indexOf("// Mobile folds the page actions up into the tab row");
@@ -48,7 +48,7 @@ function mobileVsDesktopBlock(editor){
 }
 
 function compactBranch(block){
-  return block.slice(block.indexOf("if (iconKeyHeader){"), block.indexOf("}else{"));
+  return block.slice(block.indexOf("if (compactMobileRecipe){"), block.indexOf("}else{"));
 }
 
 test("the mobile cluster is built by moving the same real buttons into #recipeHeaderActions, not rebuilding them", () => {
