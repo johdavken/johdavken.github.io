@@ -1,0 +1,20 @@
+/* The recipe print frame (station-print-sheet.js): the iframe the print
+ * sheet is written into and printed from, standing in the utility slot.
+ *
+ * Out of sight, not out of layout: a frame with no box cannot print in
+ * every browser, so it keeps a box of no size at the slot's corner,
+ * invisible and inert to the pointer, and the sheet inside it is the
+ * printer's alone. Nothing of the console's theme reaches it - the
+ * sheet carries its own stylesheet (station-print-sheet.js), black on
+ * white as a printed page is. */
+
+.station-print__frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

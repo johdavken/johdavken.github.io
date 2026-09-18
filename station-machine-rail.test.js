@@ -133,7 +133,7 @@ test("three in the column - Current Recipe with Bulk Edit and Load Next in a fly
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
   assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("data-role")]),
-    [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"]]);
+    [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"], ["DIV", "tools-group"], ["DIV", "print-group"]]);
   assert.equal(rail.element.querySelector("[data-action='reset-tracking']"), null, "Reset Tracking stands in the timeline's Now column, not on the rail");
   // Current Recipe's group: the switch, and beside it one row - the bulk
   // set (Bulk Edit with the Confirm / Cancel / field it becomes, hidden
@@ -214,7 +214,7 @@ test("three in the column - Current Recipe with Bulk Edit and Load Next in a fly
   assert.ok(rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "true", "folded: out of the tab order and the reader's tree");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit" });
+  assert.deepEqual(railModule.LABEL, { blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit", tools: "Tools", winding: "Winding Tension", print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes" });
 });
 
 test("the recipe faces' vocabulary: the hopper is Current, the folded sheet is Next; each switch draws its own object, each move the other face's object stood right with one arrow pointing left at the switch; the two moves share every arrow coordinate and the objects are faces on the plate", () => {

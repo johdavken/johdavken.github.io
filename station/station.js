@@ -114,6 +114,18 @@
   // The hopper info panel: what a hopper runs, under it on hover.
   const hopperInfo = root.PolynStationHopperInfo || null;
   const changeoverEstimate = root.PolynChangeoverEstimate || null;
+  /* The Winding Tension calculator (station-winding-tension.js): the
+   * rail's Tools row's one tool, opened out of its tile into a utility
+   * surface at the rail's edge, over the application's own arithmetic
+   * (winding-tension.js, a shared module as changeover-estimate.js is).
+   * Optional, as the Changeover Calculator is; it dispatches nothing. */
+  const windingCalculator = root.PolynStationWindingTension || null;
+  const windingTension = root.PolynWindingTension || null;
+  /* The recipe print sheet (station-print-sheet.js): the floor UI's Print
+   * Recipe, from the rail's Print row - the same sheet, printed from a
+   * frame of its own. Optional; it reads the recipes this file already
+   * holds and dispatches nothing. */
+  const printSheet = root.PolynStationPrintSheet || null;
   /* The Operator Handbook (station-handbook.js) and its first section, the
    * Recipe Book (station-recipe-book.js), and the bridge the book reads
    * through: the workspace's saved recipes as the application publishes
@@ -362,6 +374,21 @@
   /* The machine rail's handle, once mounted: told the mode's state, what
    * the reset may do, and where the far-right cluster stands. */
   let railPanel = null;
+  /* TOOLS - the rail's fourth switch, as presentation state: whether its
+   * row of calculators is unfolded. Not a mode of the stage; nothing
+   * turns over for it. Folding the row closes whatever tool is open. */
+  const tools = { open: false };
+  /* The Winding Tension calculator's handle, once mounted in the utility
+   * slot beside the Changeover Calculator's: the two stand in the same
+   * band of the stage, so opening one closes the other. */
+  let windingPanel = null;
+  /* PRINT - the rail's fifth switch, as presentation state: whether its
+   * row of choices is unfolded. A choice prints and folds the row, as the
+   * floor UI's dialog closes on its choice. */
+  const printing = { open: false };
+  /* The printer's handle, once built: the frame in the utility slot the
+   * sheet is written into and printed from. */
+  let printer = null;
   /* The theme controller belongs to the Station root, not to this boot file
    * or the application global. Resolved once the host root is known. */
   let themeController = null;
@@ -585,6 +612,8 @@
     if (modeIs(face)) return false;
     if (face === "weights" ? !canEnterWeightsEdit() : !canEnterBlendEdit()) return false;
     leaveStageControl();
+    // One row open at a time: a face's row unfolds, the utility rows fold.
+    foldUtilityRows();
     // The open layer closes: the two modes do not share the stage.
     focus = null;
     // A face change is a different recipe under the same layer names:
@@ -1026,8 +1055,120 @@
         reason: !blendActions ? "the layer actions module is not loaded." : (blendActions.can(commandsNow, "resins") ? "" : blendActions.reason(commandsNow, "resins")),
         count: bulk.selected.size,
         resin: bulk.resin
-      }
+      },
+      tools: { open: tools.open, available: !!windingPanel },
+      winding: { active: !!(windingPanel && windingPanel.isOpen()), available: !!windingPanel },
+      print: { open: printing.open, available: canPrint(), planned }
     });
+  }
+
+  /* --------------------------------------------------------------------
+   *   Print Recipe
+   * ------------------------------------------------------------------
+   * The floor UI's sheet, from what Station already holds: the running
+   * recipe as the source resolves it, the plan rebuilt from its two
+   * readings slot for slot in the running recipe's layer order, the line
+   * from the model. Offered exactly when the floor UI's button is: some
+   * hopper carries a resin or a share, or a plan exists. */
+
+  function canPrint() {
+    if (!printer) return false;
+    const r = current.resolved;
+    if (!r) return false;
+    const layers = r.recipe && Array.isArray(r.recipe.layers) ? r.recipe.layers : [];
+    const anyAssigned = layers.some(layer => (layer.hoppers || []).some(h => (h.resinName && h.resinName.trim()) || h.pct > 0));
+    return anyAssigned || !!(r.plan && r.plan.planned);
+  }
+
+  /* The plan's layers in the sheet's shape, or null when nothing is planned. */
+  function plannedSheetLayers() {
+    const r = current.resolved;
+    if (!r || !r.plan || !r.plan.planned) return null;
+    const layers = r.recipe && Array.isArray(r.recipe.layers) ? r.recipe.layers : [];
+    const nextLayers = r.nextLayerState || {};
+    const nextHoppers = r.nextHopperState || {};
+    return layers.map(layer => ({
+      name: layer.name,
+      layerPct: nextLayers[layer.name] ? nextLayers[layer.name].layerPct : 0,
+      hoppers: layer.hoppers.map((_, index) => {
+        const planned = nextHoppers[`${layer.name}:${index}`];
+        return { resinName: planned ? planned.resinName : "", pct: planned ? planned.pct : 0 };
+      })
+    }));
+  }
+
+  /* The rail's Print switch: the row of choices unfolds or folds. One
+   * row at a time, as the faces are: unfolding folds the Tools row (and
+   * the tool it holds open) and leaves whatever face is on. */
+  function togglePrintRow() {
+    const opening = !printing.open;
+    if (opening) {
+      foldUtilityRows();
+      if (blendEdit.active) exitBlendEdit();
+    }
+    printing.open = opening;
+    syncRail();
+    return printing.open;
+  }
+
+  /* A choice on the Print row: the sheet is printed and the row folds,
+   * as the floor UI's dialog closes on its choice. What happened is said
+   * on the status line either way. */
+  function printRecipe(which) {
+    if (!printer || !current.resolved) return null;
+    const r = current.resolved;
+    const result = printer.print({
+      which,
+      current: r.recipe && Array.isArray(r.recipe.layers) ? r.recipe.layers : [],
+      next: plannedSheetLayers(),
+      line: current.model ? {
+        displayName: current.model.line.displayName,
+        layerCount: current.model.line.layerCount,
+        hopperNamingMode: current.model.line.hopperNamingMode
+      } : {}
+    });
+    printing.open = false;
+    syncRail();
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : "The recipe sheet could not be printed.");
+      return result || null;
+    }
+    say(result.pages.length === 2
+      ? "Printing both recipes on one sheet."
+      : `Printing the ${result.pages[0] === "next" ? "Next" : "Current"} Recipe sheet.`);
+    return result;
+  }
+
+  /* The rail's Tools switch: the row unfolds or folds. Folding takes the
+   * open tool with it - a surface should not stand open out of a tile
+   * that has gone. */
+  function toggleTools() {
+    const opening = !tools.open;
+    // One row at a time, as the faces are: unfolding folds the Print row
+    // and leaves whatever face is on.
+    if (opening) {
+      foldUtilityRows();
+      if (blendEdit.active) exitBlendEdit();
+    }
+    tools.open = opening;
+    if (!tools.open && windingPanel && windingPanel.isOpen()) windingPanel.close();
+    syncRail();
+    return tools.open;
+  }
+
+  /* The utility rows - Tools and Print - folded, the open tool with them.
+   * Draws nothing itself: every caller syncs the rail after. */
+  function foldUtilityRows() {
+    tools.open = false;
+    printing.open = false;
+    if (windingPanel && windingPanel.isOpen()) windingPanel.close();
+  }
+
+  /* The Winding Tension tile: the surface opens out of it or returns to
+   * it; the surface's onOpenChange tells the rail either way. */
+  function toggleWindingTension() {
+    if (!windingPanel) return false;
+    return windingPanel.toggle();
   }
 
   /* The rail's two moves - Load Next under the Current face, Copy Current
@@ -2180,7 +2321,11 @@
         anchor: jobPanel.trigger("changeover"),
         mount: mounts.utility,
         reducedMotion: prefersReducedMotion,
-        onOpenChange: open => jobPanel.setLaunched(open)
+        onOpenChange: open => {
+          jobPanel.setLaunched(open);
+          // One utility surface in the upper band at a time.
+          if (open && windingPanel && windingPanel.isOpen()) windingPanel.close();
+        }
       });
       if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
     }
@@ -2218,14 +2363,42 @@
         onBulkEdit: startBulk,
         onBulkConfirm: confirmBulk,
         onBulkCancel: cancelBulk,
+        onTools: toggleTools,
+        onWindingTension: toggleWindingTension,
+        onPrint: togglePrintRow,
+        onPrintRecipe: printRecipe,
         bulkField: bulkField ? bulkField.element : null,
         setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
       });
       mounts.rail.appendChild(railPanel.element);
-      // The stage was drawn before the rail existed: told now.
-      syncRail();
     }
+
+    /* The Winding Tension calculator, in the utility slot, out of the
+     * rail's tile: handed the application's arithmetic and the tile it
+     * flies from; it writes nowhere. Its open state is the rail's to
+     * show, so it tells the rail on every change. */
+    if (windingCalculator && windingTension && mounts.utility && railPanel) {
+      windingPanel = windingCalculator.create(doc, {
+        calculator: windingTension,
+        anchor: railPanel.windingButton,
+        mount: mounts.utility,
+        reducedMotion: prefersReducedMotion,
+        onOpenChange: open => {
+          if (open && changeoverPanel && changeoverPanel.isOpen()) changeoverPanel.close();
+          syncRail();
+        }
+      });
+      if (windingPanel) mounts.utility.appendChild(windingPanel.element);
+    }
+
+    /* The recipe printer, its frame in the utility slot: built once, told
+     * what to print by the rail's Print row. */
+    if (printSheet && mounts.utility && railPanel) {
+      printer = printSheet.create(doc, { mount: mounts.utility });
+    }
+    // The stage was drawn before the rail existed: told now.
+    if (railPanel) syncRail();
 
     /* The Operator Handbook, in the slot laid over the stage. Built once
      * with its sections - the Recipe Book, Resin Totals, Appearance, Sudo - and
