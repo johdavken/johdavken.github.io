@@ -133,6 +133,7 @@
   const $ = (id) => document.getElementById(id);
   const validation = window.PolynValidation;
   const calculators = window.PolynCalculators;
+  const windingTension = window.PolynWindingTension;
   const resinCatalog = window.PolynResinCatalog;
   const resinLookup = window.PolynLookup;
   const activeJob = window.PolynActiveJob;
@@ -8746,6 +8747,88 @@
     messageEl.textContent = "Calculated from the entered weights and target footage.";
   }
 
+  /* Winding Tension
+   * ------------------------------------------------------------------
+   * All of the arithmetic, the band table and both display roundings live
+   * in winding-tension.js, so this function only moves values between the
+   * fields and the result surface. The surface stays [hidden] until a
+   * complete, valid entry produces a result: a half-typed gauge must never
+   * leave a stale recommendation on screen for an operator to read as
+   * current.
+   */
+  function updateWindingTensionCalculator(){
+    const thicknessInput = $("windingFilmThickness");
+    const widthInput = $("windingRollWidth");
+    const upsInput = $("windingUps");
+    const resultEl = $("windingTensionResult");
+    const messageEl = $("windingTensionMessage");
+    if (!windingTension || !thicknessInput || !widthInput || !upsInput || !resultEl || !messageEl) return;
+
+    const clearValidity = input=>{
+      input.setCustomValidity("");
+      input.setAttribute("aria-invalid", "false");
+      input.title = "";
+    };
+    [thicknessInput, widthInput, upsInput].forEach(clearValidity);
+
+    const withoutResult = message=>{
+      resultEl.hidden = true;
+      messageEl.textContent = message;
+    };
+
+    if (thicknessInput.value.trim() === "" || widthInput.value.trim() === ""){
+      withoutResult("Enter film thickness and roll width.");
+      return;
+    }
+
+    const result = windingTension.calculate({
+      filmThicknessMil: thicknessInput.value,
+      rollWidthIn: widthInput.value,
+      ups: upsInput.value.trim() === "" ? 1 : upsInput.value
+    });
+
+    if (!result.valid){
+      [
+        [thicknessInput, /film thickness/i],
+        [widthInput, /roll width/i],
+        [upsInput, /ups/i]
+      ].forEach(([input, matcher])=>{
+        const message = result.errors.find(text=>matcher.test(text));
+        if (!message) return;
+        input.setCustomValidity(message);
+        input.setAttribute("aria-invalid", "true");
+        input.title = message;
+      });
+      withoutResult(result.errors[0]);
+      return;
+    }
+
+    const pli = windingTension.formatPli(result.pli);
+    $("windingTensionTarget").textContent = windingTension.formatTension(result.target);
+    $("windingTensionPli").textContent = pli;
+    $("windingTensionMin").textContent = windingTension.formatTension(result.min);
+    $("windingTensionRangeTarget").textContent = windingTension.formatTension(result.target);
+    $("windingTensionMax").textContent = windingTension.formatTension(result.max);
+    $("windingTensionWind").textContent = result.wind;
+    $("windingTensionTaper").textContent = result.taper;
+    // Sourced from the module rather than retyped here, so the wording an
+    // operator reads and the wording the tests pin cannot drift apart.
+    $("windingTensionNotice").textContent = windingTension.NOTICE;
+    resultEl.hidden = false;
+    messageEl.textContent = `Calculated at ${pli} PLI of web width.`;
+  }
+
+  function clearWindingTensionCalculator(){
+    const thicknessInput = $("windingFilmThickness");
+    const widthInput = $("windingRollWidth");
+    const upsInput = $("windingUps");
+    if (!thicknessInput || !widthInput || !upsInput) return;
+    thicknessInput.value = "";
+    widthInput.value = "";
+    upsInput.value = "1";
+    updateWindingTensionCalculator();
+  }
+
   function updateHopperWeightCalculator(){
     const circumferenceInput = $("hopperCircumference");
     const heightInput = $("hopperUsableHeight");
@@ -11216,6 +11299,12 @@
     ["shortActualWeight", "shortTargetFootage", "shortLastGoodWeight"].forEach(id=>{
       $(id)?.addEventListener("input", updateShortFootageCalculator);
     });
+    [
+      "windingFilmThickness",
+      "windingRollWidth",
+      "windingUps"
+    ].forEach(id=>$(id)?.addEventListener("input", updateWindingTensionCalculator));
+    $("windingTensionClear")?.addEventListener("click", clearWindingTensionCalculator);
     [
       "hopperCircumference",
       "hopperUsableHeight",

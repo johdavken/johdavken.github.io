@@ -17,7 +17,7 @@ function section(id){
 }
 
 test("every retained desktop tool has the same heading, description, divider, and help disclosure", () => {
-  for (const id of ["shortFootageTool", "hopperWeightTool", "hopperVolumeWeightTool", "resinLookupTool", "bulkDensityMeasurementTool"]){
+  for (const id of ["shortFootageTool", "windingTensionTool", "hopperWeightTool", "hopperVolumeWeightTool", "resinLookupTool", "bulkDensityMeasurementTool"]){
     const body = section(id);
     assert.match(body, /<header class="toolPanelHeader">/);
     assert.match(body, /class="toolPanelTitle"/);
@@ -48,7 +48,7 @@ test("tools info disclosures use the Timeline guide's info glyph, not a text 'i'
     .slice(html.indexOf('id="timelineInfoGuide"'))
     .match(/<svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg>/)[0];
   const toolGuides = html.match(/<details class="toolInfoGuide"><summary[^>]*>[\s\S]*?<\/summary>/g);
-  assert.equal(toolGuides.length, 5);
+  assert.equal(toolGuides.length, 6);
   toolGuides.forEach(guide => { assert.ok(guide.includes(timelineGlyph)); });
   const scanGuides = html.match(/<details class="recipeScanInfo">\s*<summary[^>]*>[\s\S]*?<\/summary>/g);
   assert.equal(scanGuides.length, 3);
