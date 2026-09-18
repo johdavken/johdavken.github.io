@@ -91,13 +91,17 @@
  *                    RIGHT exactly as a face's does; the boot file keeps
  *                    whether it is open and tells the rail. Nothing on
  *                    the stage turns over for it.
- *   Winding Tension  the Tools row's one tool today: the application's
+ *   Winding Tension  the Tools row's first tool: the application's
  *                    Winding Tension calculator, opened out of this tile
- *                    into a utility surface over the stage
+ *                    into a window over the stage
  *                    (station-winding-tension.js). The tile shows the
- *                    surface's state as its own - on while it is open -
- *                    and is the tile the surface flies out of and back
- *                    to. More tools stand beside it on the same row.
+ *                    window's state as its own - on while it is open -
+ *                    and is the tile the window flies out of and back
+ *                    to.
+ *   Resin Totals     the row's second tool: the application's Resin
+ *                    Totals (station-resin-totals.js), once a Handbook
+ *                    page, in a window of its own out of this tile the
+ *                    same way. More tools stand beside these on the row.
  *   Print            the fifth switch, under Tools: the floor UI's Print
  *                    Recipe. On, its row unfolds to its RIGHT with the
  *                    choice the floor UI's dialog asks - Current, Next,
@@ -120,7 +124,7 @@
  *     [ Next Recipe  ]  -| [ Bulk Edit ] [ Copy Current ]  (while its face is on;
  *                           the one bulk set stands on whichever row is open)
  *     [ Weights      ]  -| [ Smart Hoppers ]
- *     [ Tools        ]  -| [ Winding Tension ]  (while the row is open)
+ *     [ Tools        ]  -| [ Winding Tension ] [ Resin Totals ]  (while the row is open)
  *     [ Print        ]  -| [ Current ] [ Next ] [ Both ]  (while the row is open)
  *     [ Handbook     ]                          (station-handbook.js)
  *
@@ -170,7 +174,7 @@
     blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers",
     next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next",
     bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit",
-    tools: "Tools", winding: "Winding Tension",
+    tools: "Tools", winding: "Winding Tension", totals: "Resin Totals",
     print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes"
   });
 
@@ -359,6 +363,20 @@
     return tile.svg;
   }
 
+  /* Resin Totals: pounds by material as a chart - three bars of rising
+   * height on a baseline, the tallest the total, with the sigma of a sum
+   * standing over them as a small stroke. */
+  function totalsGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 3, y: 11, width: 3.6, height: 6.5, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 8.2, y: 8, width: 3.6, height: 9.5, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 13.4, y: 4.5, width: 3.6, height: 13, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 2 18.4 L 18 18.4" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 8.6 1.8 L 4.2 1.8 L 6.6 4.2 L 4.2 6.6 L 8.6 6.6" }));
+    return tile.svg;
+  }
+
   /* Print: a printer as the floor UI's own button draws it - a sheet
    * standing into the body from above, the body, the printed sheet
    * coming out below. */
@@ -426,6 +444,7 @@
    * @param {function} [options.onBulkCancel]   () => void; Cancel
    * @param {function} [options.onTools]        () => void; the Tools switch's click -
    *        the boot file keeps whether the row is open and tells the rail
+   * @param {function} [options.onResinTotals] () => void; the Resin Totals tile
    * @param {function} [options.onWindingTension] () => void; the Winding Tension
    *        tile's click - the boot file opens or closes the surface and tells the rail
    * @param {function} [options.onPrint]        () => void; the Print switch's click -
@@ -451,6 +470,7 @@
     const onBulkCancel = typeof settings.onBulkCancel === "function" ? settings.onBulkCancel : () => {};
     const onTools = typeof settings.onTools === "function" ? settings.onTools : () => {};
     const onWindingTension = typeof settings.onWindingTension === "function" ? settings.onWindingTension : () => {};
+    const onResinTotals = typeof settings.onResinTotals === "function" ? settings.onResinTotals : () => {};
     const onPrint = typeof settings.onPrint === "function" ? settings.onPrint : () => {};
     const onPrintRecipe = typeof settings.onPrintRecipe === "function" ? settings.onPrintRecipe : () => {};
 
@@ -468,10 +488,11 @@
        * the resin drafted on the cards' field. */
       bulk: { active: false, available: false, reason: "", count: 0, resin: "" },
       /* The Tools row: whether it is unfolded, and whether any tool stands
-       * on it; the Winding Tension tile: whether its surface is open and
-       * whether the page has the surface at all. */
+       * on it; each tool's tile: whether its window is open and whether
+       * the page has the window at all. */
       tools: { open: false, available: false },
       winding: { active: false, available: false },
+      totals: { active: false, available: false },
       /* The Print row: whether it is unfolded, whether there is anything
        * to print at all, and whether a plan exists for Next and Both. */
       print: { open: false, available: false, planned: false }
@@ -523,6 +544,10 @@
       type: "button", "data-action": "winding-tension", "aria-pressed": "false", "aria-label": LABEL.winding, title: LABEL.winding
     });
     windingButton.appendChild(windingGlyph(doc));
+    const totalsButton = element(doc, "button", "station-rail__control station-rail__control--totals", {
+      type: "button", "data-action": "resin-totals", "aria-pressed": "false", "aria-label": LABEL.totals, title: LABEL.totals
+    });
+    totalsButton.appendChild(totalsGlyph(doc));
     const printButton = element(doc, "button", "station-rail__control station-rail__control--print", {
       type: "button", "data-action": "print", "aria-pressed": "false", "aria-label": LABEL.print, title: LABEL.print
     });
@@ -570,9 +595,10 @@
     const weightsGroup = weightsParts.wrapper;
     const weightsFlyout = weightsParts.fly;
     /* The Tools switch and its row the same way: the tools side by side,
-     * unfolded while the row is open. One tool stands there today. */
+     * unfolded while the row is open. */
     const toolsRow = element(doc, "div", "station-rail__row station-rail__row--tools", { "data-role": "tools-row" });
     toolsRow.appendChild(windingButton);
+    toolsRow.appendChild(totalsButton);
     const toolsParts = group("tools", toolsButton, "Tools", [toolsRow]);
     const toolsGroup = toolsParts.wrapper;
     const toolsFlyout = toolsParts.fly;
@@ -705,6 +731,15 @@
         : (state.winding.active
           ? `${LABEL.winding} · open — click to close the calculator`
           : `${LABEL.winding} · a starting tension from film thickness and roll width`));
+
+      totalsButton.setAttribute("aria-pressed", state.totals.active ? "true" : "false");
+      totalsButton.classList.toggle("is-active", state.totals.active);
+      totalsButton.disabled = !state.totals.available;
+      totalsButton.setAttribute("title", !state.totals.available
+        ? `${LABEL.totals} is not available on this page`
+        : (state.totals.active
+          ? `${LABEL.totals} · open — click to close`
+          : `${LABEL.totals} · pounds of each resin the job consumed`));
 
       rootEl.classList.toggle("is-print-open", state.print.open);
       printButton.setAttribute("aria-pressed", state.print.open ? "true" : "false");
@@ -860,6 +895,11 @@
       disarm();
       onWindingTension();
     });
+    totalsButton.addEventListener("click", () => {
+      if (totalsButton.disabled) return;
+      disarm();
+      onResinTotals();
+    });
     printButton.addEventListener("click", () => {
       if (printButton.disabled) return;
       disarm();
@@ -889,6 +929,7 @@
      * @param {object}  [next.bulk]       { active, available, reason, count, resin }
      * @param {object}  [next.tools]      { open, available }
      * @param {object}  [next.winding]    { active, available }
+     * @param {object}  [next.totals]     { active, available }
      * @param {object}  [next.print]      { open, available, planned }
      */
     function update(next) {
@@ -942,6 +983,9 @@
       if (n.winding && typeof n.winding === "object") {
         state.winding = { active: !!n.winding.active, available: !!n.winding.available };
       }
+      if (n.totals && typeof n.totals === "object") {
+        state.totals = { active: !!n.totals.active, available: !!n.totals.available };
+      }
       if (n.print && typeof n.print === "object") {
         state.print = { open: !!n.print.open, available: !!n.print.available, planned: !!n.print.planned };
       }
@@ -980,6 +1024,7 @@
       fieldSlot,
       toolsButton,
       windingButton,
+      totalsButton,
       toolsGroup,
       toolsFlyout,
       toolsRow,
@@ -1000,11 +1045,11 @@
         smart: Object.assign({}, state.smart),
         next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
         bulk: Object.assign({}, state.bulk),
-        tools: Object.assign({}, state.tools), winding: Object.assign({}, state.winding),
+        tools: Object.assign({}, state.tools), winding: Object.assign({}, state.winding), totals: Object.assign({}, state.totals),
         print: Object.assign({}, state.print)
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
+  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, totalsGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
 });

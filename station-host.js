@@ -70,7 +70,11 @@
     "station/styles/components/handbook.css",
     "station/styles/components/weights.css",
     "station/styles/components/changeover.css",
+    // The Station window: the frame the Tools row's surfaces stand in, and
+    // the Close every glass surface shares.
+    "station/styles/components/window.css",
     "station/styles/components/winding-tension.css",
+    "station/styles/components/resin-totals.css",
     "station/styles/components/print-frame.css",
     "station/styles/components/hopper-info.css",
     "station/styles/components/sudo.css",
@@ -117,6 +121,8 @@
     "station/station-job-controls.js",
     // The Changeover Calculator: after the job controls it applies through.
     "station/station-changeover.js",
+    // The Station window: the frame the Tools row's surfaces stand in.
+    "station/station-window.js",
     // The Winding Tension calculator: the rail's Tools row's tool, over the
     // application's winding-tension.js (loaded by index.html before this).
     "station/station-winding-tension.js",
@@ -149,7 +155,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.59.0";
+  const VERSION = "0.61.0";
 
   function requested() {
     try {

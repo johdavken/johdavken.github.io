@@ -1,31 +1,24 @@
 /* The Winding Tension calculator (station-winding-tension.js): the Tools
- * row's one tool, opened out of its tile into a utility surface.
+ * row's first tool, a Station window (station-window.js, window.css).
  *
- * WHERE IT SITS
+ * THE FRAME IS THE WINDOW'S
  *
- * In the utility slot laid over the stage's cell (shell.css), at the
- * rail's own left edge across the UPPER part of the stage - the corner
- * it flew up from is the dock's. The Operator Handbook owns the lower
- * part (its share of the stage, from the bottom up: tokens.css); this
- * surface is bounded to what is left above that share, less a gap at
- * each end, as the Changeover Calculator is, so it and the Handbook
- * stand open together and never meet. Nothing is dimmed, nothing moves,
- * and the hoppers around it still take the pointer.
- *
- * ONE BOX, FIXED CAPACITY
- *
- * As the Changeover Calculator's: the box is the stage's to give (the
- * winding tokens in tokens.css and the Handbook's share), never its
- * contents'. The entries, the figure, the range and the advice draw
- * into it; the note under them is the one line that comes and goes.
+ * Where it stands, how it moves, its title bar, its Close, its body and
+ * the flight out of the rail's tile are all the window's (window.css).
+ * This sheet gives the frame its one thing of its own - its size, from
+ * the winding tokens (tokens.css), capped by the stage's cell - and
+ * draws what is inside: the entries, the figure, the range and the
+ * advice. Fixed capacity: the box is the tokens' to give, never its
+ * contents'; the note under the answer is the one line that comes and
+ * goes.
  *
  * ON THE GLASS
  *
  * The material is the shared glass (glass.css). Everything on it is
  * flat, in the Handbook's control vocabulary (handbook.css): chips for
- * the ups, the same quiet Close. Hierarchy is carried by weight and
- * space: the target tension is the largest thing on the surface; the
- * labels are the smallest.
+ * the ups, the fields. Hierarchy is carried by weight and space: the
+ * target tension is the largest thing on the surface; the labels are
+ * the smallest.
  *
  * THE RANGE
  *
@@ -40,86 +33,12 @@
  * stand under their ends.
  */
 
-.station-winding {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* The frame: its preferred size from the tokens, capped by the stage -
-   width to the stage less a margin, height to what stands above the
-   Handbook's share less a gap above and a gap between. A definite
-   height, not a maximum: what is inside sizes to it. */
+/* The frame's size: its preferred size from the tokens, capped by the
+   stage's cell less a margin. A definite height, not a maximum: what is
+   inside sizes to it. */
 .station-winding__panel {
-  position: absolute;
-  top: var(--station-space-3);
-  left: var(--station-space-4);
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
   width: min(var(--station-winding-width), calc(100% - 2 * var(--station-space-4)));
-  height: min(var(--station-winding-height), calc(100% - var(--station-handbook-share) - 2 * var(--station-space-3)));
-  pointer-events: auto;
-  /* The opening flight scales the surface out of the rail's tile
-     (station-winding-tension.js); a transform from the top-left corner
-     is what that arithmetic assumes. */
-  transform-origin: 0 0;
-  will-change: transform, opacity;
-}
-
-.station-winding__panel[hidden] {
-  display: none;
-}
-
-/* ---- Head: the name, the answer in a word, Close ---- */
-.station-winding__head {
-  display: flex;
-  align-items: center;
-  gap: var(--station-space-4);
-  padding: var(--station-space-2) var(--station-space-4);
-  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
-}
-
-.station-winding__title {
-  margin: 0;
-  color: var(--station-text-muted);
-  font-family: var(--station-font-annotation);
-  font-size: var(--station-text-xs);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.station-winding__readout {
-  font-family: var(--station-font-mono);
-  font-size: var(--station-text-sm);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.station-winding__readout.is-unset {
-  color: var(--station-text-faint);
-}
-
-.station-root .station-winding__close {
-  margin-left: auto;
-}
-
-/* ---- Body ----
- * Sized to the frame, never the other way round; scrolls within itself
- * at a stage too short for the whole of it. */
-.station-winding__body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: var(--station-space-3);
-  min-height: 0;
-  padding: var(--station-space-3) var(--station-space-4);
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--station-handbook-control-border) transparent;
+  height: min(var(--station-winding-height), calc(100% - 2 * var(--station-space-3)));
 }
 
 .station-winding__label {

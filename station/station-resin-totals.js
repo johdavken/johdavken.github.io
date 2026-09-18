@@ -1,12 +1,14 @@
-/* Operator Handbook > Resin Totals.
+/* Resin Totals: the Tools row's second tool.
  *
  * WHAT IT IS
  *
  * The application's Resin Totals - how many pounds of each resin the job
- * consumed - drawn for the Handbook's wide, shallow bench. An end-of-job,
- * end-of-shift reading: production, scrap and their total across the top,
- * then every material's pounds in two columns underneath, with a scanned
- * lot beside a material when one was scanned.
+ * consumed - drawn as a page for a Station window (station-window.js;
+ * once the Operator Handbook's bench, and still built on the Handbook
+ * section contract: create / update / focus). An end-of-job, end-of-shift
+ * reading: production, scrap and their total across the top, then every
+ * material's pounds in two columns underneath, with a scanned lot beside
+ * a material when one was scanned.
  *
  * ONE CALCULATION
  *
@@ -15,7 +17,7 @@
  * lots, all as the state bridge carries them - to resin-totals.js
  * (PolynResinTotals), the module the application's own Resin Totals section
  * runs, and draws what comes back. Same function, same inputs, same rows in
- * the same order: the Handbook cannot show a different total from the floor
+ * the same order: the window cannot show a different total from the floor
  * UI because it has no arithmetic of its own to differ with.
  *
  * WHAT IT WRITES, AND HOW
@@ -35,11 +37,12 @@
  * REDRAWING
  *
  * update() reads the current resolved state through the function the boot
- * file hands it and redraws from scratch - a few dozen nodes at most. The
- * Handbook calls it on opening, on switching to this page, and whenever the
- * boot file learns of a change, so an accepted recipe edit or a new
- * production figure is on the page the next time it is looked at, with no
- * subscription of this section's own.
+ * file hands it and redraws from scratch - a few dozen nodes at most - and
+ * answers with what it drew (the production, scrap and total pounds, the
+ * rows), so the window's bar can say the total. The boot file calls it as
+ * the window opens and whenever it learns of a change, so an accepted
+ * recipe edit or a new production figure is on the page the next time it
+ * is looked at, with no subscription of this section's own.
  */
 (function (root, factory) {
   const api = factory();
@@ -323,15 +326,15 @@
 
       clear(list);
       rootEl.setAttribute("data-count", String(result.rows.length));
-      if (!totals) { emptyState("Resin Totals is unavailable: the shared calculation did not load."); return; }
+      if (!totals) { emptyState("Resin Totals is unavailable: the shared calculation did not load."); return result; }
       if (!current || !current.live) {
         emptyState(current && current.kind === "demo"
           ? "Demo data: no job is running, so there is nothing to total."
           : "No application is connected; there is nothing to total.");
-        return;
+        return result;
       }
-      if (result.total <= 0) { emptyState("Enter production or scrap pounds in the application to see totals here."); return; }
-      if (!result.rows.length) { emptyState("Add resin names and recipe percentages to see totals here."); return; }
+      if (result.total <= 0) { emptyState("Enter production or scrap pounds in the application to see totals here."); return result; }
+      if (!result.rows.length) { emptyState("Add resin names and recipe percentages to see totals here."); return result; }
       empty.setAttribute("hidden", "");
       list.removeAttribute("hidden");
       result.rows.forEach((row, index) => {
@@ -342,6 +345,7 @@
         if (index < 2) item.setAttribute("class", `${item.getAttribute("class")} is-first-line`);
         list.appendChild(item);
       });
+      return result;
     }
 
     update();
@@ -351,7 +355,7 @@
       /* The first thing to do on this page is usually to enter the pounds. */
       focus() { if (typeof production.reading.focus === "function") production.reading.focus(); },
       /* The sheet runs one line per hopper and scrolls past three layers:
-       * the Handbook may be raised for it. */
+       * a bench holding it may be raised for it. */
       grows: () => true,
       isEditing: () => editing
     };

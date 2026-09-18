@@ -11,17 +11,16 @@
  * wind type and the taper the band recommends. The same arithmetic, the
  * same answers, the same words; this file computes nothing itself.
  *
- * A UTILITY SURFACE, NOT A HANDBOOK SECTION
+ * A WINDOW, NOT A HANDBOOK SECTION
  *
  * The Operator Handbook is the large work surface across the stage's
- * lower part; this is a smaller, focused one across its upper part, as
- * the Changeover Calculator is - the same glass (glass.css), the same
- * control vocabulary (the Handbook's action / chip / close classes,
- * handbook.css), a box of its own (winding-tension.css): fixed capacity,
- * stood at the rail's own edge, bounded above the Handbook's share so
- * the two are open together and never meet. It opens out of the rail's
- * Winding Tension tile and returns to it; Close, Escape, or the tile
- * again, and the tile is all that is left.
+ * lower part; this is a Station window (station-window.js): a smaller,
+ * focused frame spawned at the stage's centre, moved by its title bar,
+ * closed by the bar's round button, Escape, or the tile again. The
+ * window module owns the frame, the flight out of the rail's tile and
+ * back, and the drag; this file owns what is in it - the same glass
+ * (glass.css), the Handbook's chips and fields (handbook.css), a box of
+ * its own size (winding-tension.css).
  *
  * THE RANGE
  *
@@ -41,33 +40,31 @@
  *
  * WHAT IT HOLDS
  *
- * Presentation state: whether it is open, the flight in progress, the
- * entries as typed, and the last answer.
+ * Presentation state: the entries as typed and the last answer. Whether
+ * it is open, and where, is the window's.
  */
 (function (root, factory) {
-  const transition = typeof require === "function"
-    ? require("./station-transition.js")
-    : (root && root.PolynStationTransition);
+  const windowModule = typeof require === "function"
+    ? require("./station-window.js")
+    : (root && root.PolynStationWindow);
   const winding = typeof require === "function"
     ? (function () { try { return require("../winding-tension.js"); } catch (error) { return null; } })()
     : (root && root.PolynWindingTension);
-  const api = factory(transition, winding);
+  const api = factory(windowModule, winding);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynStationWindingTension = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (transitionModule, windingModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (windowModule, windingModule) {
   "use strict";
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
-  const DEFAULT_TIMING = transitionModule && transitionModule.DEFAULT_TIMING
-    ? transitionModule.DEFAULT_TIMING
+  const DEFAULT_TIMING = windowModule && windowModule.DEFAULT_TIMING
+    ? windowModule.DEFAULT_TIMING
     : Object.freeze({ ack: 80, move: 300, lead: 40, settle: 120, ease: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
 
   /* The control vocabulary is the Handbook's (handbook.css): one set of
    * flat controls for every glass surface on the console. */
-  const ACTION = "station-handbook__action";
   const CHIP = "station-handbook__chip";
-  const CLOSE = "station-handbook__close";
 
   /* The ups are chips, as the Changeover Calculator's "Up" is, with the
    * same reach: one to ten rolls across the web. */
@@ -177,7 +174,7 @@
    * @param {Document} doc
    * @param {object}   [options]
    * @param {object}   [options.calculator]  winding-tension.js, when not global
-   * @param {Element}  [options.anchor]      the rail's tile the surface opens
+   * @param {Element}  [options.anchor]      the rail's tile the window opens
    *        out of and returns to
    * @param {Element}  [options.mount]       the element the motion tokens are read off
    * @param {function} [options.reducedMotion]  () => boolean
@@ -190,50 +187,40 @@
   function create(doc, options) {
     const settings = options || {};
     const calc = settings.calculator || windingModule;
-    if (!calc) return null;
+    if (!calc || !windowModule) return null;
     const reducedMotion = typeof settings.reducedMotion === "function" ? settings.reducedMotion : () => false;
-    const animate = typeof settings.animate === "function"
-      ? settings.animate
-      : (el, keyframes, opts) => (transitionModule && typeof transitionModule.play === "function" ? transitionModule.play(el, keyframes, opts) : null);
-    const measure = typeof settings.measure === "function"
-      ? settings.measure
-      : el => (el && typeof el.getBoundingClientRect === "function" ? el.getBoundingClientRect() : null);
-    const computedStyle = settings.computedStyle
-      || (typeof getComputedStyle === "function" ? el => getComputedStyle(el) : null);
-    const timing = Object.assign({},
-      transitionModule && typeof transitionModule.readTiming === "function" && settings.mount
-        ? transitionModule.readTiming(settings.mount, computedStyle)
-        : DEFAULT_TIMING,
-      settings.timing || {});
-    const onOpenChange = typeof settings.onOpenChange === "function" ? settings.onOpenChange : () => {};
-    const anchor = settings.anchor || null;
 
     const state = {
-      open: false,
-      flight: null,          // { animations, closing }
       sweep: [],             // the range's last motion, cancelled by the next
       entries: { thickness: "", width: "", ups: 1 },
       result: null
     };
 
-    const rootEl = element(doc, "div", "station-winding", { "data-role": "winding-tension" });
-
-    /* ---- The surface ---- */
-    const panel = element(doc, "section", "station-winding__panel station-glass", {
-      role: "region", "aria-label": "Winding Tension", hidden: ""
+    /* ---- The frame: a Station window ---- */
+    const win = windowModule.create(doc, {
+      name: "winding",
+      title: "Winding Tension",
+      className: "station-winding__panel",
+      closeTitle: "Close the calculator (Esc)",
+      anchor: settings.anchor,
+      mount: settings.mount,
+      reducedMotion,
+      animate: settings.animate,
+      measure: settings.measure,
+      computedStyle: settings.computedStyle,
+      timing: settings.timing,
+      onOpenChange: settings.onOpenChange,
+      focus: firstField
     });
-    const head = element(doc, "header", "station-winding__head");
-    head.appendChild(text(doc, "h2", "station-winding__title", "Winding Tension"));
-    const readout = text(doc, "span", "station-winding__readout", "");
-    head.appendChild(readout);
-    const closeButton = text(doc, "button", `${CLOSE} station-winding__close`, "Close", {
-      type: "button", "data-action": "close-winding", title: "Close the calculator (Esc)"
-    });
-    head.appendChild(closeButton);
-    panel.appendChild(head);
-
-    const body = element(doc, "div", "station-winding__body");
-    panel.appendChild(body);
+    const rootEl = win.element;
+    rootEl.setAttribute("data-role", "winding-tension");
+    const panel = win.panel;
+    const body = win.body;
+    const readout = win.readout;
+    const timing = win.getTiming();
+    const animate = typeof settings.animate === "function"
+      ? settings.animate
+      : (el, keyframes, opts) => windowModule.play(el, keyframes, opts);
 
     /* ---- The entries: thickness, width, ups ---- */
     const form = element(doc, "form", "station-winding__form", { "data-role": "entries" });
@@ -334,8 +321,6 @@
 
     const note = element(doc, "p", "station-winding__note", { role: "status", hidden: "" });
     body.appendChild(note);
-
-    rootEl.appendChild(panel);
 
     /* ---- Display ---- */
 
@@ -466,127 +451,26 @@
       compute();
     });
 
-    /* ---- Opening and closing: the Changeover Calculator's flight ---- */
-
-    function announce() {
-      rootEl.classList.toggle("is-open", state.open);
-      if (anchor && typeof anchor.setAttribute === "function") anchor.setAttribute("aria-expanded", state.open ? "true" : "false");
-      onOpenChange(state.open);
-    }
-
-    function cancelFlight() {
-      const flight = state.flight;
-      state.flight = null;
-      if (!flight) return;
-      for (const animation of flight.animations) { try { animation.cancel(); } catch (error) { /* gone */ } }
-    }
-
-    function settled(animations) {
-      return Promise.all(animations.filter(Boolean).map(a => (a.finished ? a.finished.catch(() => {}) : Promise.resolve())));
-    }
-
-    function flightTransform() {
-      if (!anchor || !transitionModule || typeof transitionModule.overlayTransform !== "function") return null;
-      return transitionModule.overlayTransform(measure(anchor), measure(panel));
-    }
-
     function firstField() {
       return fields[state.entries.thickness.trim() === "" ? "thickness" : (state.entries.width.trim() === "" ? "width" : "thickness")].input;
     }
 
-    function open() {
-      if (state.open && !(state.flight && state.flight.closing)) return false;
-      const wasClosing = !!(state.flight && state.flight.closing);
-      state.open = true;
-      show(panel, true);
-      announce();
-      if (wasClosing) {
-        const flight = state.flight;
-        flight.closing = false;
-        for (const animation of flight.animations) { try { animation.reverse(); } catch (error) { /* ok */ } }
-        settled(flight.animations).then(() => { if (state.flight === flight) state.flight = null; });
-        return true;
-      }
-      cancelFlight();
-      const transform = reducedMotion() ? null : flightTransform();
-      if (transform) {
-        const move = { duration: timing.move, easing: timing.ease, fill: "both" };
-        const animations = [
-          animate(panel, [{ transform, opacity: 0.3 }, { transform: "none", opacity: 1 }], move),
-          animate(body, [{ opacity: 0 }, { opacity: 1 }],
-            { duration: timing.settle, delay: Math.max(0, timing.move - timing.settle), easing: "ease-out", fill: "both" })
-        ].filter(Boolean);
-        const flight = { animations, closing: false };
-        state.flight = flight;
-        settled(animations).then(() => { if (state.flight === flight) state.flight = null; });
-      }
-      const field = firstField();
-      if (field && typeof field.focus === "function") field.focus();
-      return true;
-    }
-
-    function hideNow() {
-      show(panel, false);
-      cancelFlight();
-    }
-
-    function returnFocus() {
-      if (anchor && typeof anchor.focus === "function") anchor.focus();
-    }
-
-    function close() {
-      if (!state.open) return false;
-      state.open = false;
-      announce();
-      if (reducedMotion() || !state.flight) {
-        const transform = reducedMotion() ? null : flightTransform();
-        if (!transform) { hideNow(); returnFocus(); return true; }
-        const animations = [
-          animate(panel, [{ transform: "none", opacity: 1 }, { transform, opacity: 0.3 }],
-            { duration: timing.move, easing: timing.ease, fill: "both" })
-        ].filter(Boolean);
-        const flight = { animations, closing: true };
-        state.flight = flight;
-        settled(animations).then(() => { if (!state.open) hideNow(); });
-        returnFocus();
-        return true;
-      }
-      const flight = state.flight;
-      flight.closing = true;
-      for (const animation of flight.animations) { try { animation.reverse(); } catch (error) { /* ok */ } }
-      settled(flight.animations).then(() => { if (!state.open) hideNow(); });
-      returnFocus();
-      return true;
-    }
-
-    function toggle() {
-      return state.open ? close() : open();
-    }
-
-    closeButton.addEventListener("click", () => { close(); });
-    panel.addEventListener("keydown", event => {
-      if (event.key !== "Escape") return;
-      if (typeof event.stopPropagation === "function") event.stopPropagation();
-      if (typeof event.preventDefault === "function") event.preventDefault();
-      close();
-    });
-
     drawChips();
     compute();
-    // The tile is the launcher from the start: closed, and said so.
-    if (anchor && typeof anchor.setAttribute === "function") anchor.setAttribute("aria-expanded", "false");
 
     return {
       element: rootEl,
       panel,
-      open,
-      close,
-      toggle,
+      window: win,
+      open: win.open,
+      close: win.close,
+      toggle: win.toggle,
       compute,
-      isOpen: () => state.open,
+      isOpen: win.isOpen,
       entries: () => Object.assign({}, state.entries),
+      place: win.place,
       result: () => (state.result ? Object.assign({}, state.result) : null),
-      getTiming: () => Object.assign({}, timing)
+      getTiming: win.getTiming
     };
   }
 

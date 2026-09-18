@@ -28,7 +28,7 @@
        Station loads NONE of the application's stylesheets. The legacy cascade
        is not inherited and then overridden, it is simply not present.
        station-isolation.test.js enforces this in both directions. -->
-  <link rel="stylesheet" href="styles/tokens.css?v=0.21.0">
+  <link rel="stylesheet" href="styles/tokens.css?v=0.22.0">
   <link rel="stylesheet" href="styles/themes/industrial-light.css?v=0.8.0">
   <link rel="stylesheet" href="styles/themes/industrial-dark.css?v=0.7.0">
   <link rel="stylesheet" href="styles/themes/gruvbox-light.css?v=0.6.0">
@@ -52,11 +52,14 @@
        then the two that wear it: the Operator Handbook (its own rule, on
        the same tokens) and the Changeover Calculator. -->
   <link rel="stylesheet" href="styles/components/glass.css?v=0.1.1">
-  <link rel="stylesheet" href="styles/components/handbook.css?v=0.9.1">
+  <link rel="stylesheet" href="styles/components/handbook.css?v=0.10.0">
   <link rel="stylesheet" href="styles/components/weights.css?v=0.2.0">
-  <link rel="stylesheet" href="styles/components/changeover.css?v=0.2.0">
-  <!-- The Winding Tension calculator: the rail's Tools row's one tool, on the same glass. -->
-  <link rel="stylesheet" href="styles/components/winding-tension.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/changeover.css?v=0.3.0">
+  <!-- The Station window: the frame the Tools row's surfaces stand in, and the Close every glass surface shares. -->
+  <link rel="stylesheet" href="styles/components/window.css?v=0.1.0">
+  <!-- The Tools row's windows: Winding Tension and Resin Totals, on the same glass. -->
+  <link rel="stylesheet" href="styles/components/winding-tension.css?v=0.3.0">
+  <link rel="stylesheet" href="styles/components/resin-totals.css?v=0.1.0">
   <!-- The recipe print frame: the iframe the print sheet is printed from. -->
   <link rel="stylesheet" href="styles/components/print-frame.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/hopper-info.css?v=0.2.0">
@@ -155,16 +158,18 @@
   <!-- The machine utility rail: after the hopper controls, whose reset it
        asks for. -->
   <script src="station-armed.js?v=0.1.1" defer></script>
-  <script src="station-machine-rail.js?v=0.9.0" defer></script>
+  <script src="station-machine-rail.js?v=0.10.0" defer></script>
   <script src="station-rundown.js?v=0.4.0" defer></script>
   <script src="station-rundown-timeline.js?v=0.5.1" defer></script>
   <!-- The hopper info panel: the run-down's arithmetic beside a hopper on hover. -->
   <script src="station-hopper-info.js?v=0.2.0" defer></script>
   <script src="station-job-controls.js?v=0.3.0" defer></script>
   <!-- The Changeover Calculator: the header readout's open form. -->
-  <script src="station-changeover.js?v=0.2.0" defer></script>
+  <script src="station-changeover.js?v=0.3.0" defer></script>
+  <!-- The Station window: the frame the Tools row's surfaces stand in. -->
+  <script src="station-window.js?v=0.1.0" defer></script>
   <!-- The Winding Tension calculator: the Tools row's tile's open form. -->
-  <script src="station-winding-tension.js?v=0.1.0" defer></script>
+  <script src="station-winding-tension.js?v=0.3.0" defer></script>
   <!-- The recipe print sheet: the floor UI's Print Recipe, from the rail's Print row. -->
   <script src="station-print-sheet.js?v=0.1.0" defer></script>
   <!-- The logo, before the shell that draws it into the header. -->
@@ -176,7 +181,7 @@
        the Recipe Book. -->
   <script src="station-recipe-book.js?v=0.4.0" defer></script>
   <script src="station-weights.js?v=0.2.0" defer></script>
-  <script src="station-resin-totals.js?v=0.2.1" defer></script>
+  <script src="station-resin-totals.js?v=0.3.0" defer></script>
   <script src="station-theme-preview.js?v=0.2.0" defer></script>
   <script src="station-appearance.js?v=0.2.0" defer></script>
   <!-- Sudo: its tools, Workspace Management, Line Configuration and Resin
@@ -185,7 +190,7 @@
   <script src="station-sudo-lines.js?v=0.2.1" defer></script>
   <script src="station-sudo-resins.js?v=0.1.1" defer></script>
   <script src="station-sudo.js?v=0.2.2" defer></script>
-  <script src="station-handbook.js?v=0.3.0" defer></script>
+  <script src="station-handbook.js?v=0.3.1" defer></script>
   <script src="station-demo-lines.js?v=0.3.4" defer></script>
   <script src="station-source.js?v=0.11.0" defer></script>
   <!-- Development-only extruder study (?lab=extruder). Loaded by this harness
@@ -195,7 +200,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.31.0" defer></script>
+  <script src="station.js?v=0.32.0" defer></script>
 </head>
 <body>
 

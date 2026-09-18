@@ -80,7 +80,7 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   // and copyCurrentToNext, the same two lines again.
   // ... and the layer menus' pasteLayer and clearLayer, and the rail's
   // confirmBulk (station-blend-actions.js), the same two lines again.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 15, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Handbook's (Resin Totals' fields) onCommitted, the rail's resetTracking, the rail's toggleSmartHoppers, the rail's promoteNextRecipe and copyCurrentToNext, the menus' pasteLayer and clearLayer, and the rail's confirmBulk");
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 15, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Resin Totals window's (its fields') onCommitted, the rail's resetTracking, the rail's toggleSmartHoppers, the rail's promoteNextRecipe and copyCurrentToNext, the menus' pasteLayer and clearLayer, and the rail's confirmBulk");
   for (const name of ["pasteLayer", "clearLayer"]) {
     const move = boot.slice(boot.indexOf(`function ${name}(id) {`), boot.indexOf("\n  }\n", boot.indexOf(`function ${name}(id) {`)));
     assert.match(move, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);

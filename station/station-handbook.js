@@ -5,7 +5,7 @@
  *
  * The one place on the Station desktop for the operator-facing work that
  * does not belong permanently on the stage. It holds the Recipe Book
- * (station-recipe-book.js), Resin Totals and Appearance, and it is built
+ * (station-recipe-book.js), Weights and Appearance, and it is built
  * as a shell that holds sections, so the next one is a section added to
  * the list this file is handed and not a second panel beside the first.
  * That is the whole of the architecture: a launcher, a panel, tabs for
@@ -243,8 +243,10 @@
     head.appendChild(text(doc, "h2", "station-handbook__title", "Operator Handbook"));
     const tabs = element(doc, "div", "station-handbook__tabs", { role: "tablist", "aria-label": "Handbook sections" });
     head.appendChild(tabs);
-    const closeButton = text(doc, "button", "station-handbook__close", "Close", {
-      type: "button", "data-action": "close-handbook", title: "Close the Handbook (Esc)"
+    /* Close is the console's window control (station-window.js, window.css):
+     * the round button at the head's far end, named for assistive tech. */
+    const closeButton = element(doc, "button", "station-window__close station-handbook__close", {
+      type: "button", "data-action": "close-handbook", "aria-label": "Close", title: "Close the Handbook (Esc)"
     });
     head.appendChild(closeButton);
     panel.appendChild(head);

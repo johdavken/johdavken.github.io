@@ -619,7 +619,9 @@ test("a layer is turned over or back one at a time, only while the mode is on; t
   // rail's switch gives every layer - never a redraw of the stage.
   assert.match(flip, /turnFaces\(\[id\], wanted \? "cluster" : "card", wanted \? "card" : "cluster"\);/);
   assert.doesNotMatch(flip, /stage\.refresh|redrawForBlend|mountStage/, "a flip redraws the stage");
-  assert.match(flip, /if \(handbookPanel\) handbookPanel\.update\(\);\n\s+syncRail\(\);/);
+  // The pages that read values - the Handbook's, Resin Totals in its
+  // window - are told through the one helper, then the rail.
+  assert.match(flip, /refreshPages\(\);\n\s+syncRail\(\);/);
   // On the Next face the header's share follows the face, by the value
   // patch - the running job's hopper state, the face's layer state.
   assert.match(flip, /if \(blendEdit\.kind === "next" && current\.model && current\.resolved\) \{\n\s+render\.patchStage\(mounts\.machine, current\.model, \{\n\s+hopperState: current\.resolved\.hopperState,\n\s+layerState: stageLayerState\(current\.resolved\),/);
@@ -648,7 +650,8 @@ test("Done commits what is being entered along the editor's own path, turns ever
   // And the redraw is the stage's own refresh: no second render path.
   const redraw = body("redrawForBlend");
   assert.match(redraw, /stage\.refresh\(focusLayerFor\(\)\);/);
-  assert.match(redraw, /if \(handbookPanel\) handbookPanel\.update\(\);/);
+  assert.match(redraw, /refreshPages\(\);/);
+  assert.match(body("refreshPages"), /if \(handbookPanel\) handbookPanel\.update\(\);\n\s+refreshTotals\(\);/);
   // The turn itself is the face-turn module's, through the transition
   // module's play, on the stage's timing; without the module the class
   // alone changes, at once.

@@ -121,6 +121,9 @@
    * Optional, as the Changeover Calculator is; it dispatches nothing. */
   const windingCalculator = root.PolynStationWindingTension || null;
   const windingTension = root.PolynWindingTension || null;
+  /* The Station window (station-window.js): the frame the Tools row's
+   * surfaces stand in - Resin Totals is built into one here. Optional. */
+  const stationWindow = root.PolynStationWindow || null;
   /* The recipe print sheet (station-print-sheet.js): the floor UI's Print
    * Recipe, from the rail's Print row - the same sheet, printed from a
    * frame of its own. Optional; it reads the recipes this file already
@@ -136,7 +139,9 @@
   const recipeBook = root.PolynStationRecipeBook || null;
   /* Resin Totals (station-resin-totals.js), over the application's own
    * calculation (resin-totals.js, a shared module like scheduling.js): it
-   * reads the resolved job and draws; it computes nothing itself. */
+   * reads the resolved job and draws; it computes nothing itself. Once a
+   * Handbook page; since the Tools row, a window of its own out of the
+   * row's tile. */
   const resinTotalsSection = root.PolynStationResinTotals || null;
   const resinTotals = root.PolynResinTotals || null;
   const appearance = root.PolynStationAppearance || null;
@@ -379,9 +384,17 @@
    * turns over for it. Folding the row closes whatever tool is open. */
   const tools = { open: false };
   /* The Winding Tension calculator's handle, once mounted in the utility
-   * slot beside the Changeover Calculator's: the two stand in the same
-   * band of the stage, so opening one closes the other. */
+   * slot beside the Changeover Calculator's. */
   let windingPanel = null;
+  /* Resin Totals: the window's handle and the page built into it, once
+   * mounted in the utility slot out of the Tools row's second tile. */
+  let totalsWindow = null;
+  let totalsPage = null;
+  /* The utility surfaces stand one at a time - the Changeover Calculator,
+   * Winding Tension, Resin Totals - so opening any closes the others.
+   * Each is listed here as it is built; each tells its opening through
+   * its onOpenChange, and closeOtherSurfaces answers. */
+  const surfaces = [];
   /* PRINT - the rail's fifth switch, as presentation state: whether its
    * row of choices is unfolded. A choice prints and folds the row, as the
    * floor UI's dialog closes on its choice. */
@@ -576,7 +589,7 @@
    * turning does not come here: that is a class change (turnFaces). */
   function redrawForBlend() {
     stage.refresh(focusLayerFor());
-    if (handbookPanel) handbookPanel.update();
+    refreshPages();
     syncRail();
   }
 
@@ -659,7 +672,7 @@
     const drawn = drawCount;
     if (!turn.animated) redrawForBlend();
     else {
-      if (handbookPanel) handbookPanel.update();
+      refreshPages();
       syncRail();
       turn.done.then(() => { if (drawCount === drawn) redrawForBlend(); });
     }
@@ -692,7 +705,7 @@
         layerShare: shareFor(current.resolved)
       });
     }
-    if (handbookPanel) handbookPanel.update();
+    refreshPages();
     syncRail();
     say("");
     return true;
@@ -1056,8 +1069,9 @@
         count: bulk.selected.size,
         resin: bulk.resin
       },
-      tools: { open: tools.open, available: !!windingPanel },
+      tools: { open: tools.open, available: !!(windingPanel || totalsWindow) },
       winding: { active: !!(windingPanel && windingPanel.isOpen()), available: !!windingPanel },
+      totals: { active: !!(totalsWindow && totalsWindow.isOpen()), available: !!totalsWindow },
       print: { open: printing.open, available: canPrint(), planned }
     });
   }
@@ -1151,7 +1165,7 @@
       if (blendEdit.active) exitBlendEdit();
     }
     tools.open = opening;
-    if (!tools.open && windingPanel && windingPanel.isOpen()) windingPanel.close();
+    if (!tools.open) closeTools();
     syncRail();
     return tools.open;
   }
@@ -1161,14 +1175,57 @@
   function foldUtilityRows() {
     tools.open = false;
     printing.open = false;
-    if (windingPanel && windingPanel.isOpen()) windingPanel.close();
+    closeTools();
   }
 
-  /* The Winding Tension tile: the surface opens out of it or returns to
-   * it; the surface's onOpenChange tells the rail either way. */
+  /* The Tools row's windows closed - whichever is open. */
+  function closeTools() {
+    for (const surface of [windingPanel, totalsWindow]) {
+      if (surface && surface.isOpen()) surface.close();
+    }
+  }
+
+  /* One utility surface at a time: the one opening closes the rest. Only
+   * an opening asks, so a close never answers a close. */
+  function closeOtherSurfaces(opening) {
+    for (const surface of surfaces) {
+      if (surface !== opening && surface.isOpen()) surface.close();
+    }
+  }
+
+  /* The Winding Tension tile: the window opens out of it or returns to
+   * it; the window's onOpenChange tells the rail either way. */
   function toggleWindingTension() {
     if (!windingPanel) return false;
     return windingPanel.toggle();
+  }
+
+  /* The Resin Totals tile, the same way. The page is redrawn as the
+   * window opens, so it shows the job as it stands, not as it stood. */
+  function toggleResinTotals() {
+    if (!totalsWindow) return false;
+    return totalsWindow.toggle();
+  }
+
+  /* Resin Totals redrawn from the resolved state, and its total said on
+   * the window's bar; told wherever the Handbook is, since its page reads
+   * the same values the Handbook's do. Nothing while the window has not
+   * been built. */
+  function refreshTotals() {
+    if (!totalsPage || !totalsWindow) return;
+    const result = totalsPage.update();
+    const total = result && Number.isFinite(result.total) ? result.total : 0;
+    totalsWindow.readout.textContent = total > 0 && resinTotalsSection
+      ? `${resinTotalsSection.formatPounds(resinTotals, total)} lb total`
+      : "No pounds entered";
+    totalsWindow.readout.classList.toggle("is-unset", !(total > 0));
+  }
+
+  /* The pages that read values - the Handbook's, and Resin Totals in its
+   * window - told of a change, the same way from every site. */
+  function refreshPages() {
+    if (handbookPanel) handbookPanel.update();
+    refreshTotals();
   }
 
   /* The rail's two moves - Load Next under the Current face, Copy Current
@@ -1711,7 +1768,7 @@
     renderInspector(model, resolved);
     renderStatus(model, resolved);
     feedJob(model, resolved);
-    if (handbookPanel) handbookPanel.update();
+    refreshPages();
     syncRail();
   }
 
@@ -1790,7 +1847,7 @@
       feedJob(model, resolved);
       // The Handbook's pages read values too (Resin Totals: production,
       // scrap, lots, the blend) - told the same way the full render tells it.
-      if (handbookPanel) handbookPanel.update();
+      refreshPages();
       // And the rail: how many hoppers a reset would touch is a value.
       syncRail();
       syncLayerMenus();
@@ -2323,11 +2380,10 @@
         reducedMotion: prefersReducedMotion,
         onOpenChange: open => {
           jobPanel.setLaunched(open);
-          // One utility surface in the upper band at a time.
-          if (open && windingPanel && windingPanel.isOpen()) windingPanel.close();
+          if (open) closeOtherSurfaces(changeoverPanel);
         }
       });
-      if (changeoverPanel) mounts.utility.appendChild(changeoverPanel.element);
+      if (changeoverPanel) { mounts.utility.appendChild(changeoverPanel.element); surfaces.push(changeoverPanel); }
     }
 
     /* The hopper info panel, in the same slot: laid over the stage, inert
@@ -2365,6 +2421,7 @@
         onBulkCancel: cancelBulk,
         onTools: toggleTools,
         onWindingTension: toggleWindingTension,
+        onResinTotals: toggleResinTotals,
         onPrint: togglePrintRow,
         onPrintRecipe: printRecipe,
         bulkField: bulkField ? bulkField.element : null,
@@ -2374,9 +2431,9 @@
       mounts.rail.appendChild(railPanel.element);
     }
 
-    /* The Winding Tension calculator, in the utility slot, out of the
-     * rail's tile: handed the application's arithmetic and the tile it
-     * flies from; it writes nowhere. Its open state is the rail's to
+    /* The Winding Tension calculator, a window in the utility slot out of
+     * the rail's tile: handed the application's arithmetic and the tile
+     * it flies from; it writes nowhere. Its open state is the rail's to
      * show, so it tells the rail on every change. */
     if (windingCalculator && windingTension && mounts.utility && railPanel) {
       windingPanel = windingCalculator.create(doc, {
@@ -2385,11 +2442,11 @@
         mount: mounts.utility,
         reducedMotion: prefersReducedMotion,
         onOpenChange: open => {
-          if (open && changeoverPanel && changeoverPanel.isOpen()) changeoverPanel.close();
+          if (open) closeOtherSurfaces(windingPanel);
           syncRail();
         }
       });
-      if (windingPanel) mounts.utility.appendChild(windingPanel.element);
+      if (windingPanel) { mounts.utility.appendChild(windingPanel.element); surfaces.push(windingPanel); }
     }
 
     /* The recipe printer, its frame in the utility slot: built once, told
@@ -2401,7 +2458,7 @@
     if (railPanel) syncRail();
 
     /* The Operator Handbook, in the slot laid over the stage. Built once
-     * with its sections - the Recipe Book, Resin Totals, Appearance, Sudo - and
+     * with its sections - the Recipe Book, Weights, Appearance, Sudo - and
      * handed what they may use: the recipes bridge (read and request;
      * never the global reached for from inside). The book redraws from
      * the recipes bridge's own notifications, as the line console does
@@ -2411,7 +2468,6 @@
       const handbookSections = [];
       if (recipeBook) handbookSections.push(recipeBook.section);
       if (weightsSection) handbookSections.push(weightsSection.section);
-      if (resinTotalsSection) handbookSections.push(resinTotalsSection.section);
       if (appearance) handbookSections.push(appearance.section);
       if (sudo) handbookSections.push(sudo.section);
       handbookPanel = handbook.create(doc, {
@@ -2434,23 +2490,11 @@
             const layer = current.model ? current.model.layers.find(entry => entry.id === name) : null;
             return layer ? layer.role : "";
           },
-          /* Resin Totals reads the same resolved state the stage draws
-           * from - through a function, since `current` is replaced on
-           * every render - and the shared calculation to run over it. */
           /* Weights lists the hoppers the stage draws: the same line
-           * model, through a function for the same reason. */
+           * model, through a function, since `current` is replaced on
+           * every render; the resolved state the same way. */
           model: () => current.model,
           resolved: () => current.resolved,
-          resinTotals,
-          /* Its two fields (production and scrap pounds) write through
-           * the same offer and the same publish policy as the header's
-           * job controls: the bridge for what is on screen, and the
-           * answer re-run as the operator's own publish. */
-          commands: () => commandsFor(current.resolved),
-          onCommitted: result => {
-            lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
-            onPublish({ own: true });
-          },
           theme: themeController,
           themes: theme ? theme.THEMES : [],
           families: theme ? theme.FAMILIES : [],
@@ -2465,6 +2509,44 @@
       recipes?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
       weightProfiles?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
       admin?.subscribe(() => { if (handbookPanel) handbookPanel.update(); });
+    }
+
+    /* Resin Totals, a window out of the Tools row's second tile, with the
+     * page that was the Handbook's built into it and handed the same
+     * things: the resolved state through a function (`current` is
+     * replaced on every render), the shared calculation, and - for its
+     * two fields, production and scrap - the same offer and the same
+     * publish policy as the header's job controls. */
+    if (stationWindow && resinTotalsSection && resinTotals && mounts.utility && railPanel) {
+      totalsPage = resinTotalsSection.section.create(doc, {
+        resolved: () => current.resolved,
+        resinTotals,
+        commands: () => commandsFor(current.resolved),
+        onCommitted: result => {
+          lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+          onPublish({ own: true });
+        }
+      });
+      totalsWindow = stationWindow.create(doc, {
+        name: "totals",
+        title: resinTotalsSection.section.title,
+        className: "station-totals__panel",
+        closeTitle: `Close ${resinTotalsSection.section.title} (Esc)`,
+        anchor: railPanel.totalsButton,
+        mount: mounts.utility,
+        reducedMotion: prefersReducedMotion,
+        onOpenChange: open => {
+          if (open) { closeOtherSurfaces(totalsWindow); refreshTotals(); }
+          syncRail();
+        },
+        focus: () => totalsPage
+      });
+      totalsWindow.body.appendChild(totalsPage.element);
+      mounts.utility.appendChild(totalsWindow.element);
+      surfaces.push(totalsWindow);
+      refreshTotals();
+      // The rail was told before the window existed: told again.
+      syncRail();
     }
     feedJob(current.model, current.resolved);
   }

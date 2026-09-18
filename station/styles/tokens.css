@@ -195,15 +195,17 @@
   --station-changeover-width: 820px;
   --station-changeover-height: 308px;
 
-  /* ---- Winding Tension calculator ----
-   * The utility surface that opens out of the rail's Winding Tension
-   * tile: a smaller, fixed-capacity box at the rail's own edge across
-   * the upper part of the stage. `width` and `height` are what its
-   * row of entries, the figure, the range and the advice need at
-   * Station's type sizes; winding-tension.css caps the height exactly
-   * as changeover.css does, above the Handbook's share. */
+  /* ---- The Tools row's windows ----
+   * Station windows (window.css) spawned at the stage's centre and moved
+   * by their title bars; each is a fixed-capacity box of its own size,
+   * capped by the stage's cell in its own sheet. Winding Tension: what
+   * its row of entries, the figure, the range and the advice need at
+   * Station's type sizes. Resin Totals: the strip of three figures and
+   * two columns of materials, a few rows deep before the list scrolls. */
   --station-winding-width: 560px;
   --station-winding-height: 380px;
+  --station-totals-width: 640px;
+  --station-totals-height: 420px;
 }
 
 /* ---------------------------------------------------------------------

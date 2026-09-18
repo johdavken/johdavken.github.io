@@ -569,7 +569,7 @@ test("the printer is loaded by the host and the harness after the Winding Tensio
   const scripts = [...host.matchAll(/"(station\/[^"]+\.js)"/g)].map(m => m[1]);
   assert.ok(scripts.indexOf("station/station-print-sheet.js") > scripts.indexOf("station/station-winding-tension.js"));
   assert.ok(scripts.indexOf("station/station-print-sheet.js") < scripts.indexOf("station/station.js"));
-  assert.match(host, /"station\/styles\/components\/winding-tension\.css",\s*"station\/styles\/components\/print-frame\.css"/);
+  assert.match(host, /"station\/styles\/components\/resin-totals\.css",\s*"station\/styles\/components\/print-frame\.css"/);
   const harness = read("station/station.html");
   assert.match(harness, /station-print-sheet\.js\?v=/);
   assert.match(harness, /components\/print-frame\.css\?v=/);

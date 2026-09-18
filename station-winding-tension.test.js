@@ -210,7 +210,7 @@ function build(options) {
     doc, animations, anchor, panel, q, opened,
     field: name => q(`.station-winding__form input[data-field='${name}']`),
     chip: value => panel.element.querySelectorAll("[data-field='ups'][data-value]").find(n => n.getAttribute("data-value") === String(value)),
-    readout: () => q(".station-winding__readout"),
+    readout: () => q(".station-window__readout"),
     result: () => q("[data-role='result']"),
     target: () => q("[data-role='target']"),
     pli: () => q("[data-role='pli']"),
@@ -219,7 +219,7 @@ function build(options) {
     words: role => q(`[data-role='${role}']`),
     wedge: () => q(".station-winding__pict-wedge"),
     note: () => q(".station-winding__note"),
-    sweeps: () => animations.filter(a => a.element !== panel.panel && a.element !== q(".station-winding__body"))
+    sweeps: () => animations.filter(a => a.element !== panel.panel && a.element !== q(".station-window__body"))
   };
 }
 
@@ -249,8 +249,26 @@ test("closed by construction: the panel is hidden, a region on the glass, no dia
   assert.equal(h.q("[data-role='notice']").textContent, calc.NOTICE);
   assert.equal(surfaceModule.NOTICE, calc.NOTICE);
   assert.equal(h.anchor.getAttribute("aria-expanded"), "false");
-  // The controls are the Handbook's vocabulary.
-  assert.ok(h.q("[data-action='close-winding']").classList.contains("station-handbook__close"));
+  // The frame is a Station window: the panel, bar, readout and body are
+  // the window's classes; the controls inside are the Handbook's
+  // vocabulary; Close is the window's round button at the title bar's
+  // right, named for assistive tech and wordless on the glass.
+  assert.ok(h.panel.panel.classList.contains("station-window__panel"));
+  assert.ok(h.panel.panel.classList.contains("station-winding__panel"), "the owner's class, for its size");
+  assert.equal(h.panel.element.getAttribute("data-window"), "winding");
+  assert.equal(h.panel.element.getAttribute("data-role"), "winding-tension");
+  assert.ok(h.panel.window && h.panel.window.body === h.q(".station-window__body"));
+  const close = h.q("[data-action='close-winding']");
+  assert.ok(!close.classList.contains("station-handbook__close"));
+  assert.ok(close.classList.contains("station-window__close"));
+  assert.equal(close.getAttribute("aria-label"), "Close");
+  assert.equal(close.textContent, "");
+  const bar = h.q("[data-role='title-bar']");
+  assert.ok(bar.classList.contains("station-window__bar"));
+  assert.ok(bar.children[bar.children.length - 1] === close, "Close stands last on the bar, at its right");
+  assert.equal(bar.children[0].textContent, "Winding Tension");
+  assert.equal(bar.getAttribute("tabindex"), "0");
+  assert.match(bar.getAttribute("aria-label"), /arrow keys/);
   assert.ok(h.chip(1).classList.contains("station-handbook__chip"));
   assert.equal(h.chip(1).getAttribute("role"), "radio");
 });
@@ -400,6 +418,122 @@ test("opening is a flight out of the tile on the transition's tokens, closing re
   assert.ok(hidden(still.panel.panel), "and hidden at once");
 });
 
+/* A window whose measured box follows where it was put, as a browser's
+   would: the panel's rect reads the surface's own place. */
+function movable(h) {
+  const slot = h.panel.element;
+  slot.rect = { left: 0, top: 0, right: 1200, bottom: 700, width: 1200, height: 700 };
+  Object.defineProperty(h.panel.panel, "rect", {
+    get() {
+      const at = h.panel.place();
+      const left = 16 + at.x;
+      const top = 12 + at.y;
+      return { left, top, width: 560, height: 380, right: left + 560, bottom: top + 380 };
+    }
+  });
+  const props = {};
+  h.panel.panel.style = {
+    props,
+    setProperty(key, value) { props[key] = value; },
+    removeProperty(key) { delete props[key]; }
+  };
+  const bar = h.q("[data-role='title-bar']");
+  const pointer = (type, init) => bar.dispatchEvent(makeEvent(type, Object.assign({ bubbles: true, pointerId: 7, button: 0 }, init)));
+  const key = (name, target) => bar.dispatchEvent(makeEvent("keydown", { bubbles: true, key: name, target: target || bar }));
+  return { bar, props, pointer, key };
+}
+
+test("the title bar is a handle: a pointer drag moves the frame within the stage's cell and never off it, the frame says so while it is held, Close on the bar is not a handle; the arrow keys move it with the bar focused and Home puts it back; where it was put is where it opens next, brought back within a smaller cell; the flight is measured from where it stands", async () => {
+  const h = build();
+  const m = movable(h);
+  // Closed, the bar takes nothing.
+  m.pointer("pointerdown", { clientX: 100, clientY: 20 });
+  assert.equal(h.panel.panel.hasAttribute("data-moving"), false);
+  h.panel.open();
+  assert.deepEqual(h.panel.place(), { x: 0, y: 0 });
+  assert.deepEqual(m.props, {}, "at the tokens' place nothing is written on the frame");
+
+  // A drag: the delta is the move; the frame says it is held; the properties
+  // the sheet lays on as a translate are written in whole pixels.
+  const down = m.pointer("pointerdown", { clientX: 100, clientY: 20 });
+  assert.ok(down);
+  assert.ok(h.panel.panel.hasAttribute("data-moving"));
+  m.pointer("pointermove", { clientX: 140.4, clientY: 60 });
+  assert.ok(Math.abs(h.panel.place().x - 40.4) < 1e-9);
+  assert.equal(h.panel.place().y, 40);
+  assert.equal(m.props["--station-window-x"], "40px");
+  assert.equal(m.props["--station-window-y"], "40px");
+  // Another pointer's move is not this drag.
+  m.pointer("pointermove", { clientX: 900, clientY: 600, pointerId: 9 });
+  assert.equal(h.panel.place().y, 40);
+  // Off the cell: clamped to its edges. The frame is 560×380 in a 1200×700
+  // cell standing at (16, 12): x may go -16 … 624, y -12 … 308.
+  m.pointer("pointermove", { clientX: 5000, clientY: 5000 });
+  assert.deepEqual(h.panel.place(), { x: 624, y: 308 });
+  m.pointer("pointermove", { clientX: -5000, clientY: -5000 });
+  assert.deepEqual(h.panel.place(), { x: -16, y: -12 });
+  m.pointer("pointermove", { clientX: 160, clientY: 50 });
+  assert.deepEqual(h.panel.place(), { x: 60, y: 30 });
+  m.pointer("pointerup", { clientX: 160, clientY: 50 });
+  assert.equal(h.panel.panel.hasAttribute("data-moving"), false);
+  // Released, the pointer's travel moves nothing.
+  m.pointer("pointermove", { clientX: 400, clientY: 400 });
+  assert.deepEqual(h.panel.place(), { x: 60, y: 30 });
+  // A press on Close is Close's, not a drag; a secondary button is nothing.
+  m.pointer("pointerdown", { clientX: 20, clientY: 20, target: h.q("[data-action='close-winding']") });
+  assert.equal(h.panel.panel.hasAttribute("data-moving"), false);
+  m.pointer("pointerdown", { clientX: 100, clientY: 20, button: 2 });
+  assert.equal(h.panel.panel.hasAttribute("data-moving"), false);
+
+  // The keys, with the bar itself focused: a space-4 a press, clamped too.
+  m.key("ArrowRight");
+  assert.deepEqual(h.panel.place(), { x: 76, y: 30 });
+  m.key("ArrowDown");
+  assert.deepEqual(h.panel.place(), { x: 76, y: 46 });
+  m.key("ArrowLeft"); m.key("ArrowUp");
+  assert.deepEqual(h.panel.place(), { x: 60, y: 30 });
+  for (let i = 0; i < 40; i += 1) m.key("ArrowUp");
+  assert.deepEqual(h.panel.place(), { x: 60, y: -12 });
+  // The same keys from Close on the bar are Close's, not the window's.
+  m.key("ArrowRight", h.q("[data-action='close-winding']"));
+  assert.deepEqual(h.panel.place(), { x: 60, y: -12 });
+  // Escape on the bar still closes: the bar's handler lets it through.
+  const escape = makeEvent("keydown", { bubbles: true, key: "Escape", target: m.bar });
+  m.bar.dispatchEvent(escape);
+  assert.equal(h.panel.isOpen(), false);
+  assert.ok(escape.stopped);
+  // Closed where it was put; opened there again, and the flight out of the
+  // tile is measured from there.
+  assert.deepEqual(h.panel.place(), { x: 60, y: -12 });
+  for (const a of h.animations) a.finish();
+  await tick();
+  h.animations.length = 0;
+  h.panel.open();
+  assert.deepEqual(h.panel.place(), { x: 60, y: -12 });
+  const flight = h.animations.find(a => a.element === h.panel.panel);
+  assert.ok(flight, "a flight");
+  assert.match(flight.keyframes[0].transform, /translate\(-60px, 700px\)/, "from where the frame stands to the tile");
+  m.key("Home");
+  assert.deepEqual(h.panel.place(), { x: 0, y: 0 });
+  assert.deepEqual(m.props, {}, "back at the tokens' place, nothing is written");
+
+  // Put far out, then opened into a smaller cell: brought back within it.
+  m.pointer("pointerdown", { clientX: 100, clientY: 20 });
+  m.pointer("pointermove", { clientX: 700, clientY: 320 });
+  m.pointer("pointerup", { clientX: 700, clientY: 320 });
+  assert.deepEqual(h.panel.place(), { x: 600, y: 300 });
+  h.panel.close();
+  await tick();
+  h.panel.element.rect = { left: 0, top: 0, right: 800, bottom: 500, width: 800, height: 500 };
+  h.panel.open();
+  assert.deepEqual(h.panel.place(), { x: 224, y: 108 });
+  // A close mid-drag releases the bar.
+  m.pointer("pointerdown", { clientX: 100, clientY: 20 });
+  assert.ok(h.panel.panel.hasAttribute("data-moving"));
+  h.panel.close();
+  assert.equal(h.panel.panel.hasAttribute("data-moving"), false);
+});
+
 test("the surface dispatches nothing, reaches for nothing, restates no band and knows nothing of the Handbook", () => {
   const source = read("station/station-winding-tension.js");
   for (const forbidden of [/\.dispatch\s*\(/, /PolynStationCommandBridge/, /localStorage|sessionStorage/, /fetch\s*\(/, /document\./, /PolynStationHandbook/, /\.animate\s*\(/, /requestAnimationFrame|setInterval/]) {
@@ -422,11 +556,11 @@ test("the rail's fourth switch is Tools, at the column's foot over the Handbook,
   focused = null;
   const doc = fakeDocument();
   const clicks = [];
-  const rail = railModule.create(doc, { onTools: () => clicks.push("tools"), onWindingTension: () => clicks.push("winding") });
+  const rail = railModule.create(doc, { onTools: () => clicks.push("tools"), onWindingTension: () => clicks.push("winding"), onResinTotals: () => clicks.push("totals") });
   assert.deepEqual(rail.element.children.map(node => node.getAttribute("data-role")), ["blend-group", "next-group", "weights-group", "tools-group", "print-group"]);
   assert.deepEqual(rail.toolsGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["tools", "station-rail__flyout"]);
   assert.deepEqual(rail.toolsFlyout.children.map(node => node.getAttribute("data-role")), ["tools-row"]);
-  assert.deepEqual(rail.toolsRow.children.map(node => node.getAttribute("data-action")), ["winding-tension"]);
+  assert.deepEqual(rail.toolsRow.children.map(node => node.getAttribute("data-action")), ["winding-tension", "resin-totals"]);
   assert.equal(rail.toolsFlyout.getAttribute("aria-label"), "Tools");
   assert.equal(rail.toolsButton.getAttribute("aria-label"), "Tools");
   assert.equal(rail.windingButton.getAttribute("aria-label"), "Winding Tension");
@@ -647,9 +781,10 @@ test("the calculator is loaded by the host and the harness after the Changeover 
   const host = read("station-host.js");
   const scripts = [...host.matchAll(/"(station\/[^"]+\.js)"/g)].map(m => m[1]);
   assert.ok(scripts.indexOf("station/station-winding-tension.js") > scripts.indexOf("station/station-changeover.js"));
+  assert.ok(scripts.indexOf("station/station-winding-tension.js") > scripts.indexOf("station/station-window.js"), "the window frame before the tool that stands in it");
   assert.ok(scripts.indexOf("station/station-winding-tension.js") > scripts.indexOf("station/station-machine-rail.js"));
   assert.ok(scripts.indexOf("station/station-winding-tension.js") < scripts.indexOf("station/station.js"));
-  assert.match(host, /"station\/styles\/components\/changeover\.css",\s*"station\/styles\/components\/winding-tension\.css"/);
+  assert.match(host, /"station\/styles\/components\/window\.css",\s*"station\/styles\/components\/winding-tension\.css"/);
   const harness = read("station/station.html");
   assert.match(harness, /station-winding-tension\.js\?v=/);
   assert.match(harness, /\.\.\/winding-tension\.js\?v=/);
@@ -667,19 +802,16 @@ test("the calculator is loaded by the host and the harness after the Changeover 
   }
 });
 
-test("the frame is the stage's: preferred size from tokens, bounded above the Handbook's share exactly as the Changeover Calculator is, at the rail's edge, no media query but reduced motion, no raw length, no raw colour; the one continuing motion is the ideal zone's breathing, off under reduced motion", () => {
+test("the frame is a Station window's: the owner's sheet sets only its size from the winding tokens, capped by the stage's cell; the window's sheet spawns it at the centre and lays its place on as a translate under the flight's transform; no media query but reduced motion, no raw length, no raw colour; the one continuing motion is the ideal zone's breathing, off under reduced motion", () => {
   const raw = read("station/styles/components/winding-tension.css");
   const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
-  const rule = name => { const at = css.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return css.slice(at, css.indexOf("}", at)); };
-  const panel = rule(".station-winding__panel");
-  assert.match(panel, /\btop: var\(--station-space-3\);/);
-  assert.match(panel, /\bleft: var\(--station-space-4\);/, "at the rail's own edge");
+  const rule = (sheet, name) => { const at = sheet.indexOf(`${name} {`); assert.ok(at >= 0, `${name} has no rule`); return sheet.slice(at, sheet.indexOf("}", at)); };
+  const panel = rule(css, ".station-winding__panel");
   assert.match(panel, /width: min\(var\(--station-winding-width\), calc\(100% - 2 \* var\(--station-space-4\)\)\);/);
-  assert.match(panel, /height: min\(var\(--station-winding-height\), calc\(100% - var\(--station-handbook-share\) - 2 \* var\(--station-space-3\)\)\);/);
+  assert.match(panel, /height: min\(var\(--station-winding-height\), calc\(100% - 2 \* var\(--station-space-3\)\)\);/);
   assert.doesNotMatch(panel, /\s(max-height|min-height):|fit-content|max-content|height: auto/);
-  assert.match(panel, /pointer-events: auto;/);
-  assert.match(rule(".station-winding"), /pointer-events: none;/);
-  assert.match(rule(".station-winding__body"), /overflow-y: auto;/);
+  assert.doesNotMatch(panel, /position|top:|left:|translate|transform|z-index/, "the frame's place is the window's, not the tool's");
+  assert.doesNotMatch(css, /station-winding__(head|close|body|readout|title)/, "the bar, Close and the body are the window's vocabulary");
   const queries = [...css.matchAll(/@media ([^{]+)\{/g)].map(m => m[1].trim());
   assert.deepEqual(queries, ["(prefers-reduced-motion: reduce)"]);
   assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\(/i, "winding-tension.css names a colour");
@@ -695,4 +827,44 @@ test("the frame is the stage's: preferred size from tokens, bounded above the Ha
   const tokens = read("station/styles/tokens.css").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(tokens, /--station-winding-width: \d+px;/);
   assert.match(tokens, /--station-winding-height: \d+px;/);
+
+  // The window's sheet: spawned at the centre, moved by a translate the
+  // module writes, over the slot, inert until the frame itself.
+  const win = read("station/styles/components/window.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const frame = rule(win, ".station-window__panel");
+  assert.match(frame, /\btop: 50%;/);
+  assert.match(frame, /\bleft: 50%;/);
+  // (A unitless 0 is not addable to a percentage inside calc(): the
+  // fallback has to be 0px, or the whole declaration is dropped.)
+  assert.match(frame, /translate: calc\(-50% \+ var\(--station-window-x, 0px\)\) calc\(-50% \+ var\(--station-window-y, 0px\)\);/);
+  assert.match(frame, /transform-origin: 0 0;/, "the flight's arithmetic assumes the corner");
+  assert.match(frame, /pointer-events: auto;/);
+  assert.doesNotMatch(frame, /\b(width|height):/, "the frame's size is each window's own");
+  assert.match(rule(win, ".station-window"), /pointer-events: none;/);
+  assert.match(rule(win, ".station-window__bar"), /cursor: grab;/);
+  assert.match(rule(win, ".station-window__bar"), /touch-action: none;/);
+  assert.match(rule(win, ".station-window__panel[data-moving]"), /cursor: grabbing;/);
+  assert.match(rule(win, ".station-window__body"), /overflow-y: auto;/);
+  // Close: the round button, its cross drawn by pseudo-elements and shown
+  // with the pointer on the bar - on a window, the Handbook, the calculator.
+  const close = rule(win, ".station-root .station-window__close");
+  assert.match(close, /border-radius: 50%;/);
+  assert.match(close, /background: var\(--station-danger\);/);
+  assert.match(close, /width: var\(--station-space-3\);/);
+  assert.match(win, /\.station-window__close::before,\s*\.station-window__close::after \{[^}]*opacity: 0;/);
+  assert.match(win, /\.station-window__bar:hover \.station-window__close::before,[\s\S]*?\.station-handbook__head:hover \.station-window__close::before,[\s\S]*?\.station-changeover__head:hover \.station-window__close::before,[\s\S]*?opacity: 1;/);
+  assert.doesNotMatch(win, /#[0-9a-f]{3,8}\b|\brgba?\(/i, "window.css names a colour");
+  assert.deepEqual([...win.matchAll(/@media ([^{]+)\{/g)].map(m => m[1].trim()), ["(prefers-reduced-motion: reduce)"]);
+  // Nothing else on Station draws a Close of its own any more.
+  for (const sheet of ["handbook", "changeover"]) {
+    const other = read(`station/styles/components/${sheet}.css`).replace(/\/\*[\s\S]*?\*\//g, "");
+    assert.doesNotMatch(other, new RegExp(`\\.station-${sheet}__close`), `${sheet}.css styles a Close of its own`);
+  }
+  for (const file of ["station/station-handbook.js", "station/station-changeover.js"]) {
+    const source = read(file);
+    assert.match(source, /"aria-label": "Close"/, `${file}'s Close is not named`);
+    assert.doesNotMatch(source, /"button", [^\n]*close[^\n]*, "Close"/i, `${file}'s Close still carries the word`);
+  }
+  assert.match(read("station/station-changeover.js"), /const CLOSE = "station-window__close";/);
+  assert.match(read("station/station-handbook.js"), /"station-window__close station-handbook__close"/);
 });

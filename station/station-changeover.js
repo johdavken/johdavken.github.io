@@ -67,10 +67,11 @@
     : Object.freeze({ ack: 80, move: 300, lead: 40, settle: 120, ease: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
 
   /* The control vocabulary is the Handbook's (handbook.css): one set of
-   * flat controls for every glass surface on the console. */
+   * flat controls for every glass surface on the console. Close is the
+   * console's window control (station-window.js, window.css). */
   const ACTION = "station-handbook__action";
   const CHIP = "station-handbook__chip";
-  const CLOSE = "station-handbook__close";
+  const CLOSE = "station-window__close";
 
   /* The typed answers, in the order the wizard asks them, with the
    * wizard's own units. */
@@ -181,8 +182,8 @@
     head.appendChild(text(doc, "h2", "station-changeover__title", "Changeover"));
     const readout = text(doc, "span", "station-changeover__readout", "");
     head.appendChild(readout);
-    const closeButton = text(doc, "button", `${CLOSE} station-changeover__close`, "Close", {
-      type: "button", "data-action": "close-changeover", title: "Close the calculator (Esc)"
+    const closeButton = element(doc, "button", CLOSE, {
+      type: "button", "data-action": "close-changeover", "aria-label": "Close", title: "Close the calculator (Esc)"
     });
     head.appendChild(closeButton);
     panel.appendChild(head);
