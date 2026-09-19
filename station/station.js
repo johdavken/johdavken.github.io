@@ -113,6 +113,8 @@
   const changeoverCalculator = root.PolynStationChangeover || null;
   // The hopper info panel: what a hopper runs, under it on hover.
   const hopperInfo = root.PolynStationHopperInfo || null;
+  // The hopper legend: what the drawn states mean, from the stage's corner.
+  const hopperLegend = root.PolynStationLegend || null;
   const changeoverEstimate = root.PolynChangeoverEstimate || null;
   /* The Winding Tension calculator (station-winding-tension.js): the
    * rail's Tools row's one tool, opened out of its tile into a utility
@@ -454,6 +456,10 @@
    * shown beside the hopper under the pointer, hidden whenever the
    * drawing under the pointer is replaced. */
   let infoPanel = null;
+  /* The hopper legend's handle, once mounted in the utility slot: the
+   * info mark in the stage's corner and the card it opens. Escape closes
+   * it before anything else, as the nearest thing open. */
+  let legendPanel = null;
 
   function feedJob(model, resolved) {
     const inputs = {
@@ -2406,6 +2412,8 @@
     // including a layer that is still on its way open, which turns around.
     doc.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
+      // The legend's card is the nearest thing open: it closes first.
+      if (legendPanel && legendPanel.visible()) { legendPanel.hide(); return; }
       if (focus) { clearFocus(); return; }
       // A selection in progress is the nearer thing to leave: Escape
       // clears the selection first, and only the next one leaves the mode.
@@ -2522,6 +2530,15 @@
     if (hopperInfo && mounts.utility) {
       infoPanel = hopperInfo.create(doc, { mount: mounts.utility });
       if (infoPanel) mounts.utility.appendChild(infoPanel.element);
+    }
+
+    /* The hopper legend, in the same slot: the info mark in the stage's
+     * bottom-right corner - the corner the rail and the launcher leave
+     * free - and the card of hopper states it opens above itself. It
+     * reads no state and dispatches nothing. */
+    if (hopperLegend && mounts.utility) {
+      legendPanel = hopperLegend.create(doc);
+      if (legendPanel) mounts.utility.appendChild(legendPanel.element);
     }
 
     /* The hopper editor, built once and stood in the header's slot: the

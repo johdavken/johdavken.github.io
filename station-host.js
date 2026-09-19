@@ -88,6 +88,7 @@
     "station/styles/components/pressure.css",
     "station/styles/components/print-frame.css",
     "station/styles/components/hopper-info.css",
+    "station/styles/components/legend.css",
     "station/styles/components/sudo.css",
     "station/styles/components/machine-rail.css",
     "station/styles/components/weight-cards.css",
@@ -132,6 +133,8 @@
     "station/station-rundown-timeline.js",
     // The hopper info panel: the run-down's arithmetic beside a hopper.
     "station/station-hopper-info.js",
+    // The hopper legend: the states, drawn by the parts module, explained.
+    "station/station-legend.js",
     "station/station-job-controls.js",
     // The Changeover Calculator: after the job controls it applies through.
     "station/station-changeover.js",
@@ -172,7 +175,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.65.0";
+  const VERSION = "0.66.0";
 
   function requested() {
     try {
