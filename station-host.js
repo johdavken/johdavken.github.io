@@ -60,6 +60,8 @@
     "station/styles/components/hopper.css",
     "station/styles/components/layer-bank.css",
     "station/styles/components/focus-editor.css",
+    // The card rail: Compare and Large, riding the far-right card.
+    "station/styles/components/card-rail.css",
     "station/styles/components/inspector.css",
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
@@ -107,6 +109,8 @@
     "station/station-blend-actions.js",
     "station/station-layer-menu.js",
     "station/station-bulk-field.js",
+    // The card rail: the two switches over every card, riding the far-right one.
+    "station/station-card-rail.js",
     "station/station-layer-share.js",
     "station/station-weight-cards.js",
     // The machine utility rail: Blend Edit and Reset Tracking beside the
@@ -159,7 +163,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.62.0";
+  const VERSION = "0.63.1";
 
   function requested() {
     try {

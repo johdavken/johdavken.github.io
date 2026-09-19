@@ -81,6 +81,12 @@
    *        banks turned over to their compact blend editor
    * @param {string[]} [options.flipped]   which of the carded banks show the
    *        card rather than the cluster; omitted, every carded bank does
+   * @param {string} [options.cardSize]    "normal" | "large": stamped on every
+   *        card's group; the cards' faces read their type's size off it
+   *        (focus-editor.css). No box changes with it
+   * @param {Element} [options.cardRail]   HTML content for the card rail
+   *        (station-card-rail.js), stood against the far-right bank's card
+   *        while any bank is carded
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
    * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
    * @param {object} [options.dimensions]   layout overrides
@@ -138,10 +144,18 @@
         layerShare: settings.layerShare || null,
         blendEdit: !!settings.blendEdit,
         blendCard: cards[bank.id] || null,
-        flipped: Array.isArray(settings.flipped) ? settings.flipped.includes(bank.id) : null
+        flipped: Array.isArray(settings.flipped) ? settings.flipped.includes(bank.id) : null,
+        cardSize: settings.cardSize
       }));
     }
     svg.appendChild(row);
+    /* The card rail rides the far-right card: the last bank of the row in
+     * canvas order, whichever face it shows - the box is the same for
+     * both. Painted after the row, so no neighbour's train is over it. */
+    if (carded && !layout.focusLayer && settings.cardRail && typeof settings.cardRail === "object") {
+      const last = layout.banks.reduce((far, bank) => (!far || bank.x + bank.width > far.x + far.width ? bank : far), null);
+      if (last) svg.appendChild(parts.cardRail(doc, last, settings.cardRail));
+    }
     return svg;
   }
 
@@ -295,6 +309,27 @@
   }
 
   /**
+   * Stamp the cards' size on a mounted stage, in place: the card rail's
+   * Large switch (station-card-rail.js) changes no box, only the size the
+   * cards' faces read off their group, so the stage is not drawn again
+   * for it - a field the operator is in keeps its focus and its draft.
+   * Returns how many cards were stamped.
+   *
+   * @param {Element} mount
+   * @param {string} size  "normal" | "large"
+   */
+  function setCardSize(mount, size) {
+    if (!mount) return 0;
+    const stamp = parts.cardSizeOf(size);
+    let count = 0;
+    for (const card of findAll(mount, node => attributeOf(node, "data-role") === "blend-card")) {
+      card.setAttribute("data-size", stamp);
+      count += 1;
+    }
+    return count;
+  }
+
+  /**
    * Replace a mount point's contents with the machine for `model`.
    * Renders an explicit empty state rather than nothing when the model is null,
    * so a line that cannot be described reads as "not configured" instead of
@@ -333,6 +368,8 @@
       blendEdit: settings.blendEdit,
       blendCards: settings.blendCards,
       flipped: settings.flipped,
+      cardSize: settings.cardSize,
+      cardRail: settings.cardRail,
       raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,
       dimensions: settings.dimensions,
@@ -355,6 +392,7 @@
     renderStage,
     mountStage,
     patchStage,
+    setCardSize,
     clear
   };
 });

@@ -1,0 +1,119 @@
+/* The card rail (station-card-rail.js): the two switches riding the
+ * right side of the far-right layer card while a face is on.
+ *
+ * WHERE IT SITS
+ *
+ * In the drawing: a <foreignObject> the renderer stands against the
+ * far-right bank's card box (station-machine-parts.js: cardRailBox), a
+ * gap off the card's right edge, top-aligned, as tall as the card. It is
+ * in canvas units, so it scales with the cards it switches and the
+ * hoppers they stand for, and goes with them when the mode ends. This
+ * sheet places nothing.
+ *
+ * WHAT IT LOOKS LIKE
+ *
+ * The card's own controls, out on the card's edge: the layer menu's
+ * quiet make - no plate at rest, faded until reached, the accent on it
+ * when on - stacked with the gap the module drew them at. Each says what
+ * it is on hover and to a reader; no words on the rail. Every colour is
+ * a token, and the glyph is in the control's own colour, so it follows
+ * the control through hover, pressed and held.
+ */
+
+.station-card-rail__host {
+  overflow: visible;
+}
+
+.station-card-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 26px;
+}
+
+.station-root .station-card-rail__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: var(--station-stroke) solid transparent;
+  border-radius: var(--station-radius-sm);
+  background: none;
+  color: var(--station-text-muted);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity var(--station-motion-ack) ease-out, color var(--station-motion-ack) ease-out, background-color var(--station-motion-ack) ease-out, border-color var(--station-motion-ack) ease-out;
+}
+
+.station-root .station-card-rail__control:hover:not(:disabled),
+.station-root .station-card-rail__control:focus-visible {
+  opacity: 1;
+  color: var(--station-text);
+  background: var(--station-handbook-control-active, var(--station-accent-soft));
+  border-color: var(--station-border-strong);
+}
+
+.station-root .station-card-rail__control:focus-visible {
+  outline-offset: 2px;
+}
+
+/* On: the accent, quietly - an edge, a wash and the glyph, as the
+   machine rail's Current Recipe is on. Compare on is the entries' own
+   colour instead, the timeline's "upcoming", so the switch and what it
+   reveals read as one thing. */
+.station-root .station-card-rail__control[aria-pressed="true"],
+.station-root .station-card-rail__control[aria-pressed="true"]:hover:not(:disabled) {
+  opacity: 1;
+  color: var(--station-accent);
+  background: var(--station-accent-soft);
+  border-color: var(--station-accent);
+}
+
+.station-root .station-card-rail__control[data-action="compare"][aria-pressed="true"],
+.station-root .station-card-rail__control[data-action="compare"][aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--station-timeline-upcoming, var(--station-info));
+  border-color: var(--station-timeline-upcoming, var(--station-info));
+  background: color-mix(in srgb, var(--station-timeline-upcoming, var(--station-info)) 18%, transparent);
+}
+
+/* Held: nothing to compare on this face. Faded further, the pointer's
+   default, the reason in the title. */
+.station-root .station-card-rail__control:disabled {
+  opacity: 0.3;
+  color: var(--station-text-disabled);
+  background: none;
+  border-color: transparent;
+  cursor: default;
+}
+
+.station-card-rail__glyph {
+  display: block;
+  width: 26px;
+  height: 26px;
+  padding: 3px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.station-card-rail__glyph-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-card-rail__glyph-fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-card-rail__control {
+    transition: none;
+  }
+}

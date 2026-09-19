@@ -38,9 +38,10 @@
   <link rel="stylesheet" href="styles/base.css?v=0.5.0">
   <link rel="stylesheet" href="styles/shell.css?v=0.12.1">
   <link rel="stylesheet" href="styles/components/machine.css?v=0.4.0">
-  <link rel="stylesheet" href="styles/components/hopper.css?v=0.27.0">
+  <link rel="stylesheet" href="styles/components/hopper.css?v=0.28.0">
   <link rel="stylesheet" href="styles/components/layer-bank.css?v=0.15.0">
-  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.12.0">
+  <link rel="stylesheet" href="styles/components/focus-editor.css?v=0.13.0">
+  <link rel="stylesheet" href="styles/components/card-rail.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/inspector.css?v=0.3.1">
   <link rel="stylesheet" href="styles/components/rundown.css?v=0.6.1">
   <link rel="stylesheet" href="styles/components/job-controls.css?v=0.4.0">
@@ -68,7 +69,7 @@
   <link rel="stylesheet" href="styles/components/sudo.css?v=0.1.3">
   <!-- The machine utility rail over the Handbook's launcher: the recipe
        faces and their moves, Weights and Smart Hoppers. -->
-  <link rel="stylesheet" href="styles/components/weight-cards.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/weight-cards.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/machine-rail.css?v=0.7.2">
   <link rel="stylesheet" href="styles/components/theme-preview.css?v=0.2.0">
   <!-- Development-only review controls (?transition=debug). Harness only. -->
@@ -141,11 +142,11 @@
   <script src="station-extruder-assets.js?v=0.3.0" defer></script>
   <script src="station-mixer-assets.js?v=0.2.0" defer></script>
   <script src="station-machine-layout.js?v=0.18.1" defer></script>
-  <script src="station-machine-parts.js?v=0.29.0" defer></script>
-  <script src="station-render.js?v=0.11.0" defer></script>
+  <script src="station-machine-parts.js?v=0.30.0" defer></script>
+  <script src="station-render.js?v=0.12.0" defer></script>
   <script src="station-transition.js?v=0.1.0" defer></script>
   <script src="station-face-turn.js?v=0.2.0" defer></script>
-  <script src="station-focus-editor.js?v=0.9.0" defer></script>
+  <script src="station-focus-editor.js?v=0.10.0" defer></script>
   <script src="station-hopper-controls.js?v=0.2.0" defer></script>
   <!-- The plan controls: the seam for the rail's two moves under the Next
        face - promote the plan, copy the running recipe into it. -->
@@ -155,6 +156,8 @@
   <script src="station-blend-actions.js?v=0.1.0" defer></script>
   <script src="station-layer-menu.js?v=0.1.0" defer></script>
   <script src="station-bulk-field.js?v=0.1.0" defer></script>
+  <!-- The card rail: Compare and Large, riding the far-right card. -->
+  <script src="station-card-rail.js?v=0.1.0" defer></script>
   <script src="station-layer-share.js?v=0.1.0" defer></script>
   <!-- The weight cards: the cluster's third face, from the rail's Weights
        control, and the seam the rail's Smart Hoppers switch goes through. -->
@@ -206,7 +209,7 @@
   <!-- Development-only transition review (?transition=debug). Harness only,
        like the lab: never loaded by station-host.js. -->
   <script src="station-transition-dev.js?v=0.1.0" defer></script>
-  <script src="station.js?v=0.32.0" defer></script>
+  <script src="station.js?v=0.33.0" defer></script>
 </head>
 <body>
 

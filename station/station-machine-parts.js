@@ -910,9 +910,16 @@
     return { x, y, width, height: cluster.y + cluster.height - y };
   }
 
-  function blendCard(doc, bank, content) {
+  /* The card's other size (the card rail's Large switch, station-card-
+   * rail.js): the same box, the type on it up by a quarter - the card's
+   * faces read the size off the group (focus-editor.css). No length
+   * changes: the header above, the train below and the neighbours
+   * beside it stand where they are, and so does the card. */
+  function cardSizeOf(size) { return size === "large" ? "large" : "normal"; }
+
+  function blendCard(doc, bank, content, size) {
     const box = blendCardBox(bank);
-    const g = group(doc, "station-blend-card", "blend-card", { "data-layer": bank.id });
+    const g = group(doc, "station-blend-card", "blend-card", { "data-layer": bank.id, "data-size": cardSizeOf(size) });
     g.appendChild(node(doc, "rect", "station-blend-card__frame", {
       x: box.x, y: box.y, width: box.width, height: box.height, rx: 6
     }));
@@ -922,6 +929,29 @@
     host.appendChild(content);
     g.appendChild(host);
     return g;
+  }
+
+  /* The card rail (station-card-rail.js): the boot file's element, stood
+   * against the far-right card's box - a gap off its right edge, top-
+   * aligned, as tall as the card - in a <foreignObject> of the rail's
+   * own width. The canvas keeps `padding` past the last bank (station-
+   * machine-layout.js), which the rail fits inside; the box is read off
+   * the bank the card rides, so it moves with the card and with nothing
+   * else. */
+  const CARD_RAIL = Object.freeze({ gap: 6, width: 26 });
+  function cardRailBox(bank) {
+    const card = blendCardBox(bank);
+    return { x: card.x + card.width + CARD_RAIL.gap, y: card.y, width: CARD_RAIL.width, height: card.height };
+  }
+
+  function cardRail(doc, bank, content) {
+    const box = cardRailBox(bank);
+    const host = node(doc, "foreignObject", "station-card-rail__host", {
+      "data-role": "card-rail", "data-layer": bank.id,
+      x: box.x, y: box.y, width: box.width, height: box.height
+    });
+    host.appendChild(content);
+    return host;
   }
 
   function layerBank(doc, bank, hopperState, layerState, options) {
@@ -987,7 +1017,7 @@
     g.appendChild(header);
 
     g.appendChild(hopperCluster(doc, bank, hopperState, settings));
-    if (card) g.appendChild(blendCard(doc, bank, card));
+    if (card) g.appendChild(blendCard(doc, bank, card, settings.cardSize));
     /* Extruder, then the throat, then the mixer. The throat lands on the feed
      * flange, which stands in front of the gearbox and motor; drawn the other
      * way round the motor would paint over it and the two would look
@@ -1034,6 +1064,7 @@
   return {
     SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, shareText,
     hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
-    shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard
+    shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard,
+    CARD_RAIL, cardSizeOf, cardRailBox, cardRail
   };
 });

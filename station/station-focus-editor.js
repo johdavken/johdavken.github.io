@@ -716,9 +716,9 @@
      * recipe leaves the hopper empty. Built on every row whenever the
      * editor has the map, so a fresh card and a patched one are the same
      * DOM; whether it is SEEN is two attributes' - the row's data-differs
-     * and the card's data-show-other, the eye's - and the stylesheet's
-     * (focus-editor.css). Text, not a control: a drag from it is a drag
-     * of the row. */
+     * and the card's data-show-other, the card rail's Compare - and the
+     * stylesheet's (focus-editor.css). Text, not a control: a drag from it
+     * is a drag of the row. */
     if (entry.other) {
       const other = element(doc, "div", "station-editor__other");
       other.appendChild(text(doc, "em", "station-editor__other-tag", deps.otherRecipe));
@@ -1085,14 +1085,13 @@
    *        "<layer>:<index>" - { resin, differs } - as station-source.js
    *        otherResins() answers it: the plan's beside a running card, the
    *        running job's beside a planned one. Compact face only. Given,
-   *        every row carries the entry and the card's foot carries the eye
-   *        that shows it; absent or null, neither exists.
+   *        every row carries the entry; absent or null, none exists.
    * @param {string} [options.otherRecipe] "next" | "current": the word on
-   *        the entry and in the eye's label. Default "next".
+   *        the entry. Default "next".
    * @param {boolean} [options.showOther] whether the entries start shown:
-   *        session state the boot file keeps, so a rebuilt card shows what
-   *        the operator opened.
-   * @param {function} [options.onShowOther] (boolean) the eye was clicked.
+   *        the card rail's Compare (station-card-rail.js), session state
+   *        the boot file keeps for every card at once and tells each card
+   *        through setShowOther; a rebuilt card is built with it.
    * @returns {{ element: Element, blend: object, note: function, update: function, setBulk: function, setShowOther: function, showOther: function, able: object, variant: string }}
    */
   function create(doc, options) {
@@ -1419,33 +1418,24 @@
     rootEl.appendChild(note);
     /* The actions slot: whatever the caller built to stand at the card's
      * foot (the layer menu), placed last so it takes the room the rows
-     * leave, and - when the editor has the other recipe - the eye at the
-     * foot's right that shows or hides its entries. Nothing here reads
-     * the caller's element. */
-    const eye = otherResins ? buildEye(doc, rootEl, otherRecipe, settings) : null;
+     * leave. Nothing here reads the caller's element. */
     if (otherResins) rootEl.setAttribute("data-show-other", settings.showOther ? "true" : "false");
-    if ((settings.actions && typeof settings.actions === "object") || eye) {
+    if (settings.actions && typeof settings.actions === "object") {
       const actions = element(doc, "div", "station-editor__actions");
-      if (settings.actions && typeof settings.actions === "object") actions.appendChild(settings.actions);
-      if (eye) actions.appendChild(eye);
+      actions.appendChild(settings.actions);
       rootEl.appendChild(actions);
     }
     rootEl.classList.toggle("is-selectable", deps.bulk.active);
 
-    /* The eye's state, on the card: the attribute the stylesheet reveals
-     * the entries by, the button's pressed state and its label. */
+    /* Compare, on the card: the attribute the stylesheet reveals the
+     * entries by. The switch is the card rail's, one for every card; the
+     * boot file tells each card here. A card without the other recipe
+     * has nothing to reveal and keeps no attribute. */
     function setShowOther(on) {
       if (!otherResins) return;
       rootEl.setAttribute("data-show-other", on ? "true" : "false");
-      if (eye) {
-        eye.setAttribute("aria-pressed", on ? "true" : "false");
-        const label = `${on ? "Hide" : "Show"} ${otherRecipe} resin`;
-        eye.setAttribute("aria-label", label);
-        eye.setAttribute("title", label);
-      }
     }
     function showOther() { return rootEl.getAttribute("data-show-other") === "true"; }
-    if (eye) setShowOther(!!settings.showOther);
 
     /* Apply new canonical values to the rows that exist. See the header:
      * the active control keeps its live value, and a row whose shape must
@@ -1501,35 +1491,6 @@
     }
 
     return { element: rootEl, blend, note: deps.note, update, setBulk, setShowOther, showOther, able: offer.able, variant };
-  }
-
-  /* The eye: a quiet control at the card's foot, beside the layer menu,
-   * that shows the other recipe's entries on every row that differs.
-   * Drawn by the stylesheet from two spans, like the menu's dots; its
-   * state is the card's data-show-other, which setShowOther keeps with
-   * the pressed state and the label. Session-only: the boot file is told
-   * and keeps it for a rebuilt card, and nothing is persisted. */
-  function buildEye(doc, rootEl, otherRecipe, settings) {
-    const eye = element(doc, "button", "station-editor__eye", {
-      type: "button",
-      "data-action": "show-other",
-      "aria-pressed": "false",
-      "aria-label": `Show ${otherRecipe} resin`,
-      title: `Show ${otherRecipe} resin`
-    });
-    eye.appendChild(element(doc, "span", "station-editor__eye-lens", { "aria-hidden": "true" }));
-    eye.appendChild(element(doc, "span", "station-editor__eye-pupil", { "aria-hidden": "true" }));
-    eye.addEventListener("click", event => {
-      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
-      const on = rootEl.getAttribute("data-show-other") !== "true";
-      rootEl.setAttribute("data-show-other", on ? "true" : "false");
-      eye.setAttribute("aria-pressed", on ? "true" : "false");
-      const label = `${on ? "Hide" : "Show"} ${otherRecipe} resin`;
-      eye.setAttribute("aria-label", label);
-      eye.setAttribute("title", label);
-      if (typeof settings.onShowOther === "function") settings.onShowOther(on);
-    });
-    return eye;
   }
 
   return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };

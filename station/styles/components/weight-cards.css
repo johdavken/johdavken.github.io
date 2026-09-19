@@ -9,8 +9,10 @@
  * fields - the receiver weight, and with Smart Hoppers on the measure it
  * is computed from - with the computed weight, when there is one, in
  * the computed colour under the resin. The card is in the drawing, so
- * its type is the bank's own scale, as the blend card's is. Every
- * colour is a token; no length of its own beyond the field widths.
+ * its type is the bank's own scale, as the blend card's is - and at the
+ * card rail's Large it is up by the blend card's quarter, on the same
+ * factor (--station-card-zoom, focus-editor.css). Every colour is a
+ * token; no length of its own beyond the field widths.
  */
 
 .station-weight-card {
@@ -22,7 +24,7 @@
   gap: var(--station-space-1);
   color: var(--station-text);
   font-family: var(--station-font);
-  font-size: var(--station-text-sm);
+  font-size: calc(var(--station-text-sm) * var(--station-card-zoom, 1));
   line-height: var(--station-line-tight);
 }
 
@@ -56,7 +58,7 @@
   background: var(--station-surface-raised);
   color: var(--station-text-muted);
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-card-zoom, 1));
   text-align: center;
 }
 
@@ -66,7 +68,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-sm);
+  font-size: calc(var(--station-text-sm) * var(--station-card-zoom, 1));
 }
 
 .station-weight-card__resin.is-placeholder {
@@ -115,7 +117,7 @@
   --station-field-width: 5.5ch;
   color: var(--station-text);
   font-family: var(--station-font-mono);
-  font-size: var(--station-text-sm);
+  font-size: calc(var(--station-text-sm) * var(--station-card-zoom, 1));
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -147,7 +149,7 @@
 
 .station-weight-card__unit {
   color: var(--station-text-faint);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-card-zoom, 1));
 }
 
 /* Under the resin with Smart Hoppers on: the computed weight in the
@@ -158,7 +160,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-card-zoom, 1));
   font-variant-numeric: tabular-nums;
 }
 
@@ -194,12 +196,12 @@
 
 .station-weight-card__circumference-label {
   color: var(--station-text-muted);
-  font-size: var(--station-text-xs);
+  font-size: calc(var(--station-text-xs) * var(--station-card-zoom, 1));
 }
 
 .station-weight-card__shared {
   color: var(--station-text-faint);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-card-zoom, 1));
   font-style: italic;
 }
 
@@ -210,7 +212,7 @@
   min-height: 1.2em;
   padding: 0 var(--station-space-1);
   color: var(--station-text-muted);
-  font-size: var(--station-text-2xs);
+  font-size: calc(var(--station-text-2xs) * var(--station-card-zoom, 1));
 }
 
 .station-weight-card__note[data-kind="error"] {

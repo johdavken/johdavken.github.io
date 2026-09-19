@@ -2368,7 +2368,7 @@ test("a hopper the plan re-resins carries is-next-changes, and no other does - t
   assert.ok(String(hoppersIn(mount).find(h => h.getAttribute("data-hopper") === "A1").getAttribute("class")).split(/\s+/).includes("is-next-changes"));
 });
 
-test("the receiver's lid and lit strip carry a receiver-only class beside the shared one; the vessel's do not; the stylesheet lights the cap in the warning, statically, over pump-off", () => {
+test("the receiver's lid and lit strip carry a receiver-only class beside the shared one; the vessel's do not; the stylesheet lights the cap in the success green, statically, over pump-off", () => {
   const svg = stageFor(literal({ layerCount: 1, layerAPosition: null, hopperCount: 1 }));
   const hopper = hoppersIn(svg)[0];
   const receiver = allWith(hopper, "data-role", "hopper-receiver-drawing")[0];
@@ -2386,8 +2386,8 @@ test("the receiver's lid and lit strip carry a receiver-only class beside the sh
   const fs = require("node:fs");
   const path = require("node:path");
   const css = fs.readFileSync(path.join(__dirname, "station/styles/components/hopper.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__cap,\s*\.station-hopper\.is-next-changes \.station-hopper__receiver-lid \{\s*fill: var\(--station-warning\);\s*stroke: var\(--station-warning\);\s*\}/);
-  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__receiver-face \{\s*fill: color-mix\(in srgb, var\(--station-warning\) 60%, var\(--station-hopper-metal-lit\)\);\s*\}/);
+  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__cap,\s*\.station-hopper\.is-next-changes \.station-hopper__receiver-lid \{\s*fill: var\(--station-success\);\s*stroke: var\(--station-success\);\s*\}/);
+  assert.match(css, /\.station-hopper\.is-next-changes \.station-hopper__receiver-face \{\s*fill: color-mix\(in srgb, var\(--station-success\) 60%, var\(--station-hopper-metal-lit\)\);\s*\}/);
   assert.match(css, /\.station-hopper\.is-pump-off\.is-next-changes \.station-hopper__receiver-drawing \{\s*opacity: 1;\s*\}/);
   // After pump-off's own cap and receiver rules, so it wins at equal specificity.
   assert.ok(css.indexOf(".station-hopper.is-next-changes .station-hopper__cap") > css.indexOf(".station-hopper.is-pump-off .station-hopper__cap {"));
