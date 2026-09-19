@@ -127,6 +127,13 @@ function producer(overrides) {
       env.handle.publish();
       return { ok: true, item: { id: "r-new" } };
     },
+    saveNextRecipe: async ({ name }) => {
+      env.calls.push(["saveNextRecipe", name]);
+      if (env.recipes.some(recipe => recipe.normalizedName === name.toLowerCase())) return { ok: false, code: "duplicate_name", message: "A configuration with that name already exists." };
+      env.recipes.push(item("r-plan", name));
+      env.handle.publish();
+      return { ok: true, item: { id: "r-plan" } };
+    },
     replaceRecipe: async ({ id }) => { env.calls.push(["replaceRecipe", id]); env.handle.publish(); return { ok: true, item: { id } }; },
     loadRecipe: async ({ id, destination }) => { env.calls.push(["loadRecipe", id, destination]); return { ok: true }; },
     renameRecipe: async ({ id, name }) => {
@@ -276,6 +283,63 @@ test("Save Current asks for a name in place and hands the application one saveCu
   assert.equal(env.calls.length, 1);
 });
 
+test("Save Next stands beside Save Current: held with the reason until the boot file says a plan exists, then the same entry asks for a name for the planned recipe and hands one saveNextRecipe; a taken name offers no Replace", async () => {
+  const env = producer();
+  const plan = { on: false };
+  const { root, book } = build(env, { planned: () => plan.on });
+  const saveNext = byAction(root, "save-next");
+  const saveCurrent = byAction(root, "save-current");
+  assert.ok(saveNext.parent === saveCurrent.parent, "on the toolbar");
+  assert.ok(saveNext.parent.children.indexOf(saveNext) === saveCurrent.parent.children.indexOf(saveCurrent) + 1, "next to Save Current");
+  assert.equal(saveNext.textContent, "Save Next");
+  assert.equal(saveNext.classList.contains("is-primary"), false, "Save Current leads");
+  assert.equal(saveNext.disabled, true);
+  assert.equal(saveNext.getAttribute("title"), "Plan a Next Recipe on the stage before saving it.");
+  click(saveNext);
+  assert.ok(hidden(root.querySelector(".station-book__entry")), "held: nothing opens");
+  plan.on = true;
+  book.update();
+  assert.equal(saveNext.disabled, false);
+  assert.equal(saveNext.getAttribute("title"), "Save the planned recipe to this line's shared recipes.");
+  click(saveNext);
+  const entry = root.querySelector(".station-book__entry");
+  assert.ok(!hidden(entry));
+  assert.equal(root.querySelector(".station-book__entry-label").textContent, "Save the planned recipe as");
+  assert.equal(root.querySelector("[data-action='confirm-entry']").textContent, "Save");
+  assert.deepEqual(book.getState().entry, { mode: "save", id: null, recipe: "next" });
+  const input = root.querySelector(".station-book__name");
+  assert.equal(focused, input);
+  input.value = " Tomorrow  film ";
+  key(input, "Enter");
+  await tick();
+  assert.deepEqual(env.calls, [["saveNextRecipe", "Tomorrow film"]]);
+  assert.ok(hidden(entry));
+  assert.match(noteOf(root).textContent, /Saved “Tomorrow film”/);
+  assert.equal(book.getState().selectedId, "r-plan");
+  assert.equal(root.querySelector(".station-book__detail-name").textContent, "Tomorrow film");
+  // A taken name: the message, no Replace (Update writes the running recipe).
+  click(saveNext);
+  input.value = "Clear film";
+  click(byAction(root, "confirm-entry"));
+  await tick();
+  assert.deepEqual(env.calls.at(-1), ["saveNextRecipe", "Clear film"]);
+  assert.match(noteOf(root).textContent, /already exists\. Choose another name\./);
+  assert.doesNotMatch(noteOf(root).textContent, /Replace it/);
+  assert.ok(hidden(byAction(root, "replace")), "no Replace for a plan's save");
+  assert.equal(book.getState().duplicate, null);
+  assert.equal(input.getAttribute("aria-invalid"), "true");
+  assert.ok(!hidden(entry), "the entry stays for another name");
+  // Save Current after it is its own entry again.
+  click(byAction(root, "cancel-entry"));
+  click(saveCurrent);
+  assert.equal(root.querySelector(".station-book__entry-label").textContent, "Save the running recipe as");
+  assert.deepEqual(book.getState().entry, { mode: "save", id: null, recipe: "current" });
+  // Without a reader in the context, Save Next is never offered.
+  const bare = build(env);
+  assert.equal(byAction(bare.root, "save-next").disabled, true);
+  assert.equal(byAction(bare.root, "save-current").disabled, false);
+});
+
 test("a duplicate name is the application's answer: the book offers to replace the recipe it collides with, by id, or to rename", async () => {
   const env = producer();
   const { root, book } = build(env);
@@ -351,7 +415,7 @@ test("Refresh is one request, and its failure is said", async () => {
  *   Blend Edit is not the book's
  * -------------------------------------------------------------------- */
 
-test("the book carries no Blend Edit control and no page for the mode: the toolbar is Save Current, Refresh and the line, whatever a context hands it", () => {
+test("the book carries no Blend Edit control and no page for the mode: the toolbar is Save Current, Save Next, Refresh and the line, whatever a context hands it", () => {
   const env = producer();
   // A context that still names a blend surface (an older boot file) changes
   // nothing: the book neither reads it nor draws for it.
@@ -360,7 +424,7 @@ test("the book carries no Blend Edit control and no page for the mode: the toolb
   const { root, book } = build(env, { blend: stale });
   book.update();
   assert.deepEqual(root.querySelectorAll("[data-action]").map(node => node.getAttribute("data-action")),
-    ["save-current", "refresh", "confirm-entry", "replace", "cancel-entry"]);
+    ["save-current", "save-next", "refresh", "confirm-entry", "replace", "cancel-entry"]);
   assert.equal(root.querySelector("[data-role='blend-controls']"), null);
   assert.equal(root.querySelectorAll(".station-book__layer-chip").length, 0);
   assert.equal(root.querySelector(".station-book__blend"), null);
@@ -637,6 +701,6 @@ test("while a request runs every control is held; a publish that drops the selec
   assert.equal(b2.getState().entry, null);
   click(byAction(r2, "save-current"));
   click(rows(r2)[0]);
-  assert.deepEqual(b2.getState().entry, { mode: "save", id: null });
+  assert.deepEqual(b2.getState().entry, { mode: "save", id: null, recipe: "current" });
   assert.deepEqual(fresh.calls, []);
 });

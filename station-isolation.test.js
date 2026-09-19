@@ -252,7 +252,7 @@ test("the recipes bridge touches no DOM, names no RT Sync internal, and knows no
     assert.equal(bridge[forbidden], undefined, `the module surface exposes ${forbidden}`);
   }
   assert.ok(Object.isFrozen(bridge));
-  assert.deepEqual([...bridge.ACTIONS], ["saveCurrentRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"],
+  assert.deepEqual([...bridge.ACTIONS], ["saveCurrentRecipe", "saveNextRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"],
     "a new saved-recipe action Station may ask for arrives as an edit to this list");
 });
 

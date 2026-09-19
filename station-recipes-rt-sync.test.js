@@ -306,7 +306,7 @@ test("the book Station reads is the service's cache for the selected workspace: 
   assert.equal(book.workspace.id, "ws-9");
   assert.equal(book.workspace.displayName, "Line 9");
   assert.deepEqual(book.recipes.map(r => r.id).sort(), ["r-fit", "r-five"]);
-  assert.deepEqual([...h.bridge.capabilities()].sort(), ["deleteRecipe", "duplicateRecipe", "loadRecipe", "refresh", "renameRecipe", "replaceRecipe", "saveCurrentRecipe"]);
+  assert.deepEqual([...h.bridge.capabilities()].sort(), ["deleteRecipe", "duplicateRecipe", "loadRecipe", "refresh", "renameRecipe", "replaceRecipe", "saveCurrentRecipe", "saveNextRecipe"]);
 });
 
 /* ----------------------------------------------------------------------
@@ -355,6 +355,37 @@ test("load into Next: the plan is replaced and saved, the bridge publishes, the 
   const wide = await h.bridge.request("loadRecipe", { id: "r-five", destination: "next" });
   assert.deepEqual(wide, { ok: true });
   assert.equal(h.state.nextRecipe.layers.length, 3);
+});
+
+test("save Next: the planned recipe is created once, by the application's own plan payload, never the running recipe; held while nothing is planned; a taken name is the service's duplicate_name and creates nothing", async () => {
+  const h = await boot();
+  const none = await h.bridge.request("saveNextRecipe", { name: "Tomorrow" });
+  assert.deepEqual([none.ok, none.code], [false, "unavailable"]);
+  assert.match(none.message, /Plan a Next Recipe before saving it/);
+  assert.equal(h.configRpcs().length, 0, "nothing planned: nothing created");
+  // A plan: loaded into Next, as an operator would have made one.
+  await h.bridge.request("loadRecipe", { id: "r-fit", destination: "next" });
+  const rpcsBefore = h.configRpcs().length;
+  const saved = await h.bridge.request("saveNextRecipe", { name: "  Tomorrow  film " });
+  assert.equal(saved.ok, true);
+  const create = h.configRpcs().at(-1);
+  assert.equal(create.name, "create_workspace_configuration");
+  assert.equal(create.args.p_workspace_id, "ws-9");
+  assert.equal(create.args.p_configuration_type, "recipe");
+  assert.equal(create.args.p_name, "Tomorrow film");
+  assert.equal(create.args.p_payload.layers[0].hoppers[0].resin_name, "r-fit-A0", "the PLAN's payload, not the running recipe's");
+  assert.notEqual(create.args.p_payload.layers[0].hoppers[0].resin_name, h.state.layers[0].hoppers[0].resinName);
+  assert.equal(create.args.p_payload.layers[0].hoppers[0].receiver_weight_lb, undefined, "a recipe carries no weight");
+  assert.equal(h.configRpcs().length, rpcsBefore + 1, "one create");
+  assert.ok(h.bridge.getBook().recipes.some(r => r.name === "Tomorrow film"), "the book carries it");
+  assert.equal(h.log.statuses.at(-1), "Configuration saved successfully.");
+  assert.equal(h.state.layers[0].hoppers[0].resinName, "LIVE-A0", "the running recipe is untouched");
+  assert.deepEqual(h.log.notified, [], "a save touches no active job");
+  const taken = await h.bridge.request("saveNextRecipe", { name: "tomorrow FILM" });
+  assert.equal(taken.code, "duplicate_name");
+  assert.equal(h.configRpcs().length, rpcsBefore + 2, "the service asked, the database refused");
+  await h.flush();
+  assert.deepEqual(h.uploads(), []);
 });
 
 test("load into Current of a recipe for another layer count is refused by the application's own guard: incompatible, nothing changed, nothing sent", async () => {

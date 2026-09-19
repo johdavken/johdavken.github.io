@@ -73,6 +73,18 @@ test("Save Current IS the Recipe Book's save: the same payload builder, the same
   assert.doesNotMatch(connect, /\.rpc\(|\.from\(|workspace_configurations|getWorkspaceConfigurationTransport/);
 });
 
+test("Save Next IS the floor UI's Save Next Recipe: the plan's own payload, held on the same isMeaningful test, the same create and finish", () => {
+  const connect = between("function connectStationRecipes(){", "\n  function setupLineSync(){");
+  const save = connect.slice(connect.indexOf("saveNextRecipe: async ({ name })=>{"), connect.indexOf("// Update, rename, duplicate and delete"));
+  assert.match(save, /const payload = plannedRecipePayload\(\);/, "the plan as the state bridge projects it");
+  assert.match(save, /if \(!payload \|\| !window\.PolynNextRecipe\?\.isMeaningful\(payload\)\) return \{ ok:false, code:"unavailable"/);
+  assert.match(save, /await workspaceConfigurations\.create\(workspaceId, "recipe", name, payload\)/);
+  assert.match(save, /if \(result\?\.code !== "duplicate_name"\) finishWorkspaceConfigurationMutation\(result, "Configuration saved successfully\."\)/);
+  assert.doesNotMatch(save, /stationRecipePayload|createRecipePayload/, "never the running recipe");
+  // The floor UI's own button is held on the same test.
+  assert.match(app, /saveNextRecipeButton\.disabled=!window\.PolynNextRecipe\?\.isMeaningful\(state\.nextRecipe\);/);
+});
+
 test("Update, Rename, Duplicate and Delete ARE the floor UI's own mutation closure, on a recipe found in the service's own recipe list", () => {
   const connect = between("function connectStationRecipes(){", "\n  function setupLineSync(){");
   // A recipe is found in the service's OWN recipe list for the selected
