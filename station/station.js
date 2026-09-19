@@ -121,6 +121,12 @@
    * Optional, as the Changeover Calculator is; it dispatches nothing. */
   const windingCalculator = root.PolynStationWindingTension || null;
   const windingTension = root.PolynWindingTension || null;
+  /* The Pressure converter (station-pressure.js): the Tools row's third
+   * tool, psi to bar and back, over the application's own arithmetic
+   * (pressure-conversion.js, shared as winding-tension.js is). Optional;
+   * it dispatches nothing. */
+  const pressureConverter = root.PolynStationPressure || null;
+  const pressureConversion = root.PolynPressureConversion || null;
   /* The Station window (station-window.js): the frame the Tools row's
    * surfaces stand in - Resin Totals is built into one here. Optional. */
   const stationWindow = root.PolynStationWindow || null;
@@ -390,8 +396,12 @@
    * mounted in the utility slot out of the Tools row's second tile. */
   let totalsWindow = null;
   let totalsPage = null;
+  /* The Pressure converter's handle, once mounted in the utility slot
+   * out of the Tools row's third tile. */
+  let pressurePanel = null;
   /* The utility surfaces stand one at a time - the Changeover Calculator,
-   * Winding Tension, Resin Totals - so opening any closes the others.
+   * Winding Tension, Resin Totals, Pressure - so opening any closes the
+   * others.
    * Each is listed here as it is built; each tells its opening through
    * its onOpenChange, and closeOtherSurfaces answers. */
   const surfaces = [];
@@ -1069,9 +1079,10 @@
         count: bulk.selected.size,
         resin: bulk.resin
       },
-      tools: { open: tools.open, available: !!(windingPanel || totalsWindow) },
+      tools: { open: tools.open, available: !!(windingPanel || totalsWindow || pressurePanel) },
       winding: { active: !!(windingPanel && windingPanel.isOpen()), available: !!windingPanel },
       totals: { active: !!(totalsWindow && totalsWindow.isOpen()), available: !!totalsWindow },
+      pressure: { active: !!(pressurePanel && pressurePanel.isOpen()), available: !!pressurePanel },
       print: { open: printing.open, available: canPrint(), planned }
     });
   }
@@ -1180,7 +1191,7 @@
 
   /* The Tools row's windows closed - whichever is open. */
   function closeTools() {
-    for (const surface of [windingPanel, totalsWindow]) {
+    for (const surface of [windingPanel, totalsWindow, pressurePanel]) {
       if (surface && surface.isOpen()) surface.close();
     }
   }
@@ -1205,6 +1216,12 @@
   function toggleResinTotals() {
     if (!totalsWindow) return false;
     return totalsWindow.toggle();
+  }
+
+  /* The Pressure tile, the same way. */
+  function togglePressure() {
+    if (!pressurePanel) return false;
+    return pressurePanel.toggle();
   }
 
   /* Resin Totals redrawn from the resolved state, and its total said on
@@ -2422,6 +2439,7 @@
         onTools: toggleTools,
         onWindingTension: toggleWindingTension,
         onResinTotals: toggleResinTotals,
+        onPressure: togglePressure,
         onPrint: togglePrintRow,
         onPrintRecipe: printRecipe,
         bulkField: bulkField ? bulkField.element : null,
@@ -2447,6 +2465,23 @@
         }
       });
       if (windingPanel) { mounts.utility.appendChild(windingPanel.element); surfaces.push(windingPanel); }
+    }
+
+    /* The Pressure converter, a window in the utility slot out of the
+     * rail's third tool tile, the same way: handed the application's
+     * arithmetic and the tile it flies from; it writes nowhere. */
+    if (pressureConverter && pressureConversion && mounts.utility && railPanel) {
+      pressurePanel = pressureConverter.create(doc, {
+        calculator: pressureConversion,
+        anchor: railPanel.pressureButton,
+        mount: mounts.utility,
+        reducedMotion: prefersReducedMotion,
+        onOpenChange: open => {
+          if (open) closeOtherSurfaces(pressurePanel);
+          syncRail();
+        }
+      });
+      if (pressurePanel) { mounts.utility.appendChild(pressurePanel.element); surfaces.push(pressurePanel); }
     }
 
     /* The recipe printer, its frame in the utility slot: built once, told

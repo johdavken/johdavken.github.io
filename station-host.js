@@ -75,6 +75,7 @@
     "station/styles/components/window.css",
     "station/styles/components/winding-tension.css",
     "station/styles/components/resin-totals.css",
+    "station/styles/components/pressure.css",
     "station/styles/components/print-frame.css",
     "station/styles/components/hopper-info.css",
     "station/styles/components/sudo.css",
@@ -126,6 +127,9 @@
     // The Winding Tension calculator: the rail's Tools row's tool, over the
     // application's winding-tension.js (loaded by index.html before this).
     "station/station-winding-tension.js",
+    // The Pressure converter: the Tools row's third tool, over the
+    // application's pressure-conversion.js (loaded by index.html before this).
+    "station/station-pressure.js",
     // The recipe print sheet: the floor UI's Print Recipe from the rail's
     // Print row, printed from a frame of its own.
     "station/station-print-sheet.js",
@@ -155,7 +159,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.61.0";
+  const VERSION = "0.62.0";
 
   function requested() {
     try {
