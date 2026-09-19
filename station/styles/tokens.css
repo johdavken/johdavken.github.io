@@ -201,11 +201,15 @@
    * capped by the stage's cell in its own sheet. Winding Tension: what
    * its row of entries, the figure, the range and the advice need at
    * Station's type sizes. Resin Totals: the strip of three figures and
-   * two columns of materials, a few rows deep before the list scrolls. */
+   * two columns of materials, a few rows deep before the list scrolls.
+   * Pressure: two gauge faces side by side with their entries, the
+   * reference strip under them. */
   --station-winding-width: 560px;
   --station-winding-height: 380px;
   --station-totals-width: 640px;
   --station-totals-height: 420px;
+  --station-pressure-width: 600px;
+  --station-pressure-height: 372px;
 }
 
 /* ---------------------------------------------------------------------

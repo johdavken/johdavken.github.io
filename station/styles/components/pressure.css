@@ -1,0 +1,263 @@
+/* The Pressure converter (station-pressure.js): the Tools row's third
+ * tool, a Station window (station-window.js, window.css). Psi to bar
+ * and back.
+ *
+ * THE FRAME IS THE WINDOW'S
+ *
+ * Where it stands, how it moves, its title bar, its Close, its body and
+ * the flight out of the rail's tile are all the window's (window.css).
+ * This sheet gives the frame its one thing of its own - its size, from
+ * the pressure tokens (tokens.css), capped by the stage's cell - and
+ * draws what is inside: the two gauge faces, the link between them, the
+ * entries and the reference strip. Fixed capacity: the box is the
+ * tokens' to give, never its contents'; the note under the strip is the
+ * one line that comes and goes.
+ *
+ * ON THE GLASS
+ *
+ * The material is the shared glass (glass.css). Everything on it is
+ * flat, in the Handbook's control vocabulary (handbook.css): chips for
+ * the reference points, the fields. Hierarchy is carried by weight and
+ * space: the two dials are the largest things on the surface and the
+ * source face - the one typed on - stands a step brighter than the one
+ * that follows it; the labels are the smallest.
+ *
+ * THE GAUGE
+ *
+ * A line drawing in the face's own colour: the arc, the ticks, the
+ * figures outside them, the needle on its pivot. The needle is turned by
+ * a transform station-pressure.js writes; the ease from one reading to
+ * the next is the transition's move, here, and nothing under reduced
+ * motion. The dial's lengths are its viewBox's user units (the box is
+ * 100 by 76 in station-pressure.js), which is why they are plain
+ * numbers and not tokens: they scale with the face.
+ */
+
+/* The frame's size: its preferred size from the tokens, capped by the
+   stage's cell less a margin. A definite height, not a maximum: what is
+   inside sizes to it. */
+.station-pressure__panel {
+  width: min(var(--station-pressure-width), calc(100% - 2 * var(--station-space-4)));
+  height: min(var(--station-pressure-height), calc(100% - 2 * var(--station-space-3)));
+}
+
+.station-pressure__label {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- The faces: PSI, the link, bar ---- */
+.station-pressure__faces {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--station-space-3);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.station-pressure__face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--station-space-1);
+  min-width: 0;
+  color: var(--station-text-muted);
+  transition: color var(--station-motion-settle) ease-out;
+}
+
+/* The source face - the one typed on - in the full text colour; the
+   face that follows it a step back. Before any entry, both are faint. */
+.station-pressure__face[data-source="true"] {
+  color: var(--station-text);
+}
+
+.station-pressure__face[data-live="false"] {
+  color: var(--station-text-faint);
+}
+
+.station-pressure__dial {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.station-pressure__arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.station-pressure__tick {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+
+.station-pressure__tick--major {
+  stroke-width: 1.5;
+}
+
+.station-pressure__tick--minor {
+  stroke-width: 0.8;
+  opacity: 0.7;
+}
+
+/* The figures: the dial's own units, so they scale with the face. */
+.station-pressure__figure {
+  fill: currentColor;
+  font-family: var(--station-font-mono);
+  font-size: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The needle: the accent on a live face, turned about the pivot by the
+   transform the module writes, eased on the transition's move. */
+.station-pressure__needle {
+  transform-box: view-box;
+  transition: transform var(--station-motion-move) var(--station-motion-ease);
+}
+
+.station-pressure__blade {
+  fill: var(--station-accent);
+  stroke: none;
+}
+
+.station-pressure__face[data-live="false"] .station-pressure__blade {
+  fill: currentColor;
+}
+
+.station-pressure__pivot {
+  fill: var(--station-surface);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.station-pressure__unit {
+  font-size: var(--station-text-md);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: var(--station-line-tight);
+}
+
+.station-pressure__entry {
+  display: flex;
+  justify-content: center;
+}
+
+/* The fields: the Winding Tension calculator's, in the mono face the
+   readouts use, wide enough for a five-figure pressure with air. */
+.station-pressure__input {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: 9ch;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-md);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.station-pressure__input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* ---- The link: the two-way arrow and the factor each way ---- */
+.station-pressure__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--station-space-1);
+  color: var(--station-text-faint);
+}
+
+.station-pressure__arrows {
+  display: block;
+  width: calc(var(--station-space-6) + var(--station-space-2));
+  height: auto;
+  overflow: visible;
+}
+
+.station-pressure__arrow {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-pressure__factor {
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-2xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- The reference strip ---- */
+.station-pressure__reference {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  flex: 0 0 auto;
+}
+
+.station-pressure__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1);
+}
+
+/* Each point is a chip carrying both readings: the psi in the chip's
+   weight, its bar under it in the smaller size. */
+.station-pressure__chips .station-handbook__chip {
+  flex-direction: column;
+  padding-top: var(--station-space-1);
+  padding-bottom: var(--station-space-1);
+}
+
+.station-pressure__chip-psi,
+.station-pressure__chip-bar {
+  display: block;
+  font-family: var(--station-font-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--station-line-tight);
+}
+
+.station-pressure__chip-bar {
+  font-size: var(--station-text-2xs);
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* The application's one line under the strip. */
+.station-pressure__notice {
+  margin: 0;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+/* The note: a refused entry, said once under the strip. */
+.station-pressure__note {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-pressure__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-pressure__needle,
+  .station-pressure__face {
+    transition: none;
+  }
+}

@@ -560,7 +560,7 @@ test("the rail's fourth switch is Tools, at the column's foot over the Handbook,
   assert.deepEqual(rail.element.children.map(node => node.getAttribute("data-role")), ["blend-group", "next-group", "weights-group", "tools-group", "print-group"]);
   assert.deepEqual(rail.toolsGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["tools", "station-rail__flyout"]);
   assert.deepEqual(rail.toolsFlyout.children.map(node => node.getAttribute("data-role")), ["tools-row"]);
-  assert.deepEqual(rail.toolsRow.children.map(node => node.getAttribute("data-action")), ["winding-tension", "resin-totals"]);
+  assert.deepEqual(rail.toolsRow.children.map(node => node.getAttribute("data-action")), ["winding-tension", "resin-totals", "pressure"]);
   assert.equal(rail.toolsFlyout.getAttribute("aria-label"), "Tools");
   assert.equal(rail.toolsButton.getAttribute("aria-label"), "Tools");
   assert.equal(rail.windingButton.getAttribute("aria-label"), "Winding Tension");

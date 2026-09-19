@@ -101,6 +101,10 @@
  *   Resin Totals     the row's second tool: the application's Resin
  *                    Totals (station-resin-totals.js), once a Handbook
  *                    page, in a window of its own out of this tile the
+ *                    same way.
+ *   Pressure         the row's third tool: the console's Pressure
+ *                    converter (station-pressure.js), psi to bar and
+ *                    back, in a window of its own out of this tile the
  *                    same way. More tools stand beside these on the row.
  *   Print            the fifth switch, under Tools: the floor UI's Print
  *                    Recipe. On, its row unfolds to its RIGHT with the
@@ -124,7 +128,7 @@
  *     [ Next Recipe  ]  -| [ Bulk Edit ] [ Copy Current ]  (while its face is on;
  *                           the one bulk set stands on whichever row is open)
  *     [ Weights      ]  -| [ Smart Hoppers ]
- *     [ Tools        ]  -| [ Winding Tension ] [ Resin Totals ]  (while the row is open)
+ *     [ Tools        ]  -| [ Winding Tension ] [ Resin Totals ] [ Pressure ]  (while the row is open)
  *     [ Print        ]  -| [ Current ] [ Next ] [ Both ]  (while the row is open)
  *     [ Handbook     ]                          (station-handbook.js)
  *
@@ -174,7 +178,7 @@
     blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers",
     next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next",
     bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit",
-    tools: "Tools", winding: "Winding Tension", totals: "Resin Totals",
+    tools: "Tools", winding: "Winding Tension", totals: "Resin Totals", pressure: "Pressure",
     print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes"
   });
 
@@ -377,6 +381,19 @@
     return tile.svg;
   }
 
+  /* Pressure: a gauge - the round case, its scale an arc of ticks over
+   * the top, the needle on its pivot swung to the upper right, as a
+   * gauge reads under pressure. */
+  function pressureGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "circle", "station-rail__glyph-face", { cx: 10, cy: 10.5, r: 8 }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 4.4 8.2 L 5.8 8.9 M 7.2 4.4 L 7.9 5.7 M 10 3.5 L 10 5 M 12.8 4.4 L 12.1 5.7 M 15.6 8.2 L 14.2 8.9" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 10 10.5 L 13.6 6.6" }));
+    svg.appendChild(svgNode(doc, "circle", "station-rail__glyph-stroke", { cx: 10, cy: 10.5, r: 1.2 }));
+    return tile.svg;
+  }
+
   /* Print: a printer as the floor UI's own button draws it - a sheet
    * standing into the body from above, the body, the printed sheet
    * coming out below. */
@@ -447,6 +464,7 @@
    * @param {function} [options.onResinTotals] () => void; the Resin Totals tile
    * @param {function} [options.onWindingTension] () => void; the Winding Tension
    *        tile's click - the boot file opens or closes the surface and tells the rail
+   * @param {function} [options.onPressure]     () => void; the Pressure tile
    * @param {function} [options.onPrint]        () => void; the Print switch's click -
    *        the boot file keeps whether the row is open and tells the rail
    * @param {function} [options.onPrintRecipe]  (which) => void; a choice on the
@@ -471,6 +489,7 @@
     const onTools = typeof settings.onTools === "function" ? settings.onTools : () => {};
     const onWindingTension = typeof settings.onWindingTension === "function" ? settings.onWindingTension : () => {};
     const onResinTotals = typeof settings.onResinTotals === "function" ? settings.onResinTotals : () => {};
+    const onPressure = typeof settings.onPressure === "function" ? settings.onPressure : () => {};
     const onPrint = typeof settings.onPrint === "function" ? settings.onPrint : () => {};
     const onPrintRecipe = typeof settings.onPrintRecipe === "function" ? settings.onPrintRecipe : () => {};
 
@@ -493,6 +512,7 @@
       tools: { open: false, available: false },
       winding: { active: false, available: false },
       totals: { active: false, available: false },
+      pressure: { active: false, available: false },
       /* The Print row: whether it is unfolded, whether there is anything
        * to print at all, and whether a plan exists for Next and Both. */
       print: { open: false, available: false, planned: false }
@@ -548,6 +568,10 @@
       type: "button", "data-action": "resin-totals", "aria-pressed": "false", "aria-label": LABEL.totals, title: LABEL.totals
     });
     totalsButton.appendChild(totalsGlyph(doc));
+    const pressureButton = element(doc, "button", "station-rail__control station-rail__control--pressure", {
+      type: "button", "data-action": "pressure", "aria-pressed": "false", "aria-label": LABEL.pressure, title: LABEL.pressure
+    });
+    pressureButton.appendChild(pressureGlyph(doc));
     const printButton = element(doc, "button", "station-rail__control station-rail__control--print", {
       type: "button", "data-action": "print", "aria-pressed": "false", "aria-label": LABEL.print, title: LABEL.print
     });
@@ -599,6 +623,7 @@
     const toolsRow = element(doc, "div", "station-rail__row station-rail__row--tools", { "data-role": "tools-row" });
     toolsRow.appendChild(windingButton);
     toolsRow.appendChild(totalsButton);
+    toolsRow.appendChild(pressureButton);
     const toolsParts = group("tools", toolsButton, "Tools", [toolsRow]);
     const toolsGroup = toolsParts.wrapper;
     const toolsFlyout = toolsParts.fly;
@@ -740,6 +765,15 @@
         : (state.totals.active
           ? `${LABEL.totals} · open — click to close`
           : `${LABEL.totals} · pounds of each resin the job consumed`));
+
+      pressureButton.setAttribute("aria-pressed", state.pressure.active ? "true" : "false");
+      pressureButton.classList.toggle("is-active", state.pressure.active);
+      pressureButton.disabled = !state.pressure.available;
+      pressureButton.setAttribute("title", !state.pressure.available
+        ? `${LABEL.pressure} is not available on this page`
+        : (state.pressure.active
+          ? `${LABEL.pressure} · open — click to close the converter`
+          : `${LABEL.pressure} · psi to bar, and bar to psi`));
 
       rootEl.classList.toggle("is-print-open", state.print.open);
       printButton.setAttribute("aria-pressed", state.print.open ? "true" : "false");
@@ -900,6 +934,11 @@
       disarm();
       onResinTotals();
     });
+    pressureButton.addEventListener("click", () => {
+      if (pressureButton.disabled) return;
+      disarm();
+      onPressure();
+    });
     printButton.addEventListener("click", () => {
       if (printButton.disabled) return;
       disarm();
@@ -930,6 +969,7 @@
      * @param {object}  [next.tools]      { open, available }
      * @param {object}  [next.winding]    { active, available }
      * @param {object}  [next.totals]     { active, available }
+     * @param {object}  [next.pressure]   { active, available }
      * @param {object}  [next.print]      { open, available, planned }
      */
     function update(next) {
@@ -986,6 +1026,9 @@
       if (n.totals && typeof n.totals === "object") {
         state.totals = { active: !!n.totals.active, available: !!n.totals.available };
       }
+      if (n.pressure && typeof n.pressure === "object") {
+        state.pressure = { active: !!n.pressure.active, available: !!n.pressure.available };
+      }
       if (n.print && typeof n.print === "object") {
         state.print = { open: !!n.print.open, available: !!n.print.available, planned: !!n.print.planned };
       }
@@ -1025,6 +1068,7 @@
       toolsButton,
       windingButton,
       totalsButton,
+      pressureButton,
       toolsGroup,
       toolsFlyout,
       toolsRow,
@@ -1046,10 +1090,11 @@
         next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
         bulk: Object.assign({}, state.bulk),
         tools: Object.assign({}, state.tools), winding: Object.assign({}, state.winding), totals: Object.assign({}, state.totals),
+        pressure: Object.assign({}, state.pressure),
         print: Object.assign({}, state.print)
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, totalsGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
+  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, totalsGlyph, pressureGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
 });
