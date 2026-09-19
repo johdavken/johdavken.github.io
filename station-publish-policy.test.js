@@ -78,19 +78,24 @@ test("a command's answer runs the same publish policy, marked as Station's own, 
   // Smart Hoppers switch - which run the identical two lines.
   // ... and the rail's two moves under the Next face, promoteNextRecipe
   // and copyCurrentToNext, the same two lines again.
-  // ... and the layer menus' pasteLayer and clearLayer, and the rail's
-  // confirmBulk (station-blend-actions.js), the same two lines again.
-  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 15, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Resin Totals window's (its fields') onCommitted, the rail's resetTracking, the rail's toggleSmartHoppers, the rail's promoteNextRecipe and copyCurrentToNext, the menus' pasteLayer and clearLayer, and the rail's confirmBulk");
+  // ... and the layer menus' pasteLayer and clearLayer, the header's
+  // applySelection and the card rail's historyMove (both through
+  // station-blend-actions.js), the same two lines again.
+  assert.equal((boot.match(/lastOwnRevision\s*=/g) || []).length, 16, "lastOwnRevision is written somewhere other than its declaration, the editor's, the blend cards' and the weight cards' onCommitted, toggleHopperControl, the job controls' onCommitted, the share editor's onCommitted, the Resin Totals window's (its fields') onCommitted, the rail's resetTracking, the rail's toggleSmartHoppers, the rail's promoteNextRecipe and copyCurrentToNext, the menus' pasteLayer and clearLayer, the header's applySelection and the card rail's historyMove");
   for (const name of ["pasteLayer", "clearLayer"]) {
     const move = boot.slice(boot.indexOf(`function ${name}(id) {`), boot.indexOf("\n  }\n", boot.indexOf(`function ${name}(id) {`)));
     assert.match(move, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
     assert.match(move, /blendActions\.(copyLayer|clearLayer)\(commandsFor\(current\.resolved\), recipe/, `${name} does not go through the blend actions' seam`);
     assert.doesNotMatch(move, /patchStage|renderAll|mountStage|dispatch\(/);
   }
-  const bulkConfirm = boot.slice(boot.indexOf("function confirmBulk() {"), boot.indexOf("\n  }\n", boot.indexOf("function confirmBulk() {")));
-  assert.match(bulkConfirm, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
-  assert.match(bulkConfirm, /blendActions\.applyResins\(commandsFor\(current\.resolved\), recipe, keys, value\)/);
-  assert.doesNotMatch(bulkConfirm, /patchStage|renderAll|mountStage|dispatch\(/);
+  const apply = boot.slice(boot.indexOf("function applySelection() {"), boot.indexOf("\n  }\n", boot.indexOf("function applySelection() {")));
+  assert.match(apply, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
+  assert.match(apply, /blendActions\.applyAssignments\(commandsFor\(current\.resolved\), recipe, keys, changes\)/);
+  assert.doesNotMatch(apply, /patchStage|renderAll|mountStage|dispatch\(/);
+  const history = boot.slice(boot.indexOf("function historyMove(action) {"), boot.indexOf("\n  }\n", boot.indexOf("function historyMove(action) {")));
+  assert.match(history, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);
+  assert.match(history, /blendActions\.redoEdit\(commandsNow, recipe\) : blendActions\.undoEdit\(commandsNow, recipe\)/);
+  assert.doesNotMatch(history, /patchStage|renderAll|mountStage|dispatch\(/);
   for (const name of ["promoteNextRecipe", "copyCurrentToNext"]) {
     const move = boot.slice(boot.indexOf(`function ${name}() {`), boot.indexOf("\n  }\n", boot.indexOf(`function ${name}() {`)));
     assert.match(move, /lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s+onPublish\(\{ own: true \}\);/);

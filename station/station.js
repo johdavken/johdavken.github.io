@@ -168,22 +168,23 @@
    * Next face still edits the plan; the rail holds the two moves. */
   const planControls = root.PolynStationPlanControls || null;
   /* The blend actions (station-blend-actions.js): the seam the layer-wide
-   * edits go through - a layer pasted onto another, a layer emptied, one
-   * resin written onto a selection - and the layer menu on every Blend
+   * edits go through - a layer pasted onto another, a layer emptied, a
+   * resin and/or blend written onto a selection of hoppers, the recipe's
+   * last edit taken back or put back - and the layer menu on every Blend
    * Edit card that asks for the first two (station-layer-menu.js).
-   * Optional: without them the cards edit hopper by hopper and the rail
-   * holds Bulk Edit. */
+   * Optional: without them the cards edit hopper by hopper, no badge
+   * selects, and the card rail's Undo and Redo are held. */
   const blendActions = root.PolynStationBlendActions || null;
   const layerMenu = root.PolynStationLayerMenu || null;
-  /* The bulk field (station-bulk-field.js): the one place the resin Bulk
-   * Edit writes is entered - built once and handed to the rail, which
-   * stands it above its Blend row. Optional with the rest. */
-  const bulkFieldModule = root.PolynStationBulkField || null;
-  /* The card rail (station-card-rail.js): the two switches riding the
-   * far-right card while a face is on - Compare and Large - built once
-   * and handed to the renderer, which stands it in the drawing. Optional
-   * with the rest: without it the cards show at their one size, entries
-   * hidden. */
+  /* The hopper editor (station-hopper-edit.js): the form in the header
+   * the selected hoppers are written from - built once and stood in the
+   * header's slot. Optional with the rest: without it no badge selects. */
+  const hopperEditModule = root.PolynStationHopperEdit || null;
+  /* The card rail (station-card-rail.js): the two switches and the two
+   * history moves riding the far-right card while a face is on -
+   * Compare, Large, Undo, Redo - built once and handed to the renderer,
+   * which stands it in the drawing. Optional with the rest: without it
+   * the cards show at their one size, entries hidden. */
   const cardRailModule = root.PolynStationCardRail || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
@@ -362,12 +363,15 @@
    * name means something different on Current and Next), when the mode
    * ends, and when the layer stops existing. */
   const layerCopy = { recipe: null, layer: null };
-  /* BULK EDIT - the rail's child of Blend Edit, as presentation state:
-   * whether the selection is on, and which hoppers are in it, as the
-   * "<layer>:<index>" keys the state bridge uses. Only under the blend
-   * face; ends with it. The resin to write is the rail's field's until
-   * Confirm hands it over. */
-  const bulk = { active: false, selected: new Set(), resin: "" };
+  /* THE HOPPER SELECTION - which hoppers the operator has selected on the
+   * cards, as the "<layer>:<index>" keys the state bridge uses, and the
+   * two drafts the header's hopper editor holds for them (a resin, a
+   * percentage; empty is no change). The badges are selection toggles
+   * whenever a recipe face is on and the edit is on offer
+   * (selectionActive); the editor shows while a hopper is selected.
+   * Cleared by Cancel, Escape, Apply, the mode leaving and the face
+   * changing - never carried across recipes. */
+  const selection = { keys: new Set(), resin: "", pct: "" };
   /* How the cards show, as the card rail's two switches have it
    * (station-card-rail.js): whether every card shows the OTHER recipe's
    * resin under its rows - the plan's on the running face, the running
@@ -379,9 +383,9 @@
   /* The card rail's handle, once built (start()) and handed to every
    * drawn stage; told the switches' state by syncCardRail. */
   let cardRail = null;
-  /* The bulk field's handle, once built (start()) and handed to the rail;
-   * told the selection's state by syncBulkField. */
-  let bulkField = null;
+  /* The hopper editor's handle, once built (start()) and stood in the
+   * header; told the selection's state by syncSelectionEditor. */
+  let hopperEditor = null;
   /* The compact editors' handles, by layer id, for the stage as drawn:
    * what a value-only publish updates in place, as editorHandle is for
    * the open layer. Rebuilt by every render. */
@@ -653,7 +657,7 @@
     // nothing armed carries across, and no selection either. Compare
     // does: it means "the other recipe" on either face.
     clearLayerCopy();
-    endBulk();
+    clearSelection();
     const were = blendEdit.active ? blendEdit.flipped.slice() : [];
     blendEdit.active = true;
     blendEdit.kind = face;
@@ -677,7 +681,7 @@
     if (!blendEdit.active) return false;
     leaveStageControl();
     clearLayerCopy();
-    endBulk();
+    clearSelection();
     const were = blendEdit.flipped.slice();
     blendEdit.active = false;
     blendEdit.kind = "blend";
@@ -876,17 +880,20 @@
   }
 
   /* --------------------------------------------------------------------
-   *   Bulk Edit, from the rail
+   *   The hopper selection, and the header's editor
    * ------------------------------------------------------------------
-   * The selection is this file's; the cards show it (setBulk) and ask to
-   * change it (the badge's click); the rail shows how many and holds the
-   * resin until Confirm. Confirm is one setHopperResins over the whole
-   * selection, addressed to the face's recipe - the running recipe under
-   * the Blend face, the plan under the Next face (bulkRecipe); the
-   * answer through the same publish policy; said on the status line. */
+   * The selection is this file's; the cards show it (setSelection) and
+   * ask to change it (a badge's click); the header's hopper editor
+   * (station-hopper-edit.js) shows how many and holds the two drafts
+   * until Apply. Apply is one setHopperAssignments over the whole
+   * selection - the resin, the percentage, or both, whichever was
+   * entered - addressed to the face's recipe: the running recipe under
+   * the Blend face, the plan under the Next face (selectionRecipe); the
+   * answer through the same publish policy; said on the status line.
+   * Cancel clears the selection and writes nothing. */
 
-  function bulkKeys() {
-    return Array.from(bulk.selected);
+  function selectionKeys() {
+    return Array.from(selection.keys);
   }
 
   /* The OTHER recipe's resin beside each hopper of the face the cards
@@ -900,39 +907,47 @@
     return null;
   }
 
-  function bulkOptionsFor(layerId) {
-    if (!bulk.active) return null;
-    return { active: true, selected: bulkKeys(), onToggle: index => toggleBulkHopper(layerId, index) };
+  function selectionOptionsFor(layerId) {
+    if (!selectionActive()) return null;
+    return { active: true, selected: selectionKeys(), onToggle: index => toggleSelectedHopper(layerId, index) };
   }
 
-  /* Bulk Edit is a child of both recipe faces: on the Blend face it
+  /* The selection is a child of both recipe faces: on the Blend face it
    * writes to the running recipe, on the Next face to the plan - the
-   * same selection, the same field, the same one setHopperResins,
+   * same badges, the same editor, the same one setHopperAssignments,
    * addressed to the face's recipe. */
-  function bulkRecipe() {
+  function selectionRecipe() {
     return modeIs("next") ? "next" : "current";
   }
 
-  function canBulkEdit() {
-    return (modeIs("blend") || modeIs("next")) && !!blendActions && blendActions.can(commandsFor(current.resolved), "resins");
+  function canEditSelection() {
+    return (modeIs("blend") || modeIs("next")) && !!hopperEditor && !!blendActions && blendActions.can(commandsFor(current.resolved), "assign");
   }
 
-  function syncBulkCards() {
+  /* Whether the badges are selection toggles: a recipe face on, and the
+   * edit on offer. Nothing is "started" - a badge selects. */
+  function selectionActive() {
+    return canEditSelection();
+  }
+
+  function syncSelectionCards() {
+    const active = selectionActive();
     for (const id of Object.keys(cardHandles)) {
       const card = cardHandles[id];
-      if (typeof card.setBulk === "function") card.setBulk(bulk.active ? { active: true, selected: bulkKeys(), onToggle: index => toggleBulkHopper(id, index) } : { active: false });
+      if (typeof card.setSelection === "function") card.setSelection(active ? { active: true, selected: selectionKeys(), onToggle: index => toggleSelectedHopper(id, index) } : { active: false });
     }
-    syncBulkField();
+    syncSelectionEditor();
   }
 
-  /* The field, told the selection's state: shown while it is on, the
-   * count for its label, the draft (a rebuilt or externally-changed
-   * field takes it back), the catalog's codes. Focus goes to it when the
-   * first hopper is selected - the next thing is to type. */
-  function syncBulkField(options) {
-    if (!bulkField) return;
-    bulkField.update({ shown: bulk.active, count: bulk.active ? bulk.selected.size : 0, draft: bulk.resin, resins: catalogCodes() });
-    if (options && options.appeared) bulkField.focus();
+  /* The editor, told the selection's state: shown while a hopper is
+   * selected, the count and the recipe for its label, the drafts (a
+   * rebuilt editor takes them back), the catalog's codes. Focus goes to
+   * it when the first hopper is selected - the next thing is to type. */
+  function syncSelectionEditor(options) {
+    if (!hopperEditor) return;
+    const count = selection.keys.size;
+    hopperEditor.update({ shown: count > 0, count, recipe: selectionRecipe(), resin: selection.resin, pct: selection.pct, resins: catalogCodes() });
+    if (options && options.appeared) hopperEditor.focus();
   }
 
   /* --------------------------------------------------------------------
@@ -957,7 +972,8 @@
     const offer = compareOffer(current.resolved);
     cardRail.update({
       compare: { active: cardView.compare, available: offer.available, reason: offer.reason },
-      size: cardView.size
+      size: cardView.size,
+      history: historyOffer(current.resolved)
     });
   }
 
@@ -987,84 +1003,125 @@
     return catalogResins().map(entry => entry && (entry.resin_code || entry.code)).filter(code => typeof code === "string" && code);
   }
 
-  function startBulk() {
-    if (bulk.active || !canBulkEdit()) return false;
-    leaveStageControl();
-    bulk.active = true;
-    bulk.selected = new Set();
-    bulk.resin = "";
-    syncBulkCards();
-    syncRail();
-    say(`Bulk Edit: click hopper badges on the cards to select them, then enter the resin above the rail and confirm${bulkRecipe() === "next" ? " - the plan is what changes" : ""}.`);
-    return true;
-  }
-
-  /* Ends the selection without writing: Cancel, Escape, the mode
-   * leaving, the face changing. Quiet - the caller says what happened. */
-  function endBulk() {
-    if (!bulk.active) return false;
-    bulk.active = false;
-    bulk.selected = new Set();
-    bulk.resin = "";
-    syncBulkCards();
+  /* Ends the selection without writing: Cancel, Escape, Apply's success,
+   * the mode leaving, the face changing. The drafts go with it. Quiet -
+   * the caller says what happened. */
+  function clearSelection() {
+    if (!selection.keys.size && !selection.resin && !selection.pct) return false;
+    selection.keys = new Set();
+    selection.resin = "";
+    selection.pct = "";
+    syncSelectionCards();
     syncRail();
     return true;
   }
 
-  /* The field's keystrokes: the draft is the boot file's, so it survives
-   * the field moving and a card rebuilt under it; the rail's Confirm reads
-   * it. */
-  function draftBulkResin(value) {
-    if (!bulk.active) return false;
-    bulk.resin = String(value || "");
-    syncRail();
+  /* The editor's keystrokes: the drafts are the boot file's, so they
+   * survive a card rebuilt under the selection. */
+  function draftSelection(drafts) {
+    const d = drafts && typeof drafts === "object" ? drafts : {};
+    if (typeof d.resin === "string") selection.resin = d.resin;
+    if (typeof d.pct === "string") selection.pct = d.pct;
     return true;
   }
 
-  function cancelBulk() {
-    if (!endBulk()) return false;
-    say("Bulk Edit cancelled: nothing was written.");
+  function cancelSelection() {
+    if (!clearSelection()) return false;
+    say("Selection cleared: nothing was written.");
     return true;
   }
 
-  function toggleBulkHopper(layerId, index) {
-    if (!bulk.active || !layerIds().includes(layerId)) return false;
+  function toggleSelectedHopper(layerId, index) {
+    if (!selectionActive() || !layerIds().includes(layerId)) return false;
     const key = `${layerId}:${index}`;
-    const before = bulk.selected.size;
-    if (bulk.selected.has(key)) bulk.selected.delete(key);
-    else bulk.selected.add(key);
+    const before = selection.keys.size;
+    if (selection.keys.has(key)) selection.keys.delete(key);
+    else selection.keys.add(key);
     for (const id of Object.keys(cardHandles)) {
       const card = cardHandles[id];
-      if (typeof card.setBulk === "function") card.setBulk({ active: true, selected: bulkKeys(), onToggle: i => toggleBulkHopper(id, i) });
+      if (typeof card.setSelection === "function") card.setSelection({ active: true, selected: selectionKeys(), onToggle: i => toggleSelectedHopper(id, i) });
     }
-    syncBulkField({ appeared: before === 0 && bulk.selected.size > 0 });
+    syncSelectionEditor({ appeared: before === 0 && selection.keys.size > 0 });
     syncRail();
     return true;
   }
 
-  function confirmBulk() {
-    if (!bulk.active || !blendActions) return null;
-    const keys = bulkKeys();
-    const value = String(bulk.resin || "").trim();
+  /* Apply: what the editor holds, written onto every selected hopper as
+   * one command. An empty field is no change; H1's percentage is
+   * derived, so a percentage over a selection that includes an H1 is
+   * refused here, before anything is asked, with the way out. */
+  function applySelection() {
+    if (!hopperEditModule || !blendActions || !selectionActive()) return null;
+    const keys = selectionKeys();
     if (!keys.length) { say("Select at least one hopper on a card first."); return null; }
-    if (!value) { say("Enter the resin to write onto the selected hoppers."); return null; }
-    const recipe = bulkRecipe();
-    const result = blendActions.applyResins(commandsFor(current.resolved), recipe, keys, value);
+    const resin = hopperEditModule.readResin(selection.resin);
+    const pct = hopperEditModule.readPct(selection.pct);
+    if (!pct.ok) { say(pct.message); return null; }
+    if (resin.resin === null && pct.pct === null) { say("Enter a resin, a percentage, or both; an empty field is no change."); return null; }
+    if (pct.pct !== null && keys.some(key => key.endsWith(":0"))) {
+      say("H1's percentage is calculated from the other hoppers: deselect H1, or leave the percentage as no change.");
+      return null;
+    }
+    const recipe = selectionRecipe();
+    const changes = {};
+    if (resin.resin !== null) changes.resin = resin.resin;
+    if (pct.pct !== null) changes.pct = pct.pct;
+    const result = blendActions.applyAssignments(commandsFor(current.resolved), recipe, keys, changes);
     if (!result || !result.ok) {
-      say(result && result.message ? result.message : "The resin could not be applied.");
+      say(result && result.message ? result.message : "The edit could not be applied.");
       return result || null;
     }
     const count = keys.length;
-    endBulk();
+    const what = [resin.resin !== null ? resin.resin : null, pct.pct !== null ? `${pct.pct}%` : null].filter(Boolean).join(" and ");
+    clearSelection();
     if (!result.changed) {
-      say(`${count} hopper${count === 1 ? "" : "s"} already ${count === 1 ? "holds" : "hold"} ${value}: nothing to write.`);
+      say(`${count} hopper${count === 1 ? "" : "s"} already ${count === 1 ? "holds" : "hold"} ${what}: nothing to write.`);
       return result;
     }
     lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
     onPublish({ own: true });
-    say(`Applied ${value} to ${count} hopper${count === 1 ? "" : "s"}${recipe === "next" ? " in the plan" : ""}.`);
+    say(`Applied ${what} to ${count} hopper${count === 1 ? "" : "s"}${recipe === "next" ? " in the plan" : ""}.`);
     return result;
   }
+
+  /* --------------------------------------------------------------------
+   *   Undo and Redo, from the card rail
+   * ------------------------------------------------------------------
+   * The application's own edit history for the face's recipe, as the
+   * bridge says it stands (resolved.history: two booleans per recipe),
+   * asked for as one command each through the blend actions' seam. The
+   * Weights face has none: the weights keep no edit history. */
+  function historyOffer(resolved) {
+    if (!blendEdit.active) return { available: false, reason: "turn a recipe face on first", canUndo: false, canRedo: false };
+    if (blendEdit.kind === "weights") return { available: false, reason: "the weight cards keep no edit history", canUndo: false, canRedo: false };
+    const commandsNow = commandsFor(resolved);
+    if (!blendActions || !blendActions.can(commandsNow, "undo") || !blendActions.can(commandsNow, "redo")) {
+      return { available: false, reason: blendActions ? blendActions.reason(commandsNow, "undo") : "the layer actions module is not loaded.", canUndo: false, canRedo: false };
+    }
+    const entry = resolved && resolved.history ? resolved.history[selectionRecipe()] : null;
+    return { available: true, reason: "", canUndo: !!(entry && entry.canUndo), canRedo: !!(entry && entry.canRedo) };
+  }
+
+  function historyMove(action) {
+    if (!blendActions || !blendEdit.active || blendEdit.kind === "weights") return null;
+    leaveStageControl();
+    const recipe = selectionRecipe();
+    const commandsNow = commandsFor(current.resolved);
+    const result = action === "redo" ? blendActions.redoEdit(commandsNow, recipe) : blendActions.undoEdit(commandsNow, recipe);
+    if (!result || !result.ok) {
+      say(result && result.message ? result.message : `Nothing to ${action}.`);
+      return result || null;
+    }
+    lastOwnRevision = Number.isInteger(result.revision) ? result.revision : null;
+    onPublish({ own: true });
+    say(action === "redo"
+      ? `Put back the edit last undone${recipe === "next" ? " in the plan" : ""}.`
+      : `Took back the last edit${recipe === "next" ? " to the plan" : ""}.`);
+    return result;
+  }
+
+  function undoEdit() { return historyMove("undo"); }
+  function redoEdit() { return historyMove("redo"); }
 
   /* --------------------------------------------------------------------
    *   The machine utility rail
@@ -1128,13 +1185,7 @@
         available: smartOffered,
         reason: smartOffered || !weightCards ? "" : weightCards.smartReason(commandsNow, smart)
       },
-      bulk: {
-        active: bulk.active,
-        available: canBulkEdit(),
-        reason: !blendActions ? "the layer actions module is not loaded." : (blendActions.can(commandsNow, "resins") ? "" : blendActions.reason(commandsNow, "resins")),
-        count: bulk.selected.size,
-        resin: bulk.resin
-      },
+      selection: { active: selection.keys.size > 0 },
       tools: { open: tools.open, available: !!(windingPanel || totalsWindow || pressurePanel) },
       winding: { active: !!(windingPanel && windingPanel.isOpen()), available: !!windingPanel },
       totals: { active: !!(totalsWindow && totalsWindow.isOpen()), available: !!totalsWindow },
@@ -1822,13 +1873,11 @@
     if (blendEdit.active && (!model || !model.layers.length)) blendEdit.active = false;
     // Nor an armed source, or a selected hopper, on a layer that is gone.
     if (layerCopy.layer && (!model || !model.layers.some(layer => layer.id === layerCopy.layer))) { layerCopy.recipe = null; layerCopy.layer = null; }
-    if (bulk.active) {
-      for (const key of Array.from(bulk.selected)) {
-        const layerId = key.slice(0, key.lastIndexOf(":"));
-        if (!model || !model.layers.some(layer => layer.id === layerId)) bulk.selected.delete(key);
-      }
-      if (!blendEdit.active) { bulk.active = false; bulk.selected = new Set(); }
+    for (const key of Array.from(selection.keys)) {
+      const layerId = key.slice(0, key.lastIndexOf(":"));
+      if (!model || !model.layers.some(layer => layer.id === layerId)) selection.keys.delete(key);
     }
+    if (!blendEdit.active) { selection.keys = new Set(); selection.resin = ""; selection.pct = ""; }
     current = { model, resolved };
     // A rebuilt stage starts with a clean line: what a click on the old
     // one could not do is not what this one is refusing.
@@ -1924,6 +1973,8 @@
       // And the rail: how many hoppers a reset would touch is a value.
       syncRail();
       syncLayerMenus();
+      // And the card rail: whether there is an edit to undo or redo.
+      syncCardRail();
       return;
     }
 
@@ -2138,9 +2189,10 @@
           variant: "compact",
           /* The card's foot: the layer menu (Copy / Paste / Reset), built
            * here and told what to show once every card stands. And the
-           * rail's Bulk Edit, when on: the badges as toggles. */
+           * hopper selection, while the edit is on offer: the badges as
+           * toggles. */
           actions: menuFor(entry.id),
-          bulk: bulkOptionsFor(entry.id),
+          selection: selectionOptionsFor(entry.id),
           /* The other recipe's resin beside each row - the plan's on the
            * running face, the running job's on the Next face - and
            * whether the cards show it: the card rail's Compare, kept here
@@ -2189,8 +2241,8 @@
     // the renderer knows only that a layer is turned over.
     if (blendEdit.active && !focusLayer) mounts.machine.setAttribute("data-edit-face", blendEdit.kind);
     else mounts.machine.removeAttribute("data-edit-face");
-    // The field's count and draft, as the rebuilt cards show the selection.
-    syncBulkField();
+    // The editor's count and drafts, as the rebuilt cards show the selection.
+    syncSelectionEditor();
     // And the card rail's switches, as the rebuilt cards show them.
     syncCardRail();
     // A rendered stage is new elements: the marks the boot file owns are
@@ -2356,8 +2408,8 @@
       if (event.key !== "Escape") return;
       if (focus) { clearFocus(); return; }
       // A selection in progress is the nearer thing to leave: Escape
-      // cancels Bulk Edit first, and only the next one leaves the mode.
-      if (bulk.active) { cancelBulk(); return; }
+      // clears the selection first, and only the next one leaves the mode.
+      if (selection.keys.size) { cancelSelection(); return; }
       // With nothing open, Escape leaves Blend Edit - the same exit Done
       // is, with the same commit of whatever field was being entered.
       if (blendEdit.active) exitBlendEdit();
@@ -2472,19 +2524,16 @@
       if (infoPanel) mounts.utility.appendChild(infoPanel.element);
     }
 
-    /* The machine utility rail, in its own slot over the stage, stacked
-     * over the Handbook's launcher: the faces' switches with their
-     * children. Handed its callbacks and nothing else; told what to show
-     * by syncRail. */
-    /* The bulk field, built once and handed to the rail below: the boot
-     * file holds the draft, Enter is the rail's Confirm, Escape the rail's
-     * Cancel. */
-    if (bulkFieldModule) {
-      bulkField = bulkFieldModule.create(doc, {
-        onInput: draftBulkResin,
-        onConfirm: () => { confirmBulk(); },
-        onCancel: () => { cancelBulk(); }
+    /* The hopper editor, built once and stood in the header's slot: the
+     * boot file holds the drafts, Apply is applySelection, Cancel and
+     * Escape clear the selection. */
+    if (hopperEditModule && mounts.edit) {
+      hopperEditor = hopperEditModule.create(doc, {
+        onInput: draftSelection,
+        onApply: () => { applySelection(); },
+        onCancel: () => { cancelSelection(); }
       });
+      mounts.edit.appendChild(hopperEditor.element);
     }
 
     /* The card rail: built once; the renderer stands it against the
@@ -2492,10 +2541,16 @@
     if (cardRailModule) {
       cardRail = cardRailModule.create(doc, {
         onCompare: () => { toggleCompare(); },
-        onSize: () => { toggleCardSize(); }
+        onSize: () => { toggleCardSize(); },
+        onUndo: () => { undoEdit(); },
+        onRedo: () => { redoEdit(); }
       });
     }
 
+    /* The machine utility rail, in its own slot over the stage, stacked
+     * over the Handbook's launcher: the faces' switches with their
+     * children. Handed its callbacks and nothing else; told what to show
+     * by syncRail. */
     if (machineRail && mounts.rail) {
       railPanel = machineRail.create(doc, {
         onBlendEdit: toggleBlendEdit,
@@ -2504,16 +2559,12 @@
         onNextEdit: toggleNextEdit,
         onPromote: promoteNextRecipe,
         onCopy: copyCurrentToNext,
-        onBulkEdit: startBulk,
-        onBulkConfirm: confirmBulk,
-        onBulkCancel: cancelBulk,
         onTools: toggleTools,
         onWindingTension: toggleWindingTension,
         onResinTotals: toggleResinTotals,
         onPressure: togglePressure,
         onPrint: togglePrintRow,
         onPrintRecipe: printRecipe,
-        bulkField: bulkField ? bulkField.element : null,
         setTimeout: typeof root.setTimeout === "function" ? root.setTimeout.bind(root) : null,
         clearTimeout: typeof root.clearTimeout === "function" ? root.clearTimeout.bind(root) : null
       });

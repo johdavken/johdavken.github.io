@@ -34,8 +34,8 @@
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists.
    *
-   * Four regions and nothing else: the header (with the job controls' slot
-   * and the line console's slot), the machine stage, the run-down timeline
+   * Four regions and nothing else: the header (with the job controls' slot,
+   * the hopper editor's slot and the line console's slot), the machine stage, the run-down timeline
    * across the foot of the workspace, and the status bar - plus three slots
    * that are not regions: the Operator Handbook's, the utility surfaces'
    * and the machine utility rail's, all laid over the stage's own cell
@@ -48,7 +48,7 @@
    * them. The timeline row is not a strip of that kind: it is an
    * operational view of the job the stage shows, one modest row deep, and
    * the stage keeps everything above it. */
-  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility", "rail"]);
+  const MOUNTS = Object.freeze(["avatar", "machine", "timeline", "status", "job", "edit", "connection", "handbook", "utility", "rail"]);
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -142,6 +142,10 @@
     /* The job controls' slot: the line's output and the changeover, filled
      * by station-job-controls.js. */
     header.appendChild(element(doc, "div", "station-header__job", { "data-station-mount": "job" }));
+    /* The hopper editor's slot, to the right of the job readouts: the
+     * selected hoppers' resin and percentage (station-hopper-edit.js),
+     * shown while a card's badge is selected and empty otherwise. */
+    header.appendChild(element(doc, "div", "station-header__edit", { "data-station-mount": "edit" }));
     /* The line console's slot, at the header's far end: the one place the
      * connection is shown, filled by station-sync-console.js when the
      * application publishes a connection and left empty otherwise. */

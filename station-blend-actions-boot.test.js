@@ -1,14 +1,15 @@
 "use strict";
 
-/* Copy / Paste / Reset on the Blend Edit cards and Bulk Edit on the
- * machine rail, booted for real: station.js run under a fake DOM with
- * every module the host loads, the state bridge connected to a fake
- * application and the command bridge to an executor that applies the
- * three layer commands to that state and answers as app.js answers. What
- * the tests drive is the drawn stage, the cards' menus and the rail's own
- * controls - the same elements an operator clicks. The harness is the
- * one station-blend-edit-exit.test.js boots with, its executor extended
- * for copyLayer, clearLayer and setHopperResins.
+/* Copy / Paste / Reset on the Blend Edit cards and the hopper selection
+ * written from the header's editor, booted for real: station.js run
+ * under a fake DOM with every module the host loads, the state bridge
+ * connected to a fake application and the command bridge to an executor
+ * that applies the layer commands to that state and answers as app.js
+ * answers. What the tests drive is the drawn stage, the cards' menus and
+ * badges and the header's own form - the same elements an operator
+ * clicks. The harness is the one station-blend-edit-exit.test.js boots
+ * with, its executor extended for copyLayer, clearLayer, setHopperResins
+ * and setHopperAssignments.
  */
 
 const test = require("node:test");
@@ -314,6 +315,25 @@ function boot(options) {
           if (h.resinName !== entry.resin) { h.resinName = entry.resin; changed = true; }
         }
         if (!changed) return contract.success({ changed: false, revision: stateBridge.getRevision(), persisted: false, snapshot: stateBridge.getSnapshot() });
+      } else if (command === "setHopperAssignments") {
+        // The application's own hopper edit: each entry's resin and/or
+        // blend, H1 derived, the whole list checked first.
+        let changed = false;
+        for (const entry of args.hoppers) {
+          const h = layerOf(entry.layer) && layerOf(entry.layer).hoppers[entry.index];
+          if (!h) return contract.failure("unknown_layer");
+          if ("pct" in entry && entry.index === 0) return contract.failure("h1_derived");
+        }
+        for (const entry of args.hoppers) {
+          const layer = layerOf(entry.layer);
+          const h = layer.hoppers[entry.index];
+          if ("resin" in entry && h.resinName !== entry.resin) { h.resinName = entry.resin; changed = true; }
+          if ("pct" in entry && h.pct !== entry.pct) {
+            h.pct = entry.pct; changed = true;
+            layer.hoppers[0].pct = Math.max(0, 100 - layer.hoppers.slice(1).reduce((sum, item) => sum + item.pct, 0));
+          }
+        }
+        if (!changed) return contract.success({ changed: false, revision: stateBridge.getRevision(), persisted: false, snapshot: stateBridge.getSnapshot() });
       }
       else if (command === "resetTracking") {
         // The application's own reset: a job with nothing tracked answers
@@ -394,14 +414,19 @@ function boot(options) {
     },
     menuItem: (layer, action) => api.menu(layer).querySelector(`[data-action='${action}']`),
     choose(layer, action) { const item = api.openMenu(layer).querySelector(`[data-action='${action}']`); assert.ok(item, `no ${action} on layer ${layer}`); item.click(); return item; },
-    /* The rail's Bulk Edit and what it becomes. */
-    bulkControl: () => rail.querySelector("[data-action='bulk-edit']"),
-    confirmControl: () => rail.querySelector("[data-action='bulk-confirm']"),
-    cancelControl: () => rail.querySelector("[data-action='bulk-cancel']"),
-    /* The bulk field, stood by the rail above its Blend row. */
-    resinField: () => rail.querySelector("[data-role='bulk-resin']"),
-    resinInput: () => rail.querySelector("[data-action='bulk-resin']"),
-    fieldShown: () => { const f = rail.querySelector("[data-role='bulk-resin']"); return !!f && !f.hasAttribute("hidden") && !f.closest("[data-role='bulk-field-slot']").hasAttribute("hidden"); },
+    /* The header's hopper editor (station-hopper-edit.js) and its parts:
+     * the form in the header's slot, its two fields, Apply and Cancel. */
+    editor: () => doc.querySelector("[data-role='hopper-edit']"),
+    editorShown: () => { const e = api.editor(); return !!e && !e.hasAttribute("hidden") && !e.hasAttribute("inert"); },
+    resinInput: () => api.editor().querySelector("[data-action='edit-resin']"),
+    pctInput: () => api.editor().querySelector("[data-action='edit-pct']"),
+    applyControl: () => api.editor().querySelector("[data-action='edit-apply']"),
+    cancelControl: () => api.editor().querySelector("[data-action='edit-cancel']"),
+    countText: () => api.editor().querySelector("[data-role='hopper-edit-count']").textContent,
+    /* Type into one of the editor's fields, as keystrokes do. */
+    typeIn(input, value) { input.value = String(value); input.dispatchEvent(makeEvent("input", { bubbles: true })); return input; },
+    nextSwitch: () => rail.querySelector("[data-action='next-edit']"),
+    copyControl: () => rail.querySelector("[data-action='copy-current']"),
     /* The badge on a card's row, and its click. */
     badge: (layer, index) => {
       const card = api.cards().find(c => c.getAttribute("data-layer") === layer);
@@ -479,7 +504,7 @@ function boot(options) {
 
 
 const count = (text, needle) => text.split(needle).length - 1;
-const layerCalls = s => s.calls.filter(c => ["copyLayer", "clearLayer", "setHopperResins"].includes(c.command));
+const layerCalls = s => s.calls.filter(c => ["copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"].includes(c.command));
 
 /* ----------------------------------------------------------------------
  *   Copy / Paste / Reset from a card's menu
@@ -644,197 +669,211 @@ test("with the commands not on offer the menu's items are held and say why, and 
 });
 
 /* ----------------------------------------------------------------------
- *   Bulk Edit from the rail
+ *   The hopper selection, written from the header's editor
  * -------------------------------------------------------------------- */
 
-test("Bulk Edit unfolds beside Current Recipe while the blend face is on; its click turns every badge into a selection toggle and swaps the control for Confirm / Cancel; nothing is dispatched", () => {
+test("a recipe face on makes every badge a selection toggle at once - no Bulk Edit on the rail; the editor stands in the header's slot, hidden until a badge is clicked, then shows the count, takes the focus and holds Apply until something is entered; nothing is dispatched", () => {
   const s = boot();
-  const group = s.rail.querySelector("[data-role='blend-group']");
-  assert.equal(group.getAttribute("data-open"), "false");
+  assert.equal(s.rail.querySelector("[data-action='bulk-edit'], [data-action='bulk-confirm'], [data-action='bulk-cancel']"), null, "Bulk Edit is on the rail");
+  assert.equal(s.rail.querySelectorAll("input").length, 0, "a field on the rail");
+  const editor = s.editor();
+  assert.ok(editor && editor.closest("[data-station-mount='edit']"), "the editor stands in the header's edit slot");
+  assert.ok(editor.closest("header") && editor.closest("header").classList.contains("station-header"));
+  const slots = editor.closest("header").children.filter(n => n.getAttribute("data-station-mount")).map(n => n.getAttribute("data-station-mount"));
+  assert.deepEqual(slots, ["avatar", "job", "edit", "connection"], "to the right of the job readouts, before the line console");
+  assert.equal(s.editorShown(), false, "hidden before any selection");
+  assert.equal(s.machine.querySelectorAll("[data-role='hopper-edit']").length, 0, "and not on the stage");
   s.enterBlendEdit();
-  assert.equal(group.getAttribute("data-open"), "true");
-  assert.equal(s.bulkControl().disabled, false);
-  assert.ok(s.confirmControl().hasAttribute("hidden") && s.cancelControl().hasAttribute("hidden"));
-  assert.equal(s.fieldShown(), false, "no field before the selection starts");
-  assert.ok(s.resinField() && s.resinField().closest("[data-role='blend-group']"), "the field stands in the rail's Blend group, above the row");
-  assert.equal(s.machine.querySelectorAll("[data-role='bulk-resin']").length, 0, "and not on the cards");
-  assert.equal(s.badge("A", 1).tagName, "SPAN");
-  s.bulkControl().click();
-  assert.equal(group.getAttribute("data-bulk"), "true");
-  assert.ok(s.bulkControl().hasAttribute("hidden"));
-  assert.equal(s.confirmControl().hasAttribute("hidden"), false);
-  assert.equal(s.cancelControl().hasAttribute("hidden"), false);
-  assert.equal(s.fieldShown(), true, "the field shows with the selection, above the row");
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for selected hoppers");
-  assert.ok(s.doc.activeElement !== s.resinInput(), "nothing selected yet: the field waits, the badges are next");
-  assert.equal(s.confirmControl().disabled, true);
-  assert.equal(s.badge("A", 1).tagName, "BUTTON");
+  assert.equal(s.badge("A", 1).tagName, "BUTTON", "a badge is a toggle as soon as the face is on");
   assert.equal(s.badge("C", 5).getAttribute("aria-pressed"), "false");
-  assert.match(s.status.textContent, /Bulk Edit: click hopper badges/);
+  assert.equal(s.editorShown(), false, "nothing selected: the editor waits");
+  s.badge("A", 2).click();
+  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "true");
+  assert.equal(s.editorShown(), true, "the first hopper selected: the editor shows");
+  assert.equal(s.countText(), "1 hopper");
+  assert.ok(s.doc.activeElement === s.resinInput(), "and takes the focus: the next thing is to type");
+  assert.equal(s.resinInput().value, "");
+  assert.equal(s.pctInput().value, "");
+  assert.equal(s.resinInput().getAttribute("placeholder"), "No change");
+  assert.equal(s.pctInput().getAttribute("placeholder"), "No change");
+  assert.equal(s.applyControl().disabled, true, "nothing entered: Apply is held");
+  assert.match(s.applyControl().getAttribute("title"), /enter a resin, a percentage, or both; an empty field is no change/);
+  assert.equal(s.cancelControl().disabled, false);
+  s.badge("C", 3).click();
+  assert.equal(s.countText(), "2 hoppers");
+  s.badge("C", 3).click();
+  assert.equal(s.badge("C", 3).getAttribute("aria-pressed"), "false", "a second click deselects");
+  assert.equal(s.countText(), "1 hopper");
+  s.badge("A", 2).click();
+  assert.equal(s.editorShown(), false, "deselecting the last hopper hides the editor");
+  assert.equal(s.badge("A", 2).tagName, "BUTTON", "the badges stay toggles");
   assert.deepEqual(layerCalls(s), []);
   assert.equal(s.modeOn(), true);
   assert.deepEqual(s.flipped(), ["A", "B", "C"]);
 });
 
-test("selecting badges on two layers shows the resin field with the count; Confirm with a resin is ONE setHopperResins over the selection, the cards show the applied value, the selection ends", () => {
+test("Apply is ONE setHopperAssignments over the selection carrying only what was entered: a resin alone, a percentage alone, or both; the cards show the applied values; the selection ends and the next starts empty", () => {
   const s = boot();
   s.enterBlendEdit();
-  s.bulkControl().click();
   s.badge("A", 2).click();
-  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "true");
-  assert.equal(s.fieldShown(), true);
-  assert.ok(s.doc.activeElement === s.resinInput(), "the first hopper selected: the field takes the focus, the next thing is to type");
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for 1 hopper");
-  s.resinInput().value = "EVA";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
+  s.typeIn(s.resinInput(), "EVA");
   s.badge("C", 3).click();
   assert.equal(s.resinInput().value, "EVA", "the draft stays as the selection grows");
-  s.badge("C", 4).click();
-  s.badge("C", 4).click();
-  assert.equal(s.badge("C", 4).getAttribute("aria-pressed"), "false", "a second click deselects");
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for 2 hoppers");
-  assert.equal(s.rail.querySelectorAll("input").length, 1, "one field, on the rail");
-  s.resinInput().value = "";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
-  assert.equal(s.confirmControl().disabled, true, "no resin yet");
-  s.resinInput().value = "EVA340";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
-  assert.equal(s.confirmControl().disabled, false);
-  s.confirmControl().click();
-  assert.deepEqual(layerCalls(s), [{ command: "setHopperResins", args: { recipe: "current", resins: [
+  s.typeIn(s.resinInput(), "");
+  assert.equal(s.applyControl().disabled, true, "both fields empty again");
+  s.typeIn(s.resinInput(), "EVA340");
+  assert.equal(s.applyControl().disabled, false);
+  assert.equal(s.applyControl().getAttribute("title"), "Apply resin EVA340 to 2 hoppers");
+  s.applyControl().click();
+  assert.deepEqual(layerCalls(s), [{ command: "setHopperAssignments", args: { recipe: "current", hoppers: [
     { layer: "A", index: 2, resin: "EVA340" }, { layer: "C", index: 3, resin: "EVA340" }
   ] }, handbookOpen: false }]);
+  assert.equal("pct" in layerCalls(s)[0].args.hoppers[0], false, "no percentage was sent: no change");
   assert.equal(s.hopperOf("A", 2).resinName, "EVA340");
   assert.equal(s.hopperOf("C", 3).resinName, "EVA340");
+  assert.equal(s.hopperOf("A", 2).pct, 0, "the blend was not touched");
   assert.equal(s.hopperOf("A", 1).resinName, "LD0", "unselected hoppers untouched");
   assert.match(s.cardText("A"), /EVA340/);
   assert.match(s.cardText("C"), /EVA340/);
-  assert.match(s.status.textContent, /Applied EVA340 to 2 hoppers/);
-  // The selection ended: Bulk Edit is back, the badges are spans, the
-  // field is empty for the next time.
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-bulk"), "false");
-  assert.equal(s.bulkControl().hasAttribute("hidden"), false);
-  assert.equal(s.badge("A", 2).tagName, "SPAN");
-  assert.equal(s.fieldShown(), false, "the field hides with the selection");
+  assert.match(s.status.textContent, /Applied EVA340 to 2 hoppers\./);
+  // The selection ended: no badge pressed, the editor hidden and empty.
+  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "false");
+  assert.equal(s.badge("C", 3).getAttribute("aria-pressed"), "false");
+  assert.equal(s.editorShown(), false);
   assert.equal(s.modeOn(), true);
-  // The next selection starts with an empty draft.
-  s.bulkControl().click();
-  assert.equal(s.resinInput().value, "");
-  s.badge("B", 1).click();
-  assert.equal(s.resinInput().value, "");
+  // A percentage alone.
+  s.badge("B", 2).click();
+  assert.equal(s.resinInput().value, "", "the next selection starts with empty drafts");
+  assert.equal(s.pctInput().value, "");
+  s.typeIn(s.pctInput(), "12.5");
+  assert.equal(s.applyControl().getAttribute("title"), "Apply 12.5% to 1 hopper");
+  s.applyControl().click();
+  assert.deepEqual(layerCalls(s)[1].args, { recipe: "current", hoppers: [{ layer: "B", index: 2, pct: 12.5 }] });
+  assert.equal(s.hopperOf("B", 2).pct, 12.5);
+  assert.equal(s.hopperOf("B", 2).resinName, "", "the resin was not touched");
+  assert.equal(s.hopperOf("B", 0).pct, 47.5, "H1 followed, as the application keeps it");
+  assert.match(s.status.textContent, /Applied 12\.5% to 1 hopper\./);
+  // Both at once, on two layers.
+  s.badge("B", 3).click();
+  s.badge("A", 4).click();
+  s.typeIn(s.resinInput(), " HX 9 ");
+  s.typeIn(s.pctInput(), "10");
+  assert.equal(s.applyControl().getAttribute("title"), "Apply resin HX 9 and 10% to 2 hoppers");
+  s.applyControl().click();
+  assert.deepEqual(layerCalls(s)[2].args, { recipe: "current", hoppers: [{ layer: "B", index: 3, resin: "HX 9", pct: 10 }, { layer: "A", index: 4, resin: "HX 9", pct: 10 }] });
+  assert.match(s.status.textContent, /Applied HX 9 and 10% to 2 hoppers\./);
+  // Nothing to write is said, and the selection ends all the same.
+  s.badge("A", 4).click();
+  s.typeIn(s.resinInput(), "HX 9");
+  s.applyControl().click();
+  assert.equal(layerCalls(s).length, 4);
+  assert.match(s.status.textContent, /1 hopper already holds HX 9: nothing to write\./);
+  assert.equal(s.editorShown(), false);
 });
 
-test("Enter in the field confirms; Cancel, Escape in the field, and Escape on the stage end the selection without writing - and only the next Escape leaves the mode", () => {
+test("Enter in either field applies; Cancel, Escape in a field and Escape on the stage clear the selection without writing - and only the next Escape leaves the mode; a percentage that is not one, and a percentage over an H1, are refused before anything is asked", () => {
   const s = boot();
   s.enterBlendEdit();
-  s.bulkControl().click();
   s.badge("B", 1).click();
-  s.resinInput().value = "HX9";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
+  s.typeIn(s.resinInput(), "HX9");
   s.resinInput().dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
   assert.equal(layerCalls(s).length, 1);
   assert.equal(s.hopperOf("B", 1).resinName, "HX9");
+  s.badge("B", 2).click();
+  s.typeIn(s.pctInput(), "20");
+  s.pctInput().dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.equal(layerCalls(s).length, 2);
+  assert.equal(s.hopperOf("B", 2).pct, 20);
 
-  s.bulkControl().click();
   s.badge("B", 2).click();
+  s.typeIn(s.pctInput(), "abc");
+  assert.equal(s.applyControl().disabled, true, "not a percentage: Apply is held");
+  assert.match(s.applyControl().getAttribute("title"), /must be a number/);
+  s.pctInput().dispatchEvent(makeEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.equal(layerCalls(s).length, 2, "Enter on a held Apply asks nothing");
+  s.typeIn(s.pctInput(), "120");
+  assert.match(s.applyControl().getAttribute("title"), /between 0 and 100/);
+  s.typeIn(s.pctInput(), "50");
+  s.badge("A", 0).click();
+  assert.equal(s.applyControl().disabled, false);
+  s.applyControl().click();
+  assert.equal(layerCalls(s).length, 2, "a percentage over an H1 is refused here, not asked");
+  assert.match(s.status.textContent, /H1's percentage is calculated from the other hoppers: deselect H1, or leave the percentage as no change\./);
+  assert.equal(s.badge("A", 0).getAttribute("aria-pressed"), "true", "the selection stands for the operator to fix");
+  s.typeIn(s.pctInput(), "");
+  s.typeIn(s.resinInput(), "H1-OK");
+  s.applyControl().click();
+  assert.equal(layerCalls(s).length, 3, "a resin over an H1 is fine");
+  assert.equal(s.hopperOf("A", 0).resinName, "H1-OK");
+
   s.badge("B", 2).click();
-  assert.equal(s.fieldShown(), true, "deselecting the last hopper keeps the field: the selection is still on");
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for selected hoppers");
-  s.badge("B", 2).click();
+  s.typeIn(s.resinInput(), "NEVER");
   s.cancelControl().click();
-  assert.equal(layerCalls(s).length, 1, "Cancel writes nothing");
-  assert.equal(s.badge("B", 2).tagName, "SPAN");
-  assert.equal(s.fieldShown(), false);
-  assert.match(s.status.textContent, /Bulk Edit cancelled/);
-
-  s.bulkControl().click();
+  assert.equal(layerCalls(s).length, 3, "Cancel writes nothing");
+  assert.equal(s.badge("B", 2).getAttribute("aria-pressed"), "false", "Cancel clears the selection");
+  assert.equal(s.editorShown(), false);
+  assert.match(s.status.textContent, /Selection cleared: nothing was written\./);
   s.badge("B", 2).click();
+  assert.equal(s.resinInput().value, "", "and the draft with it");
+
   s.resinInput().dispatchEvent(makeEvent("keydown", { key: "Escape", bubbles: true }));
-  assert.equal(s.badge("B", 2).tagName, "SPAN", "Escape in the field cancels");
+  assert.equal(s.badge("B", 2).getAttribute("aria-pressed"), "false", "Escape in the field clears the selection");
   assert.equal(s.modeOn(), true, "and leaves the mode on: the key was spent on the field");
 
-  s.bulkControl().click();
   s.badge("A", 2).click();
   s.escapeOnStage();
-  assert.equal(s.badge("A", 2).tagName, "SPAN", "Escape on the stage cancels the selection first");
+  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "false", "Escape on the stage clears the selection first");
   assert.equal(s.modeOn(), true);
   s.escapeOnStage();
   assert.equal(s.modeOn(), false, "the next Escape leaves the mode");
-  assert.equal(layerCalls(s).length, 1);
+  assert.equal(s.editorShown(), false);
 });
 
-test("the mode's exit and a face change end a selection in progress; Bulk Edit is the two recipe faces' - absent under Weights, and under Next it is the same row moved to the Next bracket", () => {
+test("the mode's exit and a face change clear a selection in progress; the selection is the two recipe faces' - no badge under Weights - and on the Next face Apply is addressed to the plan; Copy Current is held while a selection is open", () => {
   const s = boot();
   s.enterBlendEdit();
-  s.bulkControl().click();
-  s.badge("A", 1).click();
+  s.badge("A", 2).click();
+  s.typeIn(s.resinInput(), "X");
   s.clickBlend();
   assert.equal(s.modeOn(), false);
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-bulk"), "false");
+  assert.equal(s.editorShown(), false, "the mode's exit hides the editor");
   s.enterBlendEdit();
-  assert.equal(s.badge("A", 1).tagName, "SPAN", "nothing selected carries across");
-  s.bulkControl().click();
-  s.badge("A", 1).click();
-  s.clickWeights();
-  assert.equal(s.face(), "weights");
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-open"), "false");
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-bulk"), "false");
-  s.rail.querySelector("[data-action='next-edit']").click();
-  assert.equal(s.face(), "next");
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-open"), "false");
-  assert.equal(s.badge("A", 1).tagName, "SPAN", "the Next face's badges are not toggles until Bulk Edit is asked");
-  assert.ok(s.bulkControl().closest("[data-role='next-group']"), "the bulk row stands in the Next group");
-  assert.equal(s.rail.querySelector("[data-role='next-group']").getAttribute("data-bulk"), "false");
-  assert.deepEqual(layerCalls(s), []);
-});
-
-test("on the Next face Bulk Edit is the same row on the Next bracket: the selection is on the plan's cards, Confirm is ONE setHopperResins naming next, the running recipe untouched", () => {
-  const s = boot();
-  s.rail.querySelector("[data-action='next-edit']").click();
-  assert.equal(s.face(), "next");
-  const nextGroup = s.rail.querySelector("[data-role='next-group']");
-  const flyout = nextGroup.querySelector(".station-rail__flyout");
-  const nextRow = flyout.querySelector("[data-role='next-row']");
-  assert.deepEqual(flyout.children.map(n => n.getAttribute("data-role")), ["next-row"], "the Next flyout's one row");
-  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "copy-current"], "the bulk set at the head of the row, before Copy Current");
-  assert.equal(s.bulkControl().disabled, false);
-  assert.match(s.bulkControl().getAttribute("title"), /in the plan$/);
-  s.bulkControl().click();
-  assert.equal(nextGroup.getAttribute("data-bulk"), "true");
-  assert.match(s.status.textContent, /the plan is what changes/);
-  assert.equal(s.badge("A", 1).tagName, "BUTTON", "the plan's badges are toggles");
+  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "false", "nothing selected on re-entry");
   s.badge("A", 2).click();
-  s.badge("B", 1).click();
-  assert.equal(s.fieldShown(), true);
-  assert.ok(s.resinField().closest("[data-role='next-group']"), "the field stands over the Next group's row");
-  s.resinInput().value = "PP77";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
-  s.confirmControl().click();
-  assert.deepEqual(layerCalls(s), [{ command: "setHopperResins", args: { recipe: "next", resins: [
-    { layer: "A", index: 2, resin: "PP77" }, { layer: "B", index: 1, resin: "PP77" }
-  ] }, handbookOpen: false }]);
-  // (The harness's executor writes wherever it is told; what the
-  // application does with `recipe: "next"` is its own - the boot file's
-  // part is to name the plan, which the call above pins.)
-  assert.match(s.status.textContent, /Applied PP77 to 2 hoppers in the plan/);
-  assert.equal(nextGroup.getAttribute("data-bulk"), "false");
-  assert.equal(s.badge("A", 2).tagName, "SPAN");
-  // Back to the Blend face: the row goes with it, and the write is to the
-  // running recipe again.
-  s.enterBlendEdit();
-  assert.ok(s.bulkControl().closest("[data-role='blend-group']"));
-  assert.deepEqual(nextRow.children.map(n => n.getAttribute("data-action")), ["copy-current"], "Copy Current alone on the Next row again");
-  assert.deepEqual(s.rail.querySelector("[data-role='blend-row']").children.map(n => n.getAttribute("data-action") || n.getAttribute("data-role")), ["bulk-set", "promote-next"], "the set back at the head of the Current row, Load Next at its end");
+  assert.equal(s.resinInput().value, "", "the draft did not survive the exit");
+  // The Next face: a different recipe under the same names.
+  s.nextSwitch().click();
+  assert.equal(s.machine.getAttribute("data-edit-face"), "next");
+  assert.equal(s.editorShown(), false, "a face change clears the selection");
+  assert.equal(s.badge("A", 2).tagName, "BUTTON", "the plan's badges are toggles too");
+  assert.equal(s.badge("A", 2).getAttribute("aria-pressed"), "false");
+  assert.equal(s.copyControl().disabled, false);
+  s.badge("A", 1).click();
+  assert.equal(s.countText(), "1 hopper · plan");
+  assert.equal(s.editor().getAttribute("data-recipe"), "next");
+  assert.equal(s.copyControl().disabled, true, "a selection open holds the move");
+  assert.match(s.copyControl().getAttribute("title"), /apply or cancel the hopper edit first/);
+  s.typeIn(s.resinInput(), "PLAN-X");
+  assert.equal(s.applyControl().getAttribute("title"), "Apply resin PLAN-X to 1 hopper in the plan");
+  s.applyControl().click();
+  assert.deepEqual(layerCalls(s)[0].args, { recipe: "next", hoppers: [{ layer: "A", index: 1, resin: "PLAN-X" }] });
+  assert.match(s.status.textContent, /Applied PLAN-X to 1 hopper in the plan\./);
+  assert.equal(s.copyControl().disabled, false, "the selection ended: the move is offered again");
+  // The Weights face: no badges, nothing to select.
+  s.nextSwitch().click();
+  s.clickWeights();
+  assert.equal(s.machine.querySelector(".station-editor__badge--select"), null);
+  assert.equal(s.editorShown(), false);
+  s.clickWeights();
 });
 
-test("a selection survives a structural publish from elsewhere: the rebuilt cards keep the selected badges pressed, and a value publish rebuilds nothing", async () => {
+test("a selection survives a structural publish from elsewhere: the rebuilt cards keep the selected badges pressed and the editor its drafts; a value publish rebuilds nothing; a layer that goes takes its hoppers out of the selection", async () => {
   const s = boot();
   s.enterBlendEdit();
-  s.bulkControl().click();
   s.badge("A", 1).click();
   s.badge("C", 0).click();
-  s.resinInput().value = "HX";
-  s.resinInput().dispatchEvent(makeEvent("input", { bubbles: true }));
+  s.typeIn(s.resinInput(), "HX");
+  s.typeIn(s.pctInput(), "5");
   const badgeA = s.badge("A", 1);
   // A value change from another device: the cards are patched in place.
   s.state().layers[1].hoppers[1].pct = 35;
@@ -854,13 +893,13 @@ test("a selection survives a structural publish from elsewhere: the rebuilt card
   assert.equal(s.badge("A", 1).getAttribute("aria-pressed"), "true");
   assert.equal(s.badge("C", 0).getAttribute("aria-pressed"), "true");
   assert.equal(s.badge("B", 2).getAttribute("aria-pressed"), "false");
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for 2 hoppers");
-  assert.equal(s.fieldShown(), true);
-  assert.equal(s.resinInput().value, "HX", "the draft survives the rebuild");
-  assert.equal(s.rail.querySelector("[data-role='blend-group']").getAttribute("data-bulk"), "true");
+  assert.equal(s.countText(), "2 hoppers");
+  assert.equal(s.editorShown(), true);
+  assert.equal(s.resinInput().value, "HX", "the drafts survive the rebuild");
+  assert.equal(s.pctInput().value, "5");
   // And the toggles still answer on the rebuilt cards.
   s.badge("B", 3).click();
-  assert.equal(s.resinInput().getAttribute("aria-label"), "Resin for 3 hoppers");
+  assert.equal(s.countText(), "3 hoppers");
   // A menu open through a structural render is closed with the card it
   // stood in: its click-away listener does not outlive it.
   s.openMenu("B");
@@ -870,26 +909,30 @@ test("a selection survives a structural publish from elsewhere: the rebuilt card
   await s.publish();
   assert.ok(listeners() < before, "the discarded menu's document listener was taken down");
   assert.equal(s.menu("B").getAttribute("data-open"), "false", "the rebuilt menu starts closed");
+  // A layer that goes takes its hoppers out of the selection.
+  s.state().layers.pop();
+  s.state().line.layerCount = 2;
+  await s.publish();
+  assert.equal(s.countText(), "2 hoppers", "C:0 left with layer C");
+  assert.equal(s.badge("A", 1).getAttribute("aria-pressed"), "true");
   // An armed copy source survives the same way.
   s.cancelControl().click();
   s.choose("A", "copy-layer");
-  s.state().layers[2].hoppers[0].usableHeight = 24;
+  s.state().layers[1].hoppers[0].usableHeight = 24;
   await s.publish();
-  assert.equal(s.menuItem("C", "paste-layer").textContent, "Paste from Layer A");
+  assert.equal(s.menuItem("B", "paste-layer").textContent, "Paste from Layer A");
   assert.equal(s.machine.querySelectorAll(".is-copy-source").length, 1);
 });
 
-test("with the command not on offer Bulk Edit is held and says why; with no producer it is held with the rest of the rail", () => {
-  const partial = boot({ capabilities: ["setHopperResin", "copyLayer", "clearLayer"] });
+test("with the command not on offer no badge selects and the editor never shows; with no producer the same; without the editor module the same", () => {
+  const partial = boot({ capabilities: ["setHopperResin", "copyLayer", "clearLayer", "setHopperResins"] });
   partial.enterBlendEdit();
-  assert.equal(partial.bulkControl().disabled, true);
-  assert.match(partial.bulkControl().getAttribute("title"), /does not offer bulk resin editing/);
-  partial.bulkControl().click();
   assert.equal(partial.badge("A", 1).tagName, "SPAN");
+  assert.equal(partial.editorShown(), false);
   const none = boot({ connectCommands: false });
   none.enterBlendEdit();
-  assert.equal(none.bulkControl().disabled, true);
-  assert.match(none.bulkControl().getAttribute("title"), /no application is connected/);
+  assert.equal(none.badge("A", 1).tagName, "SPAN");
+  assert.equal(none.editorShown(), false);
 });
 
 test("the boot file routes every layer action through the blend actions' seam, disarms after a paste whatever the answer, and clears both the arming and the selection on every exit", () => {
@@ -900,10 +943,14 @@ test("the boot file routes every layer action through the blend actions' seam, d
   assert.match(paste, /if \(layerCopy\.recipe !== recipe \|\| from === id\) return null;/, "a source armed on another face never crosses recipes");
   for (const name of ["enterBlendEdit", "exitBlendEdit"]) {
     const fn = between(`function ${name}(`, "\n  }\n");
-    assert.match(fn, /clearLayerCopy\(\);\s+endBulk\(\);/, `${name} clears the arming and the selection`);
+    assert.match(fn, /clearLayerCopy\(\);\s+clearSelection\(\);/, `${name} clears the arming and the selection`);
   }
-  const confirm = between("function confirmBulk() {", "\n  }\n");
-  assert.match(confirm, /const recipe = bulkRecipe\(\);\s+const result = blendActions\.applyResins\(commandsFor\(current\.resolved\), recipe, keys, value\)/, "Bulk Edit addresses the face's recipe");
-  assert.match(boot, /function bulkRecipe\(\) \{\s+return modeIs\("next"\) \? "next" : "current";/);
-  assert.doesNotMatch(boot, /commands\.dispatch\(\s*"(copyLayer|clearLayer|setHopperResins)"/, "no direct dispatch of a layer command");
+  const apply = between("function applySelection() {", "\n  }\n");
+  assert.match(apply, /const recipe = selectionRecipe\(\);/, "the selection addresses the face's recipe");
+  assert.match(apply, /blendActions\.applyAssignments\(commandsFor\(current\.resolved\), recipe, keys, changes\)/);
+  assert.match(boot, /function selectionRecipe\(\) \{\s+return modeIs\("next"\) \? "next" : "current";/);
+  const move = between("function historyMove(action) {", "\n  }\n");
+  assert.match(move, /blendActions\.redoEdit\(commandsNow, recipe\) : blendActions\.undoEdit\(commandsNow, recipe\)/, "undo and redo go through the seam");
+  assert.doesNotMatch(boot, /commands\.dispatch\(\s*"(copyLayer|clearLayer|setHopperResins|setHopperAssignments|undo|redo)"/, "no direct dispatch of a layer command");
+  assert.doesNotMatch(boot, /Bulk Edit|bulkField|startBulk|endBulk|confirmBulk|cancelBulk|bulkRecipe|PolynStationBulkField/, "the boot file still speaks of Bulk Edit");
 });

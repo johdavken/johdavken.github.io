@@ -1,0 +1,150 @@
+/* The hopper editor (station-hopper-edit.js): the selected hoppers'
+ * resin and percentage, in the header beside the job ribbon.
+ *
+ * WHERE IT SITS
+ *
+ * In the header's own slot (shell.css: .station-header__edit), to the
+ * right of the changeover readout that launches the calculator, before
+ * the spare width the line console takes. One row, the header's height:
+ * the count, two small fields with their cap labels, Apply and Cancel.
+ * This sheet places nothing: the slot is a flex item like its
+ * neighbours, and the form is gone (hidden) while nothing is selected.
+ * The resin field gives a little first, toward a floor; past that the
+ * header breaks its row (shell.css) and the form stands, in its glass,
+ * on a second line with the line console - never over the ribbon, never
+ * clipping the console.
+ *
+ * WHAT IT LOOKS LIKE
+ *
+ * The bench's own make: cap labels in the header's small caps, the
+ * fields on the editable surface in the mono face the resin values use,
+ * Apply the one accent-filled action and Cancel a quiet word beside it -
+ * the same pair the Changeover Calculator ends in. Every colour is a
+ * token.
+ */
+
+.station-hopper-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--station-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--station-space-1) var(--station-space-2);
+  white-space: nowrap;
+  /* The glass every surface off the header wears (glass.css), at the
+     control's radius: in the row it is a quiet pill; on a second line it
+     is a bar over the stage's top, as the Changeover Calculator is. */
+  border-radius: var(--station-radius-md);
+}
+
+.station-root .station-hopper-edit[hidden] {
+  display: none;
+}
+
+/* The count: what Apply reaches, in the header's small caps. The last
+   thing to give at the narrowest window, and then by an ellipsis. */
+.station-hopper-edit__count {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A field: its cap label and its input on one line. The resin field is
+   the one that yields width, between its floor and its full size; the
+   percentage field is fixed. */
+.station-hopper-edit__field {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--station-space-1);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-2xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-hopper-edit__field--resin {
+  flex: 0 1 auto;
+  min-width: 7.25rem;
+}
+
+.station-hopper-edit__label {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-hopper-edit__input {
+  --station-field-width: 8.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+}
+
+.station-hopper-edit__input--pct {
+  --station-field-width: 3.75rem;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* "No change", faded: the field's meaning while it is empty. */
+.station-hopper-edit__input::placeholder {
+  color: var(--station-text-disabled);
+  font-family: var(--station-font);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Under .station-root: the base layer resets buttons at (0,1,1); the
+   action says what chrome it wants at (0,2,0). Secondary by default -
+   a word with a hairline round it; Apply is the accent-filled one. */
+.station-root .station-hopper-edit__action {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--station-space-1) var(--station-space-2);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  background: none;
+  color: var(--station-text);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.station-root .station-hopper-edit__action:hover:not(:disabled) {
+  background: var(--station-accent-soft);
+  border-color: var(--station-accent);
+}
+
+.station-root .station-hopper-edit__action.is-primary {
+  background: var(--station-accent);
+  border-color: var(--station-accent);
+  color: var(--station-text-on-accent);
+}
+
+.station-root .station-hopper-edit__action.is-primary:hover:not(:disabled) {
+  background: var(--station-accent-hover);
+  border-color: var(--station-accent-hover);
+}
+
+.station-root .station-hopper-edit__action:disabled {
+  border-color: var(--station-border);
+  background: none;
+  color: var(--station-text-disabled);
+  cursor: default;
+}

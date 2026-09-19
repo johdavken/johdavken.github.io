@@ -93,7 +93,7 @@ test("the too-small notice is part of the shell, not of a page", () => {
   assert.match(notice[0].textContent, /1100px/);
 });
 
-test("the header is identity and status only: the picture's slot, the Station logo, the way back, the two job readouts' slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
+test("the header is identity, status and the one edit form: the picture's slot, the Station logo, the way back, the two job readouts' slot, the hopper editor's slot, the connection - no tag, no badge, no EXPERIMENTAL", () => {
   const root = built();
   const header = find(root, node => /station-header$/.test(node.getAttribute("class") || ""))[0];
   assert.ok(header);
@@ -102,6 +102,7 @@ test("the header is identity and status only: the picture's slot, the Station lo
     ["H1", "station-header__title"],
     ["A", "station-header__legacy"],
     ["DIV", "station-header__job"],
+    ["DIV", "station-header__edit"],
     ["DIV", "station-header__connection"]
   ]);
   // The heading holds the logo (station-logo.js): the mark and the word
@@ -207,7 +208,7 @@ test("the shell is a header, the stage, the run-down timeline and a status bar -
   // laid over the stage's own cell (shell.css) and take no track.
   assert.deepEqual(shell.children.map(node => [node.nodeName, node.getAttribute("class")]),
     [["HEADER", "station-header"], ["SECTION", "station-machine"], ["DIV", "station-handbook-slot"], ["DIV", "station-utility-slot"], ["DIV", "station-rail-slot"], ["SECTION", "station-timeline"], ["FOOTER", "station-status"]]);
-  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["avatar", "machine", "timeline", "status", "job", "connection", "handbook", "utility", "rail"]);
+  assert.deepEqual([...require("./station/station-shell.js").MOUNTS], ["avatar", "machine", "timeline", "status", "job", "edit", "connection", "handbook", "utility", "rail"]);
   const slot = shell.children[2];
   assert.equal(slot.getAttribute("data-station-mount"), "handbook");
   assert.equal(slot.children.length, 0, "the shell reserves the slot and draws nothing in it");
@@ -224,10 +225,10 @@ test("the shell is a header, the stage, the run-down timeline and a status bar -
   assert.equal(timeline.getAttribute("aria-label"), "Run-down timeline");
   assert.equal(timeline.children.length, 0);
   // The header carries the picture's slot first, then the job controls'
-  // slot before the line console's.
+  // slot, then the hopper editor's, before the line console's.
   const header = shell.children[0];
   const slots = header.children.filter(node => node.getAttribute("data-station-mount")).map(node => node.getAttribute("data-station-mount"));
-  assert.deepEqual(slots, ["avatar", "job", "connection"]);
+  assert.deepEqual(slots, ["avatar", "job", "edit", "connection"]);
   // Nothing of the old columns survives: no nav, no aside, no heading, no
   // recipe strip - and no element with nothing in it holding a place.
   walk(root, node => {

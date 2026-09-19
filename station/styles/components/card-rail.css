@@ -1,5 +1,6 @@
-/* The card rail (station-card-rail.js): the two switches riding the
- * right side of the far-right layer card while a face is on.
+/* The card rail (station-card-rail.js): the two switches and the two
+ * history moves riding the right side of the far-right layer card while
+ * a face is on.
  *
  * WHERE IT SITS
  *
@@ -14,7 +15,8 @@
  *
  * The card's own controls, out on the card's edge: the layer menu's
  * quiet make - no plate at rest, faded until reached, the accent on it
- * when on - stacked with the gap the module drew them at. Each says what
+ * when on - stacked with the gap the module drew them at; Undo and Redo
+ * a step below the switches, so the pair reads as a pair. Each says what
  * it is on hover and to a reader; no words on the rail. Every colour is
  * a token, and the glyph is in the control's own colour, so it follows
  * the control through hover, pressed and held.
@@ -80,8 +82,14 @@
   background: color-mix(in srgb, var(--station-timeline-upcoming, var(--station-info)) 18%, transparent);
 }
 
-/* Held: nothing to compare on this face. Faded further, the pointer's
-   default, the reason in the title. */
+/* The history pair stands a step under the switches: the gap again, as
+   a rule of space rather than a drawn one. */
+.station-root .station-card-rail__control--history {
+  margin-block-start: 6px;
+}
+
+/* Held: nothing to compare on this face, nothing to undo or redo. Faded
+   further, the pointer's default, the reason in the title. */
 .station-root .station-card-rail__control:disabled {
   opacity: 0.3;
   color: var(--station-text-disabled);

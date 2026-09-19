@@ -53,7 +53,12 @@
  * begins on a control - the resin value or its search, the percentage
  * field, the source value or its field, any button - is that control's
  * interaction and never a drag (isInteractiveTarget), so the caret, the
- * list and the buttons behave as they do with no drag in the file. Once
+ * list and the buttons behave as they do with no drag in the file. The
+ * one exception is the badge while it is a selection toggle (a button,
+ * see the selection below): it stays the handle the row is picked up
+ * by, so a press on it that travels is a drag and a press that does not
+ * is its click - the toggle - and the click that follows a drag is
+ * spent as the row's own is. Once
  * a drag is recognized the pointer is captured to the row, and a floating
  * card - built fresh from the row's own values, not a clone of its live
  * controls - follows the pointer under fixed positioning and a transform,
@@ -663,28 +668,32 @@
     item.classList.toggle("is-movable", !!(able.move && entry.assigned));
 
     /* The badge: static identity, anchoring the row. Not a control -
-     * except under the rail's Bulk Edit (deps.bulk), when it is the
-     * row's one selection toggle: a button, pressed while the hopper is
-     * in the selection, and never the start of a drag (a BUTTON is an
+     * except while the boot file offers a selection (deps.selection: a
+     * recipe face on, the edit on offer), when it is the row's one
+     * selection toggle: a button, pressed while the hopper is in the
+     * selection, and never the start of a drag (a BUTTON is an
      * interactive target). Which hoppers are selected is the boot file's
-     * to say; the badge only asks (onToggle) and shows (setBulk). */
-    if (deps.bulk.active) {
+     * to say; the badge only asks (onToggle) and shows (setSelection). */
+    if (deps.selection.active) {
+      const picked = deps.selection.selected.has(`${state.layer.id}:${entry.index}`);
       const badge = text(doc, "button", "station-editor__badge station-editor__badge--select", entry.id, {
-        type: "button", "data-action": "select-hopper", "aria-pressed": deps.bulk.selected.has(`${state.layer.id}:${entry.index}`) ? "true" : "false",
-        title: `Select ${entry.id} for bulk edit`
+        type: "button", "data-action": "select-hopper", "aria-pressed": picked ? "true" : "false",
+        title: badgeTitle(entry.id, picked)
       });
       badge.addEventListener("click", event => {
         if (typeof event.stopPropagation === "function") event.stopPropagation();
-        deps.bulk.onToggle(entry.index);
+        // The release that ended a drag from the badge fires this click too.
+        if (state.dragClick && event.detail !== 0) { state.dragClick = false; return; }
+        deps.selection.onToggle(entry.index);
       });
       row.badge = badge;
       row.badgeNode = badge;
       item.appendChild(badge);
-      item.classList.toggle("is-bulk-selected", deps.bulk.selected.has(`${state.layer.id}:${entry.index}`));
+      item.classList.toggle("is-picked", picked);
     } else {
       row.badge = null;
       row.badgeNode = item.appendChild(text(doc, "span", "station-editor__badge", entry.id));
-      item.classList.remove("is-bulk-selected");
+      item.classList.remove("is-picked");
     }
 
     const main = element(doc, "div", "station-editor__main");
@@ -1006,15 +1015,21 @@
   /* What the bridge offers, per slot, and why a slot is read-only when it
    * is. Asked once per build: the application declares its commands when
    * it connects, and a structural render rebuilds the editor. */
-  /* The rail's Bulk Edit as the rows read it: off, or on with the
+  /* The boot file's selection as the rows read it: off, or on with the
    * selected keys as a Set and the toggle callback. */
-  function bulkFrom(given) {
+  function selectionFrom(given) {
     const b = given && typeof given === "object" ? given : {};
     return {
       active: !!b.active,
       selected: new Set(Array.isArray(b.selected) ? b.selected.map(String) : []),
       onToggle: typeof b.onToggle === "function" ? b.onToggle : () => {}
     };
+  }
+
+  /* What a selection badge says it does: the header's hopper editor is
+   * where the selection is written to (station-hopper-edit.js). */
+  function badgeTitle(id, picked) {
+    return picked ? `${id} is selected · click to deselect` : `Select ${id} to edit its resin or blend in the header`;
   }
 
   function abilities(commands, recipe, variant) {
@@ -1077,10 +1092,11 @@
    * @param {Element} [options.actions]   an element to stand in the card's
    *        actions slot, under the note (the compact face's layer menu,
    *        station-layer-menu.js). Built by the caller; placed here.
-   * @param {object} [options.bulk]       { active, selected, onToggle }:
-   *        the rail's Bulk Edit. While active every badge is a selection
-   *        toggle; `selected` lists "<layer>:<index>" keys; onToggle(index)
-   *        is the badge's click. The handle's setBulk() changes it in place.
+   * @param {object} [options.selection]  { active, selected, onToggle }:
+   *        the boot file's hopper selection. While active every badge is
+   *        a selection toggle; `selected` lists "<layer>:<index>" keys;
+   *        onToggle(index) is the badge's click. The handle's
+   *        setSelection() changes it in place.
    * @param {object} [options.otherResins] the OTHER recipe's resin by
    *        "<layer>:<index>" - { resin, differs } - as station-source.js
    *        otherResins() answers it: the plan's beside a running card, the
@@ -1092,7 +1108,7 @@
    *        the card rail's Compare (station-card-rail.js), session state
    *        the boot file keeps for every card at once and tells each card
    *        through setShowOther; a rebuilt card is built with it.
-   * @returns {{ element: Element, blend: object, note: function, update: function, setBulk: function, setShowOther: function, showOther: function, able: object, variant: string }}
+   * @returns {{ element: Element, blend: object, note: function, update: function, setSelection: function, setShowOther: function, showOther: function, able: object, variant: string }}
    */
   function create(doc, options) {
     const settings = options || {};
@@ -1167,7 +1183,7 @@
         ? settings.dragRoot
         : row => { try { return row.item.closest(".station-root") || null; } catch (error) { return null; } },
       note: message => { note.textContent = message; },
-      bulk: bulkFrom(settings.bulk),
+      selection: selectionFrom(settings.selection),
       able: offer.able,
       reason: offer.reason,
       // The source line is the full editor's; the compact face has none.
@@ -1374,7 +1390,8 @@
       if ((event.button !== undefined && event.button !== 0) || event.pointerType === "touch") return;
       const row = rowOf(event.target);
       if (!row || !row.entry.assigned) return;
-      if (isInteractiveTarget(event.target, row.item)) return;
+      // The selection badge is a button, and the row's handle all the same.
+      if (isInteractiveTarget(event.target, row.item) && event.target !== row.badge) return;
       drag.press = { row, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
     });
     list.addEventListener("pointermove", event => {
@@ -1425,7 +1442,7 @@
       actions.appendChild(settings.actions);
       rootEl.appendChild(actions);
     }
-    rootEl.classList.toggle("is-selectable", deps.bulk.active);
+    rootEl.classList.toggle("is-selectable", deps.selection.active);
 
     /* Compare, on the card: the attribute the stylesheet reveals the
      * entries by. The switch is the card rail's, one for every card; the
@@ -1454,43 +1471,46 @@
       return fresh;
     }
 
-    /* Bulk Edit changed under the rows: the mode going on or off rebuilds
-     * every badge (a span becomes a button, or back); a selection change
-     * only re-marks the rows that exist. No row's controls are touched. */
-    function setBulk(next) {
-      const bulk = bulkFrom(next);
-      const wasActive = deps.bulk.active;
-      deps.bulk.active = bulk.active;
-      deps.bulk.selected = bulk.selected;
-      if (typeof next === "object" && next && typeof next.onToggle === "function") deps.bulk.onToggle = next.onToggle;
-      rootEl.classList.toggle("is-selectable", bulk.active);
+    /* The selection changed under the rows: the offer going on or off
+     * rebuilds every badge (a span becomes a button, or back); a change
+     * in which hoppers are selected only re-marks the rows that exist.
+     * No row's controls are touched. */
+    function setSelection(next) {
+      const selection = selectionFrom(next);
+      const wasActive = deps.selection.active;
+      deps.selection.active = selection.active;
+      deps.selection.selected = selection.selected;
+      if (typeof next === "object" && next && typeof next.onToggle === "function") deps.selection.onToggle = next.onToggle;
+      rootEl.classList.toggle("is-selectable", selection.active);
       for (const row of rows) {
         const key = `${state.layer.id}:${row.index}`;
-        const on = bulk.active && bulk.selected.has(key);
-        if (wasActive !== bulk.active) {
+        const on = selection.active && selection.selected.has(key);
+        if (wasActive !== selection.active) {
           // Rebuild the badge only - the span or button fillRow placed.
           const old = row.badgeNode || null;
-          const fresh = bulk.active
-            ? text(doc, "button", "station-editor__badge station-editor__badge--select", row.id, { type: "button", "data-action": "select-hopper", "aria-pressed": on ? "true" : "false", title: `Select ${row.id} for bulk edit` })
+          const fresh = selection.active
+            ? text(doc, "button", "station-editor__badge station-editor__badge--select", row.id, { type: "button", "data-action": "select-hopper", "aria-pressed": on ? "true" : "false", title: badgeTitle(row.id, on) })
             : text(doc, "span", "station-editor__badge", row.id);
-          if (bulk.active) {
+          if (selection.active) {
             fresh.addEventListener("click", event => {
               if (typeof event.stopPropagation === "function") event.stopPropagation();
-              deps.bulk.onToggle(row.index);
+              if (state.dragClick && event.detail !== 0) { state.dragClick = false; return; }
+              deps.selection.onToggle(row.index);
             });
           }
           if (old && typeof row.item.replaceChild === "function") row.item.replaceChild(fresh, old);
           else { if (old) row.item.removeChild(old); row.item.appendChild(fresh); }
-          row.badge = bulk.active ? fresh : null;
+          row.badge = selection.active ? fresh : null;
           row.badgeNode = fresh;
         } else if (row.badge) {
           row.badge.setAttribute("aria-pressed", on ? "true" : "false");
+          row.badge.setAttribute("title", badgeTitle(row.id, on));
         }
-        row.item.classList.toggle("is-bulk-selected", on);
+        row.item.classList.toggle("is-picked", on);
       }
     }
 
-    return { element: rootEl, blend, note: deps.note, update, setBulk, setShowOther, showOther, able: offer.able, variant };
+    return { element: rootEl, blend, note: deps.note, update, setSelection, setShowOther, showOther, able: offer.able, variant };
   }
 
   return { RESULT_LIMIT, SLOTS, SLOT_COMMAND, DRAG_THRESHOLD, blendFor, filterResins, placeResults, isInteractiveTarget, create };

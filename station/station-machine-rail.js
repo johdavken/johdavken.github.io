@@ -14,43 +14,25 @@
  *                    again: the mode ends along its one exit, every layer
  *                    back as hoppers. The control shows the mode's state
  *                    as its own. While this face is on, its row unfolds
- *                    to its RIGHT: the bulk row, then Load Next.
- *   Bulk Edit        the Recipe grid's Bulk edit, on the stage: on, every
- *                    card's hopper badges become selection toggles (the
- *                    boot file keeps the selection and tells the cards).
- *                    The control then SWAPS IN PLACE for a Confirm and a
- *                    Cancel, and the resin field (station-bulk-field.js,
- *                    built by the boot file and handed in) stands ABOVE
- *                    the Current row, right-aligned to it and reaching
- *                    back across the switch - over the stage above the
- *                    dock, where nothing is drawn. The boot file tells
- *                    the rail the draft; Confirm is held until a hopper
- *                    is selected and a resin is entered, and writes it as
- *                    one setHopperResins (station-blend-actions.js).
- *                    Cancel ends the selection without writing. The SAME
- *                    set - one Bulk Edit, one Confirm, one Cancel, one
- *                    field - is the Next face's child as well: while that
- *                    face is on it stands at the head of the Next row, on
- *                    the Next bracket, and writes to the plan; the field
- *                    stands where it stood, above the Current row (the
- *                    stylesheet lifts the slot a row). The boot file
- *                    addresses the write; the rail only moves the set to
- *                    whichever face is on.
+ *                    to its RIGHT: Load Next. (Editing a selection of
+ *                    hoppers is not the rail's: a card's badge selects
+ *                    its hopper and the header's hopper editor writes
+ *                    to the selection, station-hopper-edit.js.)
  *   Load Next        the Current face's move: the plan becomes the running
  *                    recipe - the floor UI's Load Next Recipe, as one
  *                    promoteNextRecipe command (station-plan-controls.js).
- *                    It stands beside Bulk Edit on the Current row, so the
- *                    switch it points at is the face it writes to, and the
- *                    operator watches the rows change. A promotion is easy
+ *                    It stands on the Current row, so the switch it
+ *                    points at is the face it writes to, and the operator
+ *                    watches the rows change. A promotion is easy
  *                    to do by accident and slow to undo by hand, so it is
  *                    two clicks in place (station-armed.js): the first
  *                    ARMS the control, which says so and waits; the
  *                    second confirms. A pause, a click anywhere else,
  *                    Escape or the focus leaving all disarm it. No
  *                    dialog. The armed control's title says what the
- *                    promotion changes, in counts. Held while a bulk
- *                    selection is open: the draft is finished or
- *                    cancelled first, never dropped by a promotion.
+ *                    promotion changes, in counts. Held while a hopper
+ *                    selection is open on the cards: the edit is applied
+ *                    or cancelled first, never dropped by a promotion.
  *   Weights          the other mode's switch: every layer turns over to
  *                    its weight card (station-weight-cards.js) - the
  *                    receiver weights, and with Smart Hoppers on the
@@ -78,7 +60,7 @@
  *                    unfolds to its RIGHT, on a stem from the switch, as
  *                    its children - the flyout (station-rail__flyout),
  *                    which opens and folds with a short motion the
- *                    stylesheet owns: the bulk set, then Copy Current.
+ *                    stylesheet owns: Copy Current.
  *   Copy Current     the Next face's move: the running recipe becomes the
  *                    plan - Load Current Recipe, as one copyCurrentToNext.
  *                    Armed and confirmed exactly as Load Next is: the plan
@@ -124,9 +106,8 @@
  * dock of application icons, the Handbook at its foot, the machine's
  * controls above it:
  *
- *     [ Current      ]  -| [ Bulk Edit ] [ Load Next ]     (while its face is on)
- *     [ Next Recipe  ]  -| [ Bulk Edit ] [ Copy Current ]  (while its face is on;
- *                           the one bulk set stands on whichever row is open)
+ *     [ Current      ]  -| [ Load Next ]     (while its face is on)
+ *     [ Next Recipe  ]  -| [ Copy Current ]  (while its face is on)
  *     [ Weights      ]  -| [ Smart Hoppers ]
  *     [ Tools        ]  -| [ Winding Tension ] [ Resin Totals ] [ Pressure ]  (while the row is open)
  *     [ Print        ]  -| [ Current ] [ Next ] [ Both ]  (while the row is open)
@@ -177,7 +158,6 @@
   const LABEL = Object.freeze({
     blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers",
     next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next",
-    bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit",
     tools: "Tools", winding: "Winding Tension", totals: "Resin Totals", pressure: "Pressure",
     print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes"
   });
@@ -311,36 +291,6 @@
     return tile.svg;
   }
 
-  /* Bulk Edit: three badges stacked as the card lists them, the lower two
-   * ticked - a selection of hoppers, and one thing written onto it. */
-  function bulkGlyph(doc) {
-    const tile = glyphTile(doc);
-    const svg = tile.art;
-    for (const [index, ticked] of [[0, false], [1, true], [2, true]].values()) {
-      const y = 2.5 + index * 5.4;
-      svg.appendChild(svgNode(doc, "rect", ticked ? "station-rail__glyph-face" : "station-rail__glyph-back", { x: 2.5, y, width: 7, height: 4.4, rx: 1.2 }));
-      if (ticked) svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: `M 4.4 ${y + 2.3} L 5.6 ${y + 3.4} L 7.8 ${y + 1.1}` }));
-      svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: `M 11.5 ${y + 2.2} L 17.5 ${y + 2.2}` }));
-    }
-    return tile.svg;
-  }
-
-  /* Confirm: a tick. Cancel: a cross. Drawn plain, in the control's own
-   * colour, as the two ends of one choice. */
-  function confirmGlyph(doc) {
-    const tile = glyphTile(doc);
-    const svg = tile.art;
-    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 4 10.5 L 8.2 14.5 L 16 5.5" }));
-    return tile.svg;
-  }
-
-  function cancelGlyph(doc) {
-    const tile = glyphTile(doc);
-    const svg = tile.art;
-    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 5.5 5.5 L 14.5 14.5 M 14.5 5.5 L 5.5 14.5" }));
-    return tile.svg;
-  }
-
   /* Tools: a spanner, its open jaw to the upper right and its handle
    * down to the lower left - the head an arc open at the jaw, the two
    * jaw faces turned in, the handle one bold line. */
@@ -454,11 +404,6 @@
    * @param {function} [options.onNextEdit]     () => void; the Next face's switch
    * @param {function} [options.onPromote]      () => void; Load Next's confirming click
    * @param {function} [options.onCopy]         () => void; Copy Current's confirming click
-   * @param {function} [options.onBulkEdit]     () => void; Bulk Edit's click - the
-   *        boot file starts the selection and tells the rail
-   * @param {function} [options.onBulkConfirm]  () => void; Confirm - the boot file
-   *        holds the draft it applies
-   * @param {function} [options.onBulkCancel]   () => void; Cancel
    * @param {function} [options.onTools]        () => void; the Tools switch's click -
    *        the boot file keeps whether the row is open and tells the rail
    * @param {function} [options.onResinTotals] () => void; the Resin Totals tile
@@ -469,8 +414,6 @@
    *        the boot file keeps whether the row is open and tells the rail
    * @param {function} [options.onPrintRecipe]  (which) => void; a choice on the
    *        Print row - "current", "next" or "both"; the boot file prints
-   * @param {Element}  [options.bulkField]      the resin field's element, stood
-   *        above the Current row while the selection is on
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
    * @param {function} [options.clearTimeout]
    * @param {number}   [options.armDuration]    ms an armed move waits
@@ -483,9 +426,6 @@
     const onNextEdit = typeof settings.onNextEdit === "function" ? settings.onNextEdit : () => {};
     const onPromote = typeof settings.onPromote === "function" ? settings.onPromote : () => {};
     const onCopy = typeof settings.onCopy === "function" ? settings.onCopy : () => {};
-    const onBulkEdit = typeof settings.onBulkEdit === "function" ? settings.onBulkEdit : () => {};
-    const onBulkConfirm = typeof settings.onBulkConfirm === "function" ? settings.onBulkConfirm : () => {};
-    const onBulkCancel = typeof settings.onBulkCancel === "function" ? settings.onBulkCancel : () => {};
     const onTools = typeof settings.onTools === "function" ? settings.onTools : () => {};
     const onWindingTension = typeof settings.onWindingTension === "function" ? settings.onWindingTension : () => {};
     const onResinTotals = typeof settings.onResinTotals === "function" ? settings.onResinTotals : () => {};
@@ -502,10 +442,9 @@
       next: { active: false, available: false, planned: false },
       promote: { available: false, reason: "", summary: "" },
       copy: { available: false, reason: "" },
-      /* The recipe faces' shared child: whether the selection is on, whether the
-       * application offers the write, how many hoppers are selected, and
-       * the resin drafted on the cards' field. */
-      bulk: { active: false, available: false, reason: "", count: 0, resin: "" },
+      /* Whether a hopper selection is open on the cards (the header's
+       * hopper editor is showing): the two moves are held while it is. */
+      selection: { active: false },
       /* The Tools row: whether it is unfolded, and whether any tool stands
        * on it; each tool's tile: whether its window is open and whether
        * the page has the window at all. */
@@ -544,18 +483,6 @@
       type: "button", "data-action": "copy-current", "aria-label": LABEL.copy, title: LABEL.copy
     });
     copyButton.appendChild(copyGlyph(doc));
-    const bulkButton = element(doc, "button", "station-rail__control station-rail__control--bulk", {
-      type: "button", "data-action": "bulk-edit", "aria-pressed": "false", "aria-label": LABEL.bulk, title: LABEL.bulk
-    });
-    bulkButton.appendChild(bulkGlyph(doc));
-    const confirmButton = element(doc, "button", "station-rail__control station-rail__control--confirm", {
-      type: "button", "data-action": "bulk-confirm", "aria-label": LABEL.confirm, title: LABEL.confirm
-    });
-    confirmButton.appendChild(confirmGlyph(doc));
-    const cancelButton = element(doc, "button", "station-rail__control station-rail__control--cancel", {
-      type: "button", "data-action": "bulk-cancel", "aria-label": LABEL.cancel, title: LABEL.cancel
-    });
-    cancelButton.appendChild(cancelGlyph(doc));
     const toolsButton = element(doc, "button", "station-rail__control station-rail__control--tools", {
       type: "button", "data-action": "tools", "aria-pressed": "false", "aria-label": LABEL.tools, title: LABEL.tools
     });
@@ -607,8 +534,8 @@
      * the Next row in Copy Current - the move that writes to the face
      * the row hangs from, so the arrow on its tile points at the switch
      * it changes. Each row is its flyout's one child. */
-    const blendRow = element(doc, "div", "station-rail__row station-rail__row--blend", { "data-role": "blend-row", "data-bulk": "false" });
-    const nextRow = element(doc, "div", "station-rail__row station-rail__row--next", { "data-role": "next-row", "data-bulk": "false" });
+    const blendRow = element(doc, "div", "station-rail__row station-rail__row--blend", { "data-role": "blend-row" });
+    const nextRow = element(doc, "div", "station-rail__row station-rail__row--next", { "data-role": "next-row" });
     nextRow.appendChild(copyButton);
     const nextParts = group("next", nextButton, "Next Recipe actions", [nextRow]);
     const nextGroup = nextParts.wrapper;
@@ -636,44 +563,12 @@
     const printParts = group("print", printButton, "Print Recipe choices", [printRow]);
     const printGroup = printParts.wrapper;
     const printFlyout = printParts.fly;
-    /* The bulk set: Bulk Edit and what it becomes - Confirm and Cancel
-     * while the selection is on - two sets in one place, the stylesheet
-     * swapping them (data-bulk on the row it stands in). One set, built
-     * once, laid as the row's own children (display: contents): it stands
-     * at the head of the Current row while that face is on and at the head
-     * of the Next row while that one is (draw() moves it), so a selection
-     * on the plan's cards is worked exactly as one on the running
-     * recipe's. */
-    const bulkSet = element(doc, "div", "station-rail__bulk", { "data-role": "bulk-set" });
-    bulkSet.appendChild(bulkButton);
-    bulkSet.appendChild(confirmButton);
-    bulkSet.appendChild(cancelButton);
-    /* The resin field's slot: above the Current row, right-aligned to the
-     * row the set stands in (machine-rail.css lifts it a row when that is
-     * the Next row, so the field stands in one place under either face).
-     * The field itself is the boot file's; the slot is hidden with it
-     * while no selection is on. */
-    const fieldSlot = element(doc, "div", "station-rail__field-slot", { "data-role": "bulk-field-slot", hidden: "" });
-    if (settings.bulkField && typeof settings.bulkField === "object") fieldSlot.appendChild(settings.bulkField);
-    bulkSet.appendChild(fieldSlot);
-    blendRow.appendChild(bulkSet);
     blendRow.appendChild(promoteButton);
     /* The Current switch's flyout holds its row and nothing else. */
     const blendParts = group("blend", blendButton, "Current Recipe actions", [blendRow]);
     const blendGroup = blendParts.wrapper;
     const blendFlyout = blendParts.fly;
 
-    /* The bulk set to whichever face is on: the head of the Next row while
-     * the Next face is, the head of the Current row otherwise. Appending
-     * moves the set; the row's move is re-appended after it so it keeps
-     * the row's end. */
-    function placeBulkSet() {
-      if (state.next.active) {
-        if (bulkSet.parentNode !== nextRow) { nextRow.appendChild(bulkSet); nextRow.appendChild(copyButton); }
-      } else if (bulkSet.parentNode !== blendRow) {
-        blendRow.appendChild(bulkSet); blendRow.appendChild(promoteButton);
-      }
-    }
     rootEl.appendChild(blendGroup);
     rootEl.appendChild(nextGroup);
     rootEl.appendChild(weightsGroup);
@@ -790,18 +685,18 @@
       }
 
       // Each row unfolds beside its switch only while that face is on:
-      // the bulk set and Load Next beside Current Recipe, the bulk set and
-      // Copy Current beside Next Recipe, Smart Hoppers beside Weights, the
-      // tools beside Tools while its row is open.
-      placeBulkSet();
+      // Load Next beside Current Recipe, Copy Current beside Next Recipe,
+      // Smart Hoppers beside Weights, the tools beside Tools while its
+      // row is open.
       unfold(nextGroup, flyout, state.next.active);
       unfold(weightsGroup, weightsFlyout, state.weights.active);
       unfold(blendGroup, blendFlyout, state.blend.active);
       unfold(toolsGroup, toolsFlyout, state.tools.open);
       unfold(printGroup, printFlyout, state.print.open);
-      const bulkOn = drawBulk();
+      const selecting = state.selection.active;
+      rootEl.classList.toggle("is-selection-open", selecting);
       const promoteArmed = arming.armed() === "promote";
-      promoteButton.disabled = !state.promote.available || !state.next.planned || bulkOn;
+      promoteButton.disabled = !state.promote.available || !state.next.planned || selecting;
       promoteButton.classList.toggle("is-armed", promoteArmed);
       if (promoteArmed) promoteButton.setAttribute("data-armed", "true");
       else promoteButton.removeAttribute("data-armed");
@@ -812,11 +707,11 @@
           ? `${LABEL.promote} is not available: ${state.promote.reason || "no application is connected to Station commands."}`
           : (!state.next.planned
             ? `${LABEL.promote} · nothing is planned`
-            : (bulkOn
-              ? `${LABEL.promote} · finish or cancel the bulk edit first`
+            : (selecting
+              ? `${LABEL.promote} · apply or cancel the hopper edit first`
               : `${LABEL.promote} · ${state.promote.summary || "the plan becomes the running recipe"}`))));
       const copyArmed = arming.armed() === "copy";
-      copyButton.disabled = !state.copy.available;
+      copyButton.disabled = !state.copy.available || selecting;
       copyButton.classList.toggle("is-armed", copyArmed);
       if (copyArmed) copyButton.setAttribute("data-armed", "true");
       else copyButton.removeAttribute("data-armed");
@@ -827,46 +722,9 @@
         ? `Click again to copy the running recipe into Next${state.next.planned ? " · what is planned is replaced" : ""} · the running job is untouched`
         : (!state.copy.available
           ? `${LABEL.copy} is not available: ${state.copy.reason || "no application is connected to Station commands."}`
-          : `${LABEL.copy} · the running recipe becomes the plan${state.next.planned ? ", replacing what is planned" : ""}; the running job is untouched`));
-    }
-
-    /* The bulk set, in its two states. At rest Bulk Edit is the one
-     * control; on, it is hidden (out of the tab order and the reader's
-     * tree, as a folded flyout is) and Confirm and Cancel take its place.
-     * On under either recipe's face - the Current face's running recipe,
-     * the Next face's plan. Answers whether the selection is on. */
-    function hide(node, on) {
-      if (on) { node.setAttribute("hidden", ""); node.setAttribute("inert", ""); node.setAttribute("aria-hidden", "true"); }
-      else { node.removeAttribute("hidden"); node.removeAttribute("inert"); node.removeAttribute("aria-hidden"); }
-    }
-
-    function drawBulk() {
-      const bulk = state.bulk;
-      const on = bulk.active && (state.blend.active || state.next.active);
-      blendRow.setAttribute("data-bulk", on && state.blend.active ? "true" : "false");
-      nextRow.setAttribute("data-bulk", on && state.next.active ? "true" : "false");
-      blendGroup.setAttribute("data-bulk", on && state.blend.active ? "true" : "false");
-      nextGroup.setAttribute("data-bulk", on && state.next.active ? "true" : "false");
-      rootEl.classList.toggle("is-bulk-active", on);
-      bulkButton.setAttribute("aria-pressed", on ? "true" : "false");
-      bulkButton.disabled = !bulk.available;
-      bulkButton.setAttribute("title", !bulk.available
-        ? `${LABEL.bulk} is not available: ${bulk.reason || "no application is connected to Station commands."}`
-        : `${LABEL.bulk} · select hoppers on the cards, then write one resin onto all of them${state.next.active ? " in the plan" : ""}`);
-      hide(bulkButton, on);
-      hide(confirmButton, !on);
-      hide(cancelButton, !on);
-      if (on) fieldSlot.removeAttribute("hidden");
-      else fieldSlot.setAttribute("hidden", "");
-      const typed = String(bulk.resin || "").trim();
-      const hoppers = `${bulk.count} hopper${bulk.count === 1 ? "" : "s"}`;
-      confirmButton.disabled = !on || bulk.count === 0 || !typed;
-      confirmButton.setAttribute("title", bulk.count === 0
-        ? `${LABEL.confirm} · select a hopper on a card first`
-        : (!typed ? `${LABEL.confirm} · enter the resin in the card's field for ${hoppers}` : `Apply "${typed}" to ${hoppers}`));
-      confirmButton.setAttribute("aria-label", bulk.count === 0 ? LABEL.confirm : `Apply resin to ${hoppers}`);
-      cancelButton.setAttribute("title", `${LABEL.cancel} · nothing is written; the selection is cleared`);
-      return on;
+          : (selecting
+            ? `${LABEL.copy} · apply or cancel the hopper edit first`
+            : `${LABEL.copy} · the running recipe becomes the plan${state.next.planned ? ", replacing what is planned" : ""}; the running job is untouched`)));
     }
 
     /* ---- Clicks ---- */
@@ -903,21 +761,6 @@
       if (arming.armed() !== "copy") { arming.arm("copy"); return; }
       disarm();
       onCopy();
-    });
-    bulkButton.addEventListener("click", () => {
-      if (bulkButton.disabled) return;
-      disarm();
-      onBulkEdit();
-    });
-    confirmButton.addEventListener("click", () => {
-      if (confirmButton.disabled) return;
-      disarm();
-      onBulkConfirm();
-    });
-    cancelButton.addEventListener("click", () => {
-      if (cancelButton.disabled) return;
-      disarm();
-      onBulkCancel();
     });
     toolsButton.addEventListener("click", () => {
       if (toolsButton.disabled) return;
@@ -965,7 +808,7 @@
      * @param {object}  [next.next]       { active, available, planned }
      * @param {object}  [next.promote]    { available, reason, summary }
      * @param {object}  [next.copy]       { available, reason }
-     * @param {object}  [next.bulk]       { active, available, reason, count, resin }
+     * @param {object}  [next.selection]  { active }: a hopper selection is open on the cards
      * @param {object}  [next.tools]      { open, available }
      * @param {object}  [next.winding]    { active, available }
      * @param {object}  [next.totals]     { active, available }
@@ -1008,14 +851,8 @@
       if (n.copy && typeof n.copy === "object") {
         state.copy = { available: !!n.copy.available, reason: typeof n.copy.reason === "string" ? n.copy.reason : "" };
       }
-      if (n.bulk && typeof n.bulk === "object") {
-        state.bulk = {
-          active: !!n.bulk.active,
-          available: !!n.bulk.available,
-          reason: typeof n.bulk.reason === "string" ? n.bulk.reason : "",
-          count: Number.isInteger(n.bulk.count) && n.bulk.count > 0 ? n.bulk.count : 0,
-          resin: typeof n.bulk.resin === "string" ? n.bulk.resin : ""
-        };
+      if (n.selection && typeof n.selection === "object") {
+        state.selection = { active: !!n.selection.active };
       }
       if (n.tools && typeof n.tools === "object") {
         state.tools = { open: !!n.tools.open, available: !!n.tools.available };
@@ -1034,10 +871,10 @@
       }
       // A control that stopped being possible while armed is not armed:
       // Load Next stands on the Current face and Copy Current on the Next
-      // face, and a bulk selection starting on either drops the arming.
-      const bulkOn = state.bulk.active && (state.blend.active || state.next.active);
-      const promoteGone = arming.armed() === "promote" && (!state.promote.available || !state.next.planned || !state.blend.active || bulkOn);
-      const copyGone = arming.armed() === "copy" && (!state.copy.available || !state.next.active || bulkOn);
+      // face, and a hopper selection opening on either drops the arming.
+      const selecting = state.selection.active;
+      const promoteGone = arming.armed() === "promote" && (!state.promote.available || !state.next.planned || !state.blend.active || selecting);
+      const copyGone = arming.armed() === "copy" && (!state.copy.available || !state.next.active || selecting);
       if (arming.armed() && (promoteGone || copyGone || state.hidden || state.withdrawn)) disarm();
       else draw();
     }
@@ -1060,11 +897,6 @@
       blendFlyout,
       blendRow,
       nextRow,
-      bulkSet,
-      bulkButton,
-      confirmButton,
-      cancelButton,
-      fieldSlot,
       toolsButton,
       windingButton,
       totalsButton,
@@ -1088,7 +920,7 @@
         blend: Object.assign({}, state.blend), weights: Object.assign({}, state.weights),
         smart: Object.assign({}, state.smart),
         next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
-        bulk: Object.assign({}, state.bulk),
+        selection: Object.assign({}, state.selection),
         tools: Object.assign({}, state.tools), winding: Object.assign({}, state.winding), totals: Object.assign({}, state.totals),
         pressure: Object.assign({}, state.pressure),
         print: Object.assign({}, state.print)
@@ -1096,5 +928,5 @@
     };
   }
 
-  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, totalsGlyph, pressureGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
+  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, toolsGlyph, windingGlyph, totalsGlyph, pressureGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
 });

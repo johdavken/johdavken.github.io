@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -530,7 +530,7 @@ test("the plan commands are the two moves between the running recipe and the pla
  * -------------------------------------------------------------------- */
 
 test("the layer commands are recipe edits over a layer at once: each names its recipe, may address the plan, and is neither runtime nor equipment", () => {
-  assert.deepEqual([...contract.LAYER_COMMANDS], ["copyLayer", "clearLayer", "setHopperResins"]);
+  assert.deepEqual([...contract.LAYER_COMMANDS], ["copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"]);
   assert.ok(Object.isFrozen(contract.LAYER_COMMANDS));
   for (const command of contract.LAYER_COMMANDS) {
     assert.equal(contract.ARGUMENTS[command][0], "recipe");
@@ -539,6 +539,7 @@ test("the layer commands are recipe edits over a layer at once: each names its r
   assert.deepEqual([...contract.ARGUMENTS.copyLayer], ["recipe", "layer", "toLayer"]);
   assert.deepEqual([...contract.ARGUMENTS.clearLayer], ["recipe", "layer"]);
   assert.deepEqual([...contract.ARGUMENTS.setHopperResins], ["recipe", "resins"]);
+  assert.deepEqual([...contract.ARGUMENTS.setHopperAssignments], ["recipe", "hoppers"]);
 
   // copyLayer: the source as every command names its position, the
   // destination as toLayer; the plan is a valid address. The same layer
@@ -597,4 +598,48 @@ test("a resin list follows the weight list's rules: non-empty, capped, no positi
   assert.equal(over.ok, false);
   assert.match(over.message, /No more than/);
   assert.equal(contract.normalizeArguments("setHopperResins", { recipe: "next", resins: page.slice(1) }).ok, true);
+});
+
+test("an assignment list is the resin list's rules over entries that carry what changes and leave out what does not: a resin, a percentage or both; neither is a contradiction", () => {
+  const mixed = contract.normalizeArguments("setHopperAssignments", { recipe: "next", hoppers: [
+    { layer: "A", index: "1", resin: "  LLDPE   1001 " },
+    { layer: "A", index: 2, pct: "12.5" },
+    { layer: "B", index: 3, resin: "", pct: 0 },
+    { layer: "C", index: 0, resin: "HX" }
+  ] });
+  assert.equal(mixed.ok, true);
+  assert.deepEqual(mixed.args.hoppers, [
+    { layer: "A", index: 1, resin: "LLDPE 1001" },
+    { layer: "A", index: 2, pct: 12.5 },
+    { layer: "B", index: 3, resin: "", pct: 0 },
+    { layer: "C", index: 0, resin: "HX" }
+  ]);
+  assert.ok(Object.isFrozen(mixed.args.hoppers) && Object.isFrozen(mixed.args.hoppers[0]));
+  assert.equal("pct" in mixed.args.hoppers[0], false, "no change is the field's absence, never a value");
+  assert.equal("resin" in mixed.args.hoppers[1], false);
+
+  const neither = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 1 }] });
+  assert.equal(neither.ok, false);
+  assert.equal(neither.field, "hoppers");
+  assert.match(neither.message, /A:1 names neither a resin nor a percentage/);
+  const nulls = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 1, resin: null, pct: null }] });
+  assert.equal(nulls.ok, false, "null is absence too");
+
+  const over = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 1, pct: 101 }] });
+  assert.deepEqual([over.ok, over.code, over.field], [false, "out_of_range", "hoppers"]);
+  const notNumber = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 1, pct: "abc" }] });
+  assert.deepEqual([notNumber.ok, notNumber.code], [false, "bad_argument"]);
+  const empty = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [] });
+  assert.equal(empty.ok, false);
+  assert.equal(contract.normalizeArguments("setHopperAssignments", { recipe: "current" }).ok, false);
+  const twice = contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 1, resin: "X" }, { layer: "A", index: 1, pct: 5 }] });
+  assert.equal(twice.ok, false);
+  assert.match(twice.message, /A:1 is listed twice/);
+  assert.equal(contract.normalizeArguments("setHopperAssignments", { recipe: "current", hoppers: [{ layer: "A", index: 6, resin: "X" }] }).code, "unknown_hopper");
+  const page = [];
+  for (let i = 0; i <= contract.MAX_WEIGHT_ENTRIES; i++) page.push({ layer: `L${i}`, index: 0, resin: "X" });
+  assert.match(contract.normalizeArguments("setHopperAssignments", { recipe: "next", hoppers: page }).message, /No more than/);
+  assert.equal(contract.normalizeArguments("setHopperAssignments", { recipe: "next", hoppers: page.slice(1) }).ok, true);
+  // A recipe is required, and the plan is a valid address.
+  assert.equal(contract.normalizeArguments("setHopperAssignments", { hoppers: [{ layer: "A", index: 1, resin: "X" }] }).field, "recipe");
 });

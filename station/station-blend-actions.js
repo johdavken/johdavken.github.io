@@ -1,23 +1,28 @@
-/* Station blend actions - the layer-wide edits a Blend Edit card and the
- * machine rail ask for: a layer pasted onto another, a layer emptied, one
- * resin written onto a selection of hoppers.
+/* Station blend actions - the layer-wide edits a Blend Edit card, the
+ * header's hopper editor and the card rail ask for: a layer pasted onto
+ * another, a layer emptied, one resin written onto a selection of
+ * hoppers, a resin and/or blend written onto a selection, and the
+ * recipe's last edit taken back or put back.
  *
  * WHAT IT IS
  *
- * The write seam for the three layer commands, as station-plan-controls.js
- * is the seam for the plan's two moves. A choice on a card's menu
- * (station-layer-menu.js) or the rail's Confirm (station-machine-rail.js)
- * becomes ONE command through the command bridge the caller was handed -
- * copyLayer, clearLayer or setHopperResins - addressed to the recipe the
- * face shows, and the answer goes back untouched. The application carries
- * the edit out along its own path (the Recipe grid's paste, its Reset all
- * for one layer, its Bulk edit apply), records one history entry, saves and
- * syncs once, and publishes; the caller runs the publish policy over the
- * answer.
+ * The write seam for the layer commands and the history pair, as
+ * station-plan-controls.js is the seam for the plan's two moves. A choice
+ * on a card's menu (station-layer-menu.js), Apply on the header's hopper
+ * editor (station-hopper-edit.js, through the boot file) or Undo / Redo
+ * on the card rail (station-card-rail.js, the same way) becomes ONE
+ * command through the command bridge the caller was handed - copyLayer,
+ * clearLayer, setHopperResins, setHopperAssignments, undo or redo -
+ * addressed to the recipe the face shows, and the answer goes back
+ * untouched. The application carries the edit out along its own path
+ * (the Recipe grid's paste, its Reset all for one layer, its Bulk edit
+ * apply, its toolbar's Undo and Redo), records one history entry where
+ * one is due, saves and syncs once, and publishes; the caller runs the
+ * publish policy over the answer.
  *
  * WHAT IT HOLDS
  *
- * Nothing. Two readers (what the bridge offers, and why not), three
+ * Nothing. Two readers (what the bridge offers, and why not), six
  * dispatchers, and one pure description of the grid's paste exception -
  * for the menu's wording only; the application enforces it.
  */
@@ -28,9 +33,15 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const ACTIONS = Object.freeze(["copy", "clear", "resins"]);
-  const COMMAND = Object.freeze({ copy: "copyLayer", clear: "clearLayer", resins: "setHopperResins" });
-  const LABEL = Object.freeze({ copy: "pasting a layer", clear: "resetting a layer", resins: "bulk resin editing" });
+  const ACTIONS = Object.freeze(["copy", "clear", "resins", "assign", "undo", "redo"]);
+  const COMMAND = Object.freeze({
+    copy: "copyLayer", clear: "clearLayer", resins: "setHopperResins", assign: "setHopperAssignments",
+    undo: "undo", redo: "redo"
+  });
+  const LABEL = Object.freeze({
+    copy: "pasting a layer", clear: "resetting a layer", resins: "bulk resin editing", assign: "editing selected hoppers",
+    undo: "undo", redo: "redo"
+  });
   const RECIPES = Object.freeze(["current", "next"]);
 
   function usableBridge(commands) {
@@ -94,6 +105,46 @@
     return dispatch(commands, "resins", { recipe, resins: entries });
   }
 
+  /**
+   * One edit written onto every listed position: the resin and/or the
+   * blend the header's hopper editor holds. What is not given is not
+   * sent, so the application leaves it as it is - "no change" is the
+   * absence of the field, never a sentinel value. An empty resin string
+   * clears the resin, as setHopperResin's does; the caller decides
+   * whether an empty field means "clear" or "no change".
+   *
+   * @param {Array<{layer: string, index: number}|string>} positions
+   * @param {{ resin?: string, pct?: number }} changes
+   */
+  function applyAssignments(commands, recipe, positions, changes) {
+    const wanted = changes && typeof changes === "object" ? changes : {};
+    const hasResin = typeof wanted.resin === "string";
+    const hasPct = typeof wanted.pct === "number" && Number.isFinite(wanted.pct);
+    if (!hasResin && !hasPct) return unavailable("Enter a resin or a percentage to apply.");
+    const entries = [];
+    for (const position of Array.isArray(positions) ? positions : []) {
+      const entry = typeof position === "string" ? parseKey(position) : position;
+      if (entry && typeof entry.layer === "string" && Number.isInteger(entry.index)) {
+        const assignment = { layer: entry.layer, index: entry.index };
+        if (hasResin) assignment.resin = wanted.resin;
+        if (hasPct) assignment.pct = wanted.pct;
+        entries.push(assignment);
+      }
+    }
+    if (!entries.length) return unavailable("Select at least one hopper first.");
+    return dispatch(commands, "assign", { recipe, hoppers: entries });
+  }
+
+  /** The recipe's last edit taken back, and put back: the application's
+   * own history, addressed to the face's recipe. */
+  function undoEdit(commands, recipe) {
+    return dispatch(commands, "undo", { recipe });
+  }
+
+  function redoEdit(commands, recipe) {
+    return dispatch(commands, "redo", { recipe });
+  }
+
   /* "<layer>:<index>" - the key the state bridge and the boot file's
    * selection use - as a position; null for anything else. */
   function parseKey(key) {
@@ -112,5 +163,5 @@
     return layerCount === 3 && layerId === "B";
   }
 
-  return Object.freeze({ ACTIONS, COMMAND, LABEL, can, reason, dispatch, copyLayer, clearLayer, applyResins, parseKey, resinOnlyTarget });
+  return Object.freeze({ ACTIONS, COMMAND, LABEL, can, reason, dispatch, copyLayer, clearLayer, applyResins, applyAssignments, undoEdit, redoEdit, parseKey, resinOnlyTarget });
 });
