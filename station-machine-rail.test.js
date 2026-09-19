@@ -128,43 +128,38 @@ function build(options) {
  *   What it draws
  * -------------------------------------------------------------------- */
 
-test("three in the column - Current Recipe with Bulk Edit and Load Next in a flyout beside it, Next Recipe with Bulk Edit's place and Copy Current, Weights with Smart Hoppers - each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label, and no Reset (the timeline's)", () => {
+test("five in the column - Current Recipe with Load Next in a flyout beside it, Next Recipe with Copy Current, Weights with Smart Hoppers, Tools, Print - each an SVG glyph in Station's own classes with its name on hover and to a reader - no text label, no Reset (the timeline's) and no Bulk Edit (the header's hopper editor)", () => {
   const { rail, blend, weights, smart, next, promote, copy } = build();
   assert.equal(rail.element.getAttribute("data-role"), "machine-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
   assert.deepEqual(rail.element.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("data-role")]),
     [["DIV", "blend-group"], ["DIV", "next-group"], ["DIV", "weights-group"], ["DIV", "tools-group"], ["DIV", "print-group"]]);
   assert.equal(rail.element.querySelector("[data-action='reset-tracking']"), null, "Reset Tracking stands in the timeline's Now column, not on the rail");
-  // Current Recipe's group: the switch, and beside it one row - the bulk
-  // set (Bulk Edit with the Confirm / Cancel / field it becomes, hidden
-  // until it does) and, at the row's end, Load Next: the move that writes
-  // to this face stands beside this face's switch.
+  // Current Recipe's group: the switch, and beside it one row - Load
+  // Next: the move that writes to this face stands beside this face's
+  // switch. No Bulk Edit, no Confirm, no Cancel, no field: a selection
+  // of hoppers is made on the cards' badges and written from the
+  // header's hopper editor (station-hopper-edit.js).
   assert.deepEqual(rail.blendGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["blend-edit", "station-rail__flyout"]);
   assert.deepEqual(rail.blendFlyout.children.map(node => node.getAttribute("data-role")), ["blend-row"], "the Current flyout holds its row");
-  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-set", "promote-next"], "the bulk set at the head of the row, Load Next at its end");
-  assert.deepEqual(rail.bulkSet.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-edit", "bulk-confirm", "bulk-cancel", "bulk-field-slot"]);
-  assert.equal(rail.bulkSet.getAttribute("class"), "station-rail__bulk", "laid as the row's own children (display: contents)");
-  assert.equal(rail.blendRow.getAttribute("data-bulk"), "false");
-  assert.ok(rail.fieldSlot.hasAttribute("hidden"), "the field's slot is hidden until a selection is on");
+  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["promote-next"], "Load Next alone on the row");
   assert.equal(rail.blendFlyout.getAttribute("aria-label"), "Current Recipe actions");
   assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
-  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
-  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
-  assert.ok(rail.confirmButton.hasAttribute("hidden") && rail.cancelButton.hasAttribute("hidden"));
-  // The rail builds no field of its own: the boot file hands one in (station-bulk-field.js).
-  assert.equal(rail.element.querySelectorAll("input").length, 0);
+  assert.equal(rail.element.querySelectorAll("input").length, 0, "the rail builds no field");
+  for (const action of ["bulk-edit", "bulk-confirm", "bulk-cancel"]) assert.equal(rail.element.querySelector(`[data-action='${action}']`), null, `${action} is on the rail`);
+  assert.equal(rail.element.querySelector("[data-role='bulk-set'], [data-role='bulk-field-slot']"), null);
+  for (const gone of ["bulkButton", "confirmButton", "cancelButton", "bulkSet", "fieldSlot", "bulkGlyph"]) assert.equal(gone in rail || gone in railModule, false, `${gone} survives`);
   assert.deepEqual(rail.weightsGroup.children.map(node => node.getAttribute("data-action") || node.getAttribute("class")), ["weights-edit", "station-rail__flyout"]);
   assert.deepEqual(rail.weightsFlyout.children.map(node => node.getAttribute("data-action")), ["smart-hoppers"]);
   assert.equal(rail.weightsFlyout.getAttribute("aria-label"), "Weights actions");
   assert.equal(rail.weightsFlyout.getAttribute("data-open"), "false");
   assert.ok(rail.weightsFlyout.hasAttribute("inert"));
   // The Next group: the switch in the column, the flyout beside it holding
-  // its one row - Copy Current, with the bulk set at its head only while
-  // the Next face is on.
+  // its one row - Copy Current.
   assert.deepEqual(rail.nextGroup.children.map(node => [node.tagName, node.getAttribute("data-action") || node.getAttribute("class")]), [["BUTTON", "next-edit"], ["DIV", "station-rail__flyout"]]);
   assert.deepEqual(rail.flyout.children.map(node => node.getAttribute("data-role")), ["next-row"], "the Next flyout holds its row");
-  assert.deepEqual(rail.nextRow.children.map(node => node.getAttribute("data-action")), ["copy-current"], "Copy Current alone until the face is on");
-  assert.equal(rail.nextRow.getAttribute("data-bulk"), "false");
+  assert.deepEqual(rail.nextRow.children.map(node => node.getAttribute("data-action")), ["copy-current"], "Copy Current alone on the row");
+  assert.equal(rail.nextRow.hasAttribute("data-bulk"), false);
   assert.equal(rail.flyout.getAttribute("role"), "group");
   assert.equal(rail.flyout.getAttribute("aria-label"), "Next Recipe actions");
   const REST_TITLE = {
@@ -173,12 +168,9 @@ test("three in the column - Current Recipe with Bulk Edit and Load Next in a fly
     "Next Recipe": "Next Recipe needs a line with layers on the stage",
     "Load Next into Current": "Load Next into Current is not available: no application is connected to Station commands.",
     "Copy Current into Next": "Copy Current into Next is not available: no application is connected to Station commands.",
-    "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands.",
-    "Bulk Edit": "Bulk Edit is not available: no application is connected to Station commands.",
-    "Apply resin to selected hoppers": "Apply resin to selected hoppers · select a hopper on a card first",
-    "Cancel bulk edit": "Cancel bulk edit · nothing is written; the selection is cleared"
+    "Smart Hoppers": "Smart Hoppers is not available: no application is connected to Station commands."
   };
-  for (const [button, label] of [[blend, "Current Recipe"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"], [rail.bulkButton, "Bulk Edit"], [rail.confirmButton, "Apply resin to selected hoppers"], [rail.cancelButton, "Cancel bulk edit"]]) {
+  for (const [button, label] of [[blend, "Current Recipe"], [weights, "Weights"], [next, "Next Recipe"], [promote, "Load Next into Current"], [copy, "Copy Current into Next"], [smart, "Smart Hoppers"]]) {
     assert.equal(button.getAttribute("type"), "button");
     assert.equal(button.getAttribute("aria-label"), label);
     assert.equal(button.getAttribute("title"), REST_TITLE[label]);
@@ -214,7 +206,7 @@ test("three in the column - Current Recipe with Bulk Edit and Load Next in a fly
   assert.ok(rail.flyout.hasAttribute("inert") && rail.flyout.getAttribute("aria-hidden") === "true", "folded: out of the tab order and the reader's tree");
   // Hidden until told there is a line: a rail with nothing to stand beside.
   assert.ok(rail.element.hidden);
-  assert.deepEqual(railModule.LABEL, { blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit", tools: "Tools", winding: "Winding Tension", totals: "Resin Totals", pressure: "Pressure", print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes" });
+  assert.deepEqual(railModule.LABEL, { blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers", next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next", tools: "Tools", winding: "Winding Tension", totals: "Resin Totals", pressure: "Pressure", print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes" });
 });
 
 test("the recipe faces' vocabulary: the hopper is Current, the folded sheet is Next; each switch draws its own object, each move the other face's object stood right with one arrow pointing left at the switch; the two moves share every arrow coordinate and the objects are faces on the plate", () => {
@@ -389,10 +381,9 @@ test("the stylesheet names no colour of its own, cuts every tile to the Handbook
   assert.match(read("station/styles/components/handbook.css"), /\.station-root \.station-handbook__launcher \{[^}]*left: var\(--station-space-4\);[^}]*bottom: var\(--station-space-4\);/);
   assert.doesNotMatch(css, /is-placed|data-room/);
   assert.doesNotMatch(css, /station-rail__control--reset/, "no reset tile: the reset is the timeline's");
-  // The bulk field, focused, looks as it does at rest: no ring, no
-  // shadow, no accent border.
-  assert.match(css, /\.station-root \.station-bulk-field__input:focus-visible \{[^}]*outline: none;[^}]*--station-field-shadow: none;/);
-  assert.doesNotMatch(css, /bulk-field__input:focus-visible \{[^}]*--station-field-border/);
+  // No bulk set, no field slot: the sheet knows nothing of a selection
+  // beyond the root's flag the moves are held under.
+  assert.doesNotMatch(css, /bulk|field-slot/);
   assert.doesNotMatch(css, /@media \(max-width|min-width/, "no breakpoint: the rail is desktop only, as Station is");
   // Every registered theme carries the tokens the rail spends.
   for (const theme of require("./station-theme.js").THEME_IDS) {
@@ -449,7 +440,7 @@ test("the Next switch shows the face and whether a plan exists, hands every clic
   assert.equal(next.disabled, false);
 });
 
-test("Load Next arms then confirms as one call, worded by the summary it was told; it is held with no plan, no offer, or a bulk selection open; Copy Current arms and confirms the same way, worded by what it replaces", () => {
+test("Load Next arms then confirms as one call, worded by the summary it was told; it is held with no plan, no offer, or a hopper selection open; Copy Current arms and confirms the same way, worded by what it replaces, and is held by a selection too", () => {
   const { rail, promote, copy, calls, timers, live, doc } = build();
   live();
   // Load Next stands under the Current face; Copy Current under Next. The
@@ -463,15 +454,21 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.equal(promote.disabled, false);
   assert.equal(promote.getAttribute("title"), "Load Next into Current · 2 resin changes · 1 percentage change");
   assert.match(copy.getAttribute("title"), /replacing what is planned/);
-  // A bulk selection open on the face holds it: the draft is finished or
-  // cancelled first, never dropped by a promotion.
-  rail.update({ bulk: { active: true, available: true, count: 1, resin: "" } });
+  // A hopper selection open on the cards holds both moves: the edit is
+  // applied or cancelled first, never dropped by a promotion or a copy.
+  rail.update({ selection: { active: true } });
+  assert.ok(rail.element.classList.contains("is-selection-open"));
   assert.equal(promote.disabled, true);
-  assert.equal(promote.getAttribute("title"), "Load Next into Current · finish or cancel the bulk edit first");
+  assert.equal(promote.getAttribute("title"), "Load Next into Current · apply or cancel the hopper edit first");
+  assert.equal(copy.disabled, true);
+  assert.equal(copy.getAttribute("title"), "Copy Current into Next · apply or cancel the hopper edit first");
   promote.click();
   assert.equal(rail.isArmed(), false, "held: no arming");
-  rail.update({ bulk: { active: false, available: true } });
+  assert.deepEqual(rail.getState().selection, { active: true });
+  rail.update({ selection: { active: false } });
+  assert.equal(rail.element.classList.contains("is-selection-open"), false);
   assert.equal(promote.disabled, false);
+  assert.equal(copy.disabled, false);
   promote.click();
   assert.deepEqual(calls, [], "the first click arms, and calls nothing");
   assert.equal(rail.isArmed(), true);
@@ -532,9 +529,9 @@ test("Load Next arms then confirms as one call, worded by the summary it was tol
   assert.equal(typeof doc, "object");
 });
 
-test("an armed copy disarms on its timeout, a click elsewhere, Escape, the focus leaving, the offer vanishing, the Next face closing, a bulk selection starting and the rail stepping back - each without a call", () => {
+test("an armed copy disarms on its timeout, a click elsewhere, Escape, the focus leaving, the offer vanishing, the Next face closing, a hopper selection opening and the rail stepping back - each without a call", () => {
   const { rail, copy, calls, timers, live, doc } = build();
-  const on = () => rail.update({ blend: { active: false, available: true }, next: { active: true, available: true, planned: true }, copy: { available: true }, bulk: { active: false, available: true } });
+  const on = () => rail.update({ blend: { active: false, available: true }, next: { active: true, available: true, planned: true }, copy: { available: true }, selection: { active: false } });
   live(); on();
   copy.click();
   assert.equal(rail.armedControl(), "copy");
@@ -562,8 +559,8 @@ test("an armed copy disarms on its timeout, a click elsewhere, Escape, the focus
   rail.update({ next: { active: false, available: true, planned: true } });
   assert.equal(rail.isArmed(), false, "the Next face closing disarmed it");
   on(); copy.click();
-  rail.update({ bulk: { active: true, available: true, count: 0, resin: "" } });
-  assert.equal(rail.isArmed(), false, "a bulk selection starting disarmed it");
+  rail.update({ selection: { active: true } });
+  assert.equal(rail.isArmed(), false, "a hopper selection opening disarmed it");
   on(); copy.click();
   rail.update({ withdrawn: true });
   assert.equal(rail.isArmed(), false, "the rail stepping back disarmed it");
@@ -574,9 +571,9 @@ test("an armed copy disarms on its timeout, a click elsewhere, Escape, the focus
   assert.deepEqual(calls, [], "none of it called anything");
 });
 
-test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, the face closing, and a bulk selection starting - each without a call; the arming is the shared helper's", () => {
+test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the focus leaving, the plan vanishing, the face closing, and a hopper selection opening - each without a call; the arming is the shared helper's", () => {
   const { rail, promote, calls, timers, live, doc } = build();
-  const on = () => rail.update({ blend: { active: true, available: true }, next: { active: false, available: true, planned: true }, promote: { available: true, summary: "1 resin change" }, bulk: { active: false, available: true } });
+  const on = () => rail.update({ blend: { active: true, available: true }, next: { active: false, available: true, planned: true }, promote: { available: true, summary: "1 resin change" }, selection: { active: false } });
   live(); on();
   promote.click();
   assert.equal(rail.armedControl(), "promote");
@@ -605,8 +602,8 @@ test("an armed promotion disarms on its timeout, a click elsewhere, Escape, the 
   rail.update({ blend: { active: false, available: true } });
   assert.equal(rail.isArmed(), false, "the Current face closing disarmed it");
   on(); promote.click();
-  rail.update({ bulk: { active: true, available: true, count: 0, resin: "" } });
-  assert.equal(rail.isArmed(), false, "a bulk selection starting disarmed it");
+  rail.update({ selection: { active: true } });
+  assert.equal(rail.isArmed(), false, "a hopper selection opening disarmed it");
   on(); promote.click();
   rail.update({ withdrawn: true });
   assert.equal(rail.isArmed(), false, "the rail stepping back disarmed it");
@@ -644,135 +641,29 @@ test("Smart Hoppers is the Weights switch's child: folded until the Weights face
 });
 
 /* ----------------------------------------------------------------------
- *   Bulk Edit: the recipe faces' child, and what it becomes
+ *   No Bulk Edit: the selection is the cards' and the header's
  * -------------------------------------------------------------------- */
 
-function blendOn(rail, bulk) {
-  rail.update({ hidden: false, blend: { active: true, available: true }, bulk: Object.assign({ active: false, available: true, count: 0, resin: "" }, bulk || {}) });
-}
-
-test("Bulk Edit unfolds beside Current Recipe only while that face is on, and asks the boot file on its click", () => {
-  const { rail, calls, live } = build({ onBulkEdit: () => calls.push("bulk") });
+test("the rail offers no Bulk Edit and takes no field: a selection is told as one flag, shown on the root, and holds the two moves; the stylesheet keeps the flyout's shape without a bulk set", () => {
+  const { rail, calls, live } = build();
   live();
-  assert.equal(rail.blendGroup.getAttribute("data-open"), "false");
-  assert.ok(rail.blendFlyout.hasAttribute("inert"));
-  blendOn(rail);
+  rail.update({ hidden: false, blend: { active: true, available: true }, selection: { active: true } });
   assert.equal(rail.blendGroup.getAttribute("data-open"), "true");
-  assert.equal(rail.blendFlyout.hasAttribute("inert"), false);
-  assert.equal(rail.bulkButton.disabled, false);
-  assert.match(rail.bulkButton.getAttribute("title"), /select hoppers on the cards/);
-  rail.bulkButton.click();
-  assert.deepEqual(calls, ["bulk"]);
-  // Not offered: held, with the reason.
-  blendOn(rail, { available: false, reason: "the application does not offer bulk resin editing from Station." });
-  assert.equal(rail.bulkButton.disabled, true);
-  assert.match(rail.bulkButton.getAttribute("title"), /does not offer bulk resin editing/);
-  rail.bulkButton.click();
-  assert.deepEqual(calls, ["bulk"]);
-  // The Weights face: Current's flyout folds with its children.
-  rail.update({ blend: { active: false, available: true }, weights: { active: true, available: true } });
-  assert.equal(rail.blendGroup.getAttribute("data-open"), "false");
-});
-
-test("on, Bulk Edit swaps in place for Confirm and Cancel; Confirm waits for a selected hopper and a drafted resin, both told by the boot file", () => {
-  const { rail, calls } = build({ onBulkConfirm: () => calls.push("confirm"), onBulkCancel: () => calls.push("cancel") });
-  blendOn(rail, { active: true, count: 0 });
-  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "true");
-  assert.ok(rail.element.classList.contains("is-bulk-active"));
-  assert.ok(rail.bulkButton.hasAttribute("hidden") && rail.bulkButton.hasAttribute("inert"));
-  assert.equal(rail.confirmButton.hasAttribute("hidden"), false);
-  assert.equal(rail.cancelButton.hasAttribute("hidden"), false);
-  assert.equal(rail.fieldSlot.hasAttribute("hidden"), false, "the field's slot shows with the selection");
-  assert.equal(rail.confirmButton.disabled, true);
-  assert.match(rail.confirmButton.getAttribute("title"), /select a hopper on a card first/);
-  rail.confirmButton.click();
+  assert.ok(rail.blendFlyout.hasAttribute("inert") === false);
+  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action")), ["promote-next"]);
+  assert.equal(rail.element.querySelector("input, datalist, label"), null);
+  assert.ok(rail.element.classList.contains("is-selection-open"));
   assert.deepEqual(calls, []);
-
-  blendOn(rail, { active: true, count: 2 });
-  assert.equal(rail.confirmButton.disabled, true, "no resin drafted yet");
-  assert.match(rail.confirmButton.getAttribute("title"), /enter the resin in the card's field for 2 hoppers/);
-  blendOn(rail, { active: true, count: 2, resin: "  LLDPE 1001 " });
-  assert.equal(rail.confirmButton.disabled, false);
-  assert.equal(rail.confirmButton.getAttribute("title"), 'Apply "LLDPE 1001" to 2 hoppers');
-  assert.equal(rail.confirmButton.getAttribute("aria-label"), "Apply resin to 2 hoppers");
-  rail.confirmButton.click();
-  assert.deepEqual(calls, ["confirm"]);
-  // The boot file ends the selection: back to Bulk Edit.
-  blendOn(rail, { active: false });
-  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
-  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
-  assert.ok(rail.confirmButton.hasAttribute("hidden") && rail.fieldSlot.hasAttribute("hidden"));
-  // A field handed in stands in the slot, above the row.
-  const doc2 = fakeDocument();
-  const field = doc2.createElement("label");
-  field.setAttribute("data-role", "bulk-resin");
-  const hosted = railModule.create(doc2, { bulkField: field });
-  assert.ok(hosted.fieldSlot.children[0] === field);
-  assert.ok(hosted.blendFlyout.contains(field), "in the Current flyout, so it folds and unfolds with it");
-  // Cancel.
-  blendOn(rail, { active: true, count: 1 });
-  rail.cancelButton.click();
-  assert.deepEqual(calls, ["confirm", "cancel"]);
-  const state = rail.getState();
-  assert.deepEqual(state.bulk, { active: true, available: true, reason: "", count: 1, resin: "" });
-  // Bulk on without the Current face is drawn folded and at rest: the boot
-  // file owns the mode, the rail shows what can be seen.
-  rail.update({ blend: { active: false, available: true } });
-  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
-  assert.equal(rail.bulkButton.hasAttribute("hidden"), false);
-});
-
-test("Bulk Edit is the Next face's child too: while that face is on the one bulk set stands at the head of the Next row, before Copy Current, on the Next bracket, works exactly as under Current Recipe, and goes back to the Current row when the face changes; the field's slot is lifted a row so the field stands in one place", () => {
-  const { rail, calls } = build({ onBulkEdit: () => calls.push("bulk"), onBulkConfirm: () => calls.push("confirm") });
-  rail.update({ hidden: false, blend: { active: false, available: true }, next: { active: true, available: true, planned: true }, bulk: { active: false, available: true } });
-  // The set moved: the Next row is [bulk set, Copy Current]; the Current row is Load Next alone.
-  assert.deepEqual(rail.nextRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-set", "copy-current"]);
-  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["promote-next"]);
-  assert.ok(rail.flyout.contains(rail.bulkButton) && rail.flyout.contains(rail.fieldSlot));
-  assert.equal(rail.flyout.getAttribute("data-open"), "true", "unfolded with the Next face");
-  assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
-  assert.equal(rail.bulkButton.disabled, false);
-  assert.match(rail.bulkButton.getAttribute("title"), /onto all of them in the plan$/);
-  rail.bulkButton.click();
-  assert.deepEqual(calls, ["bulk"]);
-  // On: the swap, on the Next row, under the Next group.
-  rail.update({ bulk: { active: true, available: true, count: 2, resin: "HDPE 9" } });
-  assert.equal(rail.nextRow.getAttribute("data-bulk"), "true");
-  assert.equal(rail.blendRow.getAttribute("data-bulk"), "false");
-  assert.equal(rail.nextGroup.getAttribute("data-bulk"), "true");
-  assert.equal(rail.blendGroup.getAttribute("data-bulk"), "false");
-  assert.ok(rail.element.classList.contains("is-bulk-active"));
-  assert.ok(rail.bulkButton.hasAttribute("hidden"));
-  assert.equal(rail.confirmButton.hasAttribute("hidden"), false);
-  assert.equal(rail.fieldSlot.hasAttribute("hidden"), false);
-  assert.equal(rail.confirmButton.disabled, false);
-  rail.confirmButton.click();
-  assert.deepEqual(calls, ["bulk", "confirm"]);
-  // The face changes: the set goes back to the head of the Current row, at rest.
-  rail.update({ blend: { active: true, available: true }, next: { active: false, available: true, planned: true }, bulk: { active: false, available: true } });
-  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-set", "promote-next"], "Load Next keeps the row's end");
-  assert.deepEqual(rail.nextRow.children.map(node => node.getAttribute("data-action")), ["copy-current"]);
-  assert.equal(rail.nextGroup.getAttribute("data-bulk"), "false");
-  assert.doesNotMatch(rail.bulkButton.getAttribute("title"), /in the plan/);
-  // Neither face: the set rests in the Current row, folded.
-  rail.update({ blend: { active: false, available: true } });
-  assert.deepEqual(rail.blendRow.children.map(node => node.getAttribute("data-action") || node.getAttribute("data-role")), ["bulk-set", "promote-next"]);
-  assert.equal(rail.blendFlyout.getAttribute("data-open"), "false");
+  const source = read("station/station-machine-rail.js");
+  assert.doesNotMatch(source, /onBulk|bulkField|bulkSet|fieldSlot|drawBulk|placeBulkSet|Bulk Edit"/, "the module still speaks of Bulk Edit");
   // The stylesheet: a flyout grows upward from the switch's row; the stem
-  // stays at the switch's row; the set is laid as the row's children and
-  // the swap is keyed on the row, not a group; the move at the row's end
-  // arrives a beat after the set; and under the Next group the field's
-  // slot is lifted by a tile and the gap - the Next row is one row lower
-  // than the Current row, so the field stands where it stands under the
-  // Current face, and never over the Current switch.
+  // stays at the switch's row; the move arrives a beat after the row
+  // unfolds; nothing of a bulk set or a field slot survives.
   const css = read("station/styles/components/machine-rail.css").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(css, /\.station-rail__flyout \{[^}]*bottom: 0;[^}]*flex-direction: column;[^}]*gap: var\(--station-space-2\);/);
   assert.match(css, /\.station-rail__flyout::before \{[^}]*bottom: calc\(var\(--station-handbook-launcher\) \/ 2\);/);
-  assert.match(css, /\.station-rail__bulk \{\s*display: contents;\s*\}/);
-  assert.match(css, /\.station-rail__row\[data-bulk="true"\] \.station-rail__control--confirm/);
-  assert.doesNotMatch(css, /station-rail__row--bulk/);
-  assert.doesNotMatch(css, /station-rail__group--blend\[data-bulk/);
+  assert.match(css, /\.station-rail__row \{[^}]*display: flex;[^}]*gap: var\(--station-space-2\);/);
   assert.match(css, /\.station-rail__flyout \.station-rail__control--promote,\s*\.station-rail__flyout \.station-rail__control--copy \{\s*transition-delay: var\(--station-motion-lead\);/);
-  assert.match(css, /\.station-rail__field-slot \{[^}]*bottom: calc\(100% \+ var\(--station-space-1\)\);/);
-  assert.match(css, /\.station-rail__group--next \.station-rail__field-slot \{\s*bottom: calc\(100% \+ var\(--station-space-1\) \+ var\(--station-handbook-launcher\) \+ var\(--station-space-2\)\);\s*\}/);
+  assert.doesNotMatch(css, /station-rail__bulk|station-rail__field-slot|station-bulk-field|data-bulk|station-rail-arrive/);
+  assert.match(css, /\.station-rail__glyph-stroke--bold \{\s*stroke-width: 1;\s*\}/, "the bold stroke the Tools and Pressure glyphs draw with");
 });

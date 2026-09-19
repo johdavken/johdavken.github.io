@@ -173,6 +173,19 @@
     return byLayer;
   }
 
+  /* Whether each recipe has anything to undo or redo, as the bridge
+   * projects it (station-state-bridge.js: two booleans per recipe, never
+   * the stacks). A demo line has no history; a snapshot without the
+   * field reads as none either way. */
+  function historyFrom(snapshot) {
+    const given = snapshot && snapshot.history && typeof snapshot.history === "object" ? snapshot.history : {};
+    const of = recipe => ({
+      canUndo: !!(given[recipe] && given[recipe].canUndo),
+      canRedo: !!(given[recipe] && given[recipe].canRedo)
+    });
+    return { current: of("current"), next: of("next") };
+  }
+
   /* Whether the application holds a plan at all. */
   function planFrom(snapshot) {
     return { planned: !!(snapshot && snapshot.nextRecipe && typeof snapshot.nextRecipe === "object" && Array.isArray(snapshot.nextRecipe.layers)) };
@@ -337,6 +350,7 @@
         job: jobStateFrom(snapshot),
         recipe: recipeFrom(snapshot),
         smartHoppers: smartHoppersFrom(snapshot),
+        history: historyFrom(snapshot),
         revision: typeof snapshot.revision === "number" ? snapshot.revision : null,
         label: snapshot.line && snapshot.line.linked ? "Live" : "Live (no line linked)",
         detail: snapshot.line && snapshot.line.linked
@@ -375,6 +389,8 @@
       job: jobStateFrom(demoSnapshot),
       recipe: recipeFrom(demoSnapshot),
       smartHoppers: smartHoppersFrom(demoSnapshot),
+      // And no history: a demo line was never edited.
+      history: historyFrom(null),
       revision: null,
       label: mode === MODE_DEMO ? "Demo (pinned)" : "Demo",
       detail: mode === MODE_DEMO
@@ -423,7 +439,10 @@
     return JSON.stringify({
       hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {},
       nextHopperState: resolved.nextHopperState || {}, nextLayerState: resolved.nextLayerState || {},
-      job: resolved.job || null, smartHoppers: resolved.smartHoppers || null
+      job: resolved.job || null, smartHoppers: resolved.smartHoppers || null,
+      // Whether there is anything to undo or redo moves with every edit,
+      // the operator's own or another device's: the card rail reads it.
+      history: resolved.history || null
     });
   }
 
@@ -433,5 +452,5 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return { MODE_AUTO, MODE_DEMO, normalizeResin, sameResin, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, otherResins, planFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
+  return { MODE_AUTO, MODE_DEMO, normalizeResin, sameResin, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, otherResins, planFrom, historyFrom, jobStateFrom, recipeFrom, smartHoppersFrom, configFromSnapshot, resolveSource, classifyChange };
 });

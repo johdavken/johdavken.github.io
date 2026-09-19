@@ -185,19 +185,20 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 function build() {
   const doc = fakeDocument();
   const clicks = [];
-  const rail = railModule.create(doc, { onCompare: () => clicks.push("compare"), onSize: () => clicks.push("size") });
+  const rail = railModule.create(doc, { onCompare: () => clicks.push("compare"), onSize: () => clicks.push("size"), onUndo: () => clicks.push("undo"), onRedo: () => clicks.push("redo") });
   return { doc, clicks, rail };
 }
 
-test("the rail is a group of two switches, Compare then Large, each a button with a glyph and no words; a click is handed back and changes nothing until the rail is told", () => {
+test("the rail is a group of two switches, Compare then Large, and under them the two history moves, Undo then Redo - each a button with a glyph and no words; a click is handed back and changes nothing until the rail is told", () => {
   const { rail, clicks } = build();
   assert.equal(rail.element.getAttribute("data-role"), "card-rail");
   assert.equal(rail.element.getAttribute("role"), "group");
-  assert.deepEqual(rail.element.children.map(n => n.getAttribute("data-action")), ["compare", "size"]);
+  assert.deepEqual(rail.element.children.map(n => n.getAttribute("data-action")), ["compare", "size", "undo", "redo"]);
   for (const button of rail.element.children) {
     assert.equal(button.tagName, "BUTTON");
     assert.equal(button.getAttribute("type"), "button");
-    assert.equal(button.getAttribute("aria-pressed"), "false");
+    const move = ["undo", "redo"].includes(button.getAttribute("data-action"));
+    assert.equal(button.getAttribute("aria-pressed"), move ? null : "false", "a move is not a switch");
     assert.equal(button.textContent, "", "words on the tile");
     assert.equal(button.children.length, 1);
     assert.equal(button.children[0].nodeName, "svg");
@@ -208,10 +209,20 @@ test("the rail is a group of two switches, Compare then Large, each a button wit
   }
   assert.ok(rail.compareButton === rail.element.children[0]);
   assert.ok(rail.sizeButton === rail.element.children[1]);
+  assert.ok(rail.undoButton === rail.element.children[2]);
+  assert.ok(rail.redoButton === rail.element.children[3]);
+  assert.ok(rail.undoButton.classList.contains("station-card-rail__control--history"), "the step under the switches is the first move's");
+  assert.equal(rail.redoButton.classList.contains("station-card-rail__control--history"), false);
   assert.equal(rail.element.getAttribute("data-size"), "normal");
+  // The moves are held until told there is something to move.
+  assert.equal(rail.undoButton.disabled, true);
+  assert.equal(rail.redoButton.disabled, true);
+  assert.equal(rail.undoButton.getAttribute("title"), "Undo · not available");
   rail.compareButton.click();
   rail.sizeButton.click();
-  assert.deepEqual(clicks, ["compare", "size"]);
+  rail.undoButton.click();
+  rail.redoButton.click();
+  assert.deepEqual(clicks, ["compare", "size"], "a held move handed a click back");
   assert.equal(rail.compareButton.getAttribute("aria-pressed"), "false", "the rail decided for itself");
   assert.equal(rail.sizeButton.getAttribute("aria-pressed"), "false");
   // A click does not reach the stage under the rail.
@@ -244,7 +255,7 @@ test("told: Compare shows on, held with its reason, and off; Large shows on and 
   assert.ok(rail.sizeButton.classList.contains("is-active"));
   assert.equal(rail.element.getAttribute("data-size"), "large");
   assert.match(rail.sizeButton.getAttribute("title"), /^Large cards on · /);
-  assert.deepEqual(rail.getState(), { compare: { active: false, available: true, reason: "" }, size: "large" });
+  assert.deepEqual(rail.getState(), { compare: { active: false, available: true, reason: "" }, size: "large", history: { canUndo: false, canRedo: false, available: false, reason: "" } });
   rail.update({ size: "huge" });
   assert.equal(rail.element.getAttribute("data-size"), "large", "an unknown size was taken");
   rail.update({ size: "normal" });
@@ -253,6 +264,44 @@ test("told: Compare shows on, held with its reason, and off; Large shows on and 
   // Nothing of the stage: no job read, no command, no storage.
   const source = read("station/station-card-rail.js");
   assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), /dispatch|PolynStationCommand|localStorage|sessionStorage|getBoundingClientRect|ResizeObserver/);
+});
+
+test("told the history: Undo and Redo are each offered only while there is something to move, say why when held, and hand one click each back; the glyphs are one arrow mirrored", () => {
+  const { rail, clicks } = build();
+  rail.update({ history: { canUndo: true, canRedo: false, available: true } });
+  assert.equal(rail.undoButton.disabled, false);
+  assert.equal(rail.undoButton.hasAttribute("disabled"), false);
+  assert.equal(rail.undoButton.getAttribute("title"), "Undo · take back the last edit to this recipe");
+  assert.equal(rail.redoButton.disabled, true);
+  assert.equal(rail.redoButton.getAttribute("title"), "Redo · nothing to redo");
+  rail.undoButton.click();
+  rail.redoButton.click();
+  assert.deepEqual(clicks, ["undo"]);
+  rail.update({ history: { canUndo: false, canRedo: true, available: true } });
+  assert.equal(rail.undoButton.disabled, true);
+  assert.equal(rail.undoButton.getAttribute("title"), "Undo · nothing to undo");
+  assert.equal(rail.redoButton.disabled, false);
+  assert.equal(rail.redoButton.getAttribute("title"), "Redo · put back the edit last undone");
+  rail.redoButton.click();
+  assert.deepEqual(clicks, ["undo", "redo"]);
+  rail.update({ history: { canUndo: true, canRedo: true, available: false, reason: "the weight cards keep no edit history" } });
+  assert.equal(rail.undoButton.disabled, true);
+  assert.equal(rail.redoButton.disabled, true);
+  assert.equal(rail.undoButton.getAttribute("title"), "Undo · the weight cards keep no edit history");
+  assert.equal(rail.redoButton.getAttribute("title"), "Redo · the weight cards keep no edit history");
+  assert.deepEqual(rail.getState().history, { canUndo: true, canRedo: true, available: false, reason: "the weight cards keep no edit history" });
+  // A click on a move does not reach the stage under the rail.
+  rail.update({ history: { canUndo: true, canRedo: true, available: true } });
+  const event = makeEvent("click", { bubbles: true });
+  rail.undoButton.dispatchEvent(event);
+  assert.equal(event.stopped, true);
+  // The glyphs: the same two paths, the redo's mirrored across the tile.
+  const undoArt = rail.undoButton.children[0].children;
+  const redoArt = rail.redoButton.children[0].children;
+  assert.equal(undoArt.length, 2);
+  assert.deepEqual(undoArt.map(n => n.getAttribute("transform")), [null, null]);
+  assert.deepEqual(redoArt.map(n => n.getAttribute("transform")), ["translate(20 0) scale(-1 1)", "translate(20 0) scale(-1 1)"]);
+  assert.deepEqual(undoArt.map(n => n.getAttribute("d")), redoArt.map(n => n.getAttribute("d")));
 });
 
 /* ----------------------------------------------------------------------
@@ -458,14 +507,26 @@ function boot(options) {
   const contract = window.PolynStationCommandContract;
   const calls = [];
   const handle = stateBridge.connect({ read: () => snap });
+  /* The fake application's history: what the bridge says per recipe,
+   * set by a test; an undo or a redo answers unchanged when there is
+   * nothing to move, as the executor refuses, and otherwise flips the
+   * two flags as one step would. */
+  snap.history = settings.history || { current: { canUndo: false, canRedo: false }, next: { canUndo: false, canRedo: false } };
   window.PolynStationCommandBridge.connect({
     execute(command, args) {
       calls.push({ command, args: JSON.parse(JSON.stringify(args)) });
+      if (command === "undo" || command === "redo") {
+        const entry = snap.history[args.recipe];
+        if (command === "undo" ? !entry.canUndo : !entry.canRedo) return contract.failure("nothing_to_undo", { message: command === "undo" ? "There is nothing to undo." : "There is nothing to redo." });
+        if (command === "undo") { entry.canUndo = false; entry.canRedo = true; } else { entry.canRedo = false; entry.canUndo = true; }
+        // The edit taken back: the running recipe's A1 resin.
+        snap.layers[0].hoppers[1].resinName = command === "undo" ? "UNDONE" : "REDONE";
+      }
       snap.revision += 1;
       handle.publish();
       return contract.success({ changed: true, revision: stateBridge.getRevision(), persisted: true, snapshot: stateBridge.getSnapshot() });
     },
-    capabilities: [...contract.COMMANDS]
+    capabilities: settings.capabilities || [...contract.COMMANDS]
   });
   new vm.Script(read("station/station.js"), { filename: "station/station.js" }).runInContext(context);
 
@@ -481,6 +542,10 @@ function boot(options) {
     host: () => machine.querySelectorAll("[data-role='card-rail']").find(n => n.nodeName === "foreignObject") || null,
     compare: () => rail() && rail().querySelector("[data-action='compare']"),
     size: () => rail() && rail().querySelector("[data-action='size']"),
+    undo: () => rail() && rail().querySelector("[data-action='undo']"),
+    redo: () => rail() && rail().querySelector("[data-action='redo']"),
+    status: () => q("[data-station-mount='status']").textContent,
+    resinOf: (layer, index) => (machine.querySelectorAll("[data-role='blend-card']").find(c => c.getAttribute("data-layer") === layer) || { textContent: "" }).textContent,
     cards: () => machine.querySelectorAll("[data-role='blend-card']"),
     editors: () => machine.querySelectorAll("[data-role='blend-card'] .station-editor"),
     shown: () => machine.querySelectorAll("[data-role='blend-card'] .station-editor").map(e => e.getAttribute("data-show-other")),
@@ -638,6 +703,54 @@ test("booted: Large stamps every card in place - the same cards, no redraw, no c
   assert.equal(bare.cards().length, 3);
   assert.equal(bare.host(), null);
   assert.deepEqual(bare.sizes(), ["normal", "normal", "normal"]);
+});
+
+test("booted: Undo and Redo follow the bridge's history for the face's recipe - held while there is nothing to move, on the Weights face, and where the pair is not offered; a click is ONE undo or redo addressed to that recipe, and the cards show the answer", async () => {
+  const s = boot({ planned: true, history: { current: { canUndo: true, canRedo: false }, next: { canUndo: false, canRedo: true } } });
+  s.blend.click();
+  assert.equal(s.undo().disabled, false, "the running recipe has an edit to take back");
+  assert.equal(s.redo().disabled, true);
+  assert.equal(s.redo().getAttribute("title"), "Redo · nothing to redo");
+  s.undo().click();
+  assert.deepEqual(s.calls, [{ command: "undo", args: { recipe: "current" } }]);
+  assert.match(s.status(), /Took back the last edit\./);
+  assert.match(s.resinOf("A"), /UNDONE/, "the card shows what the application now holds");
+  assert.equal(s.undo().disabled, true, "the answer's history: nothing more to undo");
+  assert.equal(s.redo().disabled, false);
+  s.redo().click();
+  assert.deepEqual(s.calls.map(c => c.command), ["undo", "redo"]);
+  assert.match(s.status(), /Put back the edit last undone\./);
+  assert.match(s.resinOf("A"), /REDONE/);
+  assert.equal(s.redo().disabled, true);
+  // The Next face addresses the plan's history.
+  s.next.click();
+  assert.equal(s.undo().disabled, true, "the plan has nothing to undo");
+  assert.equal(s.redo().disabled, false, "and one edit to put back");
+  s.redo().click();
+  assert.deepEqual(s.calls[2], { command: "redo", args: { recipe: "next" } });
+  assert.match(s.status(), /in the plan\./);
+  // The Weights face holds both, with the reason.
+  s.weights.click();
+  assert.equal(s.undo().disabled, true);
+  assert.equal(s.undo().getAttribute("title"), "Undo · the weight cards keep no edit history");
+  assert.equal(s.redo().disabled, true);
+  s.undo().click();
+  assert.equal(s.calls.length, 3, "a held move dispatched");
+  // A publish from elsewhere moves the offer.
+  s.weights.click();
+  s.blend.click();
+  s.snap.history.current = { canUndo: false, canRedo: false };
+  s.snap.revision += 1;
+  s.handle.publish();
+  await tick();
+  assert.equal(s.undo().disabled, true);
+  assert.equal(s.redo().disabled, true);
+  // Without the pair on offer, both are held and say why.
+  const partial = boot({ capabilities: [...s.window.PolynStationCommandContract.COMMANDS].filter(c => c !== "undo" && c !== "redo"), history: { current: { canUndo: true, canRedo: true }, next: { canUndo: true, canRedo: true } } });
+  partial.blend.click();
+  assert.equal(partial.undo().disabled, true);
+  assert.match(partial.undo().getAttribute("title"), /does not offer undo/);
+  assert.equal(partial.redo().disabled, true);
 });
 
 /* ----------------------------------------------------------------------

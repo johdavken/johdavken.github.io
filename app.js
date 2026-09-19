@@ -10457,6 +10457,59 @@
         return done(true, persisted);
       },
 
+      /* Station's hopper edit over a selection: each listed hopper's resin
+       * and/or blend, then ONE tail - one save, one sync notification, one
+       * history entry - as setHopperResins is for the resin alone. Every
+       * position is resolved and every blend checked before anything is
+       * written, so a refusal leaves the recipe exactly as it was: H1's
+       * blend is derived (refused as setHopperBlend refuses it), and each
+       * layer's other hoppers must still total with every listed blend in
+       * place - checked with the same validateHopperPercentages the field
+       * uses, over the layer's candidate shares. A list that changes
+       * nothing is a no-op. H1 is recomputed on every layer whose blend
+       * moved. */
+      setHopperAssignments(args){
+        const writes = [];
+        const candidates = new Map();   // layer object -> [pct per hopper 1..n]
+        let release = null;
+        for (const entry of args.hoppers){
+          const hasPct = Object.prototype.hasOwnProperty.call(entry, "pct");
+          if (hasPct && entry.index === 0){ if (release) release(); return contract.failure("h1_derived"); }
+          const at = locate(args.recipe, entry.layer, entry.index);
+          if (at.failure){ if (release) release(); return at.failure; }
+          release = release || at.release;
+          const write = { hopper: at.hopper, layer: at.layer };
+          if (Object.prototype.hasOwnProperty.call(entry, "resin")){
+            const resin = normName(entry.resin);
+            if (normName(at.hopper.resinName) !== resin) write.resin = resin;
+          }
+          if (hasPct){
+            if (!candidates.has(at.layer)) candidates.set(at.layer, at.layer.hoppers.slice(1).map(item=>clampNum(item.pct)));
+            candidates.get(at.layer)[entry.index - 1] = entry.pct;
+            if (clampNum(at.hopper.pct) !== entry.pct) write.pct = entry.pct;
+          }
+          if (write.resin !== undefined || write.pct !== undefined) writes.push(write);
+        }
+        for (const [, others] of candidates){
+          const total = validation.validateHopperPercentages(others);
+          if (!total.valid){
+            if (release) release();
+            return contract.failure("blend_total", { total: total.total, message: total.message });
+          }
+        }
+        if (!writes.length){ if (release) release(); return unchanged(); }
+        const before = snapshotRecipeEdit(args.recipe);
+        const touched = new Set();
+        for (const write of writes){
+          if (write.resin !== undefined) write.hopper.resinName = write.resin;
+          if (write.pct !== undefined){ write.hopper.pct = write.pct; touched.add(write.layer); }
+        }
+        for (const layer of touched) recomputeAutoH1(layer);
+        const persisted = commit({ sync: true });
+        recordRecipeEdit(before, args.recipe);
+        return done(true, persisted);
+      },
+
       /* The toolbar's Undo/Redo, addressed explicitly. Checked before the
        * helper runs so an empty stack never touches Next's working copy. */
       undo(args){

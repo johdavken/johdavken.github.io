@@ -984,12 +984,14 @@
 }
 
 /* ---------------------------------------------------------------------
- *   Bulk Edit: the badges as selection toggles
+ *   The hopper selection: the badges as selection toggles
  * -------------------------------------------------------------------
- * While the rail's Bulk Edit is on, every badge is a button (the row's
- * one selection toggle) and says so: a pointer, a ring on hover, and the
- * accent as a fill while its hopper is selected - the same look the
- * selected badge has under the open layer, so "selected" is one colour.
+ * While a recipe face is on and the edit is on offer, every badge is a
+ * button (the row's one selection toggle) and says so: a pointer, a ring
+ * on hover, and the accent as a fill while its hopper is selected - the
+ * same look the selected badge has under the open layer, so "selected"
+ * is one colour. The selection is written from the header's hopper
+ * editor (station-hopper-edit.js).
  */
 
 .station-root .station-editor__badge--select {
@@ -1012,13 +1014,13 @@
   color: var(--station-accent);
 }
 
-.station-editor__item.is-bulk-selected .station-editor__badge {
+.station-editor__item.is-picked .station-editor__badge {
   border-color: var(--station-accent);
   background: var(--station-accent);
   color: var(--station-text-on-accent);
 }
 
-.station-editor.is-selectable .station-editor__item.is-bulk-selected {
+.station-editor.is-selectable .station-editor__item.is-picked {
   background: var(--station-accent-soft);
 }
 

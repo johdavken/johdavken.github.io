@@ -37,8 +37,16 @@
 .station-header {
   grid-area: header;
   display: flex;
+  /* The row may break once: with the hopper editor showing on a narrow
+     window there is no room for it beside the ribbon and the console, so
+     the editor and the console take a second line under the first (the
+     editor wears the glass so it reads as a bar over the stage). The
+     first line keeps the track's height and centres in it as before -
+     the job slot holds the track's height, so the line does. */
+  flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
-  gap: var(--station-space-3);
+  gap: 0 var(--station-space-3);
   padding: 0 var(--station-space-4);
   /* No surface and no rule under it: the name, the ribbon and the line
      console stand in the stage's own room, which reaches up behind them
@@ -96,16 +104,33 @@
  * the header's own, before the spare width the line console takes. */
 .station-header__job {
   display: flex;
+  flex: none;
   align-items: center;
+  min-height: var(--station-header-height);
   min-width: 0;
   margin-left: var(--station-space-5);
 }
 
+/* The hopper editor's slot, after the job readouts: the form the
+ * selected hoppers are written from (hopper-edit.css), the header's own
+ * gap off the ribbon; no width of its own while nothing is selected. */
+.station-header__edit {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  padding: var(--station-space-1) 0;
+}
+
 /* The line console's slot: takes the header's spare width so the console
- * sits at the far end, and lets the popover it opens overhang the stage. */
+ * sits at the far end, and lets the popover it opens overhang the stage.
+ * It never gives width up: at the narrowest window the hopper editor's
+ * resin field is what yields (hopper-edit.css), so the console stays
+ * whole. */
 .station-header__connection {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
+  align-items: center;
   justify-content: flex-end;
   min-width: 0;
 }

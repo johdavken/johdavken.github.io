@@ -13,7 +13,7 @@
  *
  * WHAT IT DEFINES
  *
- *   COMMANDS       the vocabulary: twenty-six names, nothing else is a command
+ *   COMMANDS       the vocabulary: twenty-seven names, nothing else is a command
  *   ARGUMENTS      which arguments each command takes
  *   normalize*     one normalizer per argument, in the terms the application
  *                  already uses (its own resin-name trimming, its own
@@ -108,9 +108,15 @@
     "clearLayer",       // { recipe, layer }  every hopper on the layer reset -
                         //   resin, blend, tracking and pump state - the grid's
                         //   Reset all, scoped to one layer
-    "setHopperResins"   // { recipe, resins: [{ layer, index, resin }] }
+    "setHopperResins",  // { recipe, resins: [{ layer, index, resin }] }
                         //   several hoppers' resins in one request - the
                         //   grid's Bulk edit apply - written and saved once
+    "setHopperAssignments" // { recipe, hoppers: [{ layer, index, resin?, pct? }] }
+                        //   several hoppers' resin and/or blend in one
+                        //   request - Station's hopper edit over a
+                        //   selection: each entry names what changes and
+                        //   leaves out what does not; written and saved
+                        //   once, one history entry
   ]);
 
   /* The three runtime commands. Tracking and pump-off are operational state
@@ -172,14 +178,14 @@
    * executor's question; a plan that would change nothing is a no-op. */
   const PLAN_COMMANDS = Object.freeze(["promoteNextRecipe", "copyCurrentToNext"]);
 
-  /* The three layer commands. Each is a recipe edit over more than one
+  /* The four layer commands. Each is a recipe edit over more than one
    * hopper at once - a layer pasted onto another, a layer emptied, a resin
    * written onto a selection - so each names its recipe like a hopper
    * command does, may address the plan as well as the running recipe, and
    * is carried out by the application as ONE edit: one history entry, one
    * save, one sync notification. Which positions exist, and what the paste
    * carries into a core layer, is the executor's. */
-  const LAYER_COMMANDS = Object.freeze(["copyLayer", "clearLayer", "setHopperResins"]);
+  const LAYER_COMMANDS = Object.freeze(["copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"]);
 
   /* The two ways a line measures its hoppers for Smart Hoppers, as
    * line-identity.js names the geometry (`hopperGeometry`), so the value
@@ -219,7 +225,8 @@
     copyCurrentToNext: Object.freeze([]),
     copyLayer: Object.freeze(["recipe", "layer", "toLayer"]),
     clearLayer: Object.freeze(["recipe", "layer"]),
-    setHopperResins: Object.freeze(["recipe", "resins"])
+    setHopperResins: Object.freeze(["recipe", "resins"]),
+    setHopperAssignments: Object.freeze(["recipe", "hoppers"])
   });
 
   /* The error vocabulary, complete now. The first three and the last are
@@ -565,6 +572,55 @@
     return { ok: true, value: Object.freeze(out) };
   }
 
+  /* A list of assignments for Station's hopper edit: the resin list's
+   * rules - non-empty, capped, no position twice - over { layer, index,
+   * resin?, pct? } entries. Each entry carries what it changes and leaves
+   * out what it does not: a resin (read by setHopperResin's normalizer;
+   * "" clears it), a blend (setHopperBlend's; 0..100), or both - and an
+   * entry naming neither is a contradiction, not a no-op. Whether a
+   * position exists, whether its blend may be set (H1 is derived) and
+   * whether the layer still totals are the executor's. */
+  function normalizeAssignmentList(value) {
+    if (!Array.isArray(value) || value.length === 0) {
+      return { ok: false, code: "bad_argument", message: "List the hoppers and what changes on each." };
+    }
+    if (value.length > MAX_WEIGHT_ENTRIES) {
+      return { ok: false, code: "bad_argument", message: `No more than ${MAX_WEIGHT_ENTRIES} hoppers can be edited at once.` };
+    }
+    const out = [];
+    const seen = new Set();
+    for (const entry of value) {
+      const given = isPlainObject(entry) ? entry : {};
+      const layer = normalizeLayer(given.layer);
+      if (!layer.ok) return layer;
+      const index = normalizeIndex(given.index);
+      if (!index.ok) return index;
+      const hasResin = given.resin !== undefined && given.resin !== null;
+      const hasPct = given.pct !== undefined && given.pct !== null;
+      if (!hasResin && !hasPct) {
+        return { ok: false, code: "bad_argument", message: `Hopper ${layer.value}:${index.value} names neither a resin nor a percentage.` };
+      }
+      const assignment = { layer: layer.value, index: index.value };
+      if (hasResin) {
+        const resin = normalizeResin(given.resin);
+        if (!resin.ok) return resin;
+        assignment.resin = resin.value;
+      }
+      if (hasPct) {
+        const pct = normalizePercentage(given.pct);
+        if (!pct.ok) return pct;
+        assignment.pct = pct.value;
+      }
+      const key = `${layer.value}:${index.value}`;
+      if (seen.has(key)) {
+        return { ok: false, code: "bad_argument", message: `Hopper ${key} is listed twice.` };
+      }
+      seen.add(key);
+      out.push(Object.freeze(assignment));
+    }
+    return { ok: true, value: Object.freeze(out) };
+  }
+
   /* An absolute instant as epoch milliseconds, or null to clear. Whether
    * the instant is in the past, or further away than the application can
    * store, is the executor's question: it needs the clock. */
@@ -598,7 +654,8 @@
     geometries: normalizeGeometryList,
     circumference: normalizeMeasure,
     enabled: normalizeFlag,
-    resins: normalizeResinList
+    resins: normalizeResinList,
+    hoppers: normalizeAssignmentList
   });
 
   /**
@@ -661,6 +718,7 @@
     normalizeMeasure,
     normalizeGeometryList,
     normalizeResinList,
+    normalizeAssignmentList,
     normalizeTimestamp,
     normalizeArguments,
     success,

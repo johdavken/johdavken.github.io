@@ -1,10 +1,12 @@
-/* The card rail: the short column of switches riding the right side of
+/* The card rail: the short column of controls riding the right side of
  * the far-right layer card while Blend Edit is on.
  *
  * WHAT IT IS
  *
- * Two switches, and nothing that unfolds: each changes how EVERY card on
- * the stage shows, at once, and shows that state as its own.
+ * Two switches, then two moves under them, and nothing that unfolds.
+ * Each switch changes how EVERY card on the stage shows, at once, and
+ * shows that state as its own; each move takes the face's recipe one
+ * edit back, or forward.
  *
  *   Compare     the other recipe's resin under every row that differs -
  *               the plan's on the Current face, the running job's on the
@@ -17,6 +19,13 @@
  *               quarter, the cards themselves as they are (focus-editor
  *               .css reads the size off each card's group, which the
  *               renderer stamps in place). Every face has it.
+ *   Undo        the face's recipe one edit back: the application's own
+ *   Redo        history for that recipe (its Recipe grid's toolbar has
+ *               the same pair), asked for through the boot file as one
+ *               command each. Held, with the reason, while the bridge
+ *               says there is nothing to take back or put back, on the
+ *               Weights face (the weights keep no edit history) and
+ *               where the command is not on offer.
  *
  * WHERE IT STANDS
  *
@@ -28,10 +37,11 @@
  *
  * WHAT IT HOLDS
  *
- * Presentation state only: what each switch was last told to show. It
+ * Presentation state only: what each control was last told to show. It
  * reads no job, keeps no mode of its own and dispatches nothing - a
- * click is handed to the boot file, which keeps the two states for the
- * session and tells the rail (update()) and the cards what to show.
+ * click is handed to the boot file, which keeps the two switches' states
+ * for the session, asks the application for an undo or a redo, and tells
+ * the rail (update()) and the cards what to show.
  */
 (function (root, factory) {
   const api = factory();
@@ -52,7 +62,9 @@
 
   const LABEL = Object.freeze({
     compare: "Compare",
-    large: "Large cards"
+    large: "Large cards",
+    undo: "Undo",
+    redo: "Redo"
   });
 
   function element(doc, name, className, attributes) {
@@ -107,6 +119,21 @@
     return svg;
   }
 
+  /* Undo and Redo: one arrow each, curling back over itself to the left
+   * and to the right - the pair every toolbar draws, so they read at a
+   * glance. Mirror images: the same path flipped about the tile's
+   * centre line. */
+  function historyGlyph(doc, forward) {
+    const svg = glyphTile(doc);
+    const mirror = forward ? { transform: `translate(${GLYPH} 0) scale(-1 1)` } : {};
+    svg.appendChild(svgNode(doc, "path", "station-card-rail__glyph-stroke", Object.assign({ d: "M 4 8.5 L 11.5 8.5 C 14.5 8.5 16.5 10.3 16.5 12.8 C 16.5 15.3 14.5 17 11.5 17 L 8 17" }, mirror)));
+    svg.appendChild(svgNode(doc, "path", "station-card-rail__glyph-stroke", Object.assign({ d: "M 7.2 5 L 3.5 8.5 L 7.2 12" }, mirror)));
+    return svg;
+  }
+
+  function undoGlyph(doc) { return historyGlyph(doc, false); }
+  function redoGlyph(doc) { return historyGlyph(doc, true); }
+
   /**
    * Build the rail.
    *
@@ -114,16 +141,24 @@
    * @param {object} [options]
    * @param {function} [options.onCompare] () => void; the Compare switch was clicked
    * @param {function} [options.onSize]    () => void; the Large switch was clicked
-   * @returns {{ element, compareButton, sizeButton, update, getState }}
+   * @param {function} [options.onUndo]    () => void; Undo was clicked
+   * @param {function} [options.onRedo]    () => void; Redo was clicked
+   * @returns {{ element, compareButton, sizeButton, undoButton, redoButton, update, getState }}
    */
   function create(doc, options) {
     const settings = options || {};
     const onCompare = typeof settings.onCompare === "function" ? settings.onCompare : () => {};
     const onSize = typeof settings.onSize === "function" ? settings.onSize : () => {};
+    const onUndo = typeof settings.onUndo === "function" ? settings.onUndo : () => {};
+    const onRedo = typeof settings.onRedo === "function" ? settings.onRedo : () => {};
 
     const state = {
       compare: { active: false, available: true, reason: "" },
-      size: "normal"
+      size: "normal",
+      /* The history pair: whether the recipe has an edit to take back or
+       * put back, whether the application offers the pair at all, and
+       * why not when it does not. */
+      history: { canUndo: false, canRedo: false, available: false, reason: "" }
     };
 
     const rootEl = element(doc, "div", "station-card-rail", { "data-role": "card-rail", role: "group", "aria-label": "Card display" });
@@ -149,6 +184,36 @@
     });
     rootEl.appendChild(sizeButton);
 
+    /* The history pair, under the switches with a step between: momentary
+     * controls, not switches - no pressed state, just held or not. */
+    const undoButton = element(doc, "button", "station-card-rail__control station-card-rail__control--history", {
+      type: "button", "data-action": "undo", "aria-label": LABEL.undo, title: LABEL.undo
+    });
+    undoButton.appendChild(undoGlyph(doc));
+    undoButton.addEventListener("click", event => {
+      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+      if (undoButton.disabled) return;
+      onUndo();
+    });
+    rootEl.appendChild(undoButton);
+
+    const redoButton = element(doc, "button", "station-card-rail__control", {
+      type: "button", "data-action": "redo", "aria-label": LABEL.redo, title: LABEL.redo
+    });
+    redoButton.appendChild(redoGlyph(doc));
+    redoButton.addEventListener("click", event => {
+      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+      if (redoButton.disabled) return;
+      onRedo();
+    });
+    rootEl.appendChild(redoButton);
+
+    function hold(button, held) {
+      button.disabled = held;
+      if (held) button.setAttribute("disabled", "");
+      else button.removeAttribute("disabled");
+    }
+
     function paint() {
       const compare = state.compare;
       compareButton.setAttribute("aria-pressed", compare.active ? "true" : "false");
@@ -165,6 +230,16 @@
       sizeButton.classList.toggle("is-active", large);
       sizeButton.setAttribute("title", large ? `${LABEL.large} on · click for the normal size` : `${LABEL.large} · larger type on every card`);
       rootEl.setAttribute("data-size", state.size);
+
+      const history = state.history;
+      hold(undoButton, !history.available || !history.canUndo);
+      hold(redoButton, !history.available || !history.canRedo);
+      undoButton.setAttribute("title", !history.available
+        ? `${LABEL.undo} · ${history.reason || "not available"}`
+        : (history.canUndo ? `${LABEL.undo} · take back the last edit to this recipe` : `${LABEL.undo} · nothing to undo`));
+      redoButton.setAttribute("title", !history.available
+        ? `${LABEL.redo} · ${history.reason || "not available"}`
+        : (history.canRedo ? `${LABEL.redo} · put back the edit last undone` : `${LABEL.redo} · nothing to redo`));
     }
 
     /**
@@ -173,9 +248,18 @@
      * @param {object} next
      * @param {object} [next.compare] { active, available, reason }
      * @param {string} [next.size]    "normal" | "large"
+     * @param {object} [next.history] { canUndo, canRedo, available, reason }
      */
     function update(next) {
       const patch = next || {};
+      if (patch.history && typeof patch.history === "object") {
+        state.history = {
+          canUndo: !!patch.history.canUndo,
+          canRedo: !!patch.history.canRedo,
+          available: patch.history.available !== false,
+          reason: typeof patch.history.reason === "string" ? patch.history.reason : ""
+        };
+      }
       if (patch.compare && typeof patch.compare === "object") {
         state.compare = {
           active: !!patch.compare.active,
@@ -188,12 +272,12 @@
     }
 
     function getState() {
-      return { compare: Object.assign({}, state.compare), size: state.size };
+      return { compare: Object.assign({}, state.compare), size: state.size, history: Object.assign({}, state.history) };
     }
 
     paint();
-    return { element: rootEl, compareButton, sizeButton, update, getState };
+    return { element: rootEl, compareButton, sizeButton, undoButton, redoButton, update, getState };
   }
 
-  return { TILE, GAP, GLYPH, LABEL, create };
+  return { TILE, GAP, GLYPH, LABEL, compareGlyph, largeGlyph, undoGlyph, redoGlyph, create };
 });

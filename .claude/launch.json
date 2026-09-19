@@ -72,6 +72,16 @@
         "8799"
       ],
       "port": 8799
+    },
+    {
+      "name": "station-hopper-edit",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/serve.js",
+        "--port",
+        "8790"
+      ],
+      "port": 8790
     }
   ]
 }

@@ -17,15 +17,16 @@ function bridge(options) {
   return {
     calls,
     isAvailable: () => settings.available !== false,
-    capabilities: () => settings.capabilities || [...contract.LAYER_COMMANDS],
+    capabilities: () => settings.capabilities || [...contract.LAYER_COMMANDS, "undo", "redo"],
     dispatch: (command, args) => { calls.push({ command, args }); return settings.answer || { ok: true, changed: true }; }
   };
 }
 
-test("the three actions ride on the three layer commands, and the module holds nothing", () => {
-  assert.deepEqual([...actions.ACTIONS], ["copy", "clear", "resins"]);
-  assert.deepEqual(actions.COMMAND, { copy: "copyLayer", clear: "clearLayer", resins: "setHopperResins" });
-  for (const action of actions.ACTIONS) assert.ok(contract.LAYER_COMMANDS.includes(actions.COMMAND[action]));
+test("the six actions ride on the four layer commands and the history pair, and the module holds nothing", () => {
+  assert.deepEqual([...actions.ACTIONS], ["copy", "clear", "resins", "assign", "undo", "redo"]);
+  assert.deepEqual(actions.COMMAND, { copy: "copyLayer", clear: "clearLayer", resins: "setHopperResins", assign: "setHopperAssignments", undo: "undo", redo: "redo" });
+  for (const action of ["copy", "clear", "resins", "assign"]) assert.ok(contract.LAYER_COMMANDS.includes(actions.COMMAND[action]));
+  for (const action of ["undo", "redo"]) assert.ok(contract.COMMANDS.includes(actions.COMMAND[action]));
   assert.ok(Object.isFrozen(actions));
 });
 
@@ -71,6 +72,46 @@ test("applyResins turns a selection of keys or positions into one setHopperResin
   assert.deepEqual(actions.parseKey("L-2:0"), { layer: "L-2", index: 0 });
   assert.equal(actions.parseKey(":3"), null);
   assert.equal(actions.parseKey("A"), null);
+});
+
+test("applyAssignments turns a selection and the two drafts into one setHopperAssignments carrying only what was given; nothing given, or nothing selected, is refused without dispatching", () => {
+  const b = bridge({ answer: { ok: true, changed: true, revision: 9 } });
+  const both = actions.applyAssignments(b, "next", ["A:1", { layer: "C", index: 4 }, "bad"], { resin: "EVA", pct: 12.5 });
+  assert.equal(both.revision, 9);
+  const resinOnly = actions.applyAssignments(b, "current", ["B:2"], { resin: "" });
+  assert.equal(resinOnly.ok, true);
+  const pctOnly = actions.applyAssignments(b, "current", ["B:2"], { pct: 0 });
+  assert.equal(pctOnly.ok, true);
+  assert.deepEqual(b.calls, [
+    { command: "setHopperAssignments", args: { recipe: "next", hoppers: [{ layer: "A", index: 1, resin: "EVA", pct: 12.5 }, { layer: "C", index: 4, resin: "EVA", pct: 12.5 }] } },
+    { command: "setHopperAssignments", args: { recipe: "current", hoppers: [{ layer: "B", index: 2, resin: "" }] } },
+    { command: "setHopperAssignments", args: { recipe: "current", hoppers: [{ layer: "B", index: 2, pct: 0 }] } }
+  ]);
+  assert.equal("pct" in b.calls[1].args.hoppers[0], false, "no change is the field's absence");
+  assert.equal("resin" in b.calls[2].args.hoppers[0], false);
+  const nothing = actions.applyAssignments(b, "current", ["A:1"], {});
+  assert.deepEqual([nothing.ok, nothing.code], [false, "unavailable"]);
+  assert.match(nothing.message, /Enter a resin or a percentage/);
+  const nan = actions.applyAssignments(b, "current", ["A:1"], { pct: NaN });
+  assert.equal(nan.ok, false);
+  const none = actions.applyAssignments(b, "current", [], { resin: "X" });
+  assert.match(none.message, /Select at least one hopper/);
+  assert.equal(b.calls.length, 3);
+});
+
+test("undoEdit and redoEdit hand one command each, addressed to the recipe given, and return the answer untouched; can() reads the offer for them as for any action", () => {
+  const b = bridge({ answer: { ok: true, changed: true, revision: 3 } });
+  assert.deepEqual(actions.undoEdit(b, "next"), { ok: true, changed: true, revision: 3 });
+  assert.equal(actions.redoEdit(b, "current").revision, 3);
+  assert.deepEqual(b.calls, [
+    { command: "undo", args: { recipe: "next" } },
+    { command: "redo", args: { recipe: "current" } }
+  ]);
+  assert.equal(actions.can(b, "undo"), true);
+  assert.equal(actions.can(bridge({ capabilities: [...contract.LAYER_COMMANDS] }), "undo"), false);
+  assert.match(actions.reason(bridge({ capabilities: [] }), "redo"), /does not offer redo/);
+  assert.equal(actions.undoEdit(b, "plan").code, "unavailable");
+  assert.equal(actions.undoEdit(null, "current").code, "unavailable");
 });
 
 test("no bridge, a bridge without dispatch, or a view addressing no recipe is unavailable, never a throw", () => {

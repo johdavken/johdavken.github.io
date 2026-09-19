@@ -1279,7 +1279,7 @@ test("the Handbook's arrival, and Blend Edit inside it, move nothing above the f
 test("the header around the stage is identity, the way back and the two readouts; the timeline's scale is the timeline's own, under Now, and the Handbook's arrival neither covers nor moves it", () => {
   const s = boot();
   const header = s.q(".station-header");
-  assert.deepEqual(header.children.map(n => n.getAttribute("class")), ["station-header__avatar", "station-header__title", "station-header__legacy", "station-header__job", "station-header__connection"]);
+  assert.deepEqual(header.children.map(n => n.getAttribute("class")), ["station-header__avatar", "station-header__title", "station-header__legacy", "station-header__job", "station-header__edit", "station-header__connection"]);
   assert.equal(header.children[1].querySelector(".station-logo").getAttribute("aria-label"), "Station", "the heading is the logo, named Station");
   assert.doesNotMatch(header.textContent, /experimental|6H|12H/i, "no badge and no scale in the header");
   assert.equal(header.querySelector("[data-window]"), null);

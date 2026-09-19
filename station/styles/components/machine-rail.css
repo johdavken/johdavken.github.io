@@ -169,6 +169,12 @@
   stroke-linejoin: round;
 }
 
+/* The heavier line some glyphs draw with - a spanner's handle, a gauge's
+   needle. */
+.station-rail__glyph-stroke--bold {
+  stroke-width: 1;
+}
+
 /* The card turning over: the face behind is an outline, the face in
    front is filled with the surface so the two read as one card's two
    sides, as the launcher's pages are. */
@@ -206,9 +212,9 @@
 /* A switch and its children are one group in the rail's column: the
    switch stands in the column like its neighbours; the flyout is laid
    beside it to the right, out of the column's flow, so the rail is no
-   wider for it and stands where it stood. Four groups: the Current
-   switch with the bulk set and Load Next, the Next switch with the bulk
-   set and Copy Current, the Weights switch with Smart Hoppers, and at
+   wider for it and stands where it stood. Five groups: the Current
+   switch with Load Next, the Next switch with Copy Current, the Weights
+   switch with Smart Hoppers, and at
    the column's foot the Tools switch with the console's calculators -
    Winding Tension today - which is a row of launchers rather than a
    face: the switch is on while the row stands open, a tool while its
@@ -258,19 +264,12 @@
     visibility 0s linear var(--station-motion-settle);
 }
 
-/* A row of the flyout: tiles side by side, the column's gap between,
-   positioned so the field's slot can stand over it. The bulk set inside
-   it is laid as the row's own children, so the row's gap runs between
-   Bulk Edit (or Confirm and Cancel) and the move at its end. */
+/* A row of the flyout: tiles side by side, the column's gap between. */
 .station-rail__row {
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--station-space-2);
-}
-
-.station-rail__bulk {
-  display: contents;
 }
 
 /* The stem: a hairline from the switch's edge to the bracket, at the
@@ -296,8 +295,7 @@
 }
 
 /* The children: the switch's own colour on their plates' edges, the same
-   tile as the column's, each arriving a beat after the one before - the
-   move at the row's end after the bulk set. */
+   tile as the column's, each arriving a beat after the one before. */
 .station-rail__flyout .station-rail__control {
   --station-rail-plate-edge: var(--station-rail-stem);
   transform: translateX(calc(-1 * var(--station-space-2)));
@@ -355,133 +353,4 @@
 
 .station-root .station-rail__control.is-on:hover:not(:disabled) {
   --station-rail-plate-edge: var(--station-text);
-}
-
-/* ---- Bulk Edit: the set both recipe faces share, and what it becomes ---- */
-
-/* One bulk set (station-machine-rail.js moves it to the head of whichever
-   face's row is open). It holds two sets in one place: Bulk Edit at
-   rest; Confirm and Cancel while a selection is on (data-bulk on the row
-   it stands in; the resin is entered in the bulk field over the row).
-   The set not showing is hidden outright - out of layout, the tab order
-   and the reader's tree - so the swap is a swap and not two sets side by
-   side; the set arriving settles in with a short motion. */
-.station-root .station-rail__control[hidden] {
-  display: none;
-}
-
-.station-rail__row[data-bulk="true"] .station-rail__control--confirm,
-.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
-  animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
-}
-
-.station-rail__row[data-bulk="true"] .station-rail__control--cancel {
-  animation-delay: var(--station-motion-lead);
-}
-
-.station-rail__row[data-bulk="false"] .station-rail__control--bulk {
-  animation: station-rail-arrive var(--station-motion-settle) var(--station-motion-ease) backwards;
-}
-
-@keyframes station-rail-arrive {
-  from { opacity: 0; transform: translateX(calc(-1 * var(--station-space-2))) scale(0.9); }
-  to { opacity: 1; transform: none; }
-}
-
-/* Bulk Edit on shows as the Current switch does: the accent, quietly. */
-.station-root .station-rail__control--bulk[aria-pressed="true"] {
-  --station-rail-plate-edge: var(--station-accent);
-  color: var(--station-accent);
-}
-
-/* Confirm is the one control on the rail allowed the accent as a wash
-   while it can act: the choice that writes, told apart from the one that
-   does not. Held (nothing selected, nothing typed) it is the rail's
-   disabled tile like any other. */
-.station-root .station-rail__control--confirm:not(:disabled) {
-  --station-rail-plate: var(--station-accent-soft);
-  --station-rail-plate-edge: var(--station-accent);
-  color: var(--station-accent);
-}
-
-.station-rail__glyph-stroke--bold {
-  stroke-width: 1;
-}
-
-/* The resin field's slot: above the Current row, its right edge the
-   row's, reaching back across the switch - over the stage, where the
-   column stands and nothing is drawn. Out of the row's flow, so the row
-   is laid as it was; it folds and unfolds with the flyout, and is hidden
-   outright while no selection is on. Under the Next face the set stands
-   a row lower, on the Next row, and the slot is lifted by that row and
-   the gap - so the field stands in ONE place whichever face it serves,
-   and never over the Current switch. */
-.station-rail__field-slot {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + var(--station-space-1));
-  display: flex;
-  justify-content: flex-end;
-  width: max(9rem, calc(100% + var(--station-handbook-launcher) + var(--station-space-2)));
-  pointer-events: auto;
-}
-
-.station-rail__group--next .station-rail__field-slot {
-  bottom: calc(100% + var(--station-space-1) + var(--station-handbook-launcher) + var(--station-space-2));
-}
-
-.station-root .station-rail__field-slot[hidden] {
-  display: none;
-}
-
-/* The bulk field (station-bulk-field.js): a small cap label over a
-   bordered field on the editable surface, in the mono face the resin
-   values use; as wide as its slot. */
-.station-bulk-field {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  width: 100%;
-  color: var(--station-text-muted);
-  font-size: var(--station-text-2xs);
-  line-height: var(--station-line-tight);
-}
-
-.station-root .station-bulk-field[hidden] {
-  display: none;
-}
-
-.station-bulk-field__label {
-  padding-left: var(--station-space-1);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.station-bulk-field__input {
-  --station-field-width: 100%;
-  --station-field-padding: var(--station-space-1) var(--station-space-2);
-  --station-field-radius: var(--station-radius-sm);
-  --station-field-bg: var(--station-surface-editable);
-  --station-field-border: var(--station-stroke) solid var(--station-editable);
-  color: var(--station-text);
-  font-family: var(--station-font-mono);
-  font-size: var(--station-text-sm);
-}
-
-/* Focused, the field looks as it does at rest: it is the one field in
-   its band, put there by the operator's own click on Bulk Edit, and the
-   caret says where the typing goes. No ring, no shadow, no accent. */
-.station-root .station-bulk-field__input:focus-visible {
-  outline: none;
-  --station-field-shadow: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .station-rail__row[data-bulk="true"] .station-rail__control--confirm,
-  .station-rail__row[data-bulk="true"] .station-rail__control--cancel,
-  .station-rail__row[data-bulk="false"] .station-rail__control--bulk {
-    animation: none;
-  }
 }

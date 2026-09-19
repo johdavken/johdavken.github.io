@@ -66,8 +66,10 @@
     "station/styles/components/hopper.css",
     "station/styles/components/layer-bank.css",
     "station/styles/components/focus-editor.css",
-    // The card rail: Compare and Large, riding the far-right card.
+    // The card rail: Compare, Large, Undo and Redo, riding the far-right card.
     "station/styles/components/card-rail.css",
+    // The hopper editor: the selected hoppers' form in the header.
+    "station/styles/components/hopper-edit.css",
     "station/styles/components/inspector.css",
     "station/styles/components/rundown.css",
     "station/styles/components/job-controls.css",
@@ -110,12 +112,13 @@
     // The plan controls: the seam for the rail's two moves under the Next
     // face. Beside the hopper controls, whose reset the rail asks for too.
     "station/station-plan-controls.js",
-    // The blend actions: the seam for a card's Copy / Paste / Reset and the
-    // rail's Bulk Edit; the layer menu each blend card carries at its foot.
+    // The blend actions: the seam for a card's Copy / Paste / Reset, the
+    // hopper editor's Apply and the card rail's Undo / Redo; the layer menu
+    // each blend card carries at its foot; the hopper editor in the header.
     "station/station-blend-actions.js",
     "station/station-layer-menu.js",
-    "station/station-bulk-field.js",
-    // The card rail: the two switches over every card, riding the far-right one.
+    "station/station-hopper-edit.js",
+    // The card rail: the two switches and the history pair over every card, riding the far-right one.
     "station/station-card-rail.js",
     "station/station-layer-share.js",
     "station/station-weight-cards.js",
@@ -169,7 +172,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.64.0";
+  const VERSION = "0.65.0";
 
   function requested() {
     try {
