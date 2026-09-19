@@ -150,6 +150,38 @@
 .toolInputGrid > div{ display:grid; align-content:start; gap:5px; min-width:0; }
 .toolInputGrid input{ min-width:0; }
 .toolFieldHint{ color:var(--muted); font-size:10px; line-height:1.35; }
+.toolActionRow{ display:flex; align-items:center; gap:10px; max-width:760px; flex-wrap:wrap; }
+.toolActionRow .muted{ min-width:0; }
+/* Winding Tension's result surface. It ships [hidden] and is revealed by
+   clearing the attribute in app.js - never by a state class on an ancestor,
+   which the global [hidden]{display:none!important} would silently defeat. */
+.windingTensionResult{
+  display:grid;
+  gap:12px;
+  max-width:760px;
+  padding:12px;
+  border:1px solid var(--readonly-border);
+  border-radius:var(--radius-input);
+  background:var(--readonly-bg);
+}
+.windingTensionPrimary{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.windingTensionPrimary strong{ color:var(--title); font-size:2.1em; line-height:1; }
+.windingTensionPrimary > span{ color:var(--muted); font-size:1.05em; font-weight:800; }
+.windingTensionPrimary small{ color:var(--muted); font-size:.85em; }
+.windingTensionRange{ display:grid; gap:8px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.windingTensionAdvice{ display:grid; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.windingTensionRange > div,.windingTensionAdvice > div{
+  display:grid;
+  gap:2px;
+  min-width:0;
+  padding:8px 10px;
+  border:1px solid var(--border);
+  border-radius:var(--control-radius);
+  background:var(--field-bg);
+}
+.windingTensionRange span,.windingTensionAdvice span{ color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.windingTensionRange strong,.windingTensionAdvice strong{ color:var(--title); overflow-wrap:anywhere; }
+.windingTensionNotice{ margin:0; color:var(--muted); font-size:11px; line-height:1.4; }
 .toolsWorkspaceContent .toolPanel + .toolPanel{ margin-top: 0; }
 .mobileToolsHome,.mobileToolsBack,.mobileToolHeader{ display:none; }
 .mobileSectionHeaderIcon{ display:none; }
@@ -180,6 +212,9 @@
   body[data-mobile-tools="panel"] #toolsBlock .toolsWorkspace{ display:grid; }
   body[data-mobile-tools="panel"] #toolsBlock > summary{ display:none; }
   #toolsBlock .toolsIndexDropdown,#toolsBlock .toolsIndex{ display:none!important; }
+  #toolsBlock .toolActionRow{ gap:12px; }
+  #toolsBlock .toolActionRow button{ min-height:44px; min-width:96px; }
+  #toolsBlock .windingTensionAdvice{ grid-template-columns:1fr; }
   #toolsBlock .mobileToolHeader{ display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
   #toolsBlock .mobileToolHeader h1{ min-width:0; margin:0; color:var(--title); font:inherit; font-size:calc(var(--title-size) * 1.05); font-weight:800; letter-spacing:.035em; line-height:1.15; overflow-wrap:anywhere; }
   #toolsBlock .mobileToolsBack{

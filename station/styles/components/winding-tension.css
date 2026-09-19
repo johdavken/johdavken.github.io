@@ -1,0 +1,395 @@
+/* The Winding Tension calculator (station-winding-tension.js): the Tools
+ * row's first tool, a Station window (station-window.js, window.css).
+ *
+ * THE FRAME IS THE WINDOW'S
+ *
+ * Where it stands, how it moves, its title bar, its Close, its body and
+ * the flight out of the rail's tile are all the window's (window.css).
+ * This sheet gives the frame its one thing of its own - its size, from
+ * the winding tokens (tokens.css), capped by the stage's cell - and
+ * draws what is inside: the entries, the figure, the range and the
+ * advice. Fixed capacity: the box is the tokens' to give, never its
+ * contents'; the note under the answer is the one line that comes and
+ * goes.
+ *
+ * ON THE GLASS
+ *
+ * The material is the shared glass (glass.css). Everything on it is
+ * flat, in the Handbook's control vocabulary (handbook.css): chips for
+ * the ups, the fields. Hierarchy is carried by weight and space: the
+ * target tension is the largest thing on the surface; the labels are
+ * the smallest.
+ *
+ * THE RANGE
+ *
+ * A scale with the target held at its centre: the left half is the
+ * band's minimum up to the target, the right half the target up to the
+ * maximum, so the recommended figure is always the middle of what the
+ * operator reads. Each half is a bar that a new answer sweeps out from
+ * the centre (station-winding-tension.js plays it through the
+ * transition module); over the centre stand the ideal zone - a wash of
+ * the accent that breathes while an answer is live, the one continuing
+ * motion here, off under reduced motion - and the mark. The readings
+ * stand under their ends.
+ */
+
+/* The frame's size: its preferred size from the tokens, capped by the
+   stage's cell less a margin. A definite height, not a maximum: what is
+   inside sizes to it. */
+.station-winding__panel {
+  width: min(var(--station-winding-width), calc(100% - 2 * var(--station-space-4)));
+  height: min(var(--station-winding-height), calc(100% - 2 * var(--station-space-3)));
+}
+
+.station-winding__label {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-winding__unit {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  white-space: nowrap;
+}
+
+/* ---- The entries: one row, the ups' chips at its end ---- */
+.station-winding__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--station-space-2) var(--station-space-4);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.station-winding__field {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-2);
+}
+
+.station-winding__field--chips {
+  flex: 1 1 auto;
+}
+
+.station-winding__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--station-space-1);
+}
+
+/* The fields: the Changeover Calculator's, in the mono face the readouts
+   use, wide enough for a gauge or a width with air on either side. */
+.station-winding__input {
+  --station-field-padding: var(--station-space-1) var(--station-space-2);
+  --station-field-radius: var(--station-radius-sm);
+  --station-field-bg: var(--station-surface-editable);
+  --station-field-border: var(--station-stroke) solid var(--station-editable);
+  --station-field-width: 7ch;
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-winding__input[aria-invalid="true"] {
+  --station-field-shadow: 0 0 0 2px var(--station-danger);
+}
+
+/* ---- The answer ---- */
+.station-winding__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-3);
+  flex: 0 0 auto;
+}
+
+/* The figure: the target, the largest thing on the surface, its unit
+   and the PLI it came from beside it on the same baseline. */
+.station-winding__figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--station-space-2);
+}
+
+.station-winding__target {
+  color: var(--station-text);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--station-line-tight);
+}
+
+.station-winding__result[data-live="false"] .station-winding__target {
+  color: var(--station-text-faint);
+}
+
+.station-winding__unit-large {
+  color: var(--station-text-muted);
+  font-size: var(--station-text-md);
+  font-weight: 600;
+}
+
+.station-winding__pli {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The range ---- */
+.station-winding__range {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+}
+
+/* The scale: a sunken track the two halves fill. The halves are laid
+   from the centre - each is half the track, scaled from the edge it
+   shares with the other - so the sweep grows outward. */
+.station-winding__scale {
+  position: relative;
+  height: var(--station-space-3);
+  border-radius: var(--station-radius-sm);
+  background: var(--station-surface-sunken);
+  overflow: hidden;
+}
+
+.station-winding__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: linear-gradient(to right, var(--station-accent-soft), var(--station-accent));
+  opacity: 0.85;
+}
+
+.station-winding__fill--low {
+  left: 0;
+  transform-origin: right center;
+}
+
+.station-winding__fill--high {
+  left: 50%;
+  transform-origin: left center;
+  background: linear-gradient(to left, var(--station-accent-soft), var(--station-accent));
+}
+
+/* The ideal zone: the middle fifth of the scale, a wash of the accent
+   that breathes while an answer is live. */
+.station-winding__ideal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 40%;
+  width: 20%;
+  background: color-mix(in srgb, var(--station-accent) 45%, transparent);
+  opacity: 0;
+}
+
+.station-winding__result[data-live="true"] .station-winding__ideal {
+  opacity: 1;
+  animation: station-winding-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes station-winding-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* The mark: a hairline over the centre, the target's own place. */
+.station-winding__mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--station-line-medium);
+  margin-left: calc(-0.5 * var(--station-line-medium));
+  background: var(--station-text);
+  transform-origin: center bottom;
+  opacity: 0;
+}
+
+.station-winding__result[data-live="true"] .station-winding__mark {
+  opacity: 1;
+}
+
+.station-winding__result[data-live="false"] .station-winding__fill {
+  opacity: 0;
+}
+
+/* The readings: min under the left end, the target under the centre,
+   max under the right end - each its label over its value. */
+.station-winding__ends {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+}
+
+.station-winding__end {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.station-winding__end--target {
+  align-items: center;
+  text-align: center;
+}
+
+.station-winding__end--max {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.station-winding__end-label {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-winding__end-value {
+  color: var(--station-text-muted);
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.station-winding__end--target .station-winding__end-value {
+  color: var(--station-text);
+  font-weight: 600;
+}
+
+/* ---- The advice: the wind type and the taper, side by side ---- */
+.station-winding__advice {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--station-space-4);
+}
+
+.station-winding__wind,
+.station-winding__taper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-1);
+  min-width: 0;
+}
+
+.station-winding__kinds {
+  display: flex;
+  gap: var(--station-space-3);
+}
+
+/* A wind kind: its pictogram over its name; lit when the band allows
+   it, faint when it does not. */
+.station-winding__kind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  color: var(--station-text-faint);
+  transition: color var(--station-motion-settle) ease-out;
+}
+
+.station-winding__kind[data-allowed="true"] {
+  color: var(--station-accent);
+}
+
+.station-winding__kind-label {
+  font-size: var(--station-text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.station-winding__words {
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ---- The pictograms: line drawings in the cell's own colour ---- */
+.station-winding__pictogram {
+  display: block;
+  width: calc(var(--station-space-6) + var(--station-space-2));
+  height: auto;
+  overflow: visible;
+}
+
+.station-winding__pictogram--taper {
+  width: calc(var(--station-space-6) + var(--station-space-2));
+  color: var(--station-accent);
+}
+
+.station-winding__pict-roll,
+.station-winding__pict-drum {
+  fill: var(--station-surface);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.station-winding__pict-core {
+  fill: currentColor;
+  stroke: none;
+}
+
+.station-winding__pict-web,
+.station-winding__pict-nip {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-winding__pict-drive {
+  fill: none;
+  stroke: var(--station-warning);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-winding__pict-wedge {
+  fill: color-mix(in srgb, var(--station-accent) 35%, transparent);
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.station-winding__result[data-live="false"] .station-winding__pictogram--taper {
+  color: var(--station-text-faint);
+}
+
+/* The application's one line under every answer. */
+.station-winding__notice {
+  margin: 0;
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-normal);
+}
+
+/* The note: a refused entry, said once under the answer. */
+.station-winding__note {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-winding__note[data-kind="error"] {
+  color: var(--station-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-winding__result[data-live="true"] .station-winding__ideal {
+    animation: none;
+  }
+  .station-winding__kind {
+    transition: none;
+  }
+}

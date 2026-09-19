@@ -1,0 +1,210 @@
+/* The Station window (station-window.js): the frame every floating
+ * utility surface stands in - the Winding Tension calculator, Resin
+ * Totals, the tools to come.
+ *
+ * WHERE IT SITS
+ *
+ * In the utility slot laid over the stage's cell (shell.css), spawned at
+ * the cell's centre and moved from there by its title bar: the frame's
+ * place is two custom properties station-window.js writes while the bar
+ * is held, laid on here as a translate from the centre. A translate, not
+ * the offsets themselves, so the opening flight's transform composes
+ * over it untouched. Nothing is dimmed, nothing moves under it, and the
+ * hoppers around it still take the pointer; the slot itself is inert.
+ *
+ * ONE BOX, FIXED CAPACITY
+ *
+ * The frame's size is its owner's to give (each window's own sheet sets
+ * the width and height on its class, from its tokens), never its
+ * contents'. The body sizes to the frame and scrolls within itself at a
+ * stage too short for the whole of it.
+ *
+ * THE VOCABULARY
+ *
+ * The material is the shared glass (glass.css). The bar is the handle: a
+ * hand at rest, closed while it is held; no scroll or zoom gesture takes
+ * the drag from it; nothing on it is selectable. Close is the desktop's
+ * round button at the bar's right - a disc in the danger colour with a
+ * rim, its cross drawn by the two bars of its pseudo-elements and shown
+ * while the pointer is on the bar or the button has the keyboard. The
+ * Operator Handbook and the Changeover Calculator close with the same
+ * button (their own heads, this class), so every glass surface on the
+ * console closes the same way.
+ */
+
+.station-window {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.station-window__panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  translate: calc(-50% + var(--station-window-x, 0px)) calc(-50% + var(--station-window-y, 0px));
+  /* The opening flight scales the frame out of the rail's tile
+     (station-window.js); a transform from the top-left corner is what
+     that arithmetic assumes. */
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}
+
+.station-window__panel[hidden] {
+  display: none;
+}
+
+/* While the bar is held the whole frame says so, so the cursor does not
+   flicker over the body and nothing on it is selected by the drag. */
+.station-window__panel[data-moving] {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- The title bar: the name, the readout, Close ---- */
+.station-window__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--station-space-3);
+  padding: var(--station-space-2) var(--station-space-4);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-rule);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.station-window__bar:focus-visible {
+  outline-offset: calc(-1 * var(--station-space-1));
+}
+
+.station-window__panel[data-moving] .station-window__bar {
+  cursor: grabbing;
+}
+
+.station-window__title {
+  margin: 0;
+  color: var(--station-text-muted);
+  font-family: var(--station-font-annotation);
+  font-size: var(--station-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The readout: the owner's one line beside the name - an answer, a
+   figure - in the mono face, at the bar's far end before Close. */
+.station-window__readout {
+  margin-left: auto;
+  font-family: var(--station-font-mono);
+  font-size: var(--station-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.station-window__readout.is-unset {
+  color: var(--station-text-faint);
+}
+
+/* ---- Close ----
+ * Its own thing against the console's button reset (base.css), hence
+ * the root in the selector. On a head that has no readout it stands at
+ * the far end by its own margin. */
+.station-root .station-window__close {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--station-space-3);
+  height: var(--station-space-3);
+  margin-left: auto;
+  border: var(--station-stroke) solid color-mix(in srgb, var(--station-danger) 70%, var(--station-text));
+  border-radius: 50%;
+  background: var(--station-danger);
+  color: color-mix(in srgb, var(--station-danger) 25%, var(--station-text));
+  transition: filter var(--station-motion-settle) ease-out;
+}
+
+/* Beside a readout the margin is the readout's. */
+.station-window__readout + .station-window__close {
+  margin-left: 0;
+}
+
+.station-root .station-window__close:hover {
+  filter: brightness(1.15);
+}
+
+.station-root .station-window__close:active {
+  filter: brightness(0.85);
+}
+
+.station-root .station-window__close:focus-visible {
+  outline-offset: var(--station-space-1);
+}
+
+.station-window__close::before,
+.station-window__close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 55%;
+  height: var(--station-line-medium);
+  background: currentColor;
+  border-radius: var(--station-line-medium);
+  opacity: 0;
+  transition: opacity var(--station-motion-settle) ease-out;
+}
+
+.station-window__close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.station-window__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* The cross comes up with the pointer on the head the button stands on -
+   a window's bar, the Handbook's head, the calculator's - or the keyboard
+   on the button itself. */
+.station-window__bar:hover .station-window__close::before,
+.station-window__bar:hover .station-window__close::after,
+.station-handbook__head:hover .station-window__close::before,
+.station-handbook__head:hover .station-window__close::after,
+.station-changeover__head:hover .station-window__close::before,
+.station-changeover__head:hover .station-window__close::after,
+.station-window__close:hover::before,
+.station-window__close:hover::after,
+.station-window__close:focus-visible::before,
+.station-window__close:focus-visible::after {
+  opacity: 1;
+}
+
+/* ---- Body ----
+ * Sized to the frame, never the other way round; scrolls within itself
+ * at a stage too short for the whole of it. */
+.station-window__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--station-space-3);
+  min-height: 0;
+  padding: var(--station-space-3) var(--station-space-4);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--station-handbook-control-border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-window__close,
+  .station-window__close::before,
+  .station-window__close::after {
+    transition: none;
+  }
+}

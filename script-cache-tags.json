@@ -23,6 +23,10 @@
     "v": "0.18",
     "hash": "e52314d599e5d207"
   },
+  "winding-tension.js": {
+    "v": "0.1.1",
+    "hash": "48895ed8cc1e00c8"
+  },
   "active-job.js": {
     "v": "0.20.0",
     "hash": "f66df8dc486ae51c"
@@ -52,8 +56,8 @@
     "hash": "45eb154879a36623"
   },
   "station-host.js": {
-    "v": "0.4.56",
-    "hash": "9ee554b57e1f28a5"
+    "v": "0.4.60",
+    "hash": "766d31230424704b"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -180,8 +184,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.33.4",
-    "hash": "56409294d9c6d066"
+    "v": "0.33.5",
+    "hash": "5089eb43a0d8e20c"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

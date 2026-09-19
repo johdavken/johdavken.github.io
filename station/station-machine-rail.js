@@ -85,6 +85,32 @@
  *                    it overwrites may be an afternoon's work, and one
  *                    stray click on an unfolded row should not cost it.
  *                    The armed title says what is replaced.
+ *   Tools            the fourth switch, and not a face: the console's
+ *                    calculators, standing at the foot of the column
+ *                    just over the Handbook. On, its row unfolds to its
+ *                    RIGHT exactly as a face's does; the boot file keeps
+ *                    whether it is open and tells the rail. Nothing on
+ *                    the stage turns over for it.
+ *   Winding Tension  the Tools row's first tool: the application's
+ *                    Winding Tension calculator, opened out of this tile
+ *                    into a window over the stage
+ *                    (station-winding-tension.js). The tile shows the
+ *                    window's state as its own - on while it is open -
+ *                    and is the tile the window flies out of and back
+ *                    to.
+ *   Resin Totals     the row's second tool: the application's Resin
+ *                    Totals (station-resin-totals.js), once a Handbook
+ *                    page, in a window of its own out of this tile the
+ *                    same way. More tools stand beside these on the row.
+ *   Print            the fifth switch, under Tools: the floor UI's Print
+ *                    Recipe. On, its row unfolds to its RIGHT with the
+ *                    choice the floor UI's dialog asks - Current, Next,
+ *                    Both - as three tiles; Next and Both are held while
+ *                    nothing is planned, as the dialog's are. A tile's
+ *                    click is handed to the boot file, which prints the
+ *                    sheet (station-print-sheet.js) and folds the row, as
+ *                    the dialog closes. Held while there is nothing to
+ *                    print: no resin in any hopper and no plan.
  *
  * WHERE IT STANDS
  *
@@ -98,6 +124,8 @@
  *     [ Next Recipe  ]  -| [ Bulk Edit ] [ Copy Current ]  (while its face is on;
  *                           the one bulk set stands on whichever row is open)
  *     [ Weights      ]  -| [ Smart Hoppers ]
+ *     [ Tools        ]  -| [ Winding Tension ] [ Resin Totals ]  (while the row is open)
+ *     [ Print        ]  -| [ Current ] [ Next ] [ Both ]  (while the row is open)
  *     [ Handbook     ]                          (station-handbook.js)
  *
  * The Handbook is the master of the tile: the launcher's 64px, its
@@ -145,7 +173,9 @@
   const LABEL = Object.freeze({
     blend: "Current Recipe", weights: "Weights", smart: "Smart Hoppers",
     next: "Next Recipe", promote: "Load Next into Current", copy: "Copy Current into Next",
-    bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit"
+    bulk: "Bulk Edit", confirm: "Apply resin to selected hoppers", cancel: "Cancel bulk edit",
+    tools: "Tools", winding: "Winding Tension", totals: "Resin Totals",
+    print: "Print Recipe", printCurrent: "Print Current Recipe", printNext: "Print Next Recipe", printBoth: "Print both recipes"
   });
 
   function element(doc, name, className, attributes) {
@@ -307,6 +337,89 @@
     return tile.svg;
   }
 
+  /* Tools: a spanner, its open jaw to the upper right and its handle
+   * down to the lower left - the head an arc open at the jaw, the two
+   * jaw faces turned in, the handle one bold line. */
+  function toolsGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 13.5 3.4 A 3.4 3.4 0 1 0 16.6 6.5" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 13.5 3.4 L 13.4 4.9 M 16.6 6.5 L 15.1 6.6" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke station-rail__glyph-stroke--bold", { d: "M 10.8 9.2 L 4 16" }));
+    return tile.svg;
+  }
+
+  /* Winding Tension: a length of web pinched narrow by the pull on it -
+   * a face whose long edges bow inward - with an arrow leaving each end
+   * and the radiating ticks of strain above and below. */
+  function windingGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 5.5 6.5 Q 10 8.2 14.5 6.5 L 14.5 13.5 Q 10 11.8 5.5 13.5 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 4.5 10 L 1 10 M 2.6 8.4 L 1 10 L 2.6 11.6" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 15.5 10 L 19 10 M 17.4 8.4 L 19 10 L 17.4 11.6" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 10 1.6 L 10 3.8 M 6.4 2.6 L 7.4 4.6 M 13.6 2.6 L 12.6 4.6" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 10 18.4 L 10 16.2 M 6.4 17.4 L 7.4 15.4 M 13.6 17.4 L 12.6 15.4" }));
+    return tile.svg;
+  }
+
+  /* Resin Totals: pounds by material as a chart - three bars of rising
+   * height on a baseline, the tallest the total, with the sigma of a sum
+   * standing over them as a small stroke. */
+  function totalsGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 3, y: 11, width: 3.6, height: 6.5, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 8.2, y: 8, width: 3.6, height: 9.5, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 13.4, y: 4.5, width: 3.6, height: 13, rx: 0.6 }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 2 18.4 L 18 18.4" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 8.6 1.8 L 4.2 1.8 L 6.6 4.2 L 4.2 6.6 L 8.6 6.6" }));
+    return tile.svg;
+  }
+
+  /* Print: a printer as the floor UI's own button draws it - a sheet
+   * standing into the body from above, the body, the printed sheet
+   * coming out below. */
+  function printGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: "M 6 7.5 L 6 3 L 14 3 L 14 7.5" }));
+    svg.appendChild(svgNode(doc, "rect", "station-rail__glyph-face", { x: 3.5, y: 7.5, width: 13, height: 6, rx: 1 }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: "M 6 12 L 14 12 L 14 17 L 6 17 Z" }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-row", { d: "M 8 14.5 L 12 14.5" }));
+    return tile.svg;
+  }
+
+  /* The Print row's choices, in the recipe faces' vocabulary: the hopper
+   * for Current, the folded sheet for Next, and both stood side by side
+   * for Both - each the object the switch draws, reduced to fit two. */
+  const SMALL_HOPPER = "M 2.5 4 L 9.5 4 L 7.5 10.5 L 6.9 13.5 L 5.1 13.5 L 4.5 10.5 Z";
+  const SMALL_SHEET = "M 11 5 L 15.5 5 L 18 7.5 L 18 16 L 11 16 Z";
+  const SMALL_SHEET_FOLD = "M 15.5 5 L 15.5 7.5 L 18 7.5";
+
+  function printCurrentGlyph(doc) {
+    const tile = glyphTile(doc);
+    tile.art.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: HOPPER }));
+    return tile.svg;
+  }
+
+  function printNextGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: SHEET }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: SHEET_FOLD }));
+    return tile.svg;
+  }
+
+  function printBothGlyph(doc) {
+    const tile = glyphTile(doc);
+    const svg = tile.art;
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: SMALL_HOPPER }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-face", { d: SMALL_SHEET }));
+    svg.appendChild(svgNode(doc, "path", "station-rail__glyph-stroke", { d: SMALL_SHEET_FOLD }));
+    return tile.svg;
+  }
+
   /* --------------------------------------------------------------------
    *   The rail
    * ------------------------------------------------------------------ */
@@ -329,6 +442,15 @@
    * @param {function} [options.onBulkConfirm]  () => void; Confirm - the boot file
    *        holds the draft it applies
    * @param {function} [options.onBulkCancel]   () => void; Cancel
+   * @param {function} [options.onTools]        () => void; the Tools switch's click -
+   *        the boot file keeps whether the row is open and tells the rail
+   * @param {function} [options.onResinTotals] () => void; the Resin Totals tile
+   * @param {function} [options.onWindingTension] () => void; the Winding Tension
+   *        tile's click - the boot file opens or closes the surface and tells the rail
+   * @param {function} [options.onPrint]        () => void; the Print switch's click -
+   *        the boot file keeps whether the row is open and tells the rail
+   * @param {function} [options.onPrintRecipe]  (which) => void; a choice on the
+   *        Print row - "current", "next" or "both"; the boot file prints
    * @param {Element}  [options.bulkField]      the resin field's element, stood
    *        above the Current row while the selection is on
    * @param {function} [options.setTimeout]     for the arm timer; the host's by default
@@ -346,6 +468,11 @@
     const onBulkEdit = typeof settings.onBulkEdit === "function" ? settings.onBulkEdit : () => {};
     const onBulkConfirm = typeof settings.onBulkConfirm === "function" ? settings.onBulkConfirm : () => {};
     const onBulkCancel = typeof settings.onBulkCancel === "function" ? settings.onBulkCancel : () => {};
+    const onTools = typeof settings.onTools === "function" ? settings.onTools : () => {};
+    const onWindingTension = typeof settings.onWindingTension === "function" ? settings.onWindingTension : () => {};
+    const onResinTotals = typeof settings.onResinTotals === "function" ? settings.onResinTotals : () => {};
+    const onPrint = typeof settings.onPrint === "function" ? settings.onPrint : () => {};
+    const onPrintRecipe = typeof settings.onPrintRecipe === "function" ? settings.onPrintRecipe : () => {};
 
     const state = {
       hidden: true,
@@ -359,7 +486,16 @@
       /* The recipe faces' shared child: whether the selection is on, whether the
        * application offers the write, how many hoppers are selected, and
        * the resin drafted on the cards' field. */
-      bulk: { active: false, available: false, reason: "", count: 0, resin: "" }
+      bulk: { active: false, available: false, reason: "", count: 0, resin: "" },
+      /* The Tools row: whether it is unfolded, and whether any tool stands
+       * on it; each tool's tile: whether its window is open and whether
+       * the page has the window at all. */
+      tools: { open: false, available: false },
+      winding: { active: false, available: false },
+      totals: { active: false, available: false },
+      /* The Print row: whether it is unfolded, whether there is anything
+       * to print at all, and whether a plan exists for Next and Both. */
+      print: { open: false, available: false, planned: false }
     };
 
     const rootEl = element(doc, "div", "station-rail", { "data-role": "machine-rail", role: "group", "aria-label": "Machine utilities", hidden: "" });
@@ -400,6 +536,34 @@
       type: "button", "data-action": "bulk-cancel", "aria-label": LABEL.cancel, title: LABEL.cancel
     });
     cancelButton.appendChild(cancelGlyph(doc));
+    const toolsButton = element(doc, "button", "station-rail__control station-rail__control--tools", {
+      type: "button", "data-action": "tools", "aria-pressed": "false", "aria-label": LABEL.tools, title: LABEL.tools
+    });
+    toolsButton.appendChild(toolsGlyph(doc));
+    const windingButton = element(doc, "button", "station-rail__control station-rail__control--winding", {
+      type: "button", "data-action": "winding-tension", "aria-pressed": "false", "aria-label": LABEL.winding, title: LABEL.winding
+    });
+    windingButton.appendChild(windingGlyph(doc));
+    const totalsButton = element(doc, "button", "station-rail__control station-rail__control--totals", {
+      type: "button", "data-action": "resin-totals", "aria-pressed": "false", "aria-label": LABEL.totals, title: LABEL.totals
+    });
+    totalsButton.appendChild(totalsGlyph(doc));
+    const printButton = element(doc, "button", "station-rail__control station-rail__control--print", {
+      type: "button", "data-action": "print", "aria-pressed": "false", "aria-label": LABEL.print, title: LABEL.print
+    });
+    printButton.appendChild(printGlyph(doc));
+    const printCurrentButton = element(doc, "button", "station-rail__control station-rail__control--print-current", {
+      type: "button", "data-action": "print-current", "aria-label": LABEL.printCurrent, title: LABEL.printCurrent
+    });
+    printCurrentButton.appendChild(printCurrentGlyph(doc));
+    const printNextButton = element(doc, "button", "station-rail__control station-rail__control--print-next", {
+      type: "button", "data-action": "print-next", "aria-label": LABEL.printNext, title: LABEL.printNext
+    });
+    printNextButton.appendChild(printNextGlyph(doc));
+    const printBothButton = element(doc, "button", "station-rail__control station-rail__control--print-both", {
+      type: "button", "data-action": "print-both", "aria-label": LABEL.printBoth, title: LABEL.printBoth
+    });
+    printBothButton.appendChild(printBothGlyph(doc));
     /* A switch and its children as one group: the switch in the rail's
      * column, the flyout beside it to the right - out of the column's
      * flow, so the column stands where it stood, one tile wide. A flyout
@@ -430,6 +594,23 @@
     const weightsParts = group("weights", weightsButton, "Weights actions", [smartButton]);
     const weightsGroup = weightsParts.wrapper;
     const weightsFlyout = weightsParts.fly;
+    /* The Tools switch and its row the same way: the tools side by side,
+     * unfolded while the row is open. */
+    const toolsRow = element(doc, "div", "station-rail__row station-rail__row--tools", { "data-role": "tools-row" });
+    toolsRow.appendChild(windingButton);
+    toolsRow.appendChild(totalsButton);
+    const toolsParts = group("tools", toolsButton, "Tools", [toolsRow]);
+    const toolsGroup = toolsParts.wrapper;
+    const toolsFlyout = toolsParts.fly;
+    /* The Print switch and its row: the three choices side by side, in
+     * the dialog's order, unfolded while the row is open. */
+    const printRow = element(doc, "div", "station-rail__row station-rail__row--print", { "data-role": "print-row" });
+    printRow.appendChild(printCurrentButton);
+    printRow.appendChild(printNextButton);
+    printRow.appendChild(printBothButton);
+    const printParts = group("print", printButton, "Print Recipe choices", [printRow]);
+    const printGroup = printParts.wrapper;
+    const printFlyout = printParts.fly;
     /* The bulk set: Bulk Edit and what it becomes - Confirm and Cancel
      * while the selection is on - two sets in one place, the stylesheet
      * swapping them (data-bulk on the row it stands in). One set, built
@@ -471,6 +652,8 @@
     rootEl.appendChild(blendGroup);
     rootEl.appendChild(nextGroup);
     rootEl.appendChild(weightsGroup);
+    rootEl.appendChild(toolsGroup);
+    rootEl.appendChild(printGroup);
 
     /* Load Next and Copy Current armed and confirmed: the helper keeps
      * which control is armed (one at a time) and what disarms it; the
@@ -532,13 +715,56 @@
           ? `${LABEL.next} · ${state.next.planned ? "a recipe is planned: edit it on every layer" : "nothing is planned yet: plan the next run on every layer"}`
           : `${LABEL.next} needs a line with layers on the stage`));
 
+      rootEl.classList.toggle("is-tools-open", state.tools.open);
+      toolsButton.setAttribute("aria-pressed", state.tools.open ? "true" : "false");
+      toolsButton.classList.toggle("is-active", state.tools.open);
+      toolsButton.disabled = !state.tools.available && !state.tools.open;
+      toolsButton.setAttribute("title", state.tools.open
+        ? `${LABEL.tools} · open — click to fold the row`
+        : (state.tools.available ? `${LABEL.tools} · the console's calculators` : `${LABEL.tools} has nothing to offer on this page`));
+
+      windingButton.setAttribute("aria-pressed", state.winding.active ? "true" : "false");
+      windingButton.classList.toggle("is-active", state.winding.active);
+      windingButton.disabled = !state.winding.available;
+      windingButton.setAttribute("title", !state.winding.available
+        ? `${LABEL.winding} is not available on this page`
+        : (state.winding.active
+          ? `${LABEL.winding} · open — click to close the calculator`
+          : `${LABEL.winding} · a starting tension from film thickness and roll width`));
+
+      totalsButton.setAttribute("aria-pressed", state.totals.active ? "true" : "false");
+      totalsButton.classList.toggle("is-active", state.totals.active);
+      totalsButton.disabled = !state.totals.available;
+      totalsButton.setAttribute("title", !state.totals.available
+        ? `${LABEL.totals} is not available on this page`
+        : (state.totals.active
+          ? `${LABEL.totals} · open — click to close`
+          : `${LABEL.totals} · pounds of each resin the job consumed`));
+
+      rootEl.classList.toggle("is-print-open", state.print.open);
+      printButton.setAttribute("aria-pressed", state.print.open ? "true" : "false");
+      printButton.classList.toggle("is-active", state.print.open);
+      printButton.disabled = !state.print.available && !state.print.open;
+      printButton.setAttribute("title", state.print.open
+        ? `${LABEL.print} · choose Current, Next or Both — click to fold the row`
+        : (state.print.available ? `${LABEL.print} · a sheet of the running recipe, the plan, or both` : `${LABEL.print} · nothing to print: no resin in any hopper and nothing planned`));
+      printCurrentButton.disabled = !state.print.available;
+      printCurrentButton.setAttribute("title", `${LABEL.printCurrent} · the running recipe, layer by layer`);
+      for (const [button, label] of [[printNextButton, LABEL.printNext], [printBothButton, LABEL.printBoth]]) {
+        button.disabled = !state.print.available || !state.print.planned;
+        button.setAttribute("title", state.print.planned ? `${label}` : `${label} · nothing is planned`);
+      }
+
       // Each row unfolds beside its switch only while that face is on:
       // the bulk set and Load Next beside Current Recipe, the bulk set and
-      // Copy Current beside Next Recipe, Smart Hoppers beside Weights.
+      // Copy Current beside Next Recipe, Smart Hoppers beside Weights, the
+      // tools beside Tools while its row is open.
       placeBulkSet();
       unfold(nextGroup, flyout, state.next.active);
       unfold(weightsGroup, weightsFlyout, state.weights.active);
       unfold(blendGroup, blendFlyout, state.blend.active);
+      unfold(toolsGroup, toolsFlyout, state.tools.open);
+      unfold(printGroup, printFlyout, state.print.open);
       const bulkOn = drawBulk();
       const promoteArmed = arming.armed() === "promote";
       promoteButton.disabled = !state.promote.available || !state.next.planned || bulkOn;
@@ -659,6 +885,33 @@
       disarm();
       onBulkCancel();
     });
+    toolsButton.addEventListener("click", () => {
+      if (toolsButton.disabled) return;
+      disarm();
+      onTools();
+    });
+    windingButton.addEventListener("click", () => {
+      if (windingButton.disabled) return;
+      disarm();
+      onWindingTension();
+    });
+    totalsButton.addEventListener("click", () => {
+      if (totalsButton.disabled) return;
+      disarm();
+      onResinTotals();
+    });
+    printButton.addEventListener("click", () => {
+      if (printButton.disabled) return;
+      disarm();
+      onPrint();
+    });
+    for (const [button, which] of [[printCurrentButton, "current"], [printNextButton, "next"], [printBothButton, "both"]]) {
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
+        disarm();
+        onPrintRecipe(which);
+      });
+    }
     /* ---- The surface ---- */
 
     /**
@@ -674,6 +927,10 @@
      * @param {object}  [next.promote]    { available, reason, summary }
      * @param {object}  [next.copy]       { available, reason }
      * @param {object}  [next.bulk]       { active, available, reason, count, resin }
+     * @param {object}  [next.tools]      { open, available }
+     * @param {object}  [next.winding]    { active, available }
+     * @param {object}  [next.totals]     { active, available }
+     * @param {object}  [next.print]      { open, available, planned }
      */
     function update(next) {
       const n = next || {};
@@ -720,6 +977,18 @@
           resin: typeof n.bulk.resin === "string" ? n.bulk.resin : ""
         };
       }
+      if (n.tools && typeof n.tools === "object") {
+        state.tools = { open: !!n.tools.open, available: !!n.tools.available };
+      }
+      if (n.winding && typeof n.winding === "object") {
+        state.winding = { active: !!n.winding.active, available: !!n.winding.available };
+      }
+      if (n.totals && typeof n.totals === "object") {
+        state.totals = { active: !!n.totals.active, available: !!n.totals.available };
+      }
+      if (n.print && typeof n.print === "object") {
+        state.print = { open: !!n.print.open, available: !!n.print.available, planned: !!n.print.planned };
+      }
       // A control that stopped being possible while armed is not armed:
       // Load Next stands on the Current face and Copy Current on the Next
       // face, and a bulk selection starting on either drops the arming.
@@ -753,6 +1022,19 @@
       confirmButton,
       cancelButton,
       fieldSlot,
+      toolsButton,
+      windingButton,
+      totalsButton,
+      toolsGroup,
+      toolsFlyout,
+      toolsRow,
+      printButton,
+      printCurrentButton,
+      printNextButton,
+      printBothButton,
+      printGroup,
+      printFlyout,
+      printRow,
       update,
       disarm,
       isArmed: () => !!arming.armed(),
@@ -762,10 +1044,12 @@
         blend: Object.assign({}, state.blend), weights: Object.assign({}, state.weights),
         smart: Object.assign({}, state.smart),
         next: Object.assign({}, state.next), promote: Object.assign({}, state.promote), copy: Object.assign({}, state.copy),
-        bulk: Object.assign({}, state.bulk)
+        bulk: Object.assign({}, state.bulk),
+        tools: Object.assign({}, state.tools), winding: Object.assign({}, state.winding), totals: Object.assign({}, state.totals),
+        print: Object.assign({}, state.print)
       })
     };
   }
 
-  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, create });
+  return Object.freeze({ ARM_DURATION, TILE, LABEL, blendGlyph, weightsGlyph, smartGlyph, nextGlyph, promoteGlyph, copyGlyph, bulkGlyph, confirmGlyph, cancelGlyph, toolsGlyph, windingGlyph, totalsGlyph, printGlyph, printCurrentGlyph, printNextGlyph, printBothGlyph, create });
 });

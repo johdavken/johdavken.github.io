@@ -49,7 +49,7 @@
   <link rel="stylesheet" href="styles-recipe-views-phone.css?v=0.76.6">
   <link rel="stylesheet" href="styles-results.css?v=0.76.0">
   <link rel="stylesheet" href="styles-controls.css?v=0.76.0">
-  <link rel="stylesheet" href="styles-tools-notes.css?v=0.76.0">
+  <link rel="stylesheet" href="styles-tools-notes.css?v=0.76.1">
   <link rel="stylesheet" href="styles-surfaces.css?v=0.76.0">
   <link rel="stylesheet" href="styles-shell.css?v=0.76.1">
   <link rel="stylesheet" href="styles-responsive.css?v=0.76.0">
@@ -63,6 +63,7 @@
 <script src="resin-totals.js?v=0.1.0" defer></script>
 <script src="storage.js?v=0.18" defer></script>
 <script src="calculators.js?v=0.18" defer></script>
+<script src="winding-tension.js?v=0.1.1" defer></script>
 <script src="active-job.js?v=0.20.0" defer></script>
 <script src="station-state-bridge.js?v=0.6.0" defer></script>
 <script src="station-connection-bridge.js?v=0.1.0" defer></script>
@@ -70,7 +71,7 @@
 <script src="station-weight-profiles-bridge.js?v=0.1.0" defer></script>
 <script src="station-admin-bridge.js?v=0.4.0" defer></script>
 <script src="station-theme.js?v=0.2.0" defer></script>
-<script src="station-host.js?v=0.4.56" defer></script>
+<script src="station-host.js?v=0.4.60" defer></script>
 <script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="next-recipe.js?v=0.2.0" defer></script>
 <script src="hookup-sources.js?v=0.1.0" defer></script>
@@ -109,7 +110,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.33.4" defer></script>
+<script src="app.js?v=0.33.5" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="line-configurations-ui.js?v=0.2.0" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
@@ -1094,6 +1095,7 @@
     <div class="blockBody">
       <div class="mobileToolsHome" aria-label="Production tools">
         <button class="mobileToolTile" type="button" data-mobile-tool-target="shortFootageTool"><svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M5 24 12 17l5 3 10-12"/><path d="M21 8h6v6"/></g><g class="gruvboxSolidGlyph"><path d="m4.4 22.6 7.4-7.4 4.9 2.9 9.1-10.9 2.6 2.2-10.8 12.9-5.1-3-5.5 5.5z"/><path d="M20.5 6.4h8.1v3.2h-8.1z"/><path d="M25.4 6.4h3.2v8.1h-3.2z"/></g></svg><span>Short Footage</span><small>Footage calculator</small></button>
+        <button class="mobileToolTile" type="button" data-mobile-tool-target="windingTensionTool"><svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="20" cy="18" r="9"/><circle cx="20" cy="18" r="2.6"/><path d="M2 9h11"/><path d="m6 4.5-4 4.5 4 4.5"/></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M20 7.8a10.2 10.2 0 1 0 0 20.4 10.2 10.2 0 0 0 0-20.4zm0 6.6a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2z"/><path d="M6 7.4h8v3.2H6z"/><path d="M1 9 7 4v10z"/></g></svg><span>Winding Tension</span><small>Starting tension from gauge and roll width</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M7.6 4h16.8l3.4 24H4.2zm3.1 4.2-.5 3.4h11.6l-.5-3.4zm-1 7.2-.6 4.2h13l-.6-4.2z"/></g></svg><span>Hopper Weight</span><small>For cylindrical hoppers</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="hopperVolumeWeightTool"><svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><path d="M9 6h14l3 20H6L9 6Z"/><path d="M8 14h16M11 10h10"/></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M7.6 4h16.8l3.4 24H4.2zm3.1 4.2-.5 3.4h11.6l-.5-3.4zm-1 7.2-.6 4.2h13l-.6-4.2z"/></g></svg><span>Hopper Volume Weight</span><small>For non-cylindrical hoppers</small></button>
         <button class="mobileToolTile" type="button" data-mobile-tool-target="resinLookupTool"><svg viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="14" cy="14" r="8"/><path d="m20 20 7 7M11 14h6M14 11v6"/></g><g class="gruvboxSolidGlyph"><path fill-rule="evenodd" d="M13.6 1.6a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="m21.5 24.3 2.8-2.8 6.3 6.3-2.8 2.8z"/><path d="M11.9 9.2h3.4V18h-3.4z"/><path d="M9.2 11.9H18v3.4H9.2z"/></g></svg><span>Resin Reference</span><small>Codes, density and material information</small></button>
@@ -1106,6 +1108,7 @@
         </details>
         <nav class="toolsIndex" role="tablist" aria-label="Production tools">
           <button id="shortFootageToolTab" class="toolsIndexButton active" type="button" role="tab" aria-selected="true" aria-controls="shortFootageTool" data-tool-target="shortFootageTool">Short Footage</button>
+          <button id="windingTensionToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="windingTensionTool" data-tool-target="windingTensionTool" tabindex="-1">Winding Tension</button>
           <button id="hopperWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperWeightTool" data-tool-target="hopperWeightTool" tabindex="-1">Hopper Weight</button>
           <button id="hopperVolumeWeightToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="hopperVolumeWeightTool" data-tool-target="hopperVolumeWeightTool" tabindex="-1">Hopper Volume Weight</button>
           <button id="resinLookupToolTab" class="toolsIndexButton" type="button" role="tab" aria-selected="false" aria-controls="resinLookupTool" data-tool-target="resinLookupTool" tabindex="-1">Resin Reference</button>
@@ -1143,6 +1146,53 @@
           <span>Short footage</span>
           <strong id="shortFootageResult" class="mono">—</strong>
           <span id="shortFootageMessage" class="muted">Enter all three values.</span>
+        </div>
+      </section>
+
+      <section id="windingTensionTool" class="toolPanel toolWorkspacePanel" role="tabpanel" aria-labelledby="windingTensionToolTab windingTensionTitle" hidden>
+        <header class="toolPanelHeader">
+          <div><h2 id="windingTensionTitle" class="toolPanelTitle">Winding Tension</h2><p>Recommend a starting winding tension from film thickness and roll width.</p></div>
+          <details class="toolInfoGuide"><summary aria-label="Winding Tension information" title="Winding Tension information"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.75"/><path d="M12 7.75h.01"/></svg></summary><div class="toolInfoGuidePanel"><strong>Winding Tension</strong><p>Tension comes from film thickness as pounds per linear inch (PLI) of web width, then scales with roll width and the number of ups.</p><p>Thicknesses above 20 mil are held at 1.00 PLI. Every result is a starting point, not a setting.</p></div></details>
+        </header>
+
+        <div class="toolInputGrid toolInputGridThree mt10">
+          <div>
+            <label for="windingFilmThickness">Film thickness (mil)</label>
+            <input id="windingFilmThickness" type="text" inputmode="decimal" placeholder="0" />
+          </div>
+          <div>
+            <label for="windingRollWidth">Roll width (in)</label>
+            <input id="windingRollWidth" type="text" inputmode="decimal" placeholder="0" />
+            <div class="toolFieldHint">Width of one roll.</div>
+          </div>
+          <div>
+            <label for="windingUps">Number of ups</label>
+            <input id="windingUps" type="text" inputmode="numeric" value="1" />
+            <div class="toolFieldHint">Default 1</div>
+          </div>
+        </div>
+
+        <div class="toolActionRow mt10">
+          <button id="windingTensionClear" type="button" class="secondary">Clear</button>
+          <span id="windingTensionMessage" class="muted">Enter film thickness and roll width.</span>
+        </div>
+
+        <div id="windingTensionResult" class="windingTensionResult mt10" aria-live="polite" hidden>
+          <div class="windingTensionPrimary">
+            <strong id="windingTensionTarget" class="mono">&mdash;</strong>
+            <span>lbs</span>
+            <small><span id="windingTensionPli" class="mono">&mdash;</span> PLI</small>
+          </div>
+          <div class="windingTensionRange">
+            <div><span>Min</span><strong id="windingTensionMin" class="mono">&mdash;</strong></div>
+            <div><span>Target</span><strong id="windingTensionRangeTarget" class="mono">&mdash;</strong></div>
+            <div><span>Max</span><strong id="windingTensionMax" class="mono">&mdash;</strong></div>
+          </div>
+          <div class="windingTensionAdvice">
+            <div><span>Wind type</span><strong id="windingTensionWind">&mdash;</strong></div>
+            <div><span>Taper</span><strong id="windingTensionTaper">&mdash;</strong></div>
+          </div>
+          <p id="windingTensionNotice" class="windingTensionNotice">These are the recommended starting points for this product. Make the necessary adjustments based on the product being produced.</p>
         </div>
       </section>
 

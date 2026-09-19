@@ -939,7 +939,11 @@ test("the rail's switch and Escape share the one exit path: the boot file routes
   assert.doesNotMatch(bootSource, /beforeClose/, "the Handbook's close is not routed to the mode");
   assert.doesNotMatch(bootSource, /blendSurface|blend: blendSurface|context: \{\s+recipes,\s+blend/, "no surface over the mode is handed to the Handbook");
   assert.equal((bootSource.match(/blendEdit\.active = false;/g) || []).length, 2, "the mode is turned off in exitBlendEdit and by a line that lost its layers, nowhere else");
-  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 5, "called from the three toggles, from Escape, and defined - nowhere else");
+  assert.equal((bootSource.match(/exitBlendEdit\(\)/g) || []).length, 7, "called from the three toggles, from Escape, from the two utility rows (Tools, Print) unfolding over an open face, and defined - nowhere else");
+  // The utility rows leave the face through the same exit, never by
+  // turning the mode off themselves.
+  assert.match(bootSource, /function toggleTools\(\) \{[\s\S]*?if \(blendEdit\.active\) exitBlendEdit\(\);/);
+  assert.match(bootSource, /function togglePrintRow\(\) \{[\s\S]*?if \(blendEdit\.active\) exitBlendEdit\(\);/);
   // The Handbook module still offers beforeClose to whoever needs it; the
   // boot file simply does not.
   const handbookSource = read("station/station-handbook.js");

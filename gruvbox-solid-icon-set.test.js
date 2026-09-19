@@ -39,8 +39,8 @@ function iconSvgs(){
 
 test("every 32x32 app icon ships both glyph sets - the stroked base and its solid gruvbox twin", () => {
   const svgs = iconSvgs().filter(svg => svg.includes("baseGlyph") || svg.includes("gruvboxSolidGlyph"));
-  assert.equal(svgs.length, 25,
-    "expected 8 workspace tile icons (7 + the mobile-only Notes entry) + 8 mobile section header icons (7 + Notes' panel header) + 6 mobile tool tiles + 3 Play Store banner icon copies (one per state, now converted to the same 32x32 dual-glyph style) - the mobile RT Sync shortcut was removed as a duplicate of the workspace identity bar's own RT Sync action, and the desktop-only Station (Beta) link is a centered word with no tile icon");
+  assert.equal(svgs.length, 26,
+    "expected 8 workspace tile icons (7 + the mobile-only Notes entry) + 8 mobile section header icons (7 + Notes' panel header) + 7 mobile tool tiles + 3 Play Store banner icon copies (one per state, now converted to the same 32x32 dual-glyph style) - the mobile RT Sync shortcut was removed as a duplicate of the workspace identity bar's own RT Sync action, and the desktop-only Station (Beta) link is a centered word with no tile icon");
   for (const svg of svgs){
     assert.match(svg, /<g class="baseGlyph">/, `missing baseGlyph: ${svg.slice(0, 90)}`);
     assert.match(svg, /<g class="gruvboxSolidGlyph">/, `missing gruvboxSolidGlyph: ${svg.slice(0, 90)}`);
@@ -56,7 +56,7 @@ test("all four icon families were converted, not just the workspace tiles", () =
   // same 32x32 stroke/solid-twin style as everything else.
   assert.equal(family("helpPlayBannerIcon"), 3);
   const toolTiles = [...html.matchAll(/<button class="mobileToolTile"[\s\S]*?<\/button>/g)];
-  assert.equal(toolTiles.length, 6);
+  assert.equal(toolTiles.length, 7);
   for (const [tile] of toolTiles){
     assert.match(tile, /<g class="gruvboxSolidGlyph">/, "every mobile tool tile carries the solid twin");
   }

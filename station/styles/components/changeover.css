@@ -102,10 +102,6 @@
   color: var(--station-warning);
 }
 
-.station-root .station-changeover__close {
-  margin-left: auto;
-}
-
 /* ---- Body ----
  * Sized to the frame, never the other way round. At a stage too short for
  * the whole bench under the Handbook's share - Station's shortest

@@ -206,12 +206,15 @@
 /* A switch and its children are one group in the rail's column: the
    switch stands in the column like its neighbours; the flyout is laid
    beside it to the right, out of the column's flow, so the rail is no
-   wider for it and stands where it stood. Three groups: the Current
+   wider for it and stands where it stood. Four groups: the Current
    switch with the bulk set and Load Next, the Next switch with the bulk
-   set and Copy Current, the Weights switch with Smart Hoppers. Each
-   group's stem, bracket and children wear the colour its switch takes
-   when on - the Next face's "upcoming", the others' the accent - so the
-   parent and its children read as one. */
+   set and Copy Current, the Weights switch with Smart Hoppers, and at
+   the column's foot the Tools switch with the console's calculators -
+   Winding Tension today - which is a row of launchers rather than a
+   face: the switch is on while the row stands open, a tool while its
+   surface does. Each group's stem, bracket and children wear the colour
+   its switch takes when on - the Next face's "upcoming", the others' the
+   accent - so the parent and its children read as one. */
 .station-rail__group {
   --station-rail-stem: var(--station-accent);
   position: relative;

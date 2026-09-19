@@ -194,6 +194,18 @@
    * open together at every window Station supports and never meet. */
   --station-changeover-width: 820px;
   --station-changeover-height: 308px;
+
+  /* ---- The Tools row's windows ----
+   * Station windows (window.css) spawned at the stage's centre and moved
+   * by their title bars; each is a fixed-capacity box of its own size,
+   * capped by the stage's cell in its own sheet. Winding Tension: what
+   * its row of entries, the figure, the range and the advice need at
+   * Station's type sizes. Resin Totals: the strip of three figures and
+   * two columns of materials, a few rows deep before the list scrolls. */
+  --station-winding-width: 560px;
+  --station-winding-height: 380px;
+  --station-totals-width: 640px;
+  --station-totals-height: 420px;
 }
 
 /* ---------------------------------------------------------------------

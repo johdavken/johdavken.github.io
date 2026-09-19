@@ -1,11 +1,12 @@
 "use strict";
 
-/* Operator Handbook > Resin Totals (station/station-resin-totals.js): the
- * application's Resin Totals drawn for the Handbook's bench. These tests
- * hold the page to the one calculation it is a view of, to the layout it
- * promised (a three-figure strip, two columns of materials that scroll
- * inside the frame), to a quiet empty lot, and to writing nothing but
- * its two fields - production and scrap pounds - through the bridge it is
+/* Resin Totals (station/station-resin-totals.js): the application's Resin
+ * Totals drawn as a page for a Station window out of the rail's Tools
+ * row (once the Operator Handbook's bench). These tests hold the page to
+ * the one calculation it is a view of, to the layout it promised (a
+ * three-figure strip, two columns of materials that scroll inside the
+ * frame), to a quiet empty lot, and to writing nothing but its two
+ * fields - production and scrap pounds - through the bridge it is
  * handed.
  */
 
@@ -18,7 +19,7 @@ const sectionModule = require("./station/station-resin-totals.js");
 const resinTotals = require("./resin-totals.js");
 const source = require("./station/station-source.js");
 const bridgeModule = require("./station-state-bridge.js");
-const handbookModule = require("./station/station-handbook.js");
+const windowModule = require("./station/station-window.js");
 
 const ROOT = __dirname;
 const read = file => fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -162,16 +163,21 @@ const rowText = row => ({
  *   The section
  * -------------------------------------------------------------------- */
 
-test("it is a Handbook section: id, title, and the create/update/focus contract", () => {
+test("it is a page on the Handbook section contract: id, title, and create/update/focus; update answers with what it drew", () => {
   assert.equal(sectionModule.section.id, "resin-totals");
   assert.equal(sectionModule.section.title, "Resin Totals");
-  const { instance } = mount(jobState());
+  const { instance } = mount(jobState({ prodResinLb: 1000, scrapResinLb: 200 }));
   assert.equal(typeof instance.update, "function");
   assert.equal(typeof instance.focus, "function");
   assert.ok(instance.element);
   assert.equal(instance.element.getAttribute("data-role"), "resin-totals");
-  // One line per hopper, scrolling past three layers: the page tells the
-  // Handbook it can use more bench, so the frame's grip is offered on it.
+  const answer = instance.update();
+  assert.equal(answer.total, 1200);
+  assert.equal(answer.prod, 1000);
+  assert.equal(answer.scrap, 200);
+  assert.ok(Array.isArray(answer.rows));
+  // One line per hopper, scrolling past three layers: a bench holding the
+  // page may be raised for it.
   assert.equal(instance.grows(), true);
 });
 
@@ -419,71 +425,97 @@ test("focus lands on the production figure - the first thing to enter on this pa
  *   In the Handbook, between the Recipe Book and Appearance
  * -------------------------------------------------------------------- */
 
-test("station.js registers the section second, hands it the resolved state and the shared module, and updates the Handbook on value changes", () => {
+test("station.js builds the page into a Station window out of the Tools row's second tile - handed the resolved state, the shared module, and the job controls' offer and publish policy - and redraws it, with the total on the window's bar, wherever the Handbook is told of a value change; the Handbook no longer carries the page", () => {
   const boot = read("station/station.js");
   assert.match(boot, /const resinTotalsSection = root\.PolynStationResinTotals \|\| null;/);
   assert.match(boot, /const resinTotals = root\.PolynResinTotals \|\| null;/);
-  assert.match(boot, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);\s*if \(weightsSection\) handbookSections\.push\(weightsSection\.section\);\s*if \(resinTotalsSection\) handbookSections\.push\(resinTotalsSection\.section\);\s*if \(appearance\) handbookSections\.push\(appearance\.section\);/,
-    "Recipe Book, Weights, Resin Totals, Appearance");
-  assert.match(boot, /resolved: \(\) => current\.resolved,\s*resinTotals,/);
+  assert.match(boot, /const stationWindow = root\.PolynStationWindow \|\| null;/);
+  assert.match(boot, /if \(recipeBook\) handbookSections\.push\(recipeBook\.section\);\s*if \(weightsSection\) handbookSections\.push\(weightsSection\.section\);\s*if \(appearance\) handbookSections\.push\(appearance\.section\);/,
+    "Recipe Book, Weights, Appearance - no Resin Totals page");
+  assert.doesNotMatch(boot, /handbookSections\.push\(resinTotalsSection/);
+  const window = boot.slice(boot.indexOf("if (stationWindow && resinTotalsSection && resinTotals && mounts.utility && railPanel) {"), boot.indexOf("feedJob(current.model, current.resolved);"));
+  assert.match(window, /totalsPage = resinTotalsSection\.section\.create\(doc, \{\s*resolved: \(\) => current\.resolved,\s*resinTotals,/);
   // Its fields write through the same offer and publish policy as the
   // header's job controls.
-  const context = boot.slice(boot.indexOf("resolved: () => current.resolved,"), boot.indexOf("theme: themeController,"));
-  assert.match(context, /commands: \(\) => commandsFor\(current\.resolved\),/);
-  assert.match(context, /onCommitted: result => \{\s*lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s*onPublish\(\{ own: true \}\);/);
-  // The values path of onPublish tells the Handbook too, so production,
-  // scrap, lots and blend edits reach the page without a structural render.
+  assert.match(window, /commands: \(\) => commandsFor\(current\.resolved\),/);
+  assert.match(window, /onCommitted: result => \{\s*lastOwnRevision = Number\.isInteger\(result\.revision\) \? result\.revision : null;\s*onPublish\(\{ own: true \}\);/);
+  assert.match(window, /totalsWindow = stationWindow\.create\(doc, \{\s*name: "totals",\s*title: resinTotalsSection\.section\.title,\s*className: "station-totals__panel",/);
+  assert.match(window, /anchor: railPanel\.totalsButton,/);
+  assert.match(window, /totalsWindow\.body\.appendChild\(totalsPage\.element\);\s*mounts\.utility\.appendChild\(totalsWindow\.element\);\s*surfaces\.push\(totalsWindow\);/);
+  // Opening redraws the page and closes the other utility surfaces.
+  assert.match(window, /if \(open\) \{ closeOtherSurfaces\(totalsWindow\); refreshTotals\(\); \}/);
+  // The Handbook's context no longer carries the commands the page used.
+  const handbook = boot.slice(boot.indexOf("handbookPanel = handbook.create(doc, {"), boot.indexOf("mount: mounts.handbook,"));
+  assert.doesNotMatch(handbook, /resinTotals|commands:|onCommitted/);
+  // The values path of onPublish tells the pages - the Handbook's and the
+  // window's - so production, scrap, lots and blend edits reach the page
+  // without a structural render; the same helper from every site.
   const values = boot.slice(boot.indexOf('if (kind === "values"'), boot.indexOf("/* Structural (or a value change"));
-  assert.match(values, /if \(handbookPanel\) handbookPanel\.update\(\);/);
+  assert.match(values, /refreshPages\(\);/);
+  assert.doesNotMatch(boot, /if \(handbookPanel\) handbookPanel\.update\(\);\n\s+syncRail/, "a site tells the Handbook alone");
+  const refresh = boot.slice(boot.indexOf("function refreshTotals()"), boot.indexOf("function refreshPages()"));
+  assert.match(refresh, /const result = totalsPage\.update\(\);/);
+  assert.match(refresh, /resinTotalsSection\.formatPounds\(resinTotals, total\)\}? lb total/);
+  assert.match(refresh, /"No pounds entered"/);
+  assert.match(refresh, /classList\.toggle\("is-unset", !\(total > 0\)\)/);
+  // The rail's tile: state and callback.
+  assert.match(boot, /totals: \{ active: !!\(totalsWindow && totalsWindow\.isOpen\(\)\), available: !!totalsWindow \},/);
+  assert.match(boot, /onResinTotals: toggleResinTotals,/);
   // No permanent Resin Totals control anywhere else on Station: the words
   // appear in the boot file's comments only, never in a label it draws.
   const codeOnly = boot.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/[^\n]*/g, "$1");
   assert.doesNotMatch(codeOnly, /Resin Totals/);
-  for (const file of ["station/station-shell.js", "station/station-job-controls.js", "station/station-sync-console.js"]) {
+  for (const file of ["station/station-shell.js", "station/station-job-controls.js", "station/station-sync-console.js", "station/station-handbook.js"]) {
     assert.doesNotMatch(read(file), /Resin Totals|resin-totals/, `${file} grew a Resin Totals control`);
   }
 });
 
-test("the Handbook's tabs read Recipe Book · Resin Totals · Appearance when built as station.js builds it", () => {
-  const recipeBook = { id: "recipe-book", title: "Recipe Book", create: d => ({ element: d.createElement("div"), update() {} }) };
-  const appearance = { id: "appearance", title: "Appearance", create: d => ({ element: d.createElement("div"), update() {} }) };
+test("in a Station window the page opens redrawn from the current state, takes focus on the production figure, and the window's update reaches it while closed", () => {
   const d = doc();
   let current = resolvedFor(jobState());
-  const handbook = handbookModule.create(d, {
-    sections: [recipeBook, sectionModule.section, appearance],
-    context: { resolved: () => current, resinTotals },
-    reducedMotion: () => true
-  });
-  assert.deepEqual(handbook.sections(), ["recipe-book", "resin-totals", "appearance"]);
-  const tabs = handbook.panel.querySelectorAll(".station-handbook__tab");
-  assert.deepEqual(tabs.map(tab => tab.textContent), ["Recipe Book", "Resin Totals", "Appearance"]);
-  // Switching to the page redraws it from the current state.
+  const page = sectionModule.section.create(d, { resolved: () => current, resinTotals });
+  const win = windowModule.create(d, { name: "totals", title: sectionModule.section.title, className: "station-totals__panel", reducedMotion: () => true, focus: () => page });
+  win.body.appendChild(page.element);
+  assert.equal(win.panel.getAttribute("aria-label"), "Resin Totals");
+  assert.ok(win.panel.classList.contains("station-totals__panel"));
+  assert.ok(win.panel.classList.contains("station-window__panel"));
+  assert.equal(win.element.getAttribute("data-window"), "totals");
+  assert.ok(win.panel.hasAttribute("hidden"));
   current = resolvedFor(jobState({ prodResinLb: 4242 }));
-  handbook.show("resin-totals");
-  assert.equal(handbook.current(), "resin-totals");
-  const page = handbook.section("resin-totals").element;
-  assert.equal(stripValue(page, "production"), "4,242");
-  // And the Handbook's own update() reaches it while it is not the page showing.
-  handbook.show("appearance");
+  page.update();
+  assert.equal(win.open(), true);
+  assert.ok(!win.panel.hasAttribute("hidden"));
+  assert.equal(stripValue(page.element, "production"), "4,242");
+  assert.equal(page.element.querySelector('[data-field="production"]').focused, 1, "focus lands on the production figure");
+  assert.equal(win.close(), true);
+  assert.ok(win.panel.hasAttribute("hidden"));
   current = resolvedFor(jobState({ prodResinLb: 777 }));
-  handbook.update();
-  assert.equal(stripValue(page, "production"), "777");
+  page.update();
+  assert.equal(stripValue(page.element, "production"), "777");
 });
 
-test("the section is loaded by both hosts, in the same place, and styled in handbook.css inside the frame", () => {
+test("the page is loaded by both hosts after the window frame, in the same place, and styled in its own sheet inside the frame - not in handbook.css", () => {
   const host = read("station-host.js");
   const harness = read("station/station.html");
   const hostOrder = [...host.matchAll(/"station\/(station-[^"]+\.js)"/g)].map(m => m[1]);
   const harnessOrder = [...harness.matchAll(/src="(station-[^"?]+\.js)/g)].map(m => m[1]);
-  assert.ok(hostOrder.indexOf("station-resin-totals.js") > hostOrder.indexOf("station-recipe-book.js"));
-  assert.ok(hostOrder.indexOf("station-resin-totals.js") < hostOrder.indexOf("station-handbook.js"));
-  assert.ok(harnessOrder.indexOf("station-resin-totals.js") > harnessOrder.indexOf("station-recipe-book.js"));
-  assert.ok(harnessOrder.indexOf("station-resin-totals.js") < harnessOrder.indexOf("station-handbook.js"));
-  const css = read("station/styles/components/handbook.css");
+  for (const order of [hostOrder, harnessOrder]) {
+    assert.ok(order.indexOf("station-resin-totals.js") > order.indexOf("station-window.js"));
+    assert.ok(order.indexOf("station-resin-totals.js") > order.indexOf("station-recipe-book.js"));
+    assert.ok(order.indexOf("station-resin-totals.js") < order.indexOf("station-handbook.js"));
+  }
+  assert.ok(host.indexOf('"station/station-resin-totals.js"') < host.indexOf('"station/station.js"'));
+  assert.match(host, /"station\/styles\/components\/winding-tension\.css",\s*"station\/styles\/components\/resin-totals\.css"/);
+  assert.match(harness, /components\/resin-totals\.css\?v=/);
+  const css = read("station/styles/components/resin-totals.css");
+  assert.match(css, /\.station-totals__panel \{[^}]*width: min\(var\(--station-totals-width\), calc\(100% - 2 \* var\(--station-space-4\)\)\);/);
+  assert.match(css, /\.station-totals__panel \{[^}]*height: min\(var\(--station-totals-height\), calc\(100% - 2 \* var\(--station-space-3\)\)\);/);
   assert.match(css, /\.station-totals__list \{[^}]*overflow-y: auto;/, "the list scrolls inside the frame");
   assert.match(css, /\.station-totals__list \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, "two columns");
   assert.match(css, /\.station-totals__strip \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/, "a three-part strip");
-  assert.doesNotMatch(css.slice(css.indexOf("Resin Totals (station-resin-totals.js)")), /#[0-9a-fA-F]{3,8}\b|rgba?\(/, "no colour of its own - tokens only");
-  assert.doesNotMatch(css, /--station-handbook-(width|share|max-height|clearance): /, "the frame's tokens are not restated");
-  assert.doesNotMatch(read("station/styles/tokens.css").match(/--station-handbook-[a-z-]+: [^;]+;/g).join(" "), /totals/, "the frame is not resized for the page");
+  assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, "no colour of its own - tokens only");
+  assert.doesNotMatch(read("station/styles/components/handbook.css"), /station-totals/, "handbook.css still styles the page");
+  const tokens = read("station/styles/tokens.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(tokens, /--station-totals-width: \d+px;/);
+  assert.match(tokens, /--station-totals-height: \d+px;/);
 });
