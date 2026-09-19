@@ -1,0 +1,156 @@
+/* Rosé Pine — the main variant: a deep plum-black base, the soft
+ * off-white text, and the palette's six named colours - love, gold, rose,
+ * pine, foam, iris - mapped by role. The rose is the accent, the receiver
+ * and the Handbook's one action; foam and iris carry status; the pine is
+ * the fittings and the hopper charge, deep against the overlay steel. */
+.station-root[data-theme="rose-pine"],
+.station-theme-scope[data-theme="rose-pine"] {
+  color-scheme: dark;
+  --station-color-scheme: dark;
+
+  /* ---- Character ----
+   * A rendered machine in plum-black, stood in a lit room: shaded
+   * surfaces, ordinary line weights, no drafting grid, the same face for
+   * every label. */
+  --station-line-scale: 1;
+  --station-schematic-outline: 0%;
+  --station-font-annotation: var(--station-font);
+  --station-grid-major: transparent;
+  --station-grid-minor: transparent;
+  --station-canvas-pattern: none;
+  /* The room (tokens.css: the stage atmosphere): the light from above
+     and the horizon and floor under the machine are the text's own
+     colour at a whisper; the edges fall to black. */
+  --station-atmosphere-glow: rgba(224, 222, 244, 0.08);
+  --station-atmosphere-horizon: rgba(224, 222, 244, 0.1);
+  --station-atmosphere-floor: rgba(224, 222, 244, 0.045);
+  --station-atmosphere-vignette: rgba(0, 0, 0, 0.42);
+  --station-stage-atmosphere: var(--station-atmosphere);
+
+  --station-bg: #191724;
+  --station-surface: #1f1d2e;
+  --station-surface-raised: #26233a;
+  --station-surface-sunken: #191724;
+  --station-surface-interactive: #232136;
+  --station-surface-hover: #2a273f;
+  --station-surface-selected: #403d52;
+  --station-surface-editable: #2a2740;
+
+  --station-text: #e0def4;
+  --station-text-muted: #c5c3d9;
+  --station-text-faint: #a09dba;
+  --station-text-disabled: #6e6a86;
+  --station-text-on-accent: #191724;
+
+  --station-border-subtle: #26233a;
+  --station-border: #403d52;
+  --station-border-strong: #524f67;
+  --station-focus-ring: #9ccfd8;
+
+  --station-accent: #ebbcba;
+  --station-accent-hover: #f2cdca;
+  --station-accent-active: #d7827e;
+  --station-accent-soft: rgba(235, 188, 186, 0.17);
+  --station-selection: rgba(235, 188, 186, 0.24);
+  --station-editable: #f6c177;
+
+  --station-success: #9ccfd8;
+  --station-tracking: #9ccfd8;
+  --station-smart: #c4a7e7;
+  /* The run-down flow's chevrons (hopper.css): the foam, the palette's cool sea-glass -
+     there is no green in Rosé Pine, and the foam is what it uses for one. */
+  --station-rundown-flow: #9ccfd8;
+  --station-warning: #f6c177;
+  --station-danger: #eb6f92;
+  --station-info: #c4a7e7;
+  --station-inactive: #6e6a86;
+  --station-pump-off: #c4a7e7;
+
+  --station-steel: #26233a;
+  --station-steel-light: #403d52;
+  --station-steel-dark: #1f1d2e;
+  --station-frame: #232136;
+  --station-edge: #6e6a86;
+  --station-edge-soft: #524f67;
+  --station-equipment-fill: #26233a;
+  --station-equipment-stroke: #524f67;
+  --station-housing-top: #524f67;
+  --station-housing-side: #403d52;
+  --station-housing-end: #26233a;
+  --station-metal: #6e6a86;
+  --station-metal-light: #908caa;
+  --station-metal-dark: #524f67;
+  --station-fitting: #31748f;
+  --station-hopper-body: #26233a;
+  --station-hopper-stroke: #6e6a86;
+  --station-hopper-fill: #31748f;
+  --station-hopper-loader: #524f67;
+  --station-receiver: #d7827e;
+  --station-receiver-edge: #ebbcba;
+  --station-hose-clear: rgba(224, 222, 244, 0.18);
+  --station-hose-edge: rgba(224, 222, 244, 0.52);
+  --station-hose-spiral: #9ccfd8;
+  --station-hose-glint: rgba(224, 222, 244, 0.42);
+  --station-hose-empty: rgba(224, 222, 244, 0.04);
+
+  --station-layer-outside: #9ccfd8;
+  --station-layer-subskin: #31748f;
+  --station-layer-core: #f6c177;
+  --station-layer-inside: #c4a7e7;
+  --station-melt: #d7827e;
+  --station-bubble: rgba(156, 207, 216, 0.16);
+  --station-bubble-edge: #9ccfd8;
+  --station-frost: #9ccfd8;
+  --station-film: #31748f;
+  --station-batch: #6e6a86;
+
+  --station-timeline-rail: #524f67;
+  --station-timeline-current: #e0def4;
+  --station-timeline-upcoming: #a09dba;
+  --station-timeline-transition: #f6c177;
+  --station-timeline-marker: #c4a7e7;
+  --station-timeline-label: #e0def4;
+  --station-timeline-muted: #c5c3d9;
+
+  /* ---- Header ribbon (job-controls.css) ----
+     Eight stops, one per segment, and the ink for the four that carry
+     text (1 Output, 2 the figure, 6 Changeover, 8 the clock).
+     Rosé Pine's six, warm to cool - rose, gold, love, foam, pine, iris -
+     into a muted sliver and the overlay the clock sits on.
+     */
+  --station-ribbon-1: #ebbcba;
+  --station-ribbon-2: #f6c177;
+  --station-ribbon-3: #eb6f92;
+  --station-ribbon-4: #9ccfd8;
+  --station-ribbon-5: #31748f;
+  --station-ribbon-6: #c4a7e7;
+  --station-ribbon-7: #6e6a86;
+  --station-ribbon-8: #26233a;
+  --station-ribbon-ink-1: #191724;
+  --station-ribbon-ink-2: #191724;
+  --station-ribbon-ink-6: #191724;
+  --station-ribbon-ink-8: #e0def4;
+
+  --station-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.48);
+  --station-qr-surface: #ffffff;
+
+  /* ---- Operator Handbook: the glass ----
+   * The Handbook's frame is a smoked work surface over the machine, and
+   * these are its material. Plum-black glass, the lines and washes in the
+   * off-white text; the rose is kept for the one state and the one action
+   * that earn it.
+   */
+  --station-handbook-glass: rgba(31, 29, 46, 0.78);
+  --station-handbook-glass-border: rgba(224, 222, 244, 0.14);
+  --station-handbook-glass-highlight: rgba(224, 222, 244, 0.08);
+  --station-handbook-glass-blur: 14px;
+  --station-handbook-glass-saturate: 1.05;
+  --station-handbook-glass-shadow: 0 14px 36px rgba(0, 0, 0, 0.50);
+  --station-handbook-rule: rgba(224, 222, 244, 0.1);
+  --station-handbook-control-border: rgba(224, 222, 244, 0.2);
+  --station-handbook-control-hover: rgba(224, 222, 244, 0.07);
+  --station-handbook-control-active: rgba(224, 222, 244, 0.12);
+  --station-handbook-tab-active: #e0def4;
+  --station-handbook-selection: rgba(224, 222, 244, 0.1);
+  --station-handbook-selector-active: #ebbcba;
+}

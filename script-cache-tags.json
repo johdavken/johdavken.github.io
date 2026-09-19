@@ -56,12 +56,12 @@
     "hash": "5a648b2c6249a522"
   },
   "station-theme.js": {
-    "v": "0.2.0",
-    "hash": "45eb154879a36623"
+    "v": "0.3.0",
+    "hash": "3a20e45ce7cc6f83"
   },
   "station-host.js": {
-    "v": "0.4.63",
-    "hash": "d38ffd46e4d7c788"
+    "v": "0.4.64",
+    "hash": "74f325c273466701"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

@@ -15,14 +15,20 @@
 
   const STORAGE_KEY = "polyn.station.theme.v1";
   const DEFAULT_THEME = "industrial-dark";
-  /* The registry, in gallery order: three families, each a light theme
-   * over its dark one. `family` is what the Appearance gallery groups by
-   * and what the two technical themes share (the drafting grid, the
-   * schematic linework); it changes nothing about how a theme is applied. */
+  /* The registry, in gallery order: six families in two rows of three,
+   * each a light theme over its dark one. `family` is what the Appearance
+   * gallery groups by and what the two technical themes share (the
+   * drafting grid, the schematic linework); it changes nothing about how a
+   * theme is applied. The second row are three palettes from elsewhere -
+   * Rosé Pine, Everforest (as Evergreen), Ubuntu's Yaru - mapped onto the
+   * same contract. */
   const FAMILIES = Object.freeze([
     Object.freeze({ id: "standard", label: "Standard" }),
     Object.freeze({ id: "gruvbox", label: "Gruvbox" }),
-    Object.freeze({ id: "technical", label: "Technical" })
+    Object.freeze({ id: "technical", label: "Technical" }),
+    Object.freeze({ id: "rose-pine", label: "Rosé Pine" }),
+    Object.freeze({ id: "evergreen", label: "Evergreen" }),
+    Object.freeze({ id: "yaru", label: "Yaru" })
   ]);
   const THEMES = Object.freeze([
     Object.freeze({ id: "industrial-light", label: "Industrial Light", family: "standard", scheme: "light", description: "Low-glare slate and steel for bright work areas." }),
@@ -30,7 +36,13 @@
     Object.freeze({ id: "gruvbox-light", label: "Gruvbox Light", family: "gruvbox", scheme: "light", description: "Warm cream paper, dark earthy machinery, faded accents." }),
     Object.freeze({ id: "gruvbox-dark", label: "Gruvbox Dark", family: "gruvbox", scheme: "dark", description: "Warm charcoal, cream, and restrained earthy accents." }),
     Object.freeze({ id: "engineering-paper", label: "Engineering Paper", family: "technical", scheme: "light", description: "Graphite linework on a drafting sheet." }),
-    Object.freeze({ id: "blueprint", label: "Blueprint", family: "technical", scheme: "dark", description: "Pale schematic linework on blueprint blue." })
+    Object.freeze({ id: "blueprint", label: "Blueprint", family: "technical", scheme: "dark", description: "Pale schematic linework on blueprint blue." }),
+    Object.freeze({ id: "rose-pine-dawn", label: "Rosé Pine Dawn", family: "rose-pine", scheme: "light", description: "Warm parchment, dusty violet text, pine and rose accents." }),
+    Object.freeze({ id: "rose-pine", label: "Rosé Pine", family: "rose-pine", scheme: "dark", description: "Plum-black surfaces, soft off-white, rose and foam accents." }),
+    Object.freeze({ id: "evergreen-light", label: "Evergreen Light", family: "evergreen", scheme: "light", description: "Ivory paper, slate-green text, deepened forest accents." }),
+    Object.freeze({ id: "evergreen-dark", label: "Evergreen Dark", family: "evergreen", scheme: "dark", description: "Forest charcoal, parchment text, soft green and aqua accents." }),
+    Object.freeze({ id: "yaru-light", label: "Yaru Light", family: "yaru", scheme: "light", description: "Cool white, near-black text, Ubuntu orange and aubergine." }),
+    Object.freeze({ id: "yaru-dark", label: "Yaru Dark", family: "yaru", scheme: "dark", description: "Neutral graphite, white text, Ubuntu orange and aubergine." })
   ]);
   const THEME_IDS = Object.freeze(THEMES.map(theme => theme.id));
   const VALID = new Set(THEME_IDS);

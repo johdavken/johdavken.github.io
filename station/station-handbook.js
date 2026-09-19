@@ -46,8 +46,8 @@
  * show than fits: the reach is held for the open panel only, and goes
  * with the close, so the next open stands at the default again. Whether
  * a page can use the room is the section's to say (grows(), above): a
- * page that cannot - the Appearance gallery, Sudo's gate - is shown at
- * the default with no grip, and the reach waits for a page that can.
+ * page that cannot - Sudo's gate - is shown at the default with no grip,
+ * and the reach waits for a page that can.
  * The ceiling is the stage less its headroom (tokens.css), so a raised
  * frame never stands on the stage's top edge; the hoppers it covers on
  * the way up are the operator's to cover, and to uncover with a drag

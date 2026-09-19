@@ -394,8 +394,8 @@ test("the stylesheet names no colour of its own, cuts every tile to the Handbook
   assert.match(css, /\.station-root \.station-bulk-field__input:focus-visible \{[^}]*outline: none;[^}]*--station-field-shadow: none;/);
   assert.doesNotMatch(css, /bulk-field__input:focus-visible \{[^}]*--station-field-border/);
   assert.doesNotMatch(css, /@media \(max-width|min-width/, "no breakpoint: the rail is desktop only, as Station is");
-  // The six themes all carry the tokens the rail spends.
-  for (const theme of ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark", "engineering-paper", "blueprint"]) {
+  // Every registered theme carries the tokens the rail spends.
+  for (const theme of require("./station-theme.js").THEME_IDS) {
     const sheet = read(`station/styles/themes/${theme}.css`);
     for (const token of ["--station-surface-raised:", "--station-border-strong:", "--station-accent:", "--station-accent-soft:", "--station-warning:", "--station-text-muted:", "--station-text-disabled:", "--station-border-subtle:"]) {
       assert.ok(sheet.includes(token), `${theme} lacks ${token}`);
