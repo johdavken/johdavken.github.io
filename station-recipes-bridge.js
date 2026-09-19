@@ -59,6 +59,7 @@
    * outside this list is refused at connect time and at request time. */
   const ACTIONS = Object.freeze([
     "saveCurrentRecipe",  // { name }             save the running recipe under a new name
+    "saveNextRecipe",     // { name }             save the planned recipe under a new name
     "replaceRecipe",      // { id }               overwrite a saved recipe with the running one
     "loadRecipe",         // { id, destination }  apply a saved recipe to the running
                           //                      recipe ("current") or the plan ("next")
@@ -74,6 +75,7 @@
   /* The arguments each action takes, and nothing else crosses. */
   const ARGUMENTS = Object.freeze({
     saveCurrentRecipe: Object.freeze(["name"]),
+    saveNextRecipe: Object.freeze(["name"]),
     replaceRecipe: Object.freeze(["id"]),
     loadRecipe: Object.freeze(["id", "destination"]),
     renameRecipe: Object.freeze(["id", "name"]),

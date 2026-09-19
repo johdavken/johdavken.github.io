@@ -110,6 +110,7 @@ function producer(actions, cache) {
     read: () => bridgeModule.project(env.cache, { workspaceId: "ws-9", displayName: "Line 9" }),
     actions: Object.assign({
       saveCurrentRecipe: async args => { env.calls.push(["saveCurrentRecipe", args]); return { ok: true, item: { id: "r-new", createdBy: "user-a", name: args.name } }; },
+      saveNextRecipe: async args => { env.calls.push(["saveNextRecipe", args]); return { ok: true, item: { id: "r-plan", name: args.name } }; },
       replaceRecipe: async args => { env.calls.push(["replaceRecipe", args]); return { ok: true, item: { id: args.id } }; },
       loadRecipe: async args => { env.calls.push(["loadRecipe", args]); return { ok: true }; },
       renameRecipe: async args => { env.calls.push(["renameRecipe", args]); return { ok: true, item: { id: args.id, name: args.name, createdBy: "leak" } }; },
@@ -123,7 +124,7 @@ function producer(actions, cache) {
 }
 
 test("the vocabulary is closed, and an unknown action is refused at connect time and at request time", async () => {
-  assert.deepEqual([...bridgeModule.ACTIONS], ["saveCurrentRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"]);
+  assert.deepEqual([...bridgeModule.ACTIONS], ["saveCurrentRecipe", "saveNextRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"]);
   assert.ok(Object.isFrozen(bridgeModule.ACTIONS));
   assert.deepEqual([...bridgeModule.DESTINATIONS], ["current", "next"]);
   const bridge = bridgeModule.create();
@@ -152,6 +153,11 @@ test("a save carries the name, normalized, and answers with the saved id and not
   assert.ok(Object.isFrozen(env.calls[0][1]));
   assert.deepEqual(result, { ok: true, id: "r-new" });
   assert.ok(Object.isFrozen(result));
+  // Save Next: the same one argument, the same answer, for the plan.
+  const plan = await env.bridge.request("saveNextRecipe", { name: " Tomorrow  film ", id: "dropped" });
+  assert.deepEqual(env.calls[1], ["saveNextRecipe", { name: "Tomorrow film" }]);
+  assert.deepEqual(plan, { ok: true, id: "r-plan" });
+  assert.equal(bridgeModule.ARGUMENTS.saveNextRecipe.length, 1);
 });
 
 test("a missing or blank name, or a missing id, is refused before the application is asked", async () => {
@@ -232,7 +238,7 @@ test("the window is the state bridge's own: a frozen book, one notification per 
   assert.equal(env.bridge.getBook().count, 1);
   assert.notEqual(env.bridge.getBook(), first);
   assert.equal(env.bridge.publish, undefined, "publish is on the producer's handle only");
-  assert.deepEqual([...env.bridge.capabilities()].sort(), ["deleteRecipe", "duplicateRecipe", "loadRecipe", "refresh", "renameRecipe", "replaceRecipe", "saveCurrentRecipe"]);
+  assert.deepEqual([...env.bridge.capabilities()].sort(), ["deleteRecipe", "duplicateRecipe", "loadRecipe", "refresh", "renameRecipe", "replaceRecipe", "saveCurrentRecipe", "saveNextRecipe"]);
   assert.throws(() => env.bridge.connect({ read: () => ({}) }), /already connected/);
   assert.equal(env.handle.disconnect(), true);
   assert.equal(env.bridge.isConnected(), false);

@@ -2669,6 +2669,17 @@
            * every render; the resolved state the same way. */
           model: () => current.model,
           resolved: () => current.resolved,
+          /* Whether a plan with anything in it exists, for the book's
+           * Save Next: the plan's hoppers as the stage reads them. */
+          planned: () => {
+            const resolved = current.resolved;
+            if (!resolved || !resolved.plan || !resolved.plan.planned) return false;
+            const states = resolved.nextHopperState || {};
+            return Object.keys(states).some(key => {
+              const entry = states[key];
+              return !!(entry && (entry.assigned || (Number(key.slice(key.lastIndexOf(":") + 1)) > 0 && entry.pct > 0)));
+            });
+          },
           theme: themeController,
           themes: theme ? theme.THEMES : [],
           families: theme ? theme.FAMILIES : [],

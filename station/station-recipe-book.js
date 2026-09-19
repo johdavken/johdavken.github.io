@@ -5,9 +5,10 @@
  * The saved recipes of the production line this desktop is on, as a
  * compact list; the blend of whichever one is selected, with what may be
  * done to it - Load (into the running recipe or into the plan), Update,
- * and behind More: Rename, Duplicate, Delete; and Save Current, to add the
- * running recipe to them. Selecting one shows it and changes nothing;
- * only a confirmed action asks the application for anything.
+ * and behind More: Rename, Duplicate, Delete; and Save Current and Save
+ * Next, to add the running recipe or the planned one to them. Selecting
+ * one shows it and changes nothing; only a confirmed action asks the
+ * application for anything.
  *
  * WHERE IT READS FROM, AND WHERE IT WRITES
  *
@@ -21,7 +22,11 @@
  * state, with its own helper, and saves it along its own path, exactly as
  * its Save Current Recipe dialog does; a name already taken comes back as
  * the service's own duplicate_name, and the offer to replace goes back the
- * same way. Load, Update, Rename, Duplicate and Delete go the same way,
+ * same way. Save Next is the same request for the planned recipe
+ * (saveNextRecipe, the floor UI's Save Next Recipe); it is held while
+ * nothing is planned - the boot file says whether one is (context.planned)
+ * - and a taken name offers no replace, since Update writes the running
+ * recipe, not the plan. Load, Update, Rename, Duplicate and Delete go the same way,
  * each one request by the recipe's id - the application's own apply and
  * its own mutation closures, with their own tails. A load into Current is
  * the application's validated, atomic apply, told to RT Sync at once; a
@@ -203,10 +208,15 @@
     const layerRole = typeof settings.layerRole === "function" ? settings.layerRole : null;
 
     const model = typeof settings.model === "function" ? settings.model : () => null;
+    /* Whether the application holds a planned recipe with anything in it,
+     * as the boot file reads it off the stage's resolved state; without
+     * the reader, Save Next is never offered. */
+    const planned = typeof settings.planned === "function" ? settings.planned : () => false;
 
     const state = {
       selectedId: null,
-      entry: null,        // { mode: "save" | "rename" | "duplicate", id } while a name is asked for
+      entry: null,        // { mode: "save" | "rename" | "duplicate", id, recipe } while a name is
+                          // asked for; `recipe` is "current" | "next" for a save
       confirm: null,      // { kind: "load" | "update" | "delete", id } while a question is open
       moreOpen: false,    // the overflow row (Rename, Duplicate, Delete) is out
       pending: null,      // the request in flight, by action
@@ -218,16 +228,17 @@
     const rootEl = element(doc, "div", "station-book", { "data-role": "recipe-book" });
 
     /* ---- Toolbar ----
-     * Save Current leads; Refresh is a utility, an icon that says what it
-     * is on hover and to a reader. */
+     * Save Current leads, Save Next beside it; Refresh is a utility, an
+     * icon that says what it is on hover and to a reader. */
     const toolbar = element(doc, "div", "station-book__toolbar");
     const saveButton = text(doc, "button", PRIMARY, "Save Current", { type: "button", "data-action": "save-current" });
+    const saveNextButton = text(doc, "button", ACTION, "Save Next", { type: "button", "data-action": "save-next" });
     const refreshButton = element(doc, "button", "station-handbook__utility", {
       type: "button", "data-action": "refresh", "aria-label": "Refresh", title: "Refresh the line's saved recipes"
     });
     refreshButton.appendChild(glyph(doc));
     const contextLabel = element(doc, "span", "station-book__context");
-    toolbar.appendChild(saveButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
+    toolbar.appendChild(saveButton); toolbar.appendChild(saveNextButton); toolbar.appendChild(refreshButton); toolbar.appendChild(contextLabel);
     rootEl.appendChild(toolbar);
 
     /* ---- The name, asked for in place: Save Current, Rename, Duplicate ---- */
@@ -442,6 +453,12 @@
       saveButton.setAttribute("title", !on
         ? "Saving is not available: no application is connected to Station."
         : (!assigned ? "Connect this desktop to a production line to save shared recipes." : "Save the running recipe to this line's shared recipes."));
+      const hasPlan = !!planned();
+      saveNextButton.disabled = !on || !assigned || !!state.pending || !hasPlan;
+      saveNextButton.setAttribute("title", !on
+        ? "Saving is not available: no application is connected to Station."
+        : (!assigned ? "Connect this desktop to a production line to save shared recipes."
+          : (!hasPlan ? "Plan a Next Recipe on the stage before saving it." : "Save the planned recipe to this line's shared recipes.")));
       refreshButton.disabled = !on || !assigned || !!state.pending || !!(current && current.refreshing);
       const refreshing = !!(current && current.refreshing);
       refreshButton.setAttribute("aria-label", refreshing ? "Refreshing…" : "Refresh");
@@ -465,12 +482,13 @@
 
     /* ---- Actions ---- */
 
-    function openEntry(mode, recipe) {
-      state.entry = { mode, id: recipe ? recipe.id : null };
+    function openEntry(mode, recipe, target) {
+      const which = mode === "save" && target === "next" ? "next" : "current";
+      state.entry = { mode, id: recipe ? recipe.id : null, recipe: mode === "save" ? which : null };
       state.confirm = null;
       state.duplicate = null;
       state.moreOpen = false;
-      entryLabel.textContent = mode === "save" ? "Save the running recipe as"
+      entryLabel.textContent = mode === "save" ? (which === "next" ? "Save the planned recipe as" : "Save the running recipe as")
         : mode === "rename" ? `Rename “${recipe.name}” to` : `Duplicate “${recipe.name}” as`;
       confirmButton.textContent = mode === "save" ? "Save" : mode === "rename" ? "Rename" : "Duplicate";
       nameInput.value = mode === "rename" ? recipe.name : (mode === "duplicate" ? `${recipe.name} copy` : "");
@@ -532,7 +550,7 @@
         return null;
       }
       nameInput.removeAttribute("aria-invalid");
-      if (pending.mode === "save") return confirmSave(name);
+      if (pending.mode === "save") return confirmSave(name, pending.recipe === "next" ? "next" : "current");
       const action = pending.mode === "rename" ? "renameRecipe" : "duplicateRecipe";
       const result = await request(action, { id: pending.id, name });
       if (result.ok) {
@@ -547,8 +565,13 @@
       return result;
     }
 
-    async function confirmSave(name) {
-      const result = await request("saveCurrentRecipe", { name });
+    /* Save Current and Save Next: one request each, the running recipe or
+     * the plan. A taken name offers Replace only for the running recipe -
+     * replaceRecipe writes the running recipe, so a plan's save has only
+     * the other name to offer. */
+    async function confirmSave(name, which) {
+      const next = which === "next";
+      const result = await request(next ? "saveNextRecipe" : "saveCurrentRecipe", { name });
       if (result.ok) {
         state.selectedId = result.id || state.selectedId;
         state.entry = null;
@@ -560,9 +583,9 @@
       if (result.code === "duplicate_name") {
         const current = book();
         const existing = ((current && current.recipes) || []).find(recipe => normalizedName(recipe.name) === normalizedName(name)) || null;
-        state.duplicate = { name, id: existing ? existing.id : null };
+        state.duplicate = next ? null : { name, id: existing ? existing.id : null };
         if (existing) state.selectedId = existing.id;
-        say(existing
+        say(existing && !next
           ? `A recipe named “${existing.name}” already exists. Replace it with the running recipe, or choose another name.`
           : "A recipe with that name already exists. Choose another name.", "error");
         nameInput.setAttribute("aria-invalid", "true");
@@ -642,7 +665,8 @@
       const action = target.getAttribute("data-action");
       const recipe = selected(book());
       switch (action) {
-        case "save-current": openEntry("save", null); return;
+        case "save-current": openEntry("save", null, "current"); return;
+        case "save-next": openEntry("save", null, "next"); return;
         case "confirm-entry": void confirmEntry(); return;
         case "replace": void replaceExisting(); return;
         case "cancel-entry": closeEntry(); return;

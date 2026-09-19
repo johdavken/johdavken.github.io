@@ -10758,6 +10758,19 @@
             if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
             return result;
           },
+          // The planned recipe, as the floor UI's Save Next Recipe saves it:
+          // the same payload the state bridge projects (the working copy
+          // when the Next tab holds one), refused while nothing is planned
+          // - the floor UI holds its button on the same test.
+          saveNextRecipe: async ({ name })=>{
+            const workspaceId = lineSync?.getState?.().selectedWorkspaceId || "";
+            if (!workspaceId || !workspaceConfigurations) return { ok:false, code:"unavailable", message:"Connect to an RT Sync workspace to save shared recipes." };
+            const payload = plannedRecipePayload();
+            if (!payload || !window.PolynNextRecipe?.isMeaningful(payload)) return { ok:false, code:"unavailable", message:"Plan a Next Recipe before saving it." };
+            const result = await workspaceConfigurations.create(workspaceId, "recipe", name, payload);
+            if (result?.code !== "duplicate_name") finishWorkspaceConfigurationMutation(result, "Configuration saved successfully.");
+            return result;
+          },
           // Update, rename, duplicate and delete ARE the floor UI's own
           // closures: mutateWorkspaceConfiguration, with its messages.
           replaceRecipe: async ({ id })=>{
