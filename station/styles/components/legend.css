@@ -1,0 +1,179 @@
+/* The hopper legend (station-legend.js): the info mark in the stage's
+ * bottom-right corner, and the card of hopper states it opens.
+ *
+ * The mark is a small round plate on the raised surface with a hairline
+ * edge - the rail's tile, at a third of the size and round, because it is
+ * a reference and not a control of the machine - and answers the pointer
+ * as the rail does, the accent on its edge. The card is the console's
+ * glass (glass.css), opened upward from the mark and held inside the
+ * slot; its rows are a swatch, a name and a line each. The swatches are
+ * the stage's own hopper drawing (hopper.css colours them; nothing of a
+ * hopper's look is restated here) - inert to the pointer, so a legend is
+ * looked at and never clicked through to.
+ *
+ * The slot the legend stands in is inert (shell.css); the mark and the
+ * open card take the pointer back for their own boxes only.
+ */
+
+.station-legend {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---- The mark ---- */
+
+.station-root .station-legend__mark {
+  position: absolute;
+  right: var(--station-space-4);
+  bottom: var(--station-space-4);
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: 50%;
+  background: var(--station-surface-raised);
+  color: var(--station-text-muted);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color var(--station-motion-ack) ease-out, border-color var(--station-motion-ack) ease-out;
+}
+
+.station-root .station-legend__mark:hover,
+.station-root .station-legend__mark[aria-expanded="true"] {
+  border-color: var(--station-accent);
+  color: var(--station-text);
+}
+
+.station-root .station-legend__mark[aria-expanded="true"] {
+  background: var(--station-accent-soft);
+  color: var(--station-accent);
+}
+
+.station-root .station-legend__mark:active {
+  background: var(--station-handbook-control-active);
+}
+
+.station-root .station-legend__mark:focus-visible {
+  outline: 2px solid var(--station-accent);
+  outline-offset: 2px;
+}
+
+.station-legend__glyph {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.station-legend__glyph-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+.station-legend__glyph-dot {
+  fill: currentColor;
+}
+
+.station-legend__glyph-stem {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---- The card ---- */
+
+.station-legend__panel {
+  position: absolute;
+  right: var(--station-space-4);
+  bottom: calc(var(--station-space-4) + 28px + var(--station-space-2));
+  z-index: 6;
+  box-sizing: border-box;
+  /* Two columns of rows (below), so the whole legend stands open at once
+     on a stage of any height a Station window has; the stage is never
+     narrower than the console's floor, so the width is always there. */
+  width: min(640px, calc(100% - 2 * var(--station-space-4)));
+  max-height: calc(100% - var(--station-space-4) - 28px - 2 * var(--station-space-2));
+  padding: var(--station-space-2) var(--station-space-3) var(--station-space-3);
+  overflow-y: auto;
+  color: var(--station-text);
+  font-family: var(--station-font);
+  font-size: var(--station-text-sm);
+  line-height: var(--station-line-normal);
+  pointer-events: auto;
+}
+
+.station-legend__panel[hidden] {
+  display: none;
+}
+
+.station-legend__head {
+  margin-bottom: var(--station-space-2);
+  padding-bottom: var(--station-space-1);
+  border-bottom: var(--station-stroke) solid var(--station-handbook-glass-border);
+  font-size: var(--station-text-md);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.station-legend__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--station-space-5);
+  row-gap: var(--station-space-2);
+  margin: 0;
+}
+
+/* A row: the swatch in its own column, the name beside it, the note
+   under the name. The swatch's column is the hopper's width, so every
+   row's part is drawn at the one scale and the receivers, vessels and
+   captions line up down the card. */
+.station-legend__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: var(--station-space-3);
+  align-items: start;
+}
+
+.station-legend__term {
+  display: contents;
+}
+
+.station-legend__swatch {
+  grid-row: 1 / span 2;
+  display: block;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+}
+
+.station-legend__name {
+  font-weight: 600;
+}
+
+.station-legend__note {
+  grid-column: 2;
+  margin: 0;
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+}
+
+.station-legend__foot {
+  margin: var(--station-space-3) 0 0;
+  padding-top: var(--station-space-2);
+  border-top: var(--station-stroke) solid var(--station-handbook-glass-border);
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-root .station-legend__mark {
+    transition: none;
+  }
+}
