@@ -693,9 +693,11 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   assert.match(publish, /for \(const id of Object\.keys\(cardHandles\)\) \{\n\s+cardHandles\[id\]\.update\(\{\n\s+hopperState: blendEdit\.kind === "next" \? resolved\.nextHopperState : resolved\.hopperState,\n\s+smartHoppers: resolved\.smartHoppers,\n\s+otherResins: otherResinsFor\(resolved\)\n\s+\}\);\n\s+\}/);
   // The other recipe's resin rides beside each card: the plan's on the
   // running face, the job's on the Next face, nothing on Weights - and
-  // which cards show it is the boot file's session state, so a rebuilt
-  // stage shows what the operator opened.
-  assert.match(draw, /otherResins: otherResinsFor\(current\.resolved\),\n\s+otherRecipe: cardRecipe === "next" \? "current" : "next",\n\s+showOther: showOther\.has\(entry\.id\),\n\s+onShowOther: on => \{ if \(on\) showOther\.add\(entry\.id\); else showOther\.delete\(entry\.id\); \},/);
+  // whether the cards show it is the card rail's Compare, the boot
+  // file's session state for every card at once, so a rebuilt stage
+  // shows what the operator switched on.
+  assert.match(draw, /otherResins: otherResinsFor\(current\.resolved\),\n\s+otherRecipe: cardRecipe === "next" \? "current" : "next",\n\s+showOther: cardView\.compare,\n/);
+  assert.doesNotMatch(draw, /onShowOther/, "a card is still asked for its own eye");
   const other = body("otherResinsFor");
   assert.match(other, /if \(blendEdit\.kind === "next"\) return source\.otherResins\(resolved, "next"\);/);
   assert.match(other, /if \(blendEdit\.kind === "blend"\) return source\.otherResins\(resolved, "current"\);/);
@@ -705,11 +707,13 @@ test("the stage draws the cards from the same editor, addressed to the same reci
   // value path cannot add or take a card's eye.
   assert.match(publish, /const planTurned = blendEdit\.active && blendEdit\.kind !== "weights"\n\s+&& !!otherResinsFor\(current\.resolved\) !== !!otherResinsFor\(resolved\);/);
   assert.match(publish, /if \(kind === "values" && !openLayerGone && stage\.getState\(\)\.phase !== "opening" && stage\.getState\(\)\.phase !== "closing" && !planTurned\) \{/);
-  // Session-only: cleared on a face change and on leaving the mode, pruned with the flipped list, never stored.
-  assert.match(body("enterBlendEdit"), /showOther\.clear\(\);/);
-  assert.match(body("exitBlendEdit"), /showOther\.clear\(\);/);
-  assert.match(body("renderAll"), /for \(const id of Array\.from\(showOther\)\) if \(!model \|\| !model\.layers\.some\(layer => layer\.id === id\)\) showOther\.delete\(id\);/);
-  assert.doesNotMatch(boot, /showOther[^\n]*(localStorage|sessionStorage|setItem)/);
+  // Session-only: kept across a face change and the mode's end (Compare
+  // means "the other recipe" on either face), never stored.
+  assert.match(boot, /const cardView = \{ compare: false, size: "normal" \};/);
+  assert.doesNotMatch(body("enterBlendEdit"), /cardView/);
+  assert.doesNotMatch(body("exitBlendEdit"), /cardView/);
+  assert.doesNotMatch(boot, /cardView[^\n]*(localStorage|sessionStorage|setItem)/);
+  assert.doesNotMatch(boot, /showOther\.(clear|has|add|delete)/, "the per-card set is still there");
   // A layer that vanished is dropped from the mode; a line with no layers ends it.
   const all = body("renderAll");
   assert.match(all, /blendEdit\.flipped = blendEdit\.flipped\.filter\(id => !!model && model\.layers\.some\(layer => layer\.id === id\)\);/);

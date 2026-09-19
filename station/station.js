@@ -179,6 +179,12 @@
    * Edit writes is entered - built once and handed to the rail, which
    * stands it above its Blend row. Optional with the rest. */
   const bulkFieldModule = root.PolynStationBulkField || null;
+  /* The card rail (station-card-rail.js): the two switches riding the
+   * far-right card while a face is on - Compare and Large - built once
+   * and handed to the renderer, which stands it in the drawing. Optional
+   * with the rest: without it the cards show at their one size, entries
+   * hidden. */
+  const cardRailModule = root.PolynStationCardRail || null;
   /* Sudo (station-sudo.js): the Handbook's administrator page, and the
    * bridge it reads and asks through - administrator access and Workspace
    * Management as the application publishes them (station-admin-bridge.js).
@@ -362,13 +368,17 @@
    * face; ends with it. The resin to write is the rail's field's until
    * Confirm hands it over. */
   const bulk = { active: false, selected: new Set(), resin: "" };
-  /* Which cards show the OTHER recipe's resin under their rows - the
-   * plan's on the running face, the running job's on the Next face - by
-   * layer id: the eye at each card's foot. Session-only presentation,
-   * never persisted; cleared when the face changes (an entry means the
-   * other thing) and when the mode ends; pruned with the flipped list;
-   * kept across a rebuilt stage so a card comes back as it was. */
-  const showOther = new Set();
+  /* How the cards show, as the card rail's two switches have it
+   * (station-card-rail.js): whether every card shows the OTHER recipe's
+   * resin under its rows - the plan's on the running face, the running
+   * job's on the Next face - and the cards' size. Session-only
+   * presentation, never persisted; kept across a face change, a rebuilt
+   * stage and the mode's end, so the cards come back as the operator
+   * left them. */
+  const cardView = { compare: false, size: "normal" };
+  /* The card rail's handle, once built (start()) and handed to every
+   * drawn stage; told the switches' state by syncCardRail. */
+  let cardRail = null;
   /* The bulk field's handle, once built (start()) and handed to the rail;
    * told the selection's state by syncBulkField. */
   let bulkField = null;
@@ -640,11 +650,10 @@
     // The open layer closes: the two modes do not share the stage.
     focus = null;
     // A face change is a different recipe under the same layer names:
-    // nothing armed carries across, and no selection either - nor which
-    // cards show the other recipe, which is the other thing there.
+    // nothing armed carries across, and no selection either. Compare
+    // does: it means "the other recipe" on either face.
     clearLayerCopy();
     endBulk();
-    showOther.clear();
     const were = blendEdit.active ? blendEdit.flipped.slice() : [];
     blendEdit.active = true;
     blendEdit.kind = face;
@@ -669,7 +678,6 @@
     leaveStageControl();
     clearLayerCopy();
     endBulk();
-    showOther.clear();
     const were = blendEdit.flipped.slice();
     blendEdit.active = false;
     blendEdit.kind = "blend";
@@ -925,6 +933,54 @@
     if (!bulkField) return;
     bulkField.update({ shown: bulk.active, count: bulk.active ? bulk.selected.size : 0, draft: bulk.resin, resins: catalogCodes() });
     if (options && options.appeared) bulkField.focus();
+  }
+
+  /* --------------------------------------------------------------------
+   *   The card rail: Compare and Large
+   * ------------------------------------------------------------------
+   * Two switches over every card at once (station-card-rail.js). Compare
+   * is on offer only where a card has another recipe to show: a blend
+   * face with a plan beside it - the Weights face has none, and nor has
+   * a running face with nothing planned. The state outlives the offer,
+   * so a plan arriving finds the switch as it was left. */
+  function compareOffer(resolved) {
+    if (!blendEdit.active) return { available: false, reason: "turn a recipe face on first" };
+    if (blendEdit.kind === "weights") return { available: false, reason: "the weight cards have no other recipe to show" };
+    if (!otherResinsFor(resolved)) {
+      return { available: false, reason: blendEdit.kind === "next" ? "no running recipe to compare the plan with" : "nothing is planned to compare with" };
+    }
+    return { available: true, reason: "" };
+  }
+
+  function syncCardRail() {
+    if (!cardRail) return;
+    const offer = compareOffer(current.resolved);
+    cardRail.update({
+      compare: { active: cardView.compare, available: offer.available, reason: offer.reason },
+      size: cardView.size
+    });
+  }
+
+  /* Compare: every card told at once, in place - no redraw, so a field
+   * the operator is in keeps its focus and its draft. */
+  function toggleCompare() {
+    cardView.compare = !cardView.compare;
+    for (const id of Object.keys(cardHandles)) {
+      if (typeof cardHandles[id].setShowOther === "function") cardHandles[id].setShowOther(cardView.compare);
+    }
+    syncCardRail();
+    return cardView.compare;
+  }
+
+  /* Large: the type on every card up by a quarter, the cards' boxes as
+   * they are - stamped on the drawn cards in place (the renderer), so
+   * nothing is redrawn and a field the operator is in keeps its focus
+   * and its draft. Every stage drawn after is built with it. */
+  function toggleCardSize() {
+    cardView.size = cardView.size === "large" ? "normal" : "large";
+    if (mounts.machine && typeof render.setCardSize === "function") render.setCardSize(mounts.machine, cardView.size);
+    syncCardRail();
+    return cardView.size;
   }
 
   function catalogCodes() {
@@ -1763,7 +1819,6 @@
     // turned over, and a line with no layers has nothing to be in the
     // mode with.
     blendEdit.flipped = blendEdit.flipped.filter(id => !!model && model.layers.some(layer => layer.id === id));
-    for (const id of Array.from(showOther)) if (!model || !model.layers.some(layer => layer.id === id)) showOther.delete(id);
     if (blendEdit.active && (!model || !model.layers.length)) blendEdit.active = false;
     // Nor an armed source, or a selected hopper, on a layer that is gone.
     if (layerCopy.layer && (!model || !model.layers.some(layer => layer.id === layerCopy.layer))) { layerCopy.recipe = null; layerCopy.layer = null; }
@@ -1827,9 +1882,10 @@
     const shown = stage.getState().shown;
     const openLayerGone = !!shown && (!model || !model.layers.some(layer => layer.id === shown));
     /* A plan coming into being, or going, under the cards is structural
-     * for them: each card has an entry and an eye only while there is
-     * another recipe to show, and the value path cannot add or take a
-     * foot control. So it takes the full path, as a changed line does. */
+     * for them: each card has its entries only while there is another
+     * recipe to show, and the value path cannot add or take them. So it
+     * takes the full path, as a changed line does - which tells the card
+     * rail whether Compare has anything to show. */
     const planTurned = blendEdit.active && blendEdit.kind !== "weights"
       && !!otherResinsFor(current.resolved) !== !!otherResinsFor(resolved);
     if (kind === "values" && !openLayerGone && stage.getState().phase !== "opening" && stage.getState().phase !== "closing" && !planTurned) {
@@ -2087,12 +2143,11 @@
           bulk: bulkOptionsFor(entry.id),
           /* The other recipe's resin beside each row - the plan's on the
            * running face, the running job's on the Next face - and
-           * whether this card shows it: the eye's state, kept here so a
-           * rebuilt stage shows what the operator opened. */
+           * whether the cards show it: the card rail's Compare, kept here
+           * so a rebuilt stage shows what the operator switched on. */
           otherResins: otherResinsFor(current.resolved),
           otherRecipe: cardRecipe === "next" ? "current" : "next",
-          showOther: showOther.has(entry.id),
-          onShowOther: on => { if (on) showOther.add(entry.id); else showOther.delete(entry.id); },
+          showOther: cardView.compare,
           onEditing: record => {
             editing = record ? Object.assign({
               recipe: cardRecipe,
@@ -2122,6 +2177,11 @@
       blendEdit: blendEdit.active && !focusLayer,
       blendCards: cards,
       flipped: blendEdit.flipped.slice(),
+      /* The cards' type size, and the rail that switches it: stood
+       * against the far-right card by the renderer while any card is
+       * built. */
+      cardSize: cardView.size,
+      cardRail: cardRail ? cardRail.element : null,
       raiseLayer: extra && extra.raiseLayer
     });
     drawCount += 1;
@@ -2131,6 +2191,8 @@
     else mounts.machine.removeAttribute("data-edit-face");
     // The field's count and draft, as the rebuilt cards show the selection.
     syncBulkField();
+    // And the card rail's switches, as the rebuilt cards show them.
+    syncCardRail();
     // A rendered stage is new elements: the marks the boot file owns are
     // written to it from the projection as it stands (feedJob follows
     // with the fresh one on every path that changes the job).
@@ -2422,6 +2484,15 @@
         onInput: draftBulkResin,
         onConfirm: () => { confirmBulk(); },
         onCancel: () => { cancelBulk(); }
+      });
+    }
+
+    /* The card rail: built once; the renderer stands it against the
+     * far-right card of every stage drawn with cards. */
+    if (cardRailModule) {
+      cardRail = cardRailModule.create(doc, {
+        onCompare: () => { toggleCompare(); },
+        onSize: () => { toggleCardSize(); }
       });
     }
 

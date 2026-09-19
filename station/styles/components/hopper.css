@@ -396,22 +396,24 @@
 /* ---------------------------------------------------------------------
  *   The next recipe changes this hopper's resin
  * -------------------------------------------------------------------
- * The receiver cap and its lid in the warning colour, edged in the same:
+ * The receiver cap and its lid in the success colour, edged in the same:
  * the planned recipe puts a different resin here, or empties it
  * (station-source.js, nextDiffers) - the hopper an operator will want to
  * track down. Static: no motion, no glow; the run-down flow stays the
- * one animation on a hopper. Every theme's warning is an amber that
- * stands off its steel. The cone under the cap keeps its own colour, so
+ * one animation on a hopper. Every theme's success is a green that
+ * stands off its steel - and off the warning amber, which is kept for
+ * what is about to happen (an armed move, an overdue hopper), not for a
+ * plan waiting its turn. The cone under the cap keeps its own colour, so
  * the pump's state is still read where it always was. */
 .station-hopper.is-next-changes .station-hopper__cap,
 .station-hopper.is-next-changes .station-hopper__receiver-lid {
-  fill: var(--station-warning);
-  stroke: var(--station-warning);
+  fill: var(--station-success);
+  stroke: var(--station-success);
 }
 
-/* The lit strip on the cap: in the warning's family, not the steel's. */
+/* The lit strip on the cap: in the success colour's family, not the steel's. */
 .station-hopper.is-next-changes .station-hopper__receiver-face {
-  fill: color-mix(in srgb, var(--station-warning) 60%, var(--station-hopper-metal-lit));
+  fill: color-mix(in srgb, var(--station-success) 60%, var(--station-hopper-metal-lit));
 }
 
 /* A stopped receiver steps back (above); a cap that says the plan changes

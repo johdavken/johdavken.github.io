@@ -2143,63 +2143,52 @@ test("with the map, every compact row carries the entry - the tag and the code, 
   assert.equal(built.showOther(), false);
 });
 
-test("the eye stands in the actions slot after the menu, off by default; a click opens it, says so, and tells the caller; the Next face says 'current'", () => {
-  const shown = [];
+test("Compare is the card rail's, not the card's: no eye at the foot; the handle sets the attribute the stylesheet reveals by, and a card built with it starts shown; the Next face says 'current'", () => {
   const doc = fakeDocument();
   const menu = doc.createElement("div");
   menu.setAttribute("data-role", "layer-menu");
-  const built = build({ variant: "compact", otherResins: OTHERS, actions: menu, onShowOther: on => shown.push(on) });
+  const built = build({ variant: "compact", otherResins: OTHERS, actions: menu });
   const slot = built.root.querySelector(".station-editor__actions");
-  assert.ok(slot.children[0] === menu, "the menu is first");
-  const eye = slot.children[1];
-  assert.ok(eye && eye.classList.contains("station-editor__eye"), "the eye is second");
+  assert.equal(slot.children.length, 1, "something besides the menu stands at the foot");
+  assert.ok(slot.children[0] === menu, "the menu is the foot's one control");
   assert.ok(built.root.children[built.root.children.length - 1] === slot);
-  assert.equal(eye.tagName, "BUTTON");
-  assert.equal(eye.getAttribute("type"), "button");
-  assert.equal(eye.getAttribute("data-action"), "show-other");
-  assert.equal(eye.getAttribute("aria-pressed"), "false");
-  assert.equal(eye.getAttribute("aria-label"), "Show next resin");
-  assert.equal(eye.getAttribute("title"), "Show next resin");
-  assert.equal(eye.children.length, 2, "two spans draw it");
-  assert.equal(eye.textContent, "");
-  eye.dispatchEvent(event("click"));
+  assert.equal(built.root.querySelector(".station-editor__eye"), null, "the eye is back");
+  assert.equal(built.root.querySelector("[data-action='show-other']"), null);
+  // Off by default; the handle turns it in place, and reads it back.
+  assert.equal(built.root.getAttribute("data-show-other"), "false");
+  built.setShowOther(true);
   assert.equal(built.root.getAttribute("data-show-other"), "true");
   assert.equal(built.showOther(), true);
-  assert.equal(eye.getAttribute("aria-pressed"), "true");
-  assert.equal(eye.getAttribute("aria-label"), "Hide next resin");
-  assert.deepEqual(shown, [true]);
-  eye.dispatchEvent(event("click"));
+  built.setShowOther(false);
   assert.equal(built.root.getAttribute("data-show-other"), "false");
-  assert.deepEqual(shown, [true, false]);
-  // The handle sets it too, without telling the caller (it is the caller's own state coming back).
-  built.setShowOther(true);
-  assert.equal(eye.getAttribute("aria-pressed"), "true");
-  assert.deepEqual(shown, [true, false]);
-  // Started open: what the boot file kept for a rebuilt card.
+  assert.equal(built.showOther(), false);
+  // Started shown: what the boot file keeps for a rebuilt card.
   const open = build({ variant: "compact", otherResins: OTHERS, showOther: true });
   assert.equal(open.root.getAttribute("data-show-other"), "true");
-  assert.equal(open.root.querySelector(".station-editor__eye").getAttribute("aria-label"), "Hide next resin");
-  // No menu handed in: the slot still exists, holding the eye alone.
+  assert.equal(open.showOther(), true);
+  // No menu handed in: no foot at all.
   const alone = build({ variant: "compact", otherResins: OTHERS });
-  const aloneSlot = alone.root.querySelector(".station-editor__actions");
-  assert.equal(aloneSlot.children.length, 1);
-  assert.ok(aloneSlot.children[0].classList.contains("station-editor__eye"));
+  assert.equal(alone.root.querySelector(".station-editor__actions"), null);
   // The Next face: the entry is the running job's, and says so.
   const next = build({ variant: "compact", otherResins: OTHERS, otherRecipe: "current", recipe: "next" });
   assert.equal(next.root.querySelector(".station-editor__other-tag").textContent, "current");
-  assert.equal(next.root.querySelector(".station-editor__eye").getAttribute("aria-label"), "Show current resin");
+  // A card without the other recipe has nothing to reveal: the handle is a no-op.
+  const plain = build({ variant: "compact", showOther: true });
+  assert.equal(plain.root.getAttribute("data-show-other"), null);
+  plain.setShowOther(true);
+  assert.equal(plain.root.getAttribute("data-show-other"), null);
+  assert.equal(plain.showOther(), false);
 });
 
-test("without the map there is no entry and no eye - and the full editor never has either, map or not", () => {
+test("without the map there is no entry and no attribute - and the full editor never has either, map or not", () => {
   const plain = build({ variant: "compact" });
   assert.equal(plain.root.querySelector(".station-editor__other"), null);
-  assert.equal(plain.root.querySelector(".station-editor__eye"), null);
   assert.equal(plain.root.getAttribute("data-show-other"), null);
   const nulled = build({ variant: "compact", otherResins: null });
-  assert.equal(nulled.root.querySelector(".station-editor__eye"), null);
+  assert.equal(nulled.root.querySelector(".station-editor__other"), null);
+  assert.equal(nulled.root.getAttribute("data-show-other"), null);
   const full = build({ otherResins: OTHERS, showOther: true });
   assert.equal(full.root.querySelector(".station-editor__other"), null);
-  assert.equal(full.root.querySelector(".station-editor__eye"), null);
   assert.equal(full.root.getAttribute("data-show-other"), null);
 });
 
@@ -2217,12 +2206,12 @@ test("a publish rewrites the entries in place - the same nodes - and one that do
   assert.equal(after[2].children[1].textContent, "—");
   built.update({ hopperState: STATE });
   assert.deepEqual(built.root.querySelectorAll(".station-editor__other").map(e => e.getAttribute("data-differs")), ["false", "true", "false", "false", "false", "false"]);
-  // The eye's state is untouched by a publish.
+  // Compare's state is untouched by a publish.
   assert.equal(built.root.getAttribute("data-show-other"), "true");
-  // The map gone (nothing planned any more): every entry falls quiet, the eye stays.
+  // The map gone (nothing planned any more): every entry falls quiet, the attribute stays.
   built.update({ hopperState: STATE, otherResins: null });
   assert.deepEqual(built.root.querySelectorAll(".station-editor__other").map(e => e.getAttribute("data-differs")), ["false", "false", "false", "false", "false", "false"]);
-  assert.ok(built.root.querySelector(".station-editor__eye"));
+  assert.equal(built.root.getAttribute("data-show-other"), "true");
 });
 
 test("a fresh card and a patched card over the same state and the same map are the same DOM", () => {
@@ -2233,16 +2222,27 @@ test("a fresh card and a patched card over the same state and the same map are t
   assert.deepEqual(serialize(patched.root), serialize(fresh.root));
 });
 
-test("the stylesheet hides every entry until the card's eye is open and the row differs, draws the eye from tokens in two-step selectors, and names no colour", () => {
+test("the stylesheet hides every entry until Compare is on and the row differs, draws no eye, scales the compact card's type by the card zoom, and names no colour", () => {
   const css = fs.readFileSync(path.join(ROOT, "station/styles/components/focus-editor.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(css, /\.station-editor__other \{[^}]*display: none;/);
   assert.match(css, /\.station-editor\[data-show-other="true"\] \.station-editor__other\[data-differs="true"\] \{\s*display: flex;\s*\}/);
   assert.match(css, /\.station-editor__other-tag \{[^}]*text-transform: uppercase;/);
   assert.match(css, /\.station-editor__other-tag \{[^}]*color: var\(--station-timeline-upcoming, var\(--station-info\)\);/);
   assert.match(css, /\.station-editor__other-code \{[^}]*font-family: var\(--station-font-mono\);/);
-  assert.match(css, /\.station-root \.station-editor__eye \{[^}]*margin: 0 calc\(-1 \* var\(--station-space-1\)\) 0 auto;/, "the eye is not pushed to the foot's right");
-  assert.match(css, /\.station-root \.station-editor__eye \{[^}]*opacity: 0\.45;/);
-  assert.match(css, /\.station-editor:hover \.station-editor__eye,\s*\.station-root \.station-editor__eye:hover,\s*\.station-root \.station-editor__eye:focus-visible \{\s*opacity: 1;/);
-  assert.match(css, /\.station-root \.station-editor__eye\[aria-pressed="true"\] \{[^}]*opacity: 1;/);
+  assert.doesNotMatch(css, /station-editor__eye/, "the eye's rules are still in the sheet");
+  // Large: one factor on the card's group, read by every font-size the
+  // compact section sets - and by the entries', which only a card has.
+  assert.match(css, /\.station-blend-card\[data-size="large"\] \{\s*--station-card-zoom: 1\.25;\s*\}/);
+  const compact = css.slice(css.indexOf('.station-editor[data-variant="compact"] {'), css.indexOf(".station-editor__actions {"));
+  const sizes = [...compact.replace(/\.station-editor__drag-proxy\[data-variant="compact"\] \{[^}]*\}/, "").matchAll(/font-size: ([^;]+);/g)].map(m => m[1]);
+  assert.ok(sizes.length >= 12, "the compact section sets fewer sizes than it did");
+  for (const size of sizes) assert.match(size, /^calc\(var\(--station-text-[a-z0-9]+\) \* var\(--station-card-zoom, 1\)\)$/, `a compact size ignores the card zoom: ${size}`);
+  for (const entry of [".station-editor__other-tag {", ".station-editor__other-code {"]) {
+    const rule = css.slice(css.indexOf(entry), css.indexOf("}", css.indexOf(entry)));
+    assert.match(rule, /font-size: calc\(var\(--station-text-[a-z0-9]+\) \* var\(--station-card-zoom, 1\)\);/);
+  }
+  // The full editor's type is not on the factor: only a card is stamped.
+  const full = css.slice(0, css.indexOf('.station-blend-card[data-size="large"] {'));
+  assert.doesNotMatch(full, /--station-card-zoom/);
   assert.doesNotMatch(css.slice(css.indexOf(".station-editor__other {")), /#[0-9a-f]{3,8}\b|\brgba?\(|!important/i);
 });

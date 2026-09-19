@@ -1205,7 +1205,9 @@ const GEOMETRY_ATTRIBUTES = ["viewBox", "x", "y", "width", "height", "transform"
 function stageGeometry(s) {
   const nodes = [];
   const walk = node => {
-    if (node.getAttribute && node.getAttribute("data-role") === "blend-card") return;
+    // The mode's own additions - the cards, and the card rail riding the
+    // far-right one - are laid over the machine, not part of its geometry.
+    if (node.getAttribute && (node.getAttribute("data-role") === "blend-card" || node.getAttribute("data-role") === "card-rail")) return;
     const placed = {};
     for (const key of GEOMETRY_ATTRIBUTES) if (node.getAttribute && node.getAttribute(key) !== null) placed[key] = node.getAttribute(key);
     if (Object.keys(placed).length) nodes.push([node.tagName, placed]);
