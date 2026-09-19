@@ -885,6 +885,8 @@
   line-height: var(--station-line-normal);
 }
 
+/* Three families to a row; the registry's six wrap to two rows, the
+   second under the first. */
 .station-appearance__gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

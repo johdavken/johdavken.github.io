@@ -3,7 +3,8 @@
  * A gallery over the Station theme controller: it owns no preference and no
  * palette. Each theme is a tile - a miniature of Station drawn under that
  * theme's own tokens (station-theme-preview.js), and its name - grouped by
- * family, the light theme above its dark one. Choosing a tile asks the
+ * family, the light theme above its dark one, three families to a row.
+ * Choosing a tile asks the
  * controller to change the authoritative root attribute immediately; CSS
  * does the rest, and the tiles keep showing their own themes because each
  * miniature resolves its tokens in its own scope, not the root's.
@@ -104,7 +105,15 @@
     }
 
     update();
-    return { element: rootEl, update, focus() { const selected = tiles.get(controller?.getTheme?.()); if (selected) selected.focus(); } };
+    return {
+      element: rootEl,
+      update,
+      /* Two rows of families is more than the frame's default height
+       * shows without scrolling, so the gallery takes the Handbook's grip:
+       * raised, both rows stand in view. */
+      grows: () => true,
+      focus() { const selected = tiles.get(controller?.getTheme?.()); if (selected) selected.focus(); }
+    };
   }
 
   return Object.freeze({

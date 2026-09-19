@@ -9,7 +9,10 @@ const theme = require("./station-theme.js");
 const appearance = require("./station/station-appearance.js");
 const preview = require("./station/station-theme-preview.js");
 const ROOT = __dirname;
-const GALLERY_ORDER = ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark", "engineering-paper", "blueprint"];
+const GALLERY_ORDER = ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark", "engineering-paper", "blueprint",
+  "rose-pine-dawn", "rose-pine", "evergreen-light", "evergreen-dark", "yaru-light", "yaru-dark"];
+const FAMILY_ORDER = ["standard", "gruvbox", "technical", "rose-pine", "evergreen", "yaru"];
+const RENDERED = GALLERY_ORDER.filter(id => id !== "engineering-paper" && id !== "blueprint");
 
 function storage(initial) {
   const values = new Map(Object.entries(initial || {}));
@@ -53,12 +56,13 @@ function contrastRatio(a, b) {
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-test("the Station registry contains exactly the six permanent theme ids, in gallery order, in three families", () => {
+test("the Station registry contains exactly the twelve permanent theme ids, in gallery order, in six families", () => {
   assert.deepEqual([...theme.THEME_IDS], GALLERY_ORDER);
   assert.equal(theme.DEFAULT_THEME, "industrial-dark");
   assert.deepEqual(theme.THEMES.map(item => item.label),
-    ["Industrial Light", "Industrial Dark", "Gruvbox Light", "Gruvbox Dark", "Engineering Paper", "Blueprint"]);
-  assert.deepEqual(theme.FAMILIES.map(family => family.id), ["standard", "gruvbox", "technical"]);
+    ["Industrial Light", "Industrial Dark", "Gruvbox Light", "Gruvbox Dark", "Engineering Paper", "Blueprint",
+      "Rosé Pine Dawn", "Rosé Pine", "Evergreen Light", "Evergreen Dark", "Yaru Light", "Yaru Dark"]);
+  assert.deepEqual(theme.FAMILIES.map(family => family.id), FAMILY_ORDER);
   // Each family is one light theme over one dark one, in that order.
   for (const family of theme.FAMILIES) {
     const members = theme.THEMES.filter(item => item.family === family.id);
@@ -67,8 +71,8 @@ test("the Station registry contains exactly the six permanent theme ids, in gall
   assert.ok(Object.isFrozen(theme.THEMES) && theme.THEMES.every(Object.isFrozen));
 });
 
-test("each of the three new themes selects and persists on its own, and nothing else moves", () => {
-  for (const id of ["gruvbox-light", "blueprint", "engineering-paper"]) {
+test("each theme selects and persists on its own, and nothing else moves", () => {
+  for (const id of GALLERY_ORDER) {
     const root = node("div");
     const saved = storage();
     const controller = theme.create(root, saved);
@@ -103,7 +107,7 @@ test("persisted themes restore and invalid or obsolete values fall back safely",
     assert.equal(controller.getTheme(), id);
     assert.equal(root.getAttribute("data-theme"), id);
   }
-  for (const invalid of ["", "dark", "system", "rose-pine", "__proto__"]) {
+  for (const invalid of ["", "dark", "system", "rose-pine-moon", "everforest", "yaru", "__proto__"]) {
     const root = node("div");
     const controller = theme.create(root, storage({ [theme.STORAGE_KEY]: invalid }));
     assert.equal(controller.getTheme(), theme.DEFAULT_THEME);
@@ -112,15 +116,15 @@ test("persisted themes restore and invalid or obsolete values fall back safely",
   assert.equal(theme.create(node("div"), { getItem() { throw new Error("blocked"); } }).getTheme(), theme.DEFAULT_THEME);
 });
 
-test("Handbook Appearance offers six tiles in gallery order and selects the controller theme immediately", () => {
+test("Handbook Appearance offers twelve tiles in gallery order and selects the controller theme immediately", () => {
   const root = node("div");
   const saved = storage();
   const controller = theme.create(root, saved);
   const view = galleryFor(controller);
   const tiles = find(view.element, el => el.getAttribute("data-theme-choice"));
   assert.deepEqual(tiles.map(el => el.getAttribute("data-theme-choice")), GALLERY_ORDER);
-  assert.deepEqual(tiles.map(el => el.getAttribute("role")), Array(6).fill("radio"));
-  assert.deepEqual(tiles.map(el => el.getAttribute("aria-checked")), ["false", "true", "false", "false", "false", "false"]);
+  assert.deepEqual(tiles.map(el => el.getAttribute("role")), Array(12).fill("radio"));
+  assert.deepEqual(tiles.map(el => el.getAttribute("aria-checked")), GALLERY_ORDER.map(id => id === "industrial-dark" ? "true" : "false"));
   // The whole tile is the control: one button, the picture and the name inside it.
   for (const tile of tiles) {
     assert.equal(tile.tagName, "BUTTON");
@@ -135,9 +139,17 @@ test("Handbook Appearance offers six tiles in gallery order and selects the cont
   }
   // Grouped by family, the light theme over the dark, family columns in registry order.
   const columns = find(view.element, el => el.getAttribute("data-family"));
-  assert.deepEqual(columns.map(el => el.getAttribute("data-family")), ["standard", "gruvbox", "technical"]);
+  assert.deepEqual(columns.map(el => el.getAttribute("data-family")), FAMILY_ORDER);
   assert.deepEqual(columns.map(column => find(column, el => el.getAttribute("data-theme-choice")).map(el => el.getAttribute("data-theme-choice"))),
-    [["industrial-light", "industrial-dark"], ["gruvbox-light", "gruvbox-dark"], ["engineering-paper", "blueprint"]]);
+    [["industrial-light", "industrial-dark"], ["gruvbox-light", "gruvbox-dark"], ["engineering-paper", "blueprint"],
+      ["rose-pine-dawn", "rose-pine"], ["evergreen-light", "evergreen-dark"], ["yaru-light", "yaru-dark"]]);
+  // Six families wrap to two rows of three in the stylesheet, the second
+  // row under the first, and the gallery takes the Handbook's grip so
+  // both rows can stand in view.
+  const css = fs.readFileSync(path.join(ROOT, "station/styles/components/handbook.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.station-appearance__gallery \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+  assert.doesNotMatch(css, /\.station-appearance__gallery \{[^}]*grid-template-rows/);
+  assert.equal(view.grows(), true);
 });
 
 test("every tile carries a miniature in its own theme scope, so a preview shows its theme whichever theme is on", () => {
@@ -187,14 +199,14 @@ test("previews are pictures: no bridge, no subscription, no storage, no root the
     /documentElement/, /querySelector/, /\bdocument\b/]) {
     assert.doesNotMatch(source, pattern, `station-theme-preview.js matches ${pattern}`);
   }
-  // Creating the gallery's six pictures neither reads nor writes the theme controller.
+  // Creating the gallery's twelve pictures neither reads nor writes the theme controller.
   const controller = { getTheme() { this.reads = (this.reads || 0) + 1; return "industrial-dark"; }, setTheme() { throw new Error("preview set the theme"); } };
   const view = galleryFor(controller);
-  assert.equal(find(view.element, el => (el.getAttribute("class") || "").includes("station-theme-scope")).length, 6);
+  assert.equal(find(view.element, el => (el.getAttribute("class") || "").includes("station-theme-scope")).length, 12);
   assert.equal(controller.reads, 1, "the gallery read the theme more than once while drawing");
-  // A gallery with no preview module still lists the six themes.
+  // A gallery with no preview module still lists the twelve themes.
   const bare = galleryFor(theme.create(node("div"), storage()), { preview: null });
-  assert.equal(find(bare.element, el => el.getAttribute("data-theme-choice")).length, 6);
+  assert.equal(find(bare.element, el => el.getAttribute("data-theme-choice")).length, 12);
   assert.equal(find(bare.element, el => (el.getAttribute("class") || "").includes("station-theme-scope")).length, 0);
 });
 
@@ -211,7 +223,7 @@ test("every theme implements one matching semantic token contract and components
     // The same mapping is offered to a preview's scope, which is how a
     // miniature resolves under a theme that is not the root's.
     assert.match(css, new RegExp(`\\.station-theme-scope\\[data-theme="${id}"\\]`));
-    assert.doesNotMatch(css, /data-theme="(?!.*?\b(?:industrial-light|industrial-dark|gruvbox-light|gruvbox-dark|engineering-paper|blueprint)\b)/,
+    assert.doesNotMatch(css, new RegExp(`data-theme="(?!.*?\\b(?:${GALLERY_ORDER.join("|")})\\b)`),
       `${id}.css names a theme it is not`);
     assert.equal((css.match(/data-theme="([a-z-]+)"/g) || []).every(match => match.includes(`"${id}"`)), true, `${id}.css maps another theme's id`);
   }
@@ -266,7 +278,7 @@ test("the header ribbon's four text segments read against their own fills in eve
   }
 });
 
-test("the technical pair draws the grid and the schematic; the other four draw neither", () => {
+test("the technical pair draws the grid and the schematic; the other ten draw neither", () => {
   const read = id => fs.readFileSync(path.join(ROOT, "station/styles/themes", `${id}.css`), "utf8");
   const token = (css, name) => (css.match(new RegExp(`--station-${name}:\\s*([^;]+);`)) || [])[1];
   for (const id of ["blueprint", "engineering-paper"]) {
@@ -280,7 +292,7 @@ test("the technical pair draws the grid and the schematic; the other four draw n
       assert.ok(alpha > 0 && alpha <= 0.16, `${id} ${grid} is not a faint grid (alpha ${alpha})`);
     }
   }
-  for (const id of ["industrial-light", "industrial-dark", "gruvbox-light", "gruvbox-dark"]) {
+  for (const id of RENDERED) {
     const css = read(id);
     assert.equal(token(css, "canvas-pattern"), "none", `${id} gained a canvas pattern`);
     assert.equal(token(css, "schematic-outline"), "0%");
@@ -303,11 +315,12 @@ test("the technical pair draws the grid and the schematic; the other four draw n
   assert.match(base, /\.station-root \{[^}]*background-image: var\(--station-canvas-pattern\);/);
 });
 
-test("the rendered dark pair stands the machine in a lit room; the other four stand it on the sheet", () => {
+test("the rendered dark themes stand the machine in a lit room; the light ones and Blueprint stand it on the sheet", () => {
   const read = id => fs.readFileSync(path.join(ROOT, "station/styles/themes", `${id}.css`), "utf8");
   const token = (css, name) => (css.match(new RegExp(`--station-${name}:\\s*([^;]+);`)) || [])[1];
   const alphaOf = value => Number((value.match(/rgba\([^)]*,\s*([0-9.]+)\)/) || [])[1]);
-  for (const id of ["industrial-dark", "gruvbox-dark"]) {
+  const scheme = id => theme.THEMES.find(item => item.id === id).scheme;
+  for (const id of RENDERED.filter(id => scheme(id) === "dark")) {
     const css = read(id);
     assert.equal(token(css, "stage-atmosphere"), "var(--station-atmosphere)", `${id} has no atmosphere`);
     // The light, the horizon and the floor are whispers, never a wash
@@ -321,7 +334,7 @@ test("the rendered dark pair stands the machine in a lit room; the other four st
     assert.ok(vignette > 0 && vignette <= 0.5, `${id} vignette is not a falling-away (alpha ${vignette})`);
   }
   // Blueprint is dark, and is a drafting sheet: a sheet has no room.
-  for (const id of ["industrial-light", "gruvbox-light", "engineering-paper", "blueprint"]) {
+  for (const id of [...RENDERED.filter(id => scheme(id) === "light"), "engineering-paper", "blueprint"]) {
     const css = read(id);
     assert.equal(token(css, "stage-atmosphere"), "none", `${id} gained an atmosphere`);
     for (const name of ["atmosphere-glow", "atmosphere-horizon", "atmosphere-floor", "atmosphere-vignette"]) {
