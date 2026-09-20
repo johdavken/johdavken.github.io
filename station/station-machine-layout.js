@@ -604,6 +604,14 @@
         hopperWidth,
         hoppers
       },
+      /* Where the layer's blend card ends (station-machine-parts.js,
+       * blendCardBox): the BATCH bank's caption bottom, on every blender.
+       * A card is a sheet of rows, and it needs the same room whatever
+       * hangs under it; the TSM bank's short loaders and higher discharge
+       * line would leave it a third shorter, so it is sized to the batch
+       * geometry instead - the default card - and on a TSM line stands over
+       * the top of the blender. Moves with the cluster in a composition. */
+      cardBottom: d.vesselBottom + d.coneHeight + d.spoutHeight + d.hopperCaptionGap + d.hopperCaptionHeight + move.cluster.dy,
       // Which way this layer's mixer and extruder face.
       facing,
       mixer,
