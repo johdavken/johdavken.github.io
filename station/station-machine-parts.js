@@ -947,9 +947,15 @@
    */
 
   /* The card's footprint: the cluster's column, no narrower than the
-   * bank's own, from under the header's share slot to the bottom of the
-   * captions. Read off the layout the cluster was drawn from, so the card
-   * and the cluster it stands in for are the same box in every layout. */
+   * bank's own, from under the header's share slot down to the layout's
+   * `cardBottom` - the batch bank's caption bottom, the one length on
+   * every blender (station-machine-layout.js). On a batch bank that IS
+   * the cluster's bottom, and the card and the cluster it stands in for
+   * are the same box; on a TSM bank the cluster ends higher and the card
+   * keeps its length, standing over the top of the blender. Read off the
+   * layout the cluster was drawn from, so the box is the same in every
+   * layout the bank is carried through. A bank without the field (built
+   * by hand) ends the card at its cluster, as before. */
   function blendCardBox(bank) {
     const scale = bank.scale || 1;
     const slot = shareSlotBox(bank);
@@ -957,7 +963,8 @@
     const x = Math.min(cluster.x, bank.x);
     const width = Math.max(cluster.width, bank.width);
     const y = slot.y + slot.height + 6 * scale;
-    return { x, y, width, height: cluster.y + cluster.height - y };
+    const bottom = Number.isFinite(bank.cardBottom) ? bank.cardBottom : cluster.y + cluster.height;
+    return { x, y, width, height: bottom - y };
   }
 
   /* The card's other size (the card rail's Large switch, station-card-
@@ -1067,7 +1074,6 @@
     g.appendChild(header);
 
     g.appendChild(hopperCluster(doc, bank, hopperState, settings));
-    if (card) g.appendChild(blendCard(doc, bank, card, settings.cardSize));
     /* Extruder, then the throat, then the mixer. The throat lands on the feed
      * flange, which stands in front of the gearbox and motor; drawn the other
      * way round the motor would paint over it and the two would look
@@ -1078,6 +1084,13 @@
     const dc = downcomer(doc, bank);
     if (dc) g.appendChild(dc);
     g.appendChild(mixer(doc, bank));
+    /* The card last, over the train: its box is the batch bank's length on
+     * every blender (blendCardBox), and on a TSM line that reaches past the
+     * cluster over the top of the blender - which must stand behind the
+     * card, not in front of it. On a batch line the two do not meet and the
+     * order shows nothing. Hidden whenever the cluster is the face showing
+     * (hopper.css), so it takes no pointer from the machine under it. */
+    if (card) g.appendChild(blendCard(doc, bank, card, settings.cardSize));
     return g;
   }
 

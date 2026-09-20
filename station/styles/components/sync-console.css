@@ -229,7 +229,8 @@
   text-align: center;
 }
 
-.station-sync__heading {
+.station-sync__heading,
+.station-sync__lines-heading {
   margin: 0 0 var(--station-space-2);
   color: var(--station-text-faint);
   font-size: var(--station-text-xs);
@@ -274,6 +275,79 @@
 
 .station-sync__qr > .station-sync__action {
   margin-top: var(--station-space-3);
+}
+
+/* ---- Lines (administrator) ----
+ * One button per remembered line, drawn like the device rows below so the
+ * two lists read as one panel. The current line is named, not offered:
+ * pressed, accented, and disabled. */
+
+.station-sync__lines {
+  margin-top: var(--station-space-4);
+  padding-top: var(--station-space-4);
+  border-top: var(--station-stroke) solid var(--station-border);
+}
+
+.station-sync__lines-hint {
+  margin: 0 0 var(--station-space-2);
+  color: var(--station-text-muted);
+  font-size: var(--station-text-xs);
+  line-height: var(--station-line-tight);
+}
+
+.station-sync__lines-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--station-space-2);
+}
+
+.station-root .station-sync__line-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: var(--station-space-2) var(--station-space-3);
+  background: var(--station-surface-interactive);
+  border: var(--station-stroke) solid var(--station-border-strong);
+  border-radius: var(--station-radius-sm);
+  color: var(--station-text);
+  font-size: var(--station-text-sm);
+  text-align: left;
+}
+
+.station-root .station-sync__line-option:hover:not(:disabled) {
+  background: var(--station-surface-hover);
+  border-color: var(--station-accent-hover);
+}
+
+.station-root .station-sync__line-option:active:not(:disabled) {
+  background: var(--station-surface-selected);
+  border-color: var(--station-accent-active);
+}
+
+.station-root .station-sync__line-option.is-current {
+  background: var(--station-selection);
+  border-color: var(--station-accent);
+  cursor: default;
+}
+
+.station-sync__line-option:disabled:not(.is-current) {
+  color: var(--station-text-disabled);
+  cursor: default;
+}
+
+.station-sync__line-name {
+  font-weight: 600;
+}
+
+.station-sync__line-detail {
+  color: var(--station-text-faint);
+  font-size: var(--station-text-xs);
+}
+
+.station-sync__line-option.is-current > .station-sync__line-detail {
+  color: var(--station-text-muted);
 }
 
 /* ---- Devices ---- */

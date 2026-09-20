@@ -295,6 +295,58 @@ test("a TSM bank's loaders are short drums, all one vessel at the standard width
   }
 });
 
+test("a blend card is the batch bank's length on every blender: a TSM bank's card is the batch bank's box, past its own short cluster and over the blender's top, and is drawn over the train", () => {
+  const d = layoutModule.DIMENSIONS;
+  const counts = [6, 4, 6];
+  const tsmConfig = literal({ lineNumber: 8, hopperManufacturer: "tsm", slotCount: 6, layers: [{ id: "A", hopperCount: counts[0] }, { id: "B", hopperCount: counts[1] }, { id: "C", hopperCount: counts[2] }] });
+  const batchConfig = literal({ slotCount: 6, layers: [{ id: "A", hopperCount: counts[0] }, { id: "B", hopperCount: counts[1] }, { id: "C", hopperCount: counts[2] }] });
+  const tsm = layoutFor(tsmConfig);
+  const batch = layoutFor(batchConfig);
+  const captionBottom = d.vesselBottom + d.coneHeight + d.spoutHeight + d.hopperCaptionGap + d.hopperCaptionHeight;
+  tsm.banks.forEach((bank, index) => {
+    const same = batch.banks[index];
+    // The batch bank's card ends at its cluster, as it always has.
+    assert.ok(Math.abs(same.cardBottom - (same.objects.cluster.y + same.objects.cluster.height)) < 1e-9, `batch ${same.id}: the card ends at the cluster`);
+    assert.ok(Math.abs(same.cardBottom - captionBottom) < 1e-9);
+    // The TSM bank's card ends there too - not at its own, higher, cluster.
+    assert.ok(Math.abs(bank.cardBottom - same.cardBottom) < 1e-9, `${bank.id}: one card length on both blenders`);
+    assert.ok(bank.objects.cluster.y + bank.objects.cluster.height < bank.cardBottom - 100, `${bank.id}: the TSM cluster ends well above the card`);
+    assert.deepEqual(parts.blendCardBox(bank), parts.blendCardBox(same), `${bank.id}: the same card box`);
+    assert.deepEqual(parts.cardRailBox(bank), parts.cardRailBox(same), `${bank.id}: the rail beside it is as tall`);
+    // Over the blender's top: the card reaches below the TSM mixer's top edge.
+    const box = parts.blendCardBox(bank);
+    assert.ok(box.y + box.height > bank.mixer.bounds.top, `${bank.id}: the card stands over the blender`);
+    assert.ok(box.height > 300, `${bank.id}: a six-row card's room (${box.height})`);
+  });
+  // In a focus composition the card is carried rigidly with the cluster -
+  // scaled and placed as one object, its length the cluster's scale.
+  const focused = layoutFor(tsmConfig, { focusLayer: "B" });
+  for (const id of ["A", "B", "C"]) {
+    const row = focused.banks.find(bank => bank.id === id);
+    const plain = tsm.banks.find(bank => bank.id === id);
+    const ratio = row.scale / plain.scale;
+    assert.ok(Math.abs((row.cardBottom - row.objects.cluster.y) - (plain.cardBottom - plain.objects.cluster.y) * ratio) < 1e-6,
+      `${id}: the card's length scales with the cluster it stands in for`);
+  }
+  // Drawn: the card is the layer's last child, after the blender, on both lines;
+  // its frame is the box; the markup's data-object-card says the same.
+  const doc = fakeDocument();
+  const card = () => doc.createElement("div");
+  for (const [config, blender] of [[tsmConfig, "tsm"], [batchConfig, "batch"]]) {
+    const built = model.buildLineModel(config);
+    const svg = render.renderStage(built, { document: doc, blendEdit: true, blendCards: { A: card(), B: card(), C: card() } });
+    for (const layer of allWith(svg, "data-role", "layer")) {
+      const children = layer.children.map(child => child.getAttribute("data-role"));
+      assert.equal(children[children.length - 1], "blend-card", `${blender} ${layer.getAttribute("data-layer")}: the card paints last (${children.join(",")})`);
+      assert.ok(children.indexOf("mixer") < children.indexOf("blend-card"));
+      const bank = layoutFor(config).banks.find(b => b.id === layer.getAttribute("data-layer"));
+      const frame = allWithClassName(layer, "station-blend-card__frame")[0];
+      assert.equal(Number(frame.getAttribute("height")), parts.blendCardBox(bank).height);
+      assert.equal(layer.getAttribute("data-object-card").split(" ").map(Number)[3], parts.blendCardBox(bank).height);
+    }
+  }
+});
+
 test("a four-hopper layer and a six-hopper layer use the same component", () => {
   /* Same builder, same sub-groups, same classes - only the count differs. If
    * these ever diverge it will be because someone special-cased a count. */

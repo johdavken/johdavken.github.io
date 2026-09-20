@@ -2453,9 +2453,12 @@
     /* The line console, in the header's slot. It subscribes to the
      * connection bridge itself and redraws from each descriptor; a
      * connection change never touches the stage, and a job change never
-     * touches the console - the two bridges publish independently. */
+     * touches the console - the two bridges publish independently. The
+     * admin bridge is handed over too, read for one fact: whether an
+     * administrator is signed in, which is what lets the console offer a
+     * choice of line. */
     if (syncConsole && mounts.connection) {
-      const lineConsole = syncConsole.create(doc, { connection });
+      const lineConsole = syncConsole.create(doc, { connection, admin });
       mounts.connection.appendChild(lineConsole.element);
     }
 

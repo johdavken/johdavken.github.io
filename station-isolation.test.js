@@ -234,7 +234,7 @@ test("the connection bridge gives consumers no way to publish, and its action vo
   }
   assert.ok(Object.isFrozen(bridge));
   assert.ok(Object.isFrozen(bridge.ACTIONS));
-  assert.deepEqual([...bridge.ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr"],
+  assert.deepEqual([...bridge.ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr", "joinWorkspace", "selectWorkspace", "leaveWorkspace", "relabelDevice"],
     "a new RT Sync action Station may ask for arrives as an edit to this list");
 });
 
@@ -310,10 +310,19 @@ test("exactly one Station file requests a line-connection action - the line cons
       // names an action.
       assert.doesNotMatch(source, /connection\.request|\.request\s*\(\s*["'`]/, `${file} requests a line-connection action`);
     }
-    // The console holds no workspace choice: no selector, no switch, no
-    // second remembered line.
-    assert.doesNotMatch(source, /selectWorkspace|joinWorkspace|createWorkspace|leaveWorkspace|workspaceSelect|selectedWorkspaceId/,
+    // No Station file holds a workspace of its own: no join, no create, no
+    // leave, no selector state, no second remembered line. The console
+    // alone may ASK the application to select a remembered line - and only
+    // for a signed-in administrator, read from the admin bridge's window.
+    assert.doesNotMatch(source, /joinWorkspace|createWorkspace|leaveWorkspace|workspaceSelect|selectedWorkspaceId/,
       `${file} reaches for a workspace selection`);
+    if (REQUESTS.includes(file)) {
+      assert.match(source, /connection\.request\s*\(\s*name,\s*args\)/, `${file} no longer carries the line id through the bridge`);
+      assert.match(source, /"selectWorkspace"/, `${file} no longer asks for the application's line selection`);
+      assert.match(source, /access\.access\.signedIn/, `${file} no longer gates the line choice on the admin bridge's window`);
+    } else {
+      assert.doesNotMatch(source, /selectWorkspace/, `${file} reaches for a workspace selection`);
+    }
   }
 });
 
