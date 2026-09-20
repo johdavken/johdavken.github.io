@@ -25,7 +25,7 @@ const read = file => fs.readFileSync(file, "utf8");
 
 test("the checked-in module and review files are exactly the tool's output", () => {
   const { files } = tool.generate();
-  assert.equal(Object.keys(files).length, 7, "the module, three blender views and three downcomer views");
+  assert.equal(Object.keys(files).length, 10, "the module, three blender views, three core views and three downcomer views");
   for (const [file, content] of Object.entries(files)) {
     assert.equal(read(file), content, `${path.relative(ROOT, file)} is stale - run: node tools/station-tsm/generate.js`);
   }
@@ -52,7 +52,64 @@ test("the discharge is the origin in every view, the collar's top is the inlet, 
     const height = view.bounds.bottom - view.bounds.top;
     const mixerHeight = mixerAssets.views[name].bounds.bottom - mixerAssets.views[name].bounds.top;
     assert.ok(Math.abs(height - mixerHeight) < 12, `${name}: ${height} tall against the mixer's ${mixerHeight}`);
+    // With the side storage the six-loader machine is near twice the body's width; still under a six-slot bank.
+    assert.ok(view.bounds.right - view.bounds.left > 160 && view.bounds.right - view.bounds.left < 240, `${name}: width ${view.bounds.right - view.bounds.left}`);
+    assert.ok(Math.abs(view.bounds.left + view.bounds.right) < 0.01, `${name}: the storage is symmetric about the discharge`);
+  }
+});
+
+test("the side storage: a wedge each side of the funnel on the six-loader machine, its top at the funnel's top, its outlet on a chute block at the weigh unit's side; the outer wall is an undercut, seen on the near side only when the machine is turned", () => {
+  const st = tool.MACHINE.storage;
+  assert.ok(st.top <= tool.MACHINE.rim.h0 && st.top >= tool.MACHINE.funnel.top.h - 6, "the top is the funnel's top, under the collar");
+  assert.ok(st.outlet.h <= tool.MACHINE.transition.h0 + 6 && st.outlet.h >= tool.MACHINE.hood.h1, "the outlet lands at the hood's top");
+  assert.equal(st.chute.h1, st.outlet.h, "the chute block's top is the outlet");
+  assert.ok(st.outlet.x0 > tool.MACHINE.hood.x && st.outlet.x0 <= st.chute.x1 && st.outlet.x1 >= tool.MACHINE.funnel.bottom.x, "the outlet sits beside the funnel's bottom, on the chute");
+  assert.ok(st.reach > tool.MACHINE.collar.x * 1.5 && st.reach < tool.MACHINE.collar.x * 2, "the wedge reaches out about three quarters of the collar's half-width");
+  const storageFaces = name => assets.views[name].polygons.filter(p => p.part === "side-storage");
+  const chuteFaces = name => assets.views[name].polygons.filter(p => p.part === "storage-chute");
+  // Front on: each wedge's front and its top strip; no undercut.
+  assert.equal(storageFaces("front").length, 4);
+  assert.equal(storageFaces("front").filter(p => p.tone === "light").length, 2);
+  assert.equal(storageFaces("front").filter(p => p.tone === "edge").length, 2);
+  // Turned: the near wedge's undercut shows, the far one's does not.
+  assert.equal(storageFaces("intermediate").length, 5);
+  assert.equal(storageFaces("angled").length, 5);
+  assert.ok(chuteFaces("front").length >= 2 && chuteFaces("angled").length >= 2);
+  for (const name of assets.ORDER) {
+    const faces = storageFaces(name);
+    const left = Math.min(...faces.flatMap(p => p.points.filter((_, i) => i % 2 === 0)));
+    const right = Math.max(...faces.flatMap(p => p.points.filter((_, i) => i % 2 === 0)));
+    assert.equal(left, assets.views[name].bounds.left, `${name}: the storage is the machine's left edge`);
+    assert.equal(right, assets.views[name].bounds.right, `${name}: and its right`);
+    // The wedges are painted after the funnel and before the collar.
+    const parts = assets.views[name].polygons.map(p => p.part);
+    assert.ok(parts.lastIndexOf("funnel") < parts.indexOf("side-storage") && parts.lastIndexOf("side-storage") < parts.indexOf("collar-rim"));
+  }
+});
+
+test("the core machine: the same body without the side storage - the four-loader blender - in the same three views, the body's own width, everything else identical", () => {
+  const core = assets.core;
+  assert.deepEqual(core.ORDER, assets.ORDER);
+  for (const name of assets.ORDER) {
+    const view = core.views[name];
+    const full = assets.views[name];
+    assert.equal(view.yaw, full.yaw);
+    assert.deepEqual(view.outlet, full.outlet);
+    assert.deepEqual(view.inlet, full.inlet);
+    assert.equal(view.bounds.top, full.bounds.top);
+    assert.equal(view.bounds.bottom, full.bounds.bottom);
     assert.ok(view.bounds.right - view.bounds.left > 100 && view.bounds.right - view.bounds.left < 160, `${name}: width ${view.bounds.right - view.bounds.left}`);
+    assert.equal(view.rotor, null);
+    assert.equal(view.rotorAfter, view.polygons.length);
+    const parts = new Set(view.polygons.map(p => p.part));
+    assert.equal(parts.has("side-storage"), false);
+    assert.equal(parts.has("storage-chute"), false);
+    // Every other polygon is the six-loader machine's, in its order.
+    const rest = full.polygons.filter(p => p.part !== "side-storage" && p.part !== "storage-chute");
+    assert.deepEqual(view.polygons, rest);
+    const svg = read(path.join(tool.ASSET_DIR, `tsm-core-${name}.svg`));
+    assert.equal((svg.match(/<path\b/g) || []).length, view.polygons.length);
+    assert.match(svg, /four-loader/);
   }
 });
 

@@ -59,6 +59,18 @@
   function blenderAssets(blender) {
     return blender === "tsm" ? tsmAssets : mixerAssets;
   }
+  /* The TSM blender comes in two: the six-loader machine with its side
+   * storage (the 5A and A6 wedges), and the four-loader core machine
+   * without. A bank of more than four loaders gets the storage. */
+  const CORE_LOADERS = 4;
+  function blenderVariant(layer) {
+    return blenderOf(layer) === "tsm" && Number(layer.hopperCount) <= CORE_LOADERS && tsmAssets.core ? "core" : "storage";
+  }
+  function blenderViews(layer) {
+    const blender = blenderOf(layer);
+    if (blender === "tsm" && blenderVariant(layer) === "core") return tsmAssets.core.views;
+    return blenderAssets(blender).views;
+  }
 
   /* Every dimension the composition depends on. Corrections belong here, not
    * in path data. Values are viewBox units. */
@@ -495,7 +507,7 @@
     const facing = equipmentView(index, layerCount);
     const mixerScale = d.mixerScale;
     const extruderScale = d.extruderScale;
-    const mixerAsset = blenderAssets(blender).views[facing.view];
+    const mixerAsset = blenderViews(layer)[facing.view];
     const mixer = assetPlacement(facing.view, facing.mirrored, mixerAsset, {
       centerX: trainX,
       // Hung from the top: the discharge lands wherever the machine's height
@@ -504,6 +516,7 @@
       scale: mixerScale
     });
     mixer.blender = blender;
+    mixer.variant = blender === "tsm" ? blenderVariant(layer) : null;
     /* The downcomer, on TSM lines: hung from the blender's discharge - its
      * inlet on the discharge, its outlet where the extruder's feed then
      * lands - at the blender's scale and view. None on a batch line. */
@@ -734,7 +747,7 @@
     const trainMachines = view => {
       const machines = [];
       if (blenderOf(layer) === "tsm") {
-        machines.push({ bounds: tsmAssets.views[view].bounds, scale: focusedD.mixerScale });
+        machines.push({ bounds: blenderViews(layer)[view].bounds, scale: focusedD.mixerScale });
         if (tsmAssets.downcomer) machines.push({ bounds: tsmAssets.downcomer.views[view].bounds, scale: focusedD.mixerScale });
       } else {
         machines.push({ bounds: mixerAssets.views[view].bounds, scale: focusedD.mixerScale });
@@ -806,6 +819,8 @@
     assetPlacement,
     blenderOf,
     blenderAssets,
+    blenderVariant,
+    blenderViews,
     unitsPerInch,
     hopperBodyHeight,
     bankInnerWidth,

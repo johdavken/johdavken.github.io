@@ -194,16 +194,22 @@ test("a TSM line draws the TSM blender in the mixer's place - the same target, c
   const tsm = literal({ lineNumber: 8, hopperManufacturer: "tsm", layerAPosition: "inside", slotCount: 6, layers: [{ id: "A", hopperCount: 6 }, { id: "B", hopperCount: 4 }, { id: "C", hopperCount: 6 }] });
   const layout = layoutFor(tsm);
   assert.deepEqual(layout.banks.map(b => b.mixer.blender), ["tsm", "tsm", "tsm"]);
+  // Six loaders get the machine with its side storage; the four-loader core gets the core machine.
+  assert.deepEqual(layout.banks.map(b => b.mixer.variant), ["storage", "core", "storage"]);
+  assert.ok(layout.banks[0].mixer.bounds.right - layout.banks[0].mixer.bounds.left > layout.banks[1].mixer.bounds.right - layout.banks[1].mixer.bounds.left + 60, "the storage makes the machine wider");
+  assert.ok(layout.banks.every(b => b.mixer.bounds.left > b.x && b.mixer.bounds.right < b.x + b.width), "and it still stands inside its bank");
   const svg = stageFor(tsm);
   const mixers = allWith(svg, "data-role", "mixer");
   assert.equal(mixers.length, 3);
+  assert.deepEqual(mixers.map(m => m.getAttribute("data-variant")), ["storage", "core", "storage"]);
   for (const mixer of mixers) {
     assert.equal(mixer.getAttribute("data-blender"), "tsm");
     assert.equal(mixer.getAttribute("data-station-target"), "mixer");
     assert.equal(mixer.getAttribute("class"), "station-mixer");
     const view = mixer.getAttribute("data-view");
+    const variant = mixer.getAttribute("data-variant") === "core" ? tsmAssets.core : tsmAssets;
     const faces = allWith(mixer, "data-role", "mixer-body")[0].children.filter(n => n.nodeName === "path");
-    assert.equal(faces.length, tsmAssets.views[view].polygons.length, `${view}: every polygon and nothing else`);
+    assert.equal(faces.length, variant.views[view].polygons.length, `${view}: every polygon and nothing else`);
     assert.equal(allWith(mixer, "data-role", "mixer-rotor").length, 0, "no rotor on the TSM");
     assert.ok(faces.every(f => /^station-mixer__face station-mixer__face--[a-z]+/.test(f.getAttribute("class"))), "the mixer's own tone classes");
   }
@@ -244,6 +250,7 @@ test("a TSM line draws the TSM blender in the mixer's place - the same target, c
   assert.ok(batch.banks.every(b => b.downcomer === null && b.mixer.blender === "batch"));
   for (const mixer of allWith(batchSvg, "data-role", "mixer")) {
     assert.equal(mixer.getAttribute("data-blender"), "batch");
+    assert.equal(mixer.getAttribute("data-variant"), null, "the mixer has no variant");
     assert.equal(allWith(mixer, "data-role", "mixer-rotor").length, 1);
     const faces = allWith(mixer, "data-role", "mixer-body")[0].children.filter(n => n.nodeName === "path");
     assert.equal(faces.length, mixerAssets.views[mixer.getAttribute("data-view")].polygons.length);
