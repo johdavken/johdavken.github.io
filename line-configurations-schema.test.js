@@ -28,3 +28,19 @@ test("hoppers per layer is one integer per layer, 1 to 6, backfilled to six, and
   assert.match(counts,/grant execute on function public\.admin_save_line_configuration\(uuid,integer,text,text\[\],integer,text,text,text,boolean,jsonb,integer\[\]\) to authenticated/);
   assert.doesNotMatch(counts,/admin_delete_line_configuration/);
 });
+const manufacturer=fs.readFileSync("supabase/migrations/202609190001_line_configuration_hopper_manufacturer.sql","utf8");
+test("the hopper manufacturer is one of two words, Plast-Control unless said, and saved through the same admin procedure with a second optional trailing argument",()=>{
+  assert.match(manufacturer,/add column hopper_manufacturer text not null default 'plast-control'/);
+  assert.match(manufacturer,/check \(hopper_manufacturer in \('plast-control', 'tsm'\)\)/);
+  assert.match(manufacturer,/drop function public\.admin_save_line_configuration\(uuid,integer,text,text\[\],integer,text,text,text,boolean,jsonb,integer\[\]\);/);
+  assert.match(manufacturer,/p_hopper_counts integer\[\] default null,\s*p_hopper_manufacturer text default null/);
+  assert.match(manufacturer,/coalesce\(p_hopper_manufacturer, 'plast-control'\)/);
+  assert.match(manufacturer,/coalesce\(p_hopper_counts, array_fill\(6, array\[p_layer_count\]\)\)/,"the counts default is kept");
+  assert.match(manufacturer,/hopper_manufacturer=v_hopper_manufacturer where id=p_id/);
+  assert.match(manufacturer,/security definer set search_path = ''/);
+  assert.match(manufacturer,/perform private\.assert_admin\(\)/);
+  assert.match(manufacturer,/revoke all on function public\.admin_save_line_configuration\(uuid,integer,text,text\[\],integer,text,text,text,boolean,jsonb,integer\[\],text\) from public, anon/);
+  assert.match(manufacturer,/grant execute on function public\.admin_save_line_configuration\(uuid,integer,text,text\[\],integer,text,text,text,boolean,jsonb,integer\[\],text\) to authenticated/);
+  assert.doesNotMatch(manufacturer,/admin_delete_line_configuration/);
+  assert.doesNotMatch(manufacturer,/drop default/,"the column keeps its default so an older client's insert still lands");
+});

@@ -99,6 +99,8 @@
     "station/station-line-model.js",
     "station/station-extruder-assets.js",
     "station/station-mixer-assets.js",
+    // The TSM blender's artwork, for the lines that run one.
+    "station/station-tsm-assets.js",
     // Layout before parts before the renderer: the renderer reads both of
     // their globals when it executes.
     "station/station-machine-layout.js",
@@ -175,7 +177,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.67.0";
+  const VERSION = "0.69.0";
 
   function requested() {
     try {

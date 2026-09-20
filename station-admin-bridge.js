@@ -114,7 +114,7 @@
    * nothing else the row carries. */
   const LINE_FIELDS = Object.freeze([
     "lineNumber", "displayName", "aliases", "layerCount", "hopperCounts", "layerAPosition",
-    "hopperGeometry", "hopperNamingMode", "isActive", "metadata"
+    "hopperGeometry", "hopperNamingMode", "hopperManufacturer", "isActive", "metadata"
   ]);
 
   /* A resin's fields, as they cross in both directions: the record
@@ -276,6 +276,7 @@
       layerAPosition: position,
       hopperGeometry: stringOr(item.hopperGeometry, ""),
       hopperNamingMode: stringOr(item.hopperNamingMode, ""),
+      hopperManufacturer: stringOr(item.hopperManufacturer, ""),
       isActive: item.isActive !== false,
       metadata: Object.freeze(plainObject(item.metadata)),
       updatedAt: stringOr(item.updatedAt, "")
@@ -378,15 +379,16 @@
     hopperCounts: "Hoppers per layer must be whole numbers.",
     layerAPosition: "Layer A must be Inside, Outside, or N/A.",
     hopperGeometry: "A hopper geometry is required.",
-    hopperNamingMode: "A hopper naming mode is required."
+    hopperNamingMode: "A hopper naming mode is required.",
+    hopperManufacturer: "The hopper manufacturer must be a word."
   });
 
   /* The configuration to save, rebuilt field by field from LINE_FIELDS:
    * numbers as integers, names as collapsed text, aliases as a list of
    * them, orientation as a side or null (N/A crosses as null), the two
-   * modes as text, active as a boolean, metadata as a plain object.
+   * modes and the manufacturer as text, active as a boolean, metadata as a plain object.
    * What the VALUES may be - the ranges, the orientation-versus-count
-   * rule, the name conflicts - is line-identity's to say, in the service,
+   * rule, the name conflicts, the manufacturers - is line-identity's to say, in the service,
    * and is not repeated here; this only refuses a field that is not the
    * kind of thing the definition holds. Anything else passed is dropped. */
   function normalizeLineConfiguration(value) {
@@ -419,6 +421,12 @@
       const text = typeof given[field] === "string" ? given[field].trim() : "";
       if (!text) return failure("bad_argument", LINE_FIELD_MESSAGES[field], { field });
       out[field] = text;
+    }
+    // The manufacturer may be left unsaid - line-identity then takes the
+    // floor's default (Plast-Control) - but not be something other than a word.
+    if (given.hopperManufacturer !== undefined && given.hopperManufacturer !== null && given.hopperManufacturer !== "") {
+      if (typeof given.hopperManufacturer !== "string") return failure("bad_argument", LINE_FIELD_MESSAGES.hopperManufacturer, { field: "hopperManufacturer" });
+      out.hopperManufacturer = given.hopperManufacturer.trim();
     }
     out.isActive = given.isActive !== false;
     out.metadata = plainObject(given.metadata);

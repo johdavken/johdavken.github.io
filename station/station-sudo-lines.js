@@ -100,6 +100,14 @@
     Object.freeze({ value: "standard", label: "Standard" }),
     Object.freeze({ value: "main-plus-five", label: "Main + 1–5" })
   ]);
+  /* Who made the hopper system: Plast-Control on every line unless the
+   * line says TSM, which stands the TSM blender and its downcomer on the
+   * stage. The words are line-identity's HOPPER_MANUFACTURERS. */
+  const MANUFACTURERS = Object.freeze([
+    Object.freeze({ value: "plast-control", label: "Plast-Control" }),
+    Object.freeze({ value: "tsm", label: "TSM" })
+  ]);
+  const DEFAULT_MANUFACTURER = "plast-control";
   /* Six per layer unless the line says otherwise; the ceiling is
    * line-identity's (MAX_HOPPERS_PER_LAYER), read from there when loaded. */
   const DEFAULT_HOPPERS_PER_LAYER = 6;
@@ -184,6 +192,8 @@
   function rowMeta(line) {
     const parts = [plural(line.layerCount, "layer"), positionLabel(line.layerAPosition),
       labelFor(GEOMETRIES, line.hopperGeometry) || line.hopperGeometry, labelFor(NAMING_MODES, line.hopperNamingMode) || line.hopperNamingMode];
+    // Plast-Control is every line's norm; only the exception is spelled out.
+    if (line.hopperManufacturer && line.hopperManufacturer !== DEFAULT_MANUFACTURER) parts.push(labelFor(MANUFACTURERS, line.hopperManufacturer) || line.hopperManufacturer);
     if (!line.isActive) parts.push("Inactive");
     return parts.join(" · ");
   }
@@ -311,6 +321,7 @@
       layerAPosition: line ? line.layerAPosition : "outside",
       hopperGeometry: line ? line.hopperGeometry : "cylindrical",
       hopperNamingMode: line ? line.hopperNamingMode : "standard",
+      hopperManufacturer: line && line.hopperManufacturer ? line.hopperManufacturer : DEFAULT_MANUFACTURER,
       isActive: line ? line.isActive : true,
       metadata: line ? line.metadata : {}
     };
@@ -330,6 +341,7 @@
       layerAPosition: Number(draft.layerCount) === 1 ? null : (draft.layerAPosition || null),
       hopperGeometry: draft.hopperGeometry,
       hopperNamingMode: draft.hopperNamingMode,
+      hopperManufacturer: draft.hopperManufacturer || DEFAULT_MANUFACTURER,
       isActive: draft.isActive !== false,
       metadata: draft.metadata && typeof draft.metadata === "object" ? draft.metadata : {}
     };
@@ -676,6 +688,7 @@
       fields.appendChild(fieldRow("Hopper naming", chipGroup("hopperNamingMode", NAMING_MODES, draft.hopperNamingMode, { "aria-label": "Hopper naming mode" })));
       fields.appendChild(fieldRow("Hoppers", text(doc, "span", "station-sudo-lines__hoppers", hopperSummary(draft.layerCount, draft.hopperNamingMode, draft.hopperCounts), { "data-role": "hoppers" })));
       fields.appendChild(fieldRow("Hopper geometry", chipGroup("hopperGeometry", GEOMETRIES, draft.hopperGeometry, { "aria-label": "Hopper geometry" })));
+      fields.appendChild(fieldRow("Hopper manufacturer", chipGroup("hopperManufacturer", MANUFACTURERS, draft.hopperManufacturer, { "aria-label": "Hopper manufacturer" })));
       detail.appendChild(fields);
 
       detail.appendChild(text(doc, "p", "station-sudo-lines__reach", line && isCurrent(line)
@@ -871,6 +884,8 @@
         state.draft.hopperGeometry = String(value);
       } else if (field === "hopperNamingMode") {
         state.draft.hopperNamingMode = String(value);
+      } else if (field === "hopperManufacturer") {
+        state.draft.hopperManufacturer = String(value);
       } else {
         return;
       }
@@ -1093,7 +1108,7 @@
 
   return Object.freeze({
     ID, TITLE, LABEL, tool, create,
-    LAYER_COUNTS, SIDES, GEOMETRIES, NAMING_MODES,
+    LAYER_COUNTS, SIDES, GEOMETRIES, NAMING_MODES, MANUFACTURERS,
     layerRows, sideOfRow, layerAPositionFor, hopperRange, hopperSummary, hopperCountsFor, layerCountChoices,
     rowMeta, detailMeta, draftOf, definitionOf, validateDefinition
   });

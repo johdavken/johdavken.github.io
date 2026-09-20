@@ -7,7 +7,7 @@
   let service = null;
   let lines = [];
   let selected = null;
-  const choices = { layer_a_position:"", hopper_geometry:"cylindrical", hopper_naming_mode:"standard" };
+  const choices = { layer_a_position:"", hopper_geometry:"cylindrical", hopper_naming_mode:"standard", hopper_manufacturer:identity.DEFAULT_HOPPER_MANUFACTURER };
 
   function admin(){ return root.PolynResinAdminInstance || null; }
   function setMessage(id, text, type=""){
@@ -23,6 +23,8 @@
   function labelPosition(value){ return value === "inside" ? "A Inside" : value === "outside" ? "A Outside" : "A N/A"; }
   function labelGeometry(value){ return value === "volume" ? "Volume" : "Cylindrical"; }
   function labelNaming(value){ return value === "main-plus-five" ? "Main + 1–5" : "Standard"; }
+  // Plast-Control is every line's norm, so only the exception is spelled out.
+  function labelManufacturer(value){ return value === "tsm" ? " · TSM" : ""; }
   function labelHoppers(counts){
     const list = Array.isArray(counts) ? counts.map(Number) : [];
     return list.length && list.some(count=>count !== identity.MAX_HOPPERS_PER_LAYER) ? ` · Hoppers ${list.join("/")}` : "";
@@ -56,7 +58,7 @@
       const info = document.createElement("div"); info.className = "lineConfigurationRowInfo";
       const title = document.createElement("strong"); title.textContent = line.display_name;
       const detail = document.createElement("small");
-      detail.textContent = `${line.layer_count} layer${line.layer_count === 1 ? "" : "s"} · ${labelPosition(line.layer_a_position)} · ${labelGeometry(line.hopper_geometry)} · ${labelNaming(line.hopper_naming_mode)}${labelHoppers(line.hopper_counts)}${line.is_active ? "" : " · Inactive"}`;
+      detail.textContent = `${line.layer_count} layer${line.layer_count === 1 ? "" : "s"} · ${labelPosition(line.layer_a_position)} · ${labelGeometry(line.hopper_geometry)} · ${labelNaming(line.hopper_naming_mode)}${labelManufacturer(line.hopper_manufacturer)}${labelHoppers(line.hopper_counts)}${line.is_active ? "" : " · Inactive"}`;
       info.append(title, detail);
       const edit = document.createElement("button"); edit.type="button"; edit.className="secondary lineConfigurationEdit";
       edit.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20ZM13.5 6.5 17 10"/></svg><span>Edit</span>';
@@ -92,6 +94,7 @@
     setChoice("layer_a_position",line?.layer_a_position ?? "outside");
     setChoice("hopper_geometry",line?.hopper_geometry || "cylindrical");
     setChoice("hopper_naming_mode",line?.hopper_naming_mode || "standard");
+    setChoice("hopper_manufacturer",line?.hopper_manufacturer || identity.DEFAULT_HOPPER_MANUFACTURER);
     setActive(line?.is_active ?? true);
     $("lineConfigurationDialogTitle").textContent = line ? `Edit ${line.display_name}` : "Add Line";
     $("lineConfigurationDeactivate").hidden = !line?.id || !line?.is_active;
@@ -103,7 +106,7 @@
     return { line_number:$("lineConfigurationNumber").value, display_name:$("lineConfigurationName").value,
       aliases:$("lineConfigurationAliases").value.split(/[\n,]+/).map(value=>value.trim()).filter(Boolean),
       layer_count:$("lineConfigurationLayers").value, hopper_counts:hopperCountValues(), layer_a_position:choices.layer_a_position || null,
-      hopper_geometry:choices.hopper_geometry, hopper_naming_mode:choices.hopper_naming_mode,
+      hopper_geometry:choices.hopper_geometry, hopper_naming_mode:choices.hopper_naming_mode, hopper_manufacturer:choices.hopper_manufacturer,
       is_active:isActive(), metadata:selected?.metadata || {} };
   }
   async function save(nextValues=values()){

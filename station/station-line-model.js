@@ -30,6 +30,16 @@
  * rather than a line number. That path exists so the rendering contract can
  * be exercised for shapes no real line has yet - it is not a way to invent a
  * different truth for a line that does exist.
+ *
+ * WHICH BLENDER
+ *
+ * Two blenders stand on the floor: the batch mixer most lines run, and the
+ * TSM gravimetric blender some run in its place. Which a line has follows
+ * from the line catalog's hopper manufacturer (line-identity's
+ * hopperManufacturer: Plast-Control on every line unless a Line
+ * Configuration says TSM); a literal config may name the blender outright.
+ * A TSM bank's loaders are short drums, all one size; the layout draws
+ * them so, and stands the line's downcomer under the blender.
  */
 (function (root, factory) {
   const deps = {
@@ -77,6 +87,23 @@
 
   function roleLabel(role) {
     return ROLE_LABEL[role] || "Layer";
+  }
+
+  /* --------------------------------------------------------------------
+   *   Blenders
+   * ------------------------------------------------------------------ */
+
+  const BLENDERS = Object.freeze(["batch", "tsm"]);
+  /* The blender each hopper manufacturer stands on the line: the batch
+   * mixer under Plast-Control's hoppers, the TSM gravimetric blender under
+   * TSM's. The words are line-identity's HOPPER_MANUFACTURERS. */
+  const BLENDER_BY_MANUFACTURER = Object.freeze({ "plast-control": "batch", tsm: "tsm" });
+
+  function blenderFor(source) {
+    const declared = source && (source.blender ?? source.blender_model);
+    if (BLENDERS.includes(declared)) return declared;
+    const manufacturer = source && (source.hopperManufacturer ?? source.hopper_manufacturer);
+    return BLENDER_BY_MANUFACTURER[typeof manufacturer === "string" ? manufacturer.trim().toLowerCase() : ""] || "batch";
   }
 
   /* --------------------------------------------------------------------
@@ -189,6 +216,12 @@
       ? null
       : (rawPosition === "inside" || rawPosition === "outside" ? rawPosition : null);
 
+    // The line catalog's per-layer counts (line-identity's hopperCounts),
+    // in recipe order, when the line carries them: applied by index below,
+    // in six-slot banks as the application lays its layers out.
+    const counts = source.hopperCounts ?? source.hopper_counts;
+    const hopperCounts = Array.isArray(counts) && counts.length === layerCount
+      ? counts.map(count => positiveInteger(count)) : null;
     return {
       lineNumber,
       displayName: String(source.displayName || source.display_name || (lineNumber ? `Line ${lineNumber}` : "Unassigned line")),
@@ -196,13 +229,17 @@
       layerAPosition,
       hopperNamingMode: source.hopperNamingMode ?? source.hopper_naming_mode ?? "standard",
       hopperGeometry: source.hopperGeometry ?? source.hopper_geometry ?? null,
+      blender: blenderFor(source),
       layers: Array.isArray(source.layers) ? source.layers : null,
+      hopperCounts,
       defaultHopperCount: positiveInteger(source.hopperCount ?? source.hoppersPerLayer) || defaultHopperCount(payloads),
       // The slots a layer's bank is built to, when the line says: the
       // application's layers are six-slot whatever a layer's hopper count,
       // so a four-hopper core is drawn in a six-wide bank. Absent, a
-      // layer's slots are its hoppers - a literal config keeps its widths.
-      defaultSlotCount: positiveInteger(source.slotCount ?? source.hopperSlots) || null,
+      // layer's slots are its hoppers - a literal config keeps its widths
+      // - unless the line carries per-layer counts, which the application
+      // lays out in its own six slots.
+      defaultSlotCount: positiveInteger(source.slotCount ?? source.hopperSlots) || (hopperCounts ? defaultHopperCount(payloads) : null),
       payloads
     };
   }
@@ -255,6 +292,7 @@
     const layers = names.map((name, recipeIndex) => {
       const declared = byName.get(name) || null;
       const hopperCount = positiveInteger(declared && (declared.hopperCount ?? declared.hoppers_per_layer))
+        || (config.hopperCounts && config.hopperCounts[recipeIndex])
         || config.defaultHopperCount;
       // Never fewer slots than hoppers: a hopper always has a slot to stand in.
       const slotCount = Math.max(hopperCount, positiveInteger(declared && declared.slotCount) || config.defaultSlotCount || 0);
@@ -268,6 +306,8 @@
         roleLabel: roleLabel(role),
         hopperCount,
         slotCount,
+        // The blender this layer's bank feeds.
+        blender: config.blender,
         equipment: LAYER_EQUIPMENT.map(item => ({ ...item, layer: name })),
         hoppers: Array.from({ length: hopperCount }, (_, index) => ({
           id: hopperId(name, index, config.hopperNamingMode),
@@ -287,7 +327,8 @@
         orientationKnown,
         singleLayer: config.layerCount === 1,
         hopperNamingMode: config.hopperNamingMode,
-        hopperGeometry: config.hopperGeometry
+        hopperGeometry: config.hopperGeometry,
+        blender: config.blender
       },
       layers,
       shared: SHARED_EQUIPMENT.map(item => ({ ...item })),
@@ -309,6 +350,9 @@
     LAYER_EQUIPMENT,
     SHARED_EQUIPMENT,
     DEFAULT_HOPPER_COUNT,
+    BLENDERS,
+    BLENDER_BY_MANUFACTURER,
+    blenderFor,
     roleForStackIndex,
     roleLabel,
     layerNames,

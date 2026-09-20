@@ -225,6 +225,20 @@ test("the linked line's configured hoppers per layer draw fewer hoppers in the s
   assert.equal(source.classifyChange(before, resolved), "structural");
 });
 
+test("the linked line's hopper manufacturer crosses into the model input, and a change of it is structural - the blender on the stage is another machine", () => {
+  const six = () => Array.from({ length: 6 }, () => ({ pct: 0, weight: 0, resinName: "", track: false, pumpOff: false }));
+  const state = liveState({ lineType: 3, layers: [{ name: "A", layerPct: 34, hoppers: six() }, { name: "B", layerPct: 33, hoppers: six() }, { name: "C", layerPct: 33, hoppers: six() }] });
+  const plain = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: LIVE_CONFIG }), demoLines, demoId: "one-layer" });
+  assert.equal(plain.modelInput.hopperManufacturer, null, "the line does not say");
+  assert.equal(lineModel.buildLineModel(plain.modelInput).line.blender, "batch");
+  const tsm = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: Object.assign({}, LIVE_CONFIG, { hopperManufacturer: "tsm" }) }), demoLines, demoId: "one-layer" });
+  assert.equal(tsm.modelInput.hopperManufacturer, "tsm");
+  assert.equal(lineModel.buildLineModel(tsm.modelInput).line.blender, "tsm");
+  assert.equal(source.classifyChange(plain, tsm), "structural");
+  const back = source.resolveSource({ snapshot: snapshotFor(state, { lineConfiguration: Object.assign({}, LIVE_CONFIG, { hopperManufacturer: "plast-control" }) }), demoLines, demoId: "one-layer" });
+  assert.equal(lineModel.buildLineModel(back.modelInput).line.blender, "batch");
+});
+
 test("the live line's orientation reverses the physical stack - as roles on each layer, never as the order the layers are listed in", () => {
   const resolved = source.resolveSource({
     snapshot: snapshotFor(liveState({ lineType: 3, layers: ["A", "B", "C"].map(name => ({ name, layerPct: 33, hoppers: [] })) }),

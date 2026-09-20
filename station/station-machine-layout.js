@@ -31,7 +31,10 @@
       : (root && root.PolynStationExtruderAssets),
     mixerAssets: typeof require === "function"
       ? require("./station-mixer-assets.js")
-      : (root && root.PolynStationMixerAssets)
+      : (root && root.PolynStationMixerAssets),
+    tsmAssets: typeof require === "function"
+      ? require("./station-tsm-assets.js")
+      : (root && root.PolynStationTsmAssets)
   };
   const api = factory(deps);
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -44,6 +47,18 @@
    * else. */
   const extruderAssets = deps.extruderAssets;
   const mixerAssets = deps.mixerAssets;
+  const tsmAssets = deps.tsmAssets || null;
+
+  /* The blender a layer's bank feeds, by the line model's word for it:
+   * the batch mixer (station-mixer-assets.js), or the TSM gravimetric
+   * blender (station-tsm-assets.js) on the lines that run one. Without
+   * the TSM module every layer gets the mixer. */
+  function blenderOf(layer) {
+    return layer && layer.blender === "tsm" && tsmAssets ? "tsm" : "batch";
+  }
+  function blenderAssets(blender) {
+    return blender === "tsm" ? tsmAssets : mixerAssets;
+  }
 
   /* Every dimension the composition depends on. Corrections belong here, not
    * in path data. Values are viewBox units. */
@@ -57,6 +72,9 @@
     // --- Hopper ---------------------------------------------------------
     hopperWidth: 30,
     hopperGap: 6,
+    /* The TSM bank's loaders are short drums, every one the same: drawn
+     * this tall, whatever a profile says, on the vessel's inch scale. */
+    tsmVesselHeightIn: 12,
 
     /* Bodies are BOTTOM-aligned. The discharge geometry - flat plate, hose -
      * sits at one fixed height above the mixer for every hopper on the bank,
@@ -127,6 +145,13 @@
      * with the caption's four lines and a 10-unit clearance between.
      */
     mixerTop: 426,
+    /* The TSM train is a machine taller - the downcomer stands between
+     * the blender and the extruder - and its loaders are short, so the
+     * whole bank is hung higher: the discharge line and the blender's top
+     * from here, and the extruder's feed lands where it lands under the
+     * batch mixer. */
+    tsmVesselBottom: 204,
+    tsmMixerTop: 310,
     // Multiplier on the asset's native stage-unit size, for tuning.
     mixerScale: 1,
     /* The throat: the only thing drawn BETWEEN the two machines - a dark
@@ -394,7 +419,7 @@
   ]);
   /* The three absolute vertical positions a bank hangs from. Everything else
    * vertical is derived from these plus lengths. */
-  const BANK_ANCHORS = Object.freeze(["headerTop", "vesselBottom", "mixerTop"]);
+  const BANK_ANCHORS = Object.freeze(["headerTop", "vesselBottom", "mixerTop", "tsmVesselBottom", "tsmMixerTop"]);
 
   /**
    * The dimensions for one bank drawn at `scale`, scaled about `pivotY`.
@@ -455,19 +480,22 @@
     const centerX = bankCenterX + move.cluster.dx;
     const trainX = bankCenterX + move.train.dx;
     const headerY = d.headerTop + move.cluster.dy;
-    const mixerTop = d.mixerTop + move.train.dy;
+    // Which blender: the batch mixer, or the TSM blender on its lines. A
+    // TSM bank hangs higher: its train has the downcomer in it.
+    const blender = blenderOf(layer);
+    const mixerTop = (blender === "tsm" ? d.tsmMixerTop : d.mixerTop) + move.train.dy;
     const clusterX = centerX - inner / 2;
     const hoppersX = centerX - hoppersInner / 2;
     // The discharge line: fixed for every hopper on the bank, whatever its
     // body height, because that is where they all feed the mixer.
-    const coneTop = d.vesselBottom + move.cluster.dy;
+    const coneTop = (blender === "tsm" ? d.tsmVesselBottom : d.vesselBottom) + move.cluster.dy;
 
     /* Mixer and extruder turn together. Both are authored artwork hung from
      * anchors and scale whole with the bank. */
     const facing = equipmentView(index, layerCount);
     const mixerScale = d.mixerScale;
     const extruderScale = d.extruderScale;
-    const mixerAsset = mixerAssets.views[facing.view];
+    const mixerAsset = blenderAssets(blender).views[facing.view];
     const mixer = assetPlacement(facing.view, facing.mirrored, mixerAsset, {
       centerX: trainX,
       // Hung from the top: the discharge lands wherever the machine's height
@@ -475,12 +503,23 @@
       anchorY: mixerTop - mixerAsset.bounds.top * mixerScale,
       scale: mixerScale
     });
-    // The extruder's feed anchor sits under the mixer's discharge, the
-    // throat's length below it.
-    const extruderTop = mixer.outlet.y + d.mixerFeedGap;
+    mixer.blender = blender;
+    /* The downcomer, on TSM lines: hung from the blender's discharge - its
+     * inlet on the discharge, its outlet where the extruder's feed then
+     * lands - at the blender's scale and view. None on a batch line. */
+    const downcomerAsset = blender === "tsm" && tsmAssets && tsmAssets.downcomer ? tsmAssets.downcomer.views[facing.view] : null;
+    const downcomer = downcomerAsset ? assetPlacement(facing.view, facing.mirrored, downcomerAsset, {
+      centerX: trainX,
+      anchorY: mixer.outlet.y - downcomerAsset.inlet.y * mixerScale,
+      scale: mixerScale
+    }) : null;
+    // The extruder's feed anchor sits under the train's last discharge -
+    // the downcomer's, or the mixer's - the throat's length below it.
+    const feedFrom = downcomer || mixer;
+    const extruderTop = feedFrom.outlet.y + d.mixerFeedGap;
     const throat = {
       x: trainX - d.throatWidth / 2,
-      y: mixer.outlet.y,
+      y: feedFrom.outlet.y,
       width: d.throatWidth,
       height: d.mixerFeedGap,
       centerX: trainX,
@@ -498,13 +537,16 @@
 
     // The vessel's inch scale for this bank: true proportions at this width.
     const inchScale = unitsPerInch(d);
+    // A TSM bank's loaders: short drums, all one height, whatever a profile
+    // says - the machine's own, not a measurement.
+    const tsm = blender === "tsm";
     const hoppers = layer.hoppers.map((hopper, hopperIndex) => {
       const runtime = hopperState ? hopperState[`${layer.id}:${hopper.index}`] : null;
       // Drawn to the Receiver Weight Profile, growing upward from the shared
-      // discharge line.
-      const vesselHeight = hopperBodyHeight(runtime ? runtime.usableHeight : null, d);
+      // discharge line; on a TSM bank to the loader's own height.
+      const vesselHeight = tsm ? d.tsmVesselHeightIn * inchScale : hopperBodyHeight(runtime ? runtime.usableHeight : null, d);
       const vesselTop = coneTop - vesselHeight;
-      const fillValveY = vesselTop + d.vesselHeadroomIn * inchScale;
+      const fillValveY = tsm ? vesselTop + vesselHeight * 0.5 : vesselTop + d.vesselHeadroomIn * inchScale;
       const receiverTop = vesselTop - d.receiverGap - d.receiverHeight;
       return {
         id: hopper.id,
@@ -526,8 +568,9 @@
         // The discharge hose, at true diameter against the vessel.
         hoseWidth: d.hoseDiameterIn * inchScale,
         // Whether this hopper was profiled at all, so the drawing can be honest
-        // about a default rather than implying a measurement.
-        profiled: !!(runtime && Number(runtime.usableHeight) > 0),
+        // about a default rather than implying a measurement. A TSM loader's
+        // height is the machine's: nothing to profile.
+        profiled: tsm || !!(runtime && Number(runtime.usableHeight) > 0),
         coneTop,
         coneHeight: d.coneHeight,
         spoutTop: coneTop + d.coneHeight,
@@ -564,6 +607,8 @@
       // Which way this layer's mixer and extruder face.
       facing,
       mixer,
+      // The downcomer under a TSM blender; null on a batch line.
+      downcomer,
       throat,
       extruder,
       /* The bank's two RIGID OBJECTS, as boxes in canvas units. These are
@@ -581,9 +626,10 @@
           height: coneTop + d.coneHeight + d.spoutHeight + d.hopperCaptionGap + d.hopperCaptionHeight - (headerY - 12 * scale)
         },
         train: {
-          x: Math.min(mixer.bounds.left, extruder.bounds.left),
+          x: Math.min(mixer.bounds.left, extruder.bounds.left, downcomer ? downcomer.bounds.left : Infinity),
           y: mixer.bounds.top,
-          width: Math.max(mixer.bounds.right, extruder.bounds.right) - Math.min(mixer.bounds.left, extruder.bounds.left),
+          width: Math.max(mixer.bounds.right, extruder.bounds.right, downcomer ? downcomer.bounds.right : -Infinity)
+            - Math.min(mixer.bounds.left, extruder.bounds.left, downcomer ? downcomer.bounds.left : Infinity),
           height: extruder.label.y + 6 * scale - mixer.bounds.top,
           centerX: trainX
         }
@@ -675,11 +721,22 @@
     /* The train column is as wide as the widest VIEW of the train, not this
      * layer's, so the columns are in the same place whichever layer opens
      * and a turned machine and a front-on one share one workspace. */
+    // Every machine the line's blender can put in the train, at every view:
+    // the batch mixer, or the TSM blender and its downcomer.
+    const trainMachines = view => {
+      const machines = [];
+      if (blenderOf(layer) === "tsm") {
+        machines.push({ bounds: tsmAssets.views[view].bounds, scale: focusedD.mixerScale });
+        if (tsmAssets.downcomer) machines.push({ bounds: tsmAssets.downcomer.views[view].bounds, scale: focusedD.mixerScale });
+      } else {
+        machines.push({ bounds: mixerAssets.views[view].bounds, scale: focusedD.mixerScale });
+      }
+      machines.push({ bounds: extruderAssets.views[view].bounds, scale: focusedD.extruderScale });
+      return machines;
+    };
     const trainColumn = Math.max(train.width, ...Object.keys(mixerAssets.views).map(view => {
-      const m = mixerAssets.views[view].bounds;
-      const e = extruderAssets.views[view].bounds;
-      return Math.max(m.right * focusedD.mixerScale, e.right * focusedD.extruderScale) -
-        Math.min(m.left * focusedD.mixerScale, e.left * focusedD.extruderScale);
+      const machines = trainMachines(view);
+      return Math.max(...machines.map(m => m.bounds.right * m.scale)) - Math.min(...machines.map(m => m.bounds.left * m.scale));
     }));
     const trainLeft = d.focusPadding + (trainColumn - train.width) / 2;
     const clusterLeft = d.focusPadding + trainColumn + d.focusColumnGap;
@@ -739,6 +796,8 @@
     DIMENSIONS,
     equipmentView,
     assetPlacement,
+    blenderOf,
+    blenderAssets,
     unitsPerInch,
     hopperBodyHeight,
     bankInnerWidth,

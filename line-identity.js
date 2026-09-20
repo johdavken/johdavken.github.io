@@ -56,6 +56,13 @@
     return Number.isInteger(count) && count > 0 ? Array.from({ length:count }, ()=>MAX_HOPPERS_PER_LAYER) : [];
   }
 
+  // Who made the line's hopper system. Every line runs Plast-Control today;
+  // the lines that run a TSM gravimetric blender say so here, and Station
+  // draws the machine that stands there from this word alone. Absent (a
+  // built-in, an older cache, an older row) means Plast-Control.
+  const HOPPER_MANUFACTURERS = Object.freeze(["plast-control","tsm"]);
+  const DEFAULT_HOPPER_MANUFACTURER = "plast-control";
+
   const BUILT_IN_LINE_CONFIGURATIONS = Object.freeze([
     ...[1,2,3,4].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:1, layerAPosition:null, hopperGeometry:"volume", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     ...[5,6].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:3, layerAPosition:"inside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
@@ -64,7 +71,7 @@
     ...[10,11].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:5, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     ...[12,13,14].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:3, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     { lineNumber:15, displayName:"Line 15", aliases:[], layerCount:5, layerAPosition:"outside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} }
-  ].map(item=>Object.freeze({ ...item, hopperCounts:Object.freeze(defaultHopperCounts(item.layerCount)) })));
+  ].map(item=>Object.freeze({ ...item, hopperCounts:Object.freeze(defaultHopperCounts(item.layerCount)), hopperManufacturer:DEFAULT_HOPPER_MANUFACTURER })));
 
   let configuredDefinitions = [];
 
@@ -78,9 +85,11 @@
     const hopperNamingMode = value?.hopperNamingMode ?? value?.hopper_naming_mode;
     const givenCounts = value?.hopperCounts ?? value?.hopper_counts;
     const hopperCounts = Array.isArray(givenCounts) && givenCounts.length ? givenCounts.map(count=>Number(count)) : defaultHopperCounts(layerCount);
+    const givenManufacturer = value?.hopperManufacturer ?? value?.hopper_manufacturer;
+    const hopperManufacturer = givenManufacturer === undefined || givenManufacturer === null || givenManufacturer === "" ? DEFAULT_HOPPER_MANUFACTURER : givenManufacturer;
     return { id:value?.id || null, lineNumber, displayName, aliases, layerCount,
       layerAPosition:layerAPosition === "n/a" ? null : layerAPosition,
-      hopperGeometry, hopperNamingMode, hopperCounts, isActive:value?.isActive ?? value?.is_active ?? true,
+      hopperGeometry, hopperNamingMode, hopperCounts, hopperManufacturer, isActive:value?.isActive ?? value?.is_active ?? true,
       metadata:value?.metadata && typeof value.metadata === "object" && !Array.isArray(value.metadata) ? value.metadata : {},
       createdAt:value?.createdAt ?? value?.created_at ?? null, updatedAt:value?.updatedAt ?? value?.updated_at ?? null };
   }
@@ -101,6 +110,7 @@
       if (definition.layerCount > 1 && definition.layerAPosition === null) return { valid:false, message:"A multilayer line needs a Layer A orientation." };
       if (!["cylindrical","volume"].includes(definition.hopperGeometry)) return { valid:false, message:"Choose a valid hopper geometry." };
       if (!["standard","main-plus-five"].includes(definition.hopperNamingMode)) return { valid:false, message:"Choose a valid hopper naming mode." };
+      if (!HOPPER_MANUFACTURERS.includes(definition.hopperManufacturer)) return { valid:false, message:"Choose a valid hopper manufacturer." };
       if (definition.aliases.some(alias=>alias.length > 80)) return { valid:false, message:"Additional names must be 80 characters or fewer." };
       if (!definition.isActive) continue;
       for (const name of [definition.displayName, ...definition.aliases]){
@@ -262,7 +272,7 @@
     const definition = definitionForLine(number) || {
       lineNumber:number, displayName:`Line ${number}`, aliases:[], layerCount:null,
       layerAPosition:Object.prototype.hasOwnProperty.call(LAYER_A_POSITION_BY_LINE, number) ? LAYER_A_POSITION_BY_LINE[number] : null,
-      hopperGeometry:null, hopperNamingMode:"standard", hopperCounts:null, isActive:true, metadata:{}, source:"legacy"
+      hopperGeometry:null, hopperNamingMode:"standard", hopperCounts:null, hopperManufacturer:DEFAULT_HOPPER_MANUFACTURER, isActive:true, metadata:{}, source:"legacy"
     };
     const layerCount = definition.layerCount;
     const position = definition.layerAPosition;
@@ -336,7 +346,8 @@
     linkedWorkspace, linkedLineNumber, requiredLayerCountForSync,
     LAYER_A_POSITION_BY_LINE, layerAPosition, getLineConfiguration, getLineConfigurationForSync,
     VOLUME_GEOMETRY_LINES, getSmartHopperGeometryMode, getSmartHopperGeometryModeForSync,
-    LINE_CONFIGURATION_CACHE_KEY, BUILT_IN_LINE_CONFIGURATIONS, MAX_HOPPERS_PER_LAYER, defaultHopperCounts, normalizedDefinition,
+    LINE_CONFIGURATION_CACHE_KEY, BUILT_IN_LINE_CONFIGURATIONS, MAX_HOPPERS_PER_LAYER, defaultHopperCounts,
+    HOPPER_MANUFACTURERS, DEFAULT_HOPPER_MANUFACTURER, normalizedDefinition,
     validateLineConfigurations, setConfiguredLineConfigurations, loadCachedLineConfigurations,
     getLineConfigurations, definitionForLine, configuredLineNumberForName
   };

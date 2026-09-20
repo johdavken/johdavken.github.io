@@ -136,7 +136,7 @@ function producer(overrides) {
     ],
     devices: { "w-8": [{ memberId: "anon-desk-a-000000", label: "Desk A", role: "owner", lastSeenAt: "", thisDevice: true }], "w-12": [] },
     lines: [
-      line("l-12", 12, 3, "outside", { hopperCounts: [6, 4, 6] }),
+      line("l-12", 12, 3, "outside", { hopperCounts: [6, 4, 6], hopperManufacturer: "tsm" }),
       line("l-8", 8, 3, "inside", { hopperGeometry: "volume", metadata: { note: "kept" } }),
       line("l-1", 1, 1, null, { hopperGeometry: "volume" }),
       line("l-10", 10, 5, "outside"),
@@ -304,6 +304,7 @@ test("the list is the bridge's answer in line order, a name and one line of fact
   assert.equal(listed[2].querySelector(".station-sudo-ws__row-meta").textContent, "3 layers · A Outside · Cylindrical · Main + 1–5");
   assert.equal(listed[0].querySelector(".station-sudo-ws__row-meta").textContent, "1 layer · A N/A · Volume · Standard");
   assert.equal(listed[5].querySelector(".station-sudo-ws__row-meta").textContent, "3 layers · A Outside · Cylindrical · Standard · Inactive");
+  assert.equal(listed[4].querySelector(".station-sudo-ws__row-meta").textContent, "3 layers · A Outside · Cylindrical · Standard · TSM", "only the TSM line names its hopper manufacturer - Plast-Control is every line's norm");
   assert.ok(listed[5].classList.contains("is-inactive"));
   assert.deepEqual(listed.map(row => row.classList.contains("is-connected")), [false, true, false, false, false, false], "Line 8 is the connected line");
   assert.equal(listed[1].querySelector(".station-sudo-ws__row-mark").textContent, "●");
@@ -344,6 +345,7 @@ test("choosing Line 8 draws its definition: A Inside, B Core, C Outside - the ke
   assert.deepEqual(pane.querySelectorAll("[data-choice='layerCount']").map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]), [["1", "false"], ["3", "true"], ["5", "false"]]);
   assert.deepEqual(pane.querySelectorAll("[data-choice='hopperGeometry'][aria-pressed='true']").map(chip => chip.textContent), ["Volume"]);
   assert.deepEqual(pane.querySelectorAll("[data-choice='hopperNamingMode'][aria-pressed='true']").map(chip => chip.textContent), ["Standard"]);
+  assert.deepEqual(pane.querySelectorAll("[data-choice='hopperManufacturer']").map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]), [["Plast-Control", "true"], ["TSM", "false"]], "a line that does not say is Plast-Control");
   assert.equal(pane.querySelector("[data-role='hoppers']").textContent, "A1–A6 · B1–B6 · C1–C6");
   assert.match(pane.querySelector(".station-sudo-lines__reach").textContent, /reaches this Station now/);
   assert.ok(byAction(pane, "save").disabled, "nothing to save");
@@ -419,6 +421,8 @@ test("Save Changes is one request carrying the definition - the id, every field,
   click(rows(s.root)[1]);
   click(pane.querySelector("[data-choice='side:0'][data-value='outside']"));
   typeInto(pane.querySelector("[data-field='aliases']"), "Eight, L8");
+  click(pane.querySelector("[data-choice='hopperManufacturer'][data-value='tsm']"));
+  assert.deepEqual(pane.querySelectorAll("[data-choice='hopperManufacturer'][aria-pressed='true']").map(chip => chip.textContent), ["TSM"]);
   click(byAction(pane, "save"));
   await tick();
   const save = s.env.calls.find(c => c.name === "saveLineConfiguration");
@@ -426,7 +430,7 @@ test("Save Changes is one request carrying the definition - the id, every field,
   assert.equal(save.args.id, "l-8");
   assert.deepEqual(save.args.line, {
     lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, hopperCounts: [6, 6, 6], layerAPosition: "outside",
-    hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }
+    hopperGeometry: "volume", hopperNamingMode: "standard", hopperManufacturer: "tsm", isActive: true, metadata: { note: "kept" }
   });
   assert.deepEqual(calls(s), ["listWorkspaces", "listLineConfigurations", "saveLineConfiguration", "listLineConfigurations"]);
   assert.equal(s.lines.getState().dirty, false);
@@ -583,7 +587,7 @@ test("Add Line is a definition, not a workspace: a fresh draft whose name follow
   assert.equal(save.args.id, "");
   assert.deepEqual(save.args.line, {
     lineNumber: 16, displayName: "Line 16", aliases: [], layerCount: 5, hopperCounts: [6, 6, 6, 6, 6], layerAPosition: "outside",
-    hopperGeometry: "cylindrical", hopperNamingMode: "standard", isActive: true, metadata: {}
+    hopperGeometry: "cylindrical", hopperNamingMode: "standard", hopperManufacturer: "plast-control", isActive: true, metadata: {}
   });
   assert.equal(s.lines.getState().focusId, "l-100", "the saved line is the chosen one");
   assert.equal(s.lines.getState().dirty, false);

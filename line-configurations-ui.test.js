@@ -49,3 +49,17 @@ test("hoppers per layer: one number a layer in the Line layout fieldset, followi
   assert.match(ui,/\$\{labelHoppers\(line\.hopper_counts\)\}/);
   assert.match(css,/\.lineConfigurationHopperCounts\{display:flex;flex-wrap:wrap;gap:6px\}/);
 });
+test("hopper manufacturer: a two-way choice in the Hopper behavior fieldset after the naming mode, Plast-Control unless the row says TSM, read into the save and shown on a row only when it is TSM",()=>{
+  const dialog=html.slice(html.indexOf('id="lineConfigurationDialog"'),html.indexOf('</dialog>',html.indexOf('id="lineConfigurationDialog"')));
+  assert.match(dialog,/<legend>Hopper behavior<\/legend>[\s\S]*data-line-choice="hopper_naming_mode"[\s\S]*<span class="lineConfigurationLabel">Hopper manufacturer<\/span><div class="compactChoice" role="group" aria-label="Hopper manufacturer"><button type="button" data-line-choice="hopper_manufacturer" data-value="plast-control">Plast-Control<\/button><button type="button" data-line-choice="hopper_manufacturer" data-value="tsm">TSM<\/button><\/div>/);
+  assert.match(ui,/hopper_manufacturer:identity\.DEFAULT_HOPPER_MANUFACTURER/);
+  assert.match(ui,/setChoice\("hopper_manufacturer",line\?\.hopper_manufacturer \|\| identity\.DEFAULT_HOPPER_MANUFACTURER\)/);
+  assert.match(ui,/hopper_manufacturer:choices\.hopper_manufacturer/);
+  assert.match(ui,/function labelManufacturer\(value\)\{ return value === "tsm" \? " · TSM" : ""; \}/);
+  assert.match(ui,/\$\{labelManufacturer\(line\.hopper_manufacturer\)\}/);
+  const service=fs.readFileSync("line-configurations-service.js","utf8");
+  assert.match(service,/hopper_counts,hopper_manufacturer,layer_a_position/,"the public read selects the column");
+  assert.match(service,/p_hopper_manufacturer:candidate\.hopperManufacturer/);
+  const producer=fs.readFileSync("workspace-recovery-ui.js","utf8");
+  assert.match(producer,/hopperManufacturer: row\?\.hopper_manufacturer/,"the row reaches Station's Sudo editor");
+});
