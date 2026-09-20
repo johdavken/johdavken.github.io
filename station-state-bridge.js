@@ -190,6 +190,10 @@
           : null,
         hopperNamingMode: configuration && configuration.hopperNamingMode ? String(configuration.hopperNamingMode) : "standard",
         hopperGeometry: configuration && configuration.hopperGeometry ? String(configuration.hopperGeometry) : null,
+        // Who made the hopper system - "plast-control" on most lines, "tsm"
+        // where a TSM gravimetric blender stands; Station draws the machine
+        // from this. Null when no line is linked or the line does not say.
+        hopperManufacturer: configuration && configuration.hopperManufacturer ? String(configuration.hopperManufacturer) : null,
         // Hoppers per layer, in recipe order, as the line is configured -
         // most layers six, the core of several lines four. Null when no
         // line is linked or the linked line does not say: the session's

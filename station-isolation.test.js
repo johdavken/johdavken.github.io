@@ -24,7 +24,7 @@ const STATION = path.join(ROOT, "station");
 const STATION_FILES = ["station-line-model.js", "station-render.js", "station.js",
   "station-demo-lines.js", "station-source.js", "station-shell.js",
   "station-machine-layout.js", "station-machine-parts.js", "station-extruder-lab.js",
-  "station-extruder-assets.js", "station-mixer-assets.js", "station-transition.js",
+  "station-extruder-assets.js", "station-mixer-assets.js", "station-tsm-assets.js", "station-transition.js",
   "station-focus-editor.js", "station-sync-console.js", "station-hopper-controls.js",
   "station-rundown.js", "station-armed.js", "station-rundown-timeline.js", "station-hopper-info.js", "station-legend.js", "station-job-controls.js",
   "station-handbook.js", "station-recipe-book.js", "station-resin-totals.js", "station-appearance.js", "station-theme-preview.js",

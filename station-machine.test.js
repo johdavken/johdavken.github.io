@@ -188,6 +188,106 @@ test("a layer built to six slots keeps the six-hopper bank, cluster box and blen
   assert.ok(literalFour.banks[1].width < six.banks[1].width);
 });
 
+test("a TSM line draws the TSM blender in the mixer's place - the same target, classes and placement, the TSM polygons, no rotor - with the downcomer under it, and a batch line keeps the mixer alone", () => {
+  const tsmAssets = require("./station/station-tsm-assets.js");
+  const mixerAssets = require("./station/station-mixer-assets.js");
+  const tsm = literal({ lineNumber: 8, hopperManufacturer: "tsm", layerAPosition: "inside", slotCount: 6, layers: [{ id: "A", hopperCount: 6 }, { id: "B", hopperCount: 4 }, { id: "C", hopperCount: 6 }] });
+  const layout = layoutFor(tsm);
+  assert.deepEqual(layout.banks.map(b => b.mixer.blender), ["tsm", "tsm", "tsm"]);
+  const svg = stageFor(tsm);
+  const mixers = allWith(svg, "data-role", "mixer");
+  assert.equal(mixers.length, 3);
+  for (const mixer of mixers) {
+    assert.equal(mixer.getAttribute("data-blender"), "tsm");
+    assert.equal(mixer.getAttribute("data-station-target"), "mixer");
+    assert.equal(mixer.getAttribute("class"), "station-mixer");
+    const view = mixer.getAttribute("data-view");
+    const faces = allWith(mixer, "data-role", "mixer-body")[0].children.filter(n => n.nodeName === "path");
+    assert.equal(faces.length, tsmAssets.views[view].polygons.length, `${view}: every polygon and nothing else`);
+    assert.equal(allWith(mixer, "data-role", "mixer-rotor").length, 0, "no rotor on the TSM");
+    assert.ok(faces.every(f => /^station-mixer__face station-mixer__face--[a-z]+/.test(f.getAttribute("class"))), "the mixer's own tone classes");
+  }
+  // The centre layer faces front, the others turn: the TSM views by ring, as the mixer's.
+  assert.deepEqual(mixers.map(m => m.getAttribute("data-view")), ["intermediate", "front", "intermediate"]);
+  // The downcomer: one per bank, the blender's target, its inlet on the
+  // blender's discharge and its outlet on the extruder's feed anchor,
+  // painted after the throat and before the blender.
+  const downcomers = allWith(svg, "data-role", "downcomer");
+  assert.equal(downcomers.length, 3);
+  layout.banks.forEach((bank, i) => {
+    const dc = bank.downcomer;
+    assert.ok(dc, `${bank.id} has a downcomer`);
+    assert.equal(dc.view, bank.mixer.view);
+    assert.equal(dc.mirrored, bank.mixer.mirrored);
+    assert.ok(Math.abs(dc.inlet.x - bank.mixer.outlet.x) < 1e-9 && Math.abs(dc.inlet.y - bank.mixer.outlet.y) < 1e-9, "the downcomer's inlet is on the blender's discharge");
+    assert.ok(Math.abs(dc.outlet.x - bank.extruder.anchor.x) < 1e-9 && Math.abs(dc.outlet.y - bank.extruder.anchor.y) < 1e-9, "the extruder's feed is on the downcomer's outlet");
+    assert.ok(Math.abs(bank.throat.y - dc.outlet.y) < 1e-9);
+    assert.ok(bank.objects.train.x <= dc.bounds.left && bank.objects.train.x + bank.objects.train.width >= dc.bounds.right, "the train box holds the downcomer");
+    const group = downcomers.find(n => n.getAttribute("data-layer") === bank.id);
+    assert.equal(group.getAttribute("data-station-target"), "mixer");
+    assert.equal(group.getAttribute("data-view"), dc.view);
+    const faces = allWith(group, "data-role", "downcomer-body")[0].children.filter(n => n.nodeName === "path");
+    assert.equal(faces.length, tsmAssets.downcomer.views[dc.view].polygons.length);
+    const layer = allWith(svg, "data-role", "layer")[i];
+    const order = layer.children.map(n => n.getAttribute("data-role"));
+    assert.ok(order.indexOf("throat") < order.indexOf("downcomer") && order.indexOf("downcomer") < order.indexOf("mixer"), `paint order: ${order.join(",")}`);
+  });
+  // The extruder lands about where it does under the batch mixer, and stays on the canvas.
+  const batch = layoutFor(literal({ lineNumber: 5 }));
+  for (const bank of layout.banks) {
+    assert.ok(Math.abs(bank.extruder.anchor.y - batch.banks[1].extruder.anchor.y) < 8, `feed at ${bank.extruder.anchor.y}`);
+    assert.ok(bank.extruder.label.y + 4 <= layout.height, "the readout stays on the canvas");
+  }
+  // A batch line is untouched: no downcomer, the mixer with its rotor.
+  const batchSvg = stageFor(literal({ lineNumber: 5 }));
+  assert.equal(allWith(batchSvg, "data-role", "downcomer").length, 0);
+  assert.ok(batch.banks.every(b => b.downcomer === null && b.mixer.blender === "batch"));
+  for (const mixer of allWith(batchSvg, "data-role", "mixer")) {
+    assert.equal(mixer.getAttribute("data-blender"), "batch");
+    assert.equal(allWith(mixer, "data-role", "mixer-rotor").length, 1);
+    const faces = allWith(mixer, "data-role", "mixer-body")[0].children.filter(n => n.nodeName === "path");
+    assert.equal(faces.length, mixerAssets.views[mixer.getAttribute("data-view")].polygons.length);
+  }
+});
+
+test("a TSM bank's loaders are short drums, all one vessel at the standard width and pitch, twelve inches tall whatever a profile says, and never 'unprofiled'; the bank hangs higher for the taller train; widths and the row are the batch bank's", () => {
+  const config = counts => literal({ lineNumber: 8, hopperManufacturer: "tsm", slotCount: 6, layers: [{ id: "A", hopperCount: counts[0] }, { id: "B", hopperCount: counts[1] }, { id: "C", hopperCount: counts[2] }] });
+  const batchConfig = counts => literal({ slotCount: 6, layers: [{ id: "A", hopperCount: counts[0] }, { id: "B", hopperCount: counts[1] }, { id: "C", hopperCount: counts[2] }] });
+  const d = layoutModule.DIMENSIONS;
+  const profiled = { "A:0": { usableHeight: 40 }, "A:1": { usableHeight: 12 }, "A:2": { usableHeight: 0 } };
+  const tsm = layoutModule.computeLayout(model.buildLineModel(config([6, 4, 6])), { hopperState: profiled });
+  const batch = layoutModule.computeLayout(model.buildLineModel(batchConfig([6, 4, 6])), { hopperState: profiled });
+  assert.equal(tsm.width, batch.width);
+  tsm.banks.forEach((bank, index) => {
+    const same = batch.banks[index];
+    assert.deepEqual([bank.x, bank.width, bank.centerX, bank.cluster.x, bank.cluster.width], [same.x, same.width, same.centerX, same.cluster.x, same.cluster.width]);
+    assert.deepEqual(bank.cluster.hoppers.map(h => [h.id, h.x, h.width, h.pitch]), same.cluster.hoppers.map(h => [h.id, h.x, h.width, h.pitch]), "the same vessels in the same places");
+  });
+  const inch = layoutModule.unitsPerInch(d);
+  for (const bank of tsm.banks) {
+    for (const hopper of bank.cluster.hoppers) {
+      assert.ok(Math.abs(hopper.vesselHeight - d.tsmVesselHeightIn * inch) < 1e-9, `${hopper.id} is ${hopper.vesselHeight} tall`);
+      assert.equal(hopper.profiled, true, `${hopper.id}: the machine's own height is not a missing profile`);
+      assert.ok(hopper.fillValveY > hopper.vesselTop && hopper.fillValveY < hopper.coneTop, "the valve is on the short vessel");
+      assert.ok(Math.abs(hopper.coneTop - d.tsmVesselBottom) < 1e-9, "the discharge line is the TSM bank's");
+    }
+    assert.ok(Math.abs(bank.mixer.bounds.top - d.tsmMixerTop) < 1e-9);
+  }
+  // The batch bank's vessels follow their profiles; the TSM bank's do not.
+  const a = batch.banks[0].cluster.hoppers;
+  assert.ok(a[0].vesselHeight > a[1].vesselHeight);
+  assert.equal(a[2].profiled, false);
+  const svg = stageFor(config([6, 4, 6]));
+  const hoppers = allWith(svg, "data-role", "hopper");
+  assert.equal(hoppers.length, 16);
+  assert.ok(hoppers.every(h => !h.getAttribute("class").includes("is-unprofiled")), "no TSM loader is drawn as unprofiled");
+  assert.ok(hoppers.every(h => h.getAttribute("data-size") === null), "no hopper is sized: they are all one vessel");
+  for (const hopper of hoppers) {
+    assert.equal(allWith(hopper, "data-station-target", "pump").length, 1);
+    assert.equal(allWith(hopper, "data-station-target", "tracking").length, 1);
+  }
+});
+
 test("a four-hopper layer and a six-hopper layer use the same component", () => {
   /* Same builder, same sub-groups, same classes - only the count differs. If
    * these ever diverge it will be because someone special-cased a count. */

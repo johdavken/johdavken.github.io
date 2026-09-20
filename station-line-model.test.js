@@ -220,6 +220,53 @@ test("a line number resolves through line-identity rather than a Station table",
   }
 });
 
+test("which blender a line runs follows the line catalog's hopper manufacturer: the batch mixer under Plast-Control (every line by default), the TSM blender where a Line Configuration says TSM; every hopper is the same standard vessel either way", () => {
+  assert.deepEqual([...model.BLENDERS], ["batch", "tsm"]);
+  assert.deepEqual({ ...model.BLENDER_BY_MANUFACTURER }, { "plast-control": "batch", tsm: "tsm" });
+  assert.deepEqual(Object.keys(model.BLENDER_BY_MANUFACTURER).sort(), [...lineIdentity.HOPPER_MANUFACTURERS].sort(), "one blender per manufacturer line-identity knows");
+  for (const lineNumber of [5, 8, 9, 11, 12]) {
+    const built = model.buildLineModel(lineNumber);
+    assert.equal(built.line.blender, "batch", `line ${lineNumber} runs Plast-Control until its configuration says otherwise`);
+    for (const layer of built.layers) assert.equal(layer.blender, "batch");
+  }
+  // A Line Configuration sets the manufacturer; the model reads it from the catalog.
+  lineIdentity.setConfiguredLineConfigurations([{ line_number: 8, display_name: "Line 8", aliases: [], layer_count: 3, hopper_counts: [6, 4, 6], layer_a_position: "inside", hopper_geometry: "volume", hopper_naming_mode: "standard", hopper_manufacturer: "tsm", is_active: true }], { storage: null });
+  try {
+    const eight = model.buildLineModel(8);
+    assert.equal(eight.line.blender, "tsm");
+    for (const layer of eight.layers) {
+      assert.equal(layer.blender, "tsm");
+      assert.deepEqual(Object.keys(layer.hoppers[0]).sort(), ["id", "index", "layer", "positionLabel"], "a hopper carries no size: the loaders are all one vessel");
+    }
+    assert.equal(model.buildLineModel(7).line.blender, "batch", "another line is untouched");
+  } finally {
+    lineIdentity.setConfiguredLineConfigurations([], { storage: null });
+  }
+  assert.equal(model.buildLineModel(8).line.blender, "batch", "back to the built-in");
+  // A literal config carries the manufacturer, or names the blender outright.
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, hopperManufacturer: "tsm" })).line.blender, "tsm");
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, hopper_manufacturer: "TSM" })).line.blender, "tsm", "the row's spelling, any case");
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, hopperManufacturer: "plast-control" })).line.blender, "batch");
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, blender: "tsm" })).line.blender, "tsm");
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, hopperManufacturer: "tsm", blender: "batch" })).line.blender, "batch", "a named blender wins over the manufacturer");
+  assert.equal(model.buildLineModel(literal({ lineNumber: 12, hopperManufacturer: "nonsense" })).line.blender, "batch", "an unknown manufacturer is the default");
+  assert.equal(model.blenderFor({}), "batch");
+  assert.equal(model.blenderFor({ hopperManufacturer: "tsm" }), "tsm");
+  assert.equal(model.blenderFor(null), "batch");
+});
+
+test("a line's per-layer hopper counts (line-identity's hopperCounts) are honoured by index, in six-slot banks as the application lays its layers out", () => {
+  const fakeIdentity = {
+    getLineConfiguration: () => ({ lineNumber: 8, displayName: "Line 8", layerCount: 3, layerAPosition: "inside", hopperNamingMode: "standard", hopperCounts: [6, 4, 6] })
+  };
+  const built = model.buildLineModel(8, { lineIdentity: fakeIdentity });
+  assert.deepEqual(built.layers.map(l => [l.id, l.hopperCount, l.slotCount]), [["A", 6, 6], ["B", 4, 6], ["C", 6, 6]]);
+  assert.deepEqual(built.layers[1].hoppers.map(h => h.id), ["B1", "B2", "B3", "B4"]);
+  // A count list of the wrong length is ignored, not half-applied.
+  const wrong = { getLineConfiguration: () => ({ lineNumber: 8, layerCount: 3, layerAPosition: "inside", hopperCounts: [4, 4] }) };
+  assert.deepEqual(model.buildLineModel(8, { lineIdentity: wrong }).layers.map(l => l.hopperCount), [6, 6, 6]);
+});
+
 test("an unmapped line produces null rather than an invented machine", () => {
   assert.equal(model.buildLineModel(999), null);
   assert.equal(model.buildLineModel(null), null);

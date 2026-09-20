@@ -606,6 +606,11 @@ test("the line's hoppers per layer cross as configured - one integer a layer, fr
   });
   assert.deepEqual(snapshot.line.hopperCounts, [6, 4, 6]);
   assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: null } }).line.hopperCounts, null);
+  // The hopper manufacturer crosses as the line's word, or null when it has none.
+  assert.equal(snapshot.line.hopperManufacturer, null);
+  assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperManufacturer: "tsm" } }).line.hopperManufacturer, "tsm");
+  assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperManufacturer: "" } }).line.hopperManufacturer, null);
+  assert.equal(bridgeModule.project(appState(), { lineConfiguration: null }).line.hopperManufacturer, null);
   assert.equal(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: "6,4,6" } }).line.hopperCounts, null);
   assert.deepEqual(bridgeModule.project(appState(), { lineConfiguration: { lineNumber: 12, hopperCounts: [6, "x", 6] } }).line.hopperCounts, [6, null, 6]);
   // Through the bridge the list is frozen with the rest of the snapshot.

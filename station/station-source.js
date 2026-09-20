@@ -312,6 +312,7 @@
       layerAPosition: snapshot.line.layerAPosition,
       hopperNamingMode: snapshot.line.hopperNamingMode,
       hopperGeometry: snapshot.line.hopperGeometry,
+      hopperManufacturer: snapshot.line.hopperManufacturer,
       layers: layers.map((layer, index) => ({ id: layer.name, slotCount: layer.hoppers.length, hopperCount: hopperCountFor(layer, index) }))
     };
   }

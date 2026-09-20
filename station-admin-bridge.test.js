@@ -176,7 +176,7 @@ test("a line configuration crosses outward by allow-list: the definition's field
   const { bridge } = producer({
     listLineConfigurations: async () => ({ ok: true, lines: [
       { id: "l-8", line_number: 8, lineNumber: "8", displayName: "Line 8", aliases: ["Eight", " ", "Eight", 7], layerCount: "3", hopperCounts: [6, "4", 6.5, "x", 6], layerAPosition: "inside",
-        hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z",
+        hopperGeometry: "volume", hopperNamingMode: "standard", hopperManufacturer: "tsm", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z",
         created_at: "x", extra: "dropped" },
       { id: "l-1", lineNumber: 1, displayName: "Line 1", layerCount: 1, layerAPosition: null, hopperGeometry: "volume", hopperNamingMode: "standard", isActive: false, metadata: "bad" },
       { id: "l-x", lineNumber: 5, displayName: "Line 5", layerCount: 3, layerAPosition: "sideways", hopperGeometry: "cylindrical", hopperNamingMode: "standard" },
@@ -188,12 +188,12 @@ test("a line configuration crosses outward by allow-list: the definition's field
   assert.ok(result.lines.every(line => Object.isFrozen(line.hopperCounts)), "the counts cross frozen");
   assert.deepEqual(result.lines.map(line => ({ ...line, aliases: [...line.aliases], hopperCounts: [...line.hopperCounts], metadata: { ...line.metadata } })), [
     { id: "l-8", lineNumber: 8, displayName: "Line 8", aliases: ["Eight"], layerCount: 3, hopperCounts: [6, 4, 6], layerAPosition: "inside", hopperGeometry: "volume",
-      hopperNamingMode: "standard", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z" },
+      hopperNamingMode: "standard", hopperManufacturer: "tsm", isActive: true, metadata: { note: "kept", nested: { a: 1 } }, updatedAt: "2026-09-01T00:00:00Z" },
     { id: "l-1", lineNumber: 1, displayName: "Line 1", aliases: [], layerCount: 1, hopperCounts: [], layerAPosition: null, hopperGeometry: "volume",
-      hopperNamingMode: "standard", isActive: false, metadata: {}, updatedAt: "" },
+      hopperNamingMode: "standard", hopperManufacturer: "", isActive: false, metadata: {}, updatedAt: "" },
     { id: "l-x", lineNumber: 5, displayName: "Line 5", aliases: [], layerCount: 3, hopperCounts: [], layerAPosition: null, hopperGeometry: "cylindrical",
-      hopperNamingMode: "standard", isActive: true, metadata: {}, updatedAt: "" }
-  ], "a row without an id is dropped; an unknown side is no side; a count that is not a whole number is dropped, an absent list is empty; `created_at` and `extra` do not cross");
+      hopperNamingMode: "standard", hopperManufacturer: "", isActive: true, metadata: {}, updatedAt: "" }
+  ], "a row without an id is dropped; an unknown side is no side; a count that is not a whole number is dropped, an absent list is empty; an unsaid manufacturer crosses empty; `created_at` and `extra` do not cross");
   assert.equal(JSON.stringify(result).includes("dropped"), false);
 });
 
@@ -204,18 +204,18 @@ test("a save's arguments are rebuilt field by field - integers, collapsed names,
   const metadata = { note: "kept" };
   const result = await bridge.request("saveLineConfiguration", { id: " l-8 ", line: {
     lineNumber: "8", displayName: "  Line   8 ", aliases: [" Eight ", "", "Eight", "L8"], layerCount: "3", hopperCounts: ["6", 4, 6], layerAPosition: "inside",
-    hopperGeometry: " volume ", hopperNamingMode: "standard", isActive: "yes", metadata, id: "smuggled", created_at: "x"
+    hopperGeometry: " volume ", hopperNamingMode: "standard", hopperManufacturer: " tsm ", isActive: "yes", metadata, id: "smuggled", created_at: "x"
   } });
   assert.ok(result.ok);
   assert.deepEqual(env.calls[0].args, { id: "l-8", line: {
     lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, hopperCounts: [6, 4, 6], layerAPosition: "inside",
-    hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }
+    hopperGeometry: "volume", hopperNamingMode: "standard", hopperManufacturer: "tsm", isActive: true, metadata: { note: "kept" }
   } });
   assert.ok(Object.isFrozen(env.calls[0].args.line));
   assert.notEqual(env.calls[0].args.line.metadata, metadata, "the metadata is a clone");
   assert.deepEqual({ ...result.line, aliases: [...result.line.aliases], hopperCounts: [...result.line.hopperCounts], metadata: { ...result.line.metadata } }, {
     id: "l-8", lineNumber: 8, displayName: "Line 8", aliases: ["Eight", "L8"], layerCount: 3, hopperCounts: [6, 4, 6], layerAPosition: "inside",
-    hopperGeometry: "volume", hopperNamingMode: "standard", isActive: true, metadata: { note: "kept" }, updatedAt: "2026-09-13T00:00:00Z"
+    hopperGeometry: "volume", hopperNamingMode: "standard", hopperManufacturer: "tsm", isActive: true, metadata: { note: "kept" }, updatedAt: "2026-09-13T00:00:00Z"
   });
   // Create: no id crosses as an empty one; N/A and "" are null.
   await bridge.request("saveLineConfiguration", { line: { lineNumber: 1, displayName: "Line 1", layerCount: 1, layerAPosition: "n/a", hopperGeometry: "volume", hopperNamingMode: "standard", isActive: false } });
@@ -224,6 +224,7 @@ test("a save's arguments are rebuilt field by field - integers, collapsed names,
   assert.equal(env.calls[1].args.line.isActive, false);
   assert.deepEqual(env.calls[1].args.line.metadata, {});
   assert.equal("hopperCounts" in env.calls[1].args.line, false, "counts not given are not invented here - the service defaults them");
+  assert.equal("hopperManufacturer" in env.calls[1].args.line, false, "nor is a manufacturer not given - line-identity defaults it to Plast-Control");
   const before = env.calls.length;
   const valid = { lineNumber: 8, displayName: "Line 8", layerCount: 3, layerAPosition: "inside", hopperGeometry: "volume", hopperNamingMode: "standard" };
   for (const [bad, field, message] of [
@@ -234,7 +235,8 @@ test("a save's arguments are rebuilt field by field - integers, collapsed names,
     [{ ...valid, hopperCounts: "6,4,6" }, "hopperCounts", "Hoppers per layer must be whole numbers."],
     [{ ...valid, layerAPosition: "sideways" }, "layerAPosition", "Layer A must be Inside, Outside, or N/A."],
     [{ ...valid, hopperGeometry: "" }, "hopperGeometry", "A hopper geometry is required."],
-    [{ ...valid, hopperNamingMode: 3 }, "hopperNamingMode", "A hopper naming mode is required."]
+    [{ ...valid, hopperNamingMode: 3 }, "hopperNamingMode", "A hopper naming mode is required."],
+    [{ ...valid, hopperManufacturer: ["tsm"] }, "hopperManufacturer", "The hopper manufacturer must be a word."]
   ]) {
     assert.deepEqual(await bridge.request("saveLineConfiguration", { line: bad }), { ok: false, code: "bad_argument", message, field });
   }

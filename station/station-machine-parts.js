@@ -32,7 +32,10 @@
       : (root && root.PolynStationExtruderAssets),
     mixerAssets: typeof require === "function"
       ? require("./station-mixer-assets.js")
-      : (root && root.PolynStationMixerAssets)
+      : (root && root.PolynStationMixerAssets),
+    tsmAssets: typeof require === "function"
+      ? require("./station-tsm-assets.js")
+      : (root && root.PolynStationTsmAssets)
   };
   const api = factory(deps);
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -42,6 +45,7 @@
 
   const extruderAssets = deps.extruderAssets;
   const mixerAssets = deps.mixerAssets;
+  const tsmAssets = deps.tsmAssets || null;
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -677,10 +681,15 @@
    */
   function mixer(doc, bank) {
     const m = bank.mixer;
-    const asset = mixerAssets.views[m.view];
+    // Which blender the layout placed: the batch mixer's artwork, or the
+    // TSM blender's (station-tsm-assets.js) - the same classes, the same
+    // target, the same placement; only the polygons differ.
+    const blender = m.blender === "tsm" && tsmAssets ? "tsm" : "batch";
+    const asset = (blender === "tsm" ? tsmAssets : mixerAssets).views[m.view];
     const g = group(doc, "station-mixer", "mixer", {
       "data-layer": bank.id,
       "data-station-target": "mixer",
+      "data-blender": blender,
       "data-view": m.view,
       "data-mirrored": m.mirrored ? "true" : "false",
       "data-yaw": round(m.yaw)
@@ -703,7 +712,13 @@
     const body = group(doc, "station-mixer__body", "mixer-body");
     asset.polygons.slice(0, asset.rotorAfter).forEach(polygon => body.appendChild(face(polygon)));
 
+    // A blender with nothing that turns (the TSM) has no rotor to build.
     const r = asset.rotor;
+    if (!r) {
+      asset.polygons.slice(asset.rotorAfter).forEach(polygon => body.appendChild(face(polygon)));
+      g.appendChild(body);
+      return g;
+    }
     const clipId = `station-mixer-windows-${bank.id}`;
     const clip = node(doc, "clipPath", null, { id: clipId });
     for (const window of r.windows) clip.appendChild(node(doc, "path", null, { d: pathFor(window) }));
@@ -727,6 +742,37 @@
     body.appendChild(shutter);
 
     asset.polygons.slice(asset.rotorAfter).forEach(polygon => body.appendChild(face(polygon)));
+    g.appendChild(body);
+    return g;
+  }
+
+  /* --------------------------------------------------------------------
+   *   Downcomer - on a TSM line, between the blender and the extruder
+   * ------------------------------------------------------------------
+   * The same drawing scheme as the blender (station-tsm-assets.js:
+   * downcomer), placed by the layout with its inlet on the blender's
+   * discharge and its outlet on the extruder's feed. It wears the mixer's
+   * tone classes, so it is coloured as the blender is, and it is the
+   * blender's target: a click on it is a click on the blender. */
+  function downcomer(doc, bank) {
+    const dc = bank.downcomer;
+    if (!dc || !tsmAssets || !tsmAssets.downcomer) return null;
+    const asset = tsmAssets.downcomer.views[dc.view];
+    const g = group(doc, "station-downcomer", "downcomer", {
+      "data-layer": bank.id,
+      "data-station-target": "mixer",
+      "data-view": dc.view,
+      "data-mirrored": dc.mirrored ? "true" : "false"
+    });
+    g.appendChild(hitArea(doc, dc.bounds.left - 4, dc.bounds.top, dc.bounds.right - dc.bounds.left + 8, dc.bounds.bottom - dc.bounds.top));
+    const pathFor = placed(dc);
+    const body = group(doc, "station-mixer__body", "downcomer-body");
+    for (const polygon of asset.polygons) {
+      body.appendChild(node(doc, "path",
+        `station-mixer__face station-mixer__face--${polygon.tone}` +
+          (polygon.seamless ? ` station-mixer__seam station-mixer__seam--${polygon.tone}` : ""),
+        { "data-part": polygon.part, d: pathFor(polygon.points) }));
+    }
     g.appendChild(body);
     return g;
   }
@@ -1024,6 +1070,9 @@
      * unconnected. */
     g.appendChild(extruder(doc, bank));
     g.appendChild(throat(doc, bank));
+    // The downcomer, on a TSM line, under the blender and over the throat.
+    const dc = downcomer(doc, bank);
+    if (dc) g.appendChild(dc);
     g.appendChild(mixer(doc, bank));
     return g;
   }
@@ -1063,7 +1112,7 @@
 
   return {
     SVG_NS, node, label, group, taper, hitArea, fitText, hopperStateKey, shownWeight, weightLine, WEIGHT_TYPE, shareText,
-    hopper, hopperCluster, mixer, throat, extruder, layerBank, workspace,
+    hopper, hopperCluster, mixer, downcomer, throat, extruder, layerBank, workspace,
     shareSlotBox, shareTitle, layerShare, blendCardBox, blendCard,
     CARD_RAIL, cardSizeOf, cardRailBox, cardRail
   };

@@ -69,6 +69,26 @@
           Object.freeze({ id: "C", hopperCount: 3 })
         ])
       })
+    }),
+    Object.freeze({
+      id: "tsm",
+      label: "3 layers, TSM blender",
+      note: "Literal config for Line 8 with TSM as its hopper manufacturer - the TSM gravimetric blender and its downcomer on every layer, short loaders above; six on A and C, four on the core.",
+      config: Object.freeze({
+        lineNumber: 8,
+        displayName: "Line 8 (demo)",
+        layerCount: 3,
+        layerAPosition: "inside",
+        hopperNamingMode: "standard",
+        hopperGeometry: "volume",
+        hopperManufacturer: "tsm",
+        slotCount: 6,
+        layers: Object.freeze([
+          Object.freeze({ id: "A", hopperCount: 6 }),
+          Object.freeze({ id: "B", hopperCount: 4 }),
+          Object.freeze({ id: "C", hopperCount: 6 })
+        ])
+      })
     })
   ]);
 

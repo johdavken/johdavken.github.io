@@ -106,3 +106,35 @@ test("hoppers per layer: six a layer unless the line says, one whole number from
   assert.deepEqual(identity.defaultHopperCounts(5),[6,6,6,6,6]);
   assert.deepEqual(identity.defaultHopperCounts("x"),[]);
 });
+
+test("a line's hopper manufacturer: Plast-Control on every built-in and on any row that does not say, TSM when a configuration says so, nothing else",()=>{
+  const identity=fresh();
+  assert.deepEqual([...identity.HOPPER_MANUFACTURERS],["plast-control","tsm"]);
+  assert.equal(identity.DEFAULT_HOPPER_MANUFACTURER,"plast-control");
+  identity.BUILT_IN_LINE_CONFIGURATIONS.forEach(line=>assert.equal(line.hopperManufacturer,"plast-control"));
+  const base={line_number:8,display_name:"Line 8",aliases:[],layer_count:3,layer_a_position:"inside",hopper_geometry:"volume",hopper_naming_mode:"standard",is_active:true};
+  // A row without the column (an older cache, an older server) reads as Plast-Control; so does an empty word.
+  assert.equal(identity.setConfiguredLineConfigurations([base]).valid,true);
+  assert.equal(identity.definitionForLine(8).hopperManufacturer,"plast-control");
+  assert.equal(identity.normalizedDefinition({...base,hopper_manufacturer:""}).hopperManufacturer,"plast-control");
+  assert.equal(identity.normalizedDefinition({...base,hopper_manufacturer:null}).hopperManufacturer,"plast-control");
+  // The column, snake or camel, round-trips, through the cache too.
+  const storage=new Map();
+  const fake={ getItem:key=>storage.get(key) ?? null, setItem:(key,value)=>storage.set(key,value) };
+  assert.equal(identity.setConfiguredLineConfigurations([{...base,hopper_manufacturer:"tsm"}],{storage:fake}).valid,true);
+  assert.equal(identity.definitionForLine(8).hopperManufacturer,"tsm");
+  assert.equal(identity.getLineConfiguration(8).hopperManufacturer,"tsm");
+  assert.equal(identity.getLineConfiguration(7).hopperManufacturer,"plast-control","another line is untouched");
+  assert.equal(identity.normalizedDefinition({lineNumber:8,displayName:"Line 8",layerCount:3,layerAPosition:"inside",hopperGeometry:"volume",hopperNamingMode:"standard",hopperManufacturer:"tsm"}).hopperManufacturer,"tsm");
+  const again=fresh();
+  assert.equal(again.loadCachedLineConfigurations(fake).source,"cache");
+  assert.equal(again.definitionForLine(8).hopperManufacturer,"tsm");
+  // An unknown line's stub is Plast-Control like every line.
+  assert.equal(identity.getLineConfiguration(77).hopperManufacturer,"plast-control");
+  // Refused: any other word.
+  for (const word of ["TSM","Plast-Control","acme",7]){
+    const result=identity.validateLineConfigurations([{...base,hopper_manufacturer:word}]);
+    assert.equal(result.valid,false,String(word));
+    assert.equal(result.message,"Choose a valid hopper manufacturer.");
+  }
+});
