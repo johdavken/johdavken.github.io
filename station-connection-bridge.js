@@ -1,5 +1,5 @@
 /* Station connection bridge - the line connection as Station is allowed to
- * see it, and the four things it is allowed to ask of it.
+ * see it, and the eight things it is allowed to ask of it.
  *
  * THE THIRD OF THREE
  *
@@ -7,20 +7,25 @@
  *   station-command-bridge.js      Station -> application   recipe edits
  *   station-connection-bridge.js   both ways, narrowly      the LINE CONNECTION
  *
- * Station has to say which production line this desktop is, whether it is
+ * Station has to say which production line this device is, whether it is
  * in step with the other devices on that line, how many of them there are,
  * and offer the operator a join code for a new one and a way to reconcile
- * now. All of that already exists in the application's RT Sync layer
- * (cloud-sync.js, driven from app.js). None of it may be re-implemented in
- * Station: Station must never hold a second workspace selection, open a
- * second live feed, keep a second queue of unsent changes or mint a second
- * join code of its own.
+ * now. A phone console must also be able to do what the floor UI's own
+ * RT Sync panel does on a phone: join a line by its code, choose among the
+ * lines this device remembers, leave one, and name itself. All of that
+ * already exists in the application's RT Sync layer (cloud-sync.js, driven
+ * from app.js). None of it may be re-implemented in Station: Station must
+ * never hold a second workspace selection, open a second live feed, keep a
+ * second queue of unsent changes or mint a second join code of its own.
+ * Every action here is one of the application's OWN closures, run through
+ * the application's own action runner, and the arguments a console may
+ * pass are checked and rebuilt here before that closure sees them.
  *
  * So this module is a window and a letterbox, and nothing else:
  *
  *   Producer (app.js, once):  connect({ read, actions }) -> { publish, disconnect }
  *   Consumer (Station):       getStatus(), subscribe(fn), isConnected(),
- *                             capabilities(), request(action)
+ *                             capabilities(), request(action, args)
  *
  * The window is the state bridge's own machinery (create()): a lazy read,
  * deep-cloned and deeply frozen, one coalesced notification per tick. The
@@ -34,11 +39,13 @@
  * project() below is the allow-list. It reads cloud-sync's public state
  * object and keeps: the remembered line, the status word and message, the
  * pending count, the joined devices as display facts, the current join
- * code. It drops: the RT user id, the device id (it is only USED, to mark
- * this desktop), the member rows' user ids, revisions, the pending-change
- * summary, the workspace list. Station never learns a table, a feed, an
- * RPC, a credential or a storage key - it learns "Line 9, synced, three
- * devices".
+ * code, this device's own label, and the lines this device remembers - as
+ * display facts only (an id to name them by, a name, a line number, a
+ * display name), because a phone has to be able to choose its line. It
+ * drops: the RT user id, the device id (it is only USED, to mark this
+ * device), the member rows' user ids, revisions, the pending-change
+ * summary. Station never learns a table, a feed, an RPC, a credential or a
+ * storage key - it learns "Line 9, synced, three devices".
  *
  * WHY THE LINE IS PROJECTED EVEN WHEN NOT CONNECTED
  *
@@ -67,8 +74,34 @@
     "refresh",          // reconcile this line with RT Sync now (the existing refresh)
     "reconnect",        // re-attach a remembered but locally disconnected line
     "generateJoinCode", // mint a one-time join code for another device
-    "renderJoinQr"      // the current join code drawn as an SVG string
+    "renderJoinQr",     // the current join code drawn as an SVG string
+    "joinWorkspace",    // join a line by its four-character code (the phone panel's Join)
+    "selectWorkspace",  // make one of the remembered lines this device's line
+    "leaveWorkspace",   // leave the line on this device (server membership ends; local data stays)
+    "relabelDevice"     // name this device as the other devices see it
   ]);
+
+  /* What each action may be handed, by field. A request's arguments are
+   * checked and rebuilt against this before the application's closure
+   * sees them; anything else that was passed is dropped. The zero-argument
+   * actions receive an empty object. */
+  const ARGUMENTS = Object.freeze({
+    refresh: Object.freeze([]),
+    reconnect: Object.freeze([]),
+    generateJoinCode: Object.freeze([]),
+    renderJoinQr: Object.freeze([]),
+    joinWorkspace: Object.freeze(["code", "label"]),
+    selectWorkspace: Object.freeze(["id"]),
+    leaveWorkspace: Object.freeze([]),
+    relabelDevice: Object.freeze(["label"])
+  });
+
+  /* The floor UI's own join-code rule (app.js, updateLineSyncJoinAvailability):
+   * four characters, letters and digits, upper case. cloud-sync uppercases
+   * and trims again for itself; the check here refuses early, by field. */
+  const CODE = /^[A-Z0-9]{4}$/;
+  /* The device label field's own maxlength (index.html, #lineSyncDeviceLabel). */
+  const LABEL_MAX = 80;
 
   /* cloud-sync's status words, as it spells them. Anything else is passed
    * through under its own key rather than mapped to an invented state. */
@@ -105,6 +138,9 @@
    * @param {boolean} [options.busy]  An RT Sync action is in flight.
    * @param {string} [options.busyAction]  Which one, by the app's own name.
    * @param {string} [options.joinUrl]  The join link for the current code.
+   * @param {Array}  [options.workspaces]  Facts the application resolves for
+   *        the remembered lines: `{ id, lineNumber, displayName }` per
+   *        workspace id. Only ids cloud-sync itself lists ever cross.
    */
   function project(syncState, options) {
     if (!syncState || typeof syncState !== "object") return null;
@@ -122,8 +158,37 @@
       lineNumber,
       displayName: settings.displayName
         ? String(settings.displayName)
-        : (lineNumber !== null ? `Line ${lineNumber}` : (workspaceName || "Unnamed line"))
+        : (lineNumber !== null ? `Line ${lineNumber}` : (workspaceName || "Unnamed line")),
+      /* This device's standing on the line: an owner cannot leave it
+       * (cloud-sync refuses with transfer_ownership_before_leaving), so
+       * the console withdraws Leave rather than offering a refusal. The
+       * word is all that crosses; the membership row does not. */
+      role: workspace.membership && workspace.membership.role === "owner" ? "owner" : "member"
     } : null;
+
+    /* The lines this device remembers, as display facts: cloud-sync's own
+     * list gives the ids and names; the application resolves a line number
+     * and a display name per id the way it does for the selected line. */
+    const facts = new Map();
+    for (const fact of Array.isArray(settings.workspaces) ? settings.workspaces : []) {
+      if (fact && fact.id) facts.set(String(fact.id), fact);
+    }
+    const workspaces = (Array.isArray(syncState.workspaces) ? syncState.workspaces : [])
+      .filter(item => item && item.id)
+      .map(item => {
+        const id = String(item.id);
+        const name = stringOr(item.name, "");
+        const fact = facts.get(id) || {};
+        const number = nullableInteger(fact.lineNumber);
+        return {
+          id,
+          name,
+          lineNumber: number,
+          displayName: fact.displayName
+            ? String(fact.displayName)
+            : (number !== null ? `Line ${number}` : (name || "Unnamed line"))
+        };
+      });
 
     // cloud-sync's `connected`: the operator has not unlinked this line on
     // this device. Not network reachability - that is what the status word
@@ -168,6 +233,10 @@
       assigned: !!line,
       line,
       linked,
+      workspaces,
+      /* This device's own name, as the other devices see it: what the
+       * relabel action changes. */
+      deviceLabel: stringOr(syncState.deviceLabel, ""),
       status: {
         key: statusWord.toLowerCase().replace(/\s+/g, "-"),
         label: statusWord,
@@ -189,7 +258,14 @@
       can: {
         refresh: enabled && linked && !busy,
         reconnect: enabled && !!line && !linked && !busy && !adminRequired,
-        addDevice: enabled && available && linked && !busy
+        addDevice: enabled && available && linked && !busy,
+        /* Joining needs the RT Sync client; choosing a line needs lines to
+         * choose from; leaving is for members, not the owner; a device can
+         * name itself whenever RT Sync is on (the label is local-first). */
+        join: enabled && available && !busy,
+        select: enabled && !busy && workspaces.length > 0,
+        leave: enabled && available && !!line && !busy && line.role !== "owner",
+        relabel: enabled && !busy
       }
     };
   }
@@ -198,8 +274,40 @@
    *   Results
    * ------------------------------------------------------------------ */
 
-  function failure(code, message) {
-    return Object.freeze({ ok: false, code, message: message || "" });
+  function failure(code, message, extra) {
+    const out = { ok: false, code, message: message || "" };
+    if (extra && typeof extra.field === "string") out.field = extra.field;
+    return Object.freeze(out);
+  }
+
+  /* The request's arguments, checked and rebuilt: a join code is four
+   * characters, upper-cased for the operator who typed it small; a label
+   * is text with its whitespace collapsed, no longer than the floor UI's
+   * own field allows; an id is text. Anything else that was passed is
+   * dropped. The first field that fails names itself in the answer. */
+  function normalizeArguments(name, args) {
+    const given = args && typeof args === "object" ? args : {};
+    const out = {};
+    for (const field of ARGUMENTS[name] || []) {
+      const value = given[field];
+      if (field === "code") {
+        const code = typeof value === "string" ? value.trim().toUpperCase() : "";
+        if (!CODE.test(code)) return failure("bad_argument", "Enter the four-character link code.", { field });
+        out.code = code;
+        continue;
+      }
+      if (field === "label") {
+        const label = typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, LABEL_MAX) : "";
+        if (name === "relabelDevice" && !label) return failure("bad_argument", "Give this device a name.", { field });
+        if (label) out.label = label;
+        continue;
+      }
+      if (field === "id") {
+        if (typeof value !== "string" || !value.trim()) return failure("bad_argument", "The line must be named by id.", { field });
+        out.id = value.trim();
+      }
+    }
+    return { ok: true, args: Object.freeze(out) };
   }
 
   /* Whatever an action returned, as a frozen result. An object with `ok`
@@ -230,14 +338,19 @@
       return actions ? Object.freeze(Object.keys(actions)) : NONE;
     }
 
-    /* Ask the application to do one of the ACTIONS. Never throws. */
-    async function request(name) {
+    /* Ask the application to do one of the ACTIONS. Never throws. The
+     * arguments are checked against ARGUMENTS first; a refused argument
+     * comes back as a failure naming its field, and the closure is never
+     * called. */
+    async function request(name, args) {
       if (!ACTIONS.includes(name)) return failure("unknown_action", `"${name}" is not a line connection action.`);
       if (!actions) return failure("unavailable", "No application is connected to the Station line connection.");
       const action = actions[name];
       if (typeof action !== "function") return failure("unavailable", `The application does not offer "${name}".`);
+      const checked = normalizeArguments(name, args);
+      if (!checked.ok) return checked;
       try {
-        return normalize(await action());
+        return normalize(await action(checked.args));
       } catch (error) {
         // The application's own failure text is what the operator would
         // have seen on the floor UI; anything without one gets a plain
@@ -293,8 +406,10 @@
 
   return Object.freeze({
     ACTIONS,
+    ARGUMENTS,
     STATUS_WORDS,
     project,
+    normalizeArguments,
     connect: shared.connect,
     getStatus: shared.getStatus,
     subscribe: shared.subscribe,

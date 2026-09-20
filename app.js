@@ -10616,7 +10616,14 @@
             displayName: configuration?.displayName || "",
             busy: lineSyncActionInFlight,
             busyAction: lineSyncBusyAction,
-            joinUrl: syncState?.generatedCode ? rtSyncLinkUrl(syncState.generatedCode) : ""
+            joinUrl: syncState?.generatedCode ? rtSyncLinkUrl(syncState.generatedCode) : "",
+            // The remembered lines' numbers and display names, resolved the
+            // same way as the selected line's, so the console names them alike.
+            workspaces: (syncState?.workspaces || []).map(item=>{
+              const number = window.PolynLineIdentity?.workspaceLineNumber?.(item) ?? null;
+              const lineConfiguration = number !== null ? window.PolynLineIdentity?.getLineConfiguration?.(number) : null;
+              return { id: item?.id, lineNumber: number, displayName: lineConfiguration?.displayName || "" };
+            })
           });
         },
         actions
@@ -10947,7 +10954,18 @@
         if (!code) return { ok:false, code:"failed", message:"No join code has been generated." };
         const svg = await linkCodeQrSvg(code);
         return svg ? { ok:true, code, svg } : { ok:false, code:"failed", message:"The QR code could not be drawn." };
-      }
+      },
+      // The phone panel's own four: join by code, choose a remembered line,
+      // leave, name this device. Each is the same cloud-sync call the panel's
+      // control makes, through the same runner; the bridge has already
+      // checked the arguments by field.
+      joinWorkspace: (args)=>stationSyncAction(()=>lineSync.joinWorkspace(args.code, args.label), "join"),
+      selectWorkspace: (args)=>{
+        if (!lineSync.getState().workspaces.some(item=>item.id === args.id)) return Promise.resolve({ ok:false, code:"failed", message:"That line is not remembered on this device." });
+        return stationSyncAction(()=>lineSync.selectWorkspace(args.id), "connect");
+      },
+      leaveWorkspace: ()=>stationSyncAction(()=>lineSync.leaveWorkspace(), "leave"),
+      relabelDevice: (args)=>stationSyncAction(()=>lineSync.updateDeviceLabel(args.label), "relabel")
     });
     connectStationRecipes();
     connectStationWeightProfiles();

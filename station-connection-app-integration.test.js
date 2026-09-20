@@ -79,7 +79,7 @@ test("Station's refresh and reconnect ARE the refresh the status bar and Reconne
   assert.match(actions, /renderJoinQr: async \(\)=>\{/);
   // Exactly the bridge's vocabulary, nothing more.
   const keys = [...actions.matchAll(/^\s{6}(\w+):/gm)].map(match => match[1]);
-  assert.deepEqual(keys, ["refresh", "reconnect", "generateJoinCode", "renderJoinQr"]);
+  assert.deepEqual(keys, ["refresh", "reconnect", "generateJoinCode", "renderJoinQr", "joinWorkspace", "selectWorkspace", "leaveWorkspace", "relabelDevice"]);
   // The same closures the buttons are wired to.
   assert.match(app, /const reconnectRtSync = \(\)=>runLineSyncAction\(refreshRtSyncAction, "refresh"\);/);
   assert.match(app, /const generateLinkCode = \(\)=>runLineSyncAction\(generateLinkCodeAction, "generate-code"\);/);
@@ -100,10 +100,35 @@ test("every Station action runs through runLineSyncAction - the same in-flight g
   assert.match(runner, /lastLineSyncErrorMessage = message;/);
 });
 
-test("the Station-facing code never reloads the page, never reaches the client, and never joins, leaves, selects or creates a workspace", () => {
+test("the phone panel's four actions ARE its own cloud-sync calls, each through stationSyncAction, and the line selector only accepts a remembered line", () => {
+  const actions = between("    connectStationConnection({", "    });\n");
+  assert.match(actions, /joinWorkspace: \(args\)=>stationSyncAction\(\(\)=>lineSync\.joinWorkspace\(args\.code, args\.label\), "join"\)/);
+  assert.match(actions, /leaveWorkspace: \(\)=>stationSyncAction\(\(\)=>lineSync\.leaveWorkspace\(\), "leave"\)/);
+  assert.match(actions, /relabelDevice: \(args\)=>stationSyncAction\(\(\)=>lineSync\.updateDeviceLabel\(args\.label\), "relabel"\)/);
+  const select = between("      selectWorkspace: (args)=>{", "      },\n");
+  assert.match(select, /lineSync\.getState\(\)\.workspaces\.some\(item=>item\.id === args\.id\)/, "an id cloud-sync does not list is refused, not silently ignored");
+  assert.match(select, /stationSyncAction\(\(\)=>lineSync\.selectWorkspace\(args\.id\), "connect"\)/);
+  // The same calls the panel's own controls make.
+  assert.match(app, /runLineSyncAction\(\(\)=>lineSync\.joinWorkspace\(\s*\$\("lineSyncJoinCode"\)\?\.value, \$\("lineSyncDeviceLabel"\)\?\.value\s*\), "join"\)/);
+  assert.match(app, /runLineSyncAction\(\(\)=>lineSync\.leaveWorkspace\(\), "leave"\)/);
+  assert.match(app, /runLineSyncAction\(\(\)=>lineSync\.selectWorkspace\(event\.target\.value\)\)/);
+  assert.match(app, /runLineSyncAction\(\(\)=>lineSync\.updateDeviceLabel\(event\.target\.value\)/);
+  // The remembered lines' facts are resolved the way the selected line's are.
+  const connect = between("function connectStationConnection(actions){", "\n  function setupLineSync(){");
+  assert.match(connect, /workspaces: \(syncState\?\.workspaces \|\| \[\]\)\.map\(item=>\{/);
+  assert.match(connect, /window\.PolynLineIdentity\?\.workspaceLineNumber\?\.\(item\)/);
+});
+
+test("the Station-facing code never reloads the page, never reaches the client, and never creates, deletes or administers a workspace", () => {
   const stationSide = between("    // Station's line console asks for these same two closures", "    $(\"lineSyncLeaveBtn\")");
-  for (const forbidden of [/location\.reload/, /\.reload\s*\(/, /supabase/i, /\.rpc\s*\(/, /\.channel\s*\(/, /joinWorkspace|leaveWorkspace|selectWorkspace|createWorkspace|deleteWorkspace|removeMember|transferOwnership/]) {
+  for (const forbidden of [/location\.reload/, /\.reload\s*\(/, /supabase/i, /\.rpc\s*\(/, /\.channel\s*\(/, /createWorkspace|deleteWorkspace|removeMember|transferOwnership|renameWorkspace/]) {
     assert.doesNotMatch(stationSide, forbidden, `the Station adapter does more than hand over existing actions (${forbidden})`);
+  }
+  // Every closure in the literal is a stationSyncAction, or the QR drawing,
+  // or the line-selector guard before one.
+  const actions = between("    connectStationConnection({", "    });\n");
+  for (const line of actions.split("\n").filter(one => /^\s{6}\w+: /.test(one))) {
+    assert.match(line, /stationSyncAction\(|renderJoinQr: async|selectWorkspace: \(args\)=>\{/, `${line.trim()} bypasses the shared runner`);
   }
   const connect = between("function connectStationConnection(actions){", "\n  function setupLineSync(){");
   assert.doesNotMatch(connect, /location\.reload|supabase|\.rpc\s*\(/i);
@@ -161,7 +186,10 @@ test("the shell reserves one header slot for the console, and the boot file moun
   assert.equal(slot.attrs.class, "station-header__connection");
   assert.match(boot, /const syncConsole = root\.PolynStationSyncConsole \|\| null;/);
   assert.match(boot, /const connection = root\.PolynStationConnectionBridge \|\| null;/);
-  assert.match(boot, /if \(syncConsole && mounts\.connection\) \{\s*\n\s*const lineConsole = syncConsole\.create\(doc, \{ connection \}\);\s*\n\s*mounts\.connection\.appendChild\(lineConsole\.element\);/);
+  // The console is handed the connection bridge and the admin bridge - the
+  // latter read for one fact, whether an administrator is signed in - and
+  // never the globals.
+  assert.match(boot, /if \(syncConsole && mounts\.connection\) \{\s*\n\s*const lineConsole = syncConsole\.create\(doc, \{ connection, admin \}\);\s*\n\s*mounts\.connection\.appendChild\(lineConsole\.element\);/);
   assert.equal((boot.match(/syncConsole\.create\(/g) || []).length, 1);
   // The boot file hands the bridge over and reads nothing from it itself.
   assert.doesNotMatch(boot, /connection\.(getStatus|request|subscribe)/);

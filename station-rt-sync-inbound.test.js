@@ -471,7 +471,9 @@ test("a locally disconnected desktop reads LINE 9 · LOCAL ONLY with Reconnect o
   assert.equal(status.line.displayName, "Line 9");
   assert.equal(status.linked, false);
   assert.equal(status.status.key, "local-only");
-  assert.deepEqual(status.can, { refresh: false, reconnect: true, addDevice: false });
+  // The phone console's four (join, select, leave, relabel) ride along; an
+  // owner cannot leave, and there is nothing to refresh while unlinked.
+  assert.deepEqual(status.can, { refresh: false, reconnect: true, addDevice: false, join: true, select: true, leave: false, relabel: true });
   assert.equal(consoleModule.summarize(status).text, "Line 9 · Local only · 3 devices");
   // The job is still there to look at; only the link is down.
   const station = stationOver(desktop.stateBridge);
