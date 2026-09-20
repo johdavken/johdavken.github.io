@@ -79,6 +79,14 @@
      * stack, the batch mixer (185 units at UNIT 0.42), the extruder and its
      * readout, with the read-only notice under that when a layer is open. */
     height: 740,
+    /* The canvas with the extruders off (`extruders`, below): it ends where
+     * the blenders discharge - the batch mixer's outlet flange and the TSM
+     * downcomer's both land at 611 - with the same clearance under them
+     * that the header has above it. The stage fits the shorter canvas to
+     * the same room, so everything left - hoppers, receivers, blenders -
+     * is drawn larger by the one factor: the room the extruders took goes
+     * to the blenders, and nothing changes shape. */
+    heightWithoutExtruders: 632,
     padding: 34,
 
     // --- Hopper ---------------------------------------------------------
@@ -196,6 +204,12 @@
     extruderScale: 1,
     // The layer-share readout sits this far under the lowest foot.
     extruderLabelGap: 14,
+    /* Whether the extruder is placed at all. A device preference
+     * (station-display.js, off by default) reaches the layout as
+     * computeLayout's `showExtruders`; without the extruder the train is
+     * the blender alone, there is no throat - it joined the two - and the
+     * canvas is `heightWithoutExtruders` tall. */
+    extruders: true,
 
     /* A line narrower than this ratio is CENTRED on the canvas rather than
      * stretched to fill it: the equipment that exists stays the same size, and
@@ -530,7 +544,12 @@
     // the downcomer's, or the mixer's - the throat's length below it.
     const feedFrom = downcomer || mixer;
     const extruderTop = feedFrom.outlet.y + d.mixerFeedGap;
-    const throat = {
+    /* With the extruders off there is no extruder and no throat: the
+     * throat is the join between the two machines, and the contact shadow
+     * it keeps lands on the extruder's feed flange - neither has a place
+     * under a blender that discharges into nothing drawn. */
+    const withExtruder = d.extruders !== false;
+    const throat = withExtruder ? {
       x: trainX - d.throatWidth / 2,
       y: feedFrom.outlet.y,
       width: d.throatWidth,
@@ -538,15 +557,20 @@
       centerX: trainX,
       // The contact shadow, on the extruder's feed flange where the throat lands.
       shadow: { cx: trainX, cy: extruderTop, rx: d.throatShadowRx, ry: d.throatShadowRy }
-    };
-    const extruder = assetPlacement(facing.view, facing.mirrored, extruderAssets.views[facing.view], {
+    } : null;
+    const extruder = withExtruder ? assetPlacement(facing.view, facing.mirrored, extruderAssets.views[facing.view], {
       // The feed anchor lands exactly here for every layer and every view:
       // it is the asset's origin, so only the machine around it swings.
       centerX: trainX,
       anchorY: extruderTop,
       scale: extruderScale,
       labelGap: d.extruderLabelGap
-    });
+    }) : null;
+    /* The train's last machine, and where the train ends: under the
+     * extruder's readout, or - without one - under the blender's discharge
+     * (the downcomer's, on a TSM line), where the throat would have begun. */
+    const trainMachines = [mixer, downcomer, extruder].filter(Boolean);
+    const trainBottom = extruder ? extruder.label.y + 6 * scale : feedFrom.bounds.bottom;
 
     // The vessel's inch scale for this bank: true proportions at this width.
     const inchScale = unitsPerInch(d);
@@ -630,6 +654,7 @@
       mixer,
       // The downcomer under a TSM blender; null on a batch line.
       downcomer,
+      // The throat and the extruder; both null with the extruders off.
       throat,
       extruder,
       /* The bank's two RIGID OBJECTS, as boxes in canvas units. These are
@@ -647,11 +672,11 @@
           height: coneTop + d.coneHeight + d.spoutHeight + d.hopperCaptionGap + d.hopperCaptionHeight - (headerY - 12 * scale)
         },
         train: {
-          x: Math.min(mixer.bounds.left, extruder.bounds.left, downcomer ? downcomer.bounds.left : Infinity),
+          x: Math.min(...trainMachines.map(machine => machine.bounds.left)),
           y: mixer.bounds.top,
-          width: Math.max(mixer.bounds.right, extruder.bounds.right, downcomer ? downcomer.bounds.right : -Infinity)
-            - Math.min(mixer.bounds.left, extruder.bounds.left, downcomer ? downcomer.bounds.left : Infinity),
-          height: extruder.label.y + 6 * scale - mixer.bounds.top,
+          width: Math.max(...trainMachines.map(machine => machine.bounds.right))
+            - Math.min(...trainMachines.map(machine => machine.bounds.left)),
+          height: trainBottom - mixer.bounds.top,
           centerX: trainX
         }
       }
@@ -668,11 +693,16 @@
    * @param {string} [options.focusLayer]  layer id to expand, or null
    * @param {object} [options.dimensions]  DIMENSIONS overrides
    * @param {number} [options.stageAspect] width/height of the stage the canvas fills (focus only)
+   * @param {boolean} [options.showExtruders] false leaves the extruders out
+   *        and shortens the canvas to the blenders (DIMENSIONS.extruders);
+   *        omitted or true, the train is drawn whole
    */
   function computeLayout(model, options) {
     if (!model || !Array.isArray(model.layers) || !model.layers.length) return null;
     const settings = options || {};
     const d = Object.assign({}, DIMENSIONS, settings.dimensions || {});
+    if (settings.showExtruders === false) d.extruders = false;
+    if (d.extruders === false) d.height = d.heightWithoutExtruders;
     const focusLayer = settings.focusLayer || null;
     const hopperState = settings.hopperState || null;
 
@@ -752,7 +782,7 @@
       } else {
         machines.push({ bounds: mixerAssets.views[view].bounds, scale: focusedD.mixerScale });
       }
-      machines.push({ bounds: extruderAssets.views[view].bounds, scale: focusedD.extruderScale });
+      if (focusedD.extruders !== false) machines.push({ bounds: extruderAssets.views[view].bounds, scale: focusedD.extruderScale });
       return machines;
     };
     const trainColumn = Math.max(train.width, ...Object.keys(mixerAssets.views).map(view => {

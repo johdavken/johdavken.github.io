@@ -444,9 +444,11 @@ function boot(options) {
     cards: () => machine.querySelectorAll("[data-role='blend-card']"),
     chips: () => machine.querySelectorAll("[data-station-target='flip']"),
     /* Turning a layer over or back is its own train's click while the
-     * mode is on: the layer's extruder, the same target an operator
-     * clicks to open it outside the mode. */
-    flipLayer: layer => api.clickTarget("extruder", layer),
+     * mode is on: the layer's mixer, the same target an operator clicks
+     * to open it outside the mode. (The mixer, not the extruder: the
+     * extruders are off by default - station-display.js - so a booted
+     * Station draws none.) */
+    flipLayer: layer => api.clickTarget("mixer", layer),
     flipped: () => machine.querySelectorAll("[data-role='layer'].is-flipped").map(n => n.getAttribute("data-layer")),
     clusters: () => machine.querySelectorAll(".station-hopper-cluster").length,
     modeOn: () => machine.getAttribute("data-blend-edit") === "true",

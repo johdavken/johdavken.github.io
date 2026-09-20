@@ -177,7 +177,7 @@
     "station/station.js"
   ];
 
-  const VERSION = "0.71.0";
+  const VERSION = "0.72.0";
 
   function requested() {
     try {
@@ -220,6 +220,13 @@
       ? theme.initialize(host, root)
       : null;
     if (!host.stationTheme) host.setAttribute("data-theme", "industrial-dark");
+    /* The display preferences (station-display.js) the same way: read
+     * here, before the boot file draws, so the first stage is already the
+     * one the device chose. */
+    const display = root.PolynStationDisplay;
+    host.stationDisplay = display && typeof display.initialize === "function"
+      ? display.initialize(host, root)
+      : null;
 
     /* FOCUS STOPS AT THE HOST'S EDGE
      *

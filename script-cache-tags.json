@@ -59,9 +59,13 @@
     "v": "0.3.0",
     "hash": "3a20e45ce7cc6f83"
   },
+  "station-display.js": {
+    "v": "0.1.0",
+    "hash": "dabd9aeada8d333a"
+  },
   "station-host.js": {
-    "v": "0.4.72",
-    "hash": "59aacd1241abfb2d"
+    "v": "0.4.73",
+    "hash": "e46ac7a3d68b27a5"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

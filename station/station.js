@@ -431,6 +431,14 @@
   /* The theme controller belongs to the Station root, not to this boot file
    * or the application global. Resolved once the host root is known. */
   let themeController = null;
+  /* The display preferences (station-display.js) the same way: whether
+   * the extruders are drawn, which the stage is asked for on every
+   * render. Without the controller the drawing is the preference's
+   * default - the blenders alone. */
+  let displayController = null;
+  function showExtruders() {
+    return !!(displayController && typeof displayController.getShowExtruders === "function" && displayController.getShowExtruders());
+  }
   /* The one transient line the status bar carries ahead of what it was
    * saying: why a click did nothing, until something newer replaces it
    * or a valid interaction clears it. One, replaced - never stacked. */
@@ -730,7 +738,8 @@
         layerState: stageLayerState(current.resolved),
         focusLayer: null,
         hopperControls: controlsFor(current.resolved),
-        layerShare: shareFor(current.resolved)
+        layerShare: shareFor(current.resolved),
+        showExtruders: showExtruders()
       });
     }
     refreshPages();
@@ -1951,7 +1960,8 @@
         focusLayer: shown,
         selectedHopper: focus && focus.layer === shown ? focus.hopper : null,
         hopperControls: controlsFor(resolved),
-        layerShare: shareFor(resolved)
+        layerShare: shareFor(resolved),
+        showExtruders: showExtruders()
       });
       // A patched hopper is a new element; the one the panel stood beside
       // may be gone, and its facts may have changed either way.
@@ -2240,7 +2250,9 @@
        * built. */
       cardSize: cardView.size,
       cardRail: cardRail ? cardRail.element : null,
-      raiseLayer: extra && extra.raiseLayer
+      raiseLayer: extra && extra.raiseLayer,
+      // The device's choice: the train whole, or the blenders alone.
+      showExtruders: showExtruders()
     });
     drawCount += 1;
     // Which face the turned layers show, for the stylesheet and the tests;
@@ -2299,6 +2311,7 @@
     const doc = root.document;
     let container = mountPoint(doc);
     themeController = container.stationTheme || (doc.documentElement && doc.documentElement.stationTheme) || null;
+    displayController = container.stationDisplay || (doc.documentElement && doc.documentElement.stationDisplay) || null;
 
     // An empty container is the harness's thin body: fill it from the same
     // builder the application host uses.
@@ -2449,6 +2462,12 @@
     // which live state reaches Station - there is no polling and no second
     // subscription to anything else.
     bridge?.subscribe(() => { onPublish(); });
+
+    /* The display preferences: a change to what the stage draws - the
+     * extruders on or off - is structural for the drawing, so it takes the
+     * full render, as a changed line does. No state moved, so nothing
+     * else reads it: the Handbook's page keeps its own switch current. */
+    displayController?.subscribe(() => { renderAll(); });
 
     /* The line console, in the header's slot. It subscribes to the
      * connection bridge itself and redraws from each descriptor; a
@@ -2686,6 +2705,8 @@
           theme: themeController,
           themes: theme ? theme.THEMES : [],
           families: theme ? theme.FAMILIES : [],
+          // The Appearance page's other preference: the extruders' switch.
+          display: displayController,
           /* The Appearance gallery's miniatures: a picture per theme,
            * drawn under that theme's own tokens. Presentation only. */
           preview: themePreview

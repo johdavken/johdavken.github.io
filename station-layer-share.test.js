@@ -539,7 +539,7 @@ function boot(options) {
     /* The mode's switch is the machine rail's; a layer is turned back or
      * over by its own train while the mode is on. */
     blendSwitch: () => doc.querySelector("[data-role='machine-rail'] [data-action='blend-edit']"),
-    flipLayer: layer => api.clickTarget("extruder", layer),
+    flipLayer: layer => api.clickTarget("mixer", layer),
     enterBlendEdit() {
       api.blendSwitch().click();
       assert.equal(api.modeOn(), true, "Blend Edit is on");

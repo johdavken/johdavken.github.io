@@ -134,7 +134,11 @@ const RECIPES_BRIDGE = "station-recipes-bridge.js";
 const ADMIN_BRIDGE = "station-admin-bridge.js";
 const WEIGHT_PROFILES_BRIDGE = "station-weight-profiles-bridge.js";
 const THEME = "station-theme.js";
-const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, ADMIN_BRIDGE, WEIGHT_PROFILES_BRIDGE, THEME].sort();
+/* The display preferences (the extruders' switch): a device-local
+ * preference beside the theme, loaded the same way and for the same
+ * reason - a Station module may not touch storage. */
+const DISPLAY = "station-display.js";
+const INDEX_STATION_ASSETS = [SHARED_BRIDGE, STATION_HOST, COMMAND_CONTRACT, COMMAND_BRIDGE, CONNECTION_BRIDGE, RECIPES_BRIDGE, ADMIN_BRIDGE, WEIGHT_PROFILES_BRIDGE, THEME, DISPLAY].sort();
 
 /* The one Station stylesheet permitted to name an application selector, use
  * !important, or style a bare element: hiding the application's shell is
@@ -289,9 +293,12 @@ test("no Station file names an RT Sync internal, subscribes to anything but the 
     // The only subscriptions Station holds are to the windows the
     // application publishes through: the state bridge, the connection
     // bridge, the recipes bridge, the weight-profiles bridge and the admin
-    // bridge. Anything else would be a second live feed.
+    // bridge. Anything else would be a second live feed - except the
+    // device's own display preferences (station-display.js, the
+    // extruders' switch), which publish nothing of the application: the
+    // boot file redraws on a change, the Appearance page moves its switch.
     for (const match of source.matchAll(/(\w+)\??\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection", "recipes", "weightProfiles", "admin"].includes(match[1]),
+      assert.ok(["bridge", "connection", "recipes", "weightProfiles", "admin", "displayController", "display"].includes(match[1]),
         `${file} subscribes to "${match[1]}", which is none of the bridges`);
     }
   }
