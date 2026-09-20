@@ -8,7 +8,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const bridgeModule = require("./station-connection-bridge.js");
-const { project, ACTIONS } = bridgeModule;
+const { project, ACTIONS, ARGUMENTS, normalizeArguments } = bridgeModule;
 
 /* cloud-sync's getState() as it looks on a Line 9 desktop that is synced
  * with two other devices. Deliberately carries everything the real object
@@ -38,7 +38,7 @@ function syncedLine9(overrides) {
 test("a synced Line 9 desktop projects as Line 9, synced, three devices, with this desktop marked", () => {
   const status = project(syncedLine9(), { lineNumber: 9, displayName: "Line 9" });
   assert.equal(status.assigned, true);
-  assert.deepEqual(status.line, { workspaceId: "ws-9", name: "Line 9", lineNumber: 9, displayName: "Line 9" });
+  assert.deepEqual(status.line, { workspaceId: "ws-9", name: "Line 9", lineNumber: 9, displayName: "Line 9", role: "owner" });
   assert.equal(status.linked, true);
   assert.equal(status.status.key, "synced");
   assert.equal(status.status.label, "Synced");
@@ -49,7 +49,9 @@ test("a synced Line 9 desktop projects as Line 9, synced, three devices, with th
     ["Operator Phone", "member", false],
     ["Floor Tablet", "member", false]
   ]);
-  assert.deepEqual(status.can, { refresh: true, reconnect: false, addDevice: true });
+  assert.deepEqual(status.can, { refresh: true, reconnect: false, addDevice: true, join: true, select: true, leave: false, relabel: true });
+  assert.equal(status.line.role, "owner");
+  assert.equal(status.deviceLabel, "Line 9 Desktop");
 });
 
 test("the line identity is the selected workspace and nothing else - a stale selectedWorkspace object does not count", () => {
@@ -57,7 +59,7 @@ test("the line identity is the selected workspace and nothing else - a stale sel
   assert.equal(status.assigned, false);
   assert.equal(status.line, null);
   assert.equal(status.linked, false);
-  assert.deepEqual(status.can, { refresh: false, reconnect: false, addDevice: false });
+  assert.deepEqual(status.can, { refresh: false, reconnect: false, addDevice: false, join: true, select: true, leave: false, relabel: true });
 });
 
 test("the projection carries no identity, credential, revision or queue detail across", () => {
@@ -65,9 +67,16 @@ test("the projection carries no identity, credential, revision or queue detail a
     { lineNumber: 9, joinUrl: "https://resin.tools/?rtSyncCode=AB12" });
   const flat = JSON.stringify(status);
   for (const secret of ["anon-user", "dev-desktop", "dev-phone", "user_id", "device_id", "activeRevision", "workspaceRevision",
-    "pendingSummary", "ws-10", "Line 10", "membership", "access", "token"]) {
+    "pendingSummary", "membership", "access", "token"]) {
     assert.ok(!flat.includes(secret), `the descriptor carries "${secret}"`);
   }
+  // The remembered lines cross as display facts only - an id to name them
+  // by, a name, and what the application resolves for them - never a
+  // membership row or a revision.
+  assert.deepEqual(project(syncedLine9(), { lineNumber: 9, workspaces: [{ id: "ws-9", lineNumber: 9, displayName: "Line 9" }, { id: "ws-10", lineNumber: 10, displayName: "" }] }).workspaces,
+    [{ id: "ws-9", name: "Line 9", lineNumber: 9, displayName: "Line 9" }, { id: "ws-10", name: "Line 10", lineNumber: 10, displayName: "Line 10" }]);
+  assert.deepEqual(project(syncedLine9(), { lineNumber: 9 }).workspaces.map(item => item.displayName), ["Line 9", "Line 10"], "without facts a line is named by its workspace");
+  assert.deepEqual(project(syncedLine9(), { lineNumber: 9, workspaces: [{ id: "ws-99", lineNumber: 99 }] }).workspaces.map(item => item.id), ["ws-9", "ws-10"], "a fact for a line cloud-sync does not list never crosses");
   // The join code and its link are the two facts the QR view needs, and
   // they only cross while the line is linked.
   assert.deepEqual(status.joinCode, { code: "AB12", expiresAt: "2026-09-11T14:32:00Z", url: "https://resin.tools/?rtSyncCode=AB12" });
@@ -80,7 +89,7 @@ test("a remembered line that is locally disconnected keeps its name and offers R
   assert.equal(status.line.displayName, "Line 9");
   assert.equal(status.linked, false);
   assert.equal(status.status.key, "local-only");
-  assert.deepEqual(status.can, { refresh: false, reconnect: true, addDevice: false });
+  assert.deepEqual(status.can, { refresh: false, reconnect: true, addDevice: false, join: true, select: true, leave: false, relabel: true });
 });
 
 test("every cloud-sync status word maps to its own key, and nothing is upgraded to Synced", () => {
@@ -112,7 +121,7 @@ test("pending count and last sync cross as numbers and strings; the busy flag cl
   assert.equal(status.status.pendingCount, 2);
   assert.equal(status.status.lastSyncAt, "2026-09-11T14:02:00Z");
   assert.deepEqual(status.busy, { active: true, action: "refresh" });
-  assert.deepEqual(status.can, { refresh: false, reconnect: false, addDevice: false });
+  assert.deepEqual(status.can, { refresh: false, reconnect: false, addDevice: false, join: false, select: false, leave: false, relabel: false });
   assert.deepEqual(project(syncedLine9(), { lineNumber: 9 }).busy, { active: false, action: "" });
 });
 
@@ -127,7 +136,7 @@ test("an access-revoked Error reads as admin-required and withdraws Reconnect, e
 
 test("with RT Sync disabled or unavailable nothing is offered, and a workspace that maps to no line keeps its own name", () => {
   const disabled = project(syncedLine9({ enabled: false, available: false, status: "Local only" }), { lineNumber: 9 });
-  assert.deepEqual(disabled.can, { refresh: false, reconnect: false, addDevice: false });
+  assert.deepEqual(disabled.can, { refresh: false, reconnect: false, addDevice: false, join: false, select: false, leave: false, relabel: false });
   const unavailable = project(syncedLine9({ available: false }), { lineNumber: 9 });
   assert.equal(unavailable.can.addDevice, false, "a join code needs the RT Sync client");
   assert.equal(unavailable.can.refresh, true, "a refresh may still try - it is how the client comes back");
@@ -248,12 +257,62 @@ test("a throwing, rejecting or false-returning action becomes a failure value wi
 
 test("the vocabulary is closed: an unknown action is refused at request time and at connect time", async () => {
   const bridge = bridgeModule.create({ scheduler: run => run() });
-  assert.throws(() => bridge.connect({ read: () => null, actions: { selectWorkspace: async () => true } }), /unknown action "selectWorkspace"/);
+  assert.throws(() => bridge.connect({ read: () => null, actions: { deleteWorkspace: async () => true } }), /unknown action "deleteWorkspace"/);
   assert.equal(bridge.isConnected(), false, "a refused connect leaves nothing connected");
   bridge.connect({ read: () => null, actions: { refresh: async () => true } });
-  const result = await bridge.request("selectWorkspace");
+  const result = await bridge.request("deleteWorkspace");
   assert.equal(result.code, "unknown_action");
-  assert.deepEqual([...ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr"]);
+  assert.deepEqual([...ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr", "joinWorkspace", "selectWorkspace", "leaveWorkspace", "relabelDevice"]);
+  assert.deepEqual(Object.keys(ARGUMENTS), [...ACTIONS], "every action declares its arguments, even when there are none");
+});
+
+/* ----------------------------------------------------------------------
+ *   The phone panel's four: arguments are checked before the closure runs
+ * -------------------------------------------------------------------- */
+
+test("a join code is rebuilt upper-cased and trimmed; a bad code, a missing id or a blank device name is refused by field and the closure never runs", async () => {
+  const bridge = bridgeModule.create({ scheduler: run => run() });
+  const seen = [];
+  bridge.connect({
+    read: () => null,
+    actions: {
+      joinWorkspace: async args => { seen.push(["join", args]); return true; },
+      selectWorkspace: async args => { seen.push(["select", args]); return true; },
+      leaveWorkspace: async args => { seen.push(["leave", args]); return true; },
+      relabelDevice: async args => { seen.push(["relabel", args]); return true; },
+      refresh: async args => { seen.push(["refresh", args]); return true; }
+    }
+  });
+  assert.deepEqual(await bridge.request("joinWorkspace", { code: " ab12 ", label: "  Line 9   phone " }), { ok: true });
+  assert.deepEqual(seen.pop(), ["join", { code: "AB12", label: "Line 9 phone" }]);
+  assert.deepEqual(await bridge.request("joinWorkspace", { code: "AB12" }), { ok: true });
+  assert.deepEqual(seen.pop(), ["join", { code: "AB12" }], "a blank label is left to cloud-sync, which keeps the current one");
+  for (const bad of [{ code: "ab1" }, { code: "AB 12" }, { code: 1234 }, {}, null]) {
+    const refused = await bridge.request("joinWorkspace", bad);
+    assert.deepEqual(refused, { ok: false, code: "bad_argument", message: "Enter the four-character link code.", field: "code" });
+  }
+  assert.deepEqual(await bridge.request("selectWorkspace", { id: " ws-10 " }), { ok: true });
+  assert.deepEqual(seen.pop(), ["select", { id: "ws-10" }]);
+  assert.equal((await bridge.request("selectWorkspace", {})).field, "id");
+  assert.equal((await bridge.request("relabelDevice", { label: "   " })).field, "label");
+  assert.equal((await bridge.request("relabelDevice", { label: "x".repeat(200) })).ok, true);
+  assert.equal(seen.pop()[1].label.length, 80, "a label is cut to the floor UI's own field length");
+  assert.deepEqual(await bridge.request("leaveWorkspace", { anything: true }), { ok: true });
+  assert.deepEqual(seen.pop(), ["leave", {}], "a zero-argument action receives nothing it did not declare");
+  assert.deepEqual(await bridge.request("refresh", { code: "zzz" }), { ok: true });
+  assert.deepEqual(seen.pop(), ["refresh", {}]);
+  assert.equal(seen.length, 0, "a refused argument never reached a closure");
+  assert.ok(Object.isFrozen(normalizeArguments("joinWorkspace", { code: "AB12" }).args));
+});
+
+test("Leave is withdrawn from the owner and offered to a member; the owner's reason is the application's own", () => {
+  const owner = project(syncedLine9(), { lineNumber: 9 });
+  assert.equal(owner.can.leave, false);
+  const member = project(syncedLine9({ selectedWorkspace: { id: "ws-9", name: "Line 9", membership: { role: "member" } } }), { lineNumber: 9 });
+  assert.equal(member.line.role, "member");
+  assert.equal(member.can.leave, true);
+  assert.equal(project(syncedLine9({ available: false }), { lineNumber: 9 }).can.join, false, "joining needs the client");
+  assert.equal(project(syncedLine9({ workspaces: [] }), { lineNumber: 9 }).can.select, false, "nothing to choose from");
 });
 
 test("disconnecting withdraws the actions along with the window", async () => {

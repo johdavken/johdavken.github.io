@@ -234,7 +234,7 @@ test("the connection bridge gives consumers no way to publish, and its action vo
   }
   assert.ok(Object.isFrozen(bridge));
   assert.ok(Object.isFrozen(bridge.ACTIONS));
-  assert.deepEqual([...bridge.ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr"],
+  assert.deepEqual([...bridge.ACTIONS], ["refresh", "reconnect", "generateJoinCode", "renderJoinQr", "joinWorkspace", "selectWorkspace", "leaveWorkspace", "relabelDevice"],
     "a new RT Sync action Station may ask for arrives as an edit to this list");
 });
 
