@@ -24,20 +24,35 @@
  * knows how a join code is made, what a refresh reconciles, or where the
  * devices are recorded; it knows the words on the descriptor.
  *
+ * THE ONE THING AN ADMINISTRATOR MAY DO HERE
+ *
+ * A desktop belongs to its production line, and an operator is offered no
+ * way to change that. An ADMINISTRATOR is: when the admin bridge
+ * (station-admin-bridge.js, handed in beside the connection bridge) says
+ * an administrator is signed in, and the descriptor lists more than one
+ * line this device remembers, the panel adds a section naming those lines
+ * and lets the administrator make one of them this desktop's line. That is
+ * the floor UI's own line selector, with the floor UI's own action behind
+ * it (selectWorkspace, through the same letterbox), gated on this screen
+ * to the administrator because a production console is not the place for
+ * an operator to wander between lines. The gate is presentation: it is the
+ * application that decides what the selection does, and the application
+ * that refuses a line this device does not remember.
+ *
  * WHAT IT NEVER DOES
  *
- * It offers no way to choose a line. A desktop belongs to its production
- * line; changing that is an administrator's job in the application, not a
- * control on a production console. It reloads nothing: Refresh is the
- * application's reconcile, never the page. And it does not decorate: a
- * device is "joined", because that is what the application knows; nothing
- * here calls a device online.
+ * It reloads nothing: Refresh is the application's reconcile, never the
+ * page. It holds no line of its own: the lines it lists are the
+ * descriptor's, and the line it marks current is the descriptor's. And it
+ * does not decorate: a device is "joined", because that is what the
+ * application knows; nothing here calls a device online.
  *
  * WHAT IT HOLDS
  *
  * Presentation state only, and only for this screen: whether the panel is
  * open, whether the QR view is showing and for which code, whether a
- * request is in flight, and the last message a request produced.
+ * request is in flight (and, for a line change, which line was asked
+ * for), and the last message a request produced.
  */
 (function (root, factory) {
   const api = factory();
@@ -107,6 +122,25 @@
 
   /* What the panel says under the status when there is nothing to offer,
    * or something the operator should know before pressing anything. */
+  /* Whether the admin bridge, if one was handed in, says an administrator
+   * is signed in on this device. Read, never cached: the bridge's window
+   * is the only copy of that fact. */
+  function administrator(admin) {
+    if (!admin || typeof admin.getAccess !== "function") return false;
+    const access = admin.getAccess();
+    return !!(access && access.access && access.access.signedIn);
+  }
+
+  /* Whether the line section is on offer: an administrator, and more than
+   * one line to choose between. One remembered line is not a choice, and
+   * an operator is never offered one. Pure, and exported, so the gate can
+   * be tested apart from the DOM. */
+  function offersLines(status, admin) {
+    if (!status || !status.enabled) return false;
+    const lines = Array.isArray(status.workspaces) ? status.workspaces : [];
+    return lines.length > 1 && administrator(admin);
+  }
+
   function guidance(status) {
     if (!status.enabled) return "RT Sync is not available on this build. Station is showing this device's local job.";
     if (!status.assigned) return "This desktop is not assigned to a production line. Connect it through Resin.Tools RT Sync, then reopen Station.";
@@ -122,6 +156,9 @@
    * @param {object} options
    * @param {object} options.connection  The connection bridge (getStatus,
    *        subscribe, request). Handed in, never reached for globally.
+   * @param {object} [options.admin]  The admin bridge (getAccess, subscribe),
+   *        read only to learn whether an administrator is signed in. Without
+   *        it the console offers no line choice, ever.
    * @param {function} [options.onOpenChange]  Told when the panel opens or
    *        closes, so the host can keep its own keyboard handling out of
    *        the way while it is open.
@@ -129,12 +166,14 @@
   function create(doc, options) {
     const settings = options || {};
     const connection = settings.connection || null;
+    const admin = settings.admin || null;
 
     const state = {
       status: null,
       open: false,
       qr: null,          // { code, svg } while the QR view is showing
       pending: null,     // the request in flight, by action name
+      pendingLine: "",   // the line asked for while pending is "select-line"
       note: "",          // the last request's message, shown until the next
       noteKind: ""       // "error" | "info"
     };
@@ -188,6 +227,17 @@
     const note = element(doc, "p", "station-sync__note", { role: "status" });
     note.setAttribute("hidden", "");
     panel.appendChild(note);
+
+    /* The administrator's line section: built once, shown only while an
+     * administrator is signed in and there is more than one line to name. */
+    const linesSection = element(doc, "section", "station-sync__lines", { "aria-label": "Lines on this desktop" });
+    linesSection.setAttribute("hidden", "");
+    const linesHeading = element(doc, "h4", "station-sync__lines-heading");
+    const linesHint = text(doc, "p", "station-sync__lines-hint",
+      "Administrator: choose the line this desktop follows. Other devices keep their own line.");
+    const linesList = element(doc, "ul", "station-sync__lines-items");
+    for (const part of [linesHeading, linesHint, linesList]) linesSection.appendChild(part);
+    panel.appendChild(linesSection);
 
     /* QR view: built once, shown only while a code is on offer. */
     const qrSection = element(doc, "section", "station-sync__qr", { "aria-label": "Join code" });
@@ -255,6 +305,42 @@
       }
     }
 
+    function renderLines(status) {
+      clearChildren(linesList);
+      const offer = offersLines(status, admin);
+      show(linesSection, offer);
+      if (!offer) return;
+      const lines = status.workspaces;
+      linesHeading.textContent = `Lines on this desktop (${lines.length})`;
+      const busy = state.pending !== null || status.busy.active;
+      const currentId = status.assigned && status.line ? status.line.workspaceId : "";
+      for (const line of lines) {
+        const item = element(doc, "li", "station-sync__line-item");
+        const current = !!currentId && line.id === currentId;
+        const asked = state.pending === "select-line" && state.pendingLine === line.id;
+        const button = element(doc, "button", "station-sync__line-option", {
+          type: "button", "data-action": "select-line", "data-id": line.id,
+          "aria-pressed": current ? "true" : "false"
+        });
+        if (current) button.classList.add("is-current");
+        // The current line is named, not offered: pressing it would ask
+        // the application for the line it already has.
+        button.disabled = busy || !status.can.select || current;
+        const name = text(doc, "span", "station-sync__line-name", line.displayName);
+        const facts = [];
+        if (current) facts.push("This desktop's line");
+        if (line.name && line.name !== line.displayName) facts.push(line.name);
+        if (asked) facts.push("Connecting…");
+        const detail = text(doc, "span", "station-sync__line-detail", facts.join(" · "));
+        show(detail, facts.length > 0);
+        button.appendChild(name);
+        button.appendChild(detail);
+        button.addEventListener("click", () => { void selectLine(line.id); });
+        item.appendChild(button);
+        linesList.appendChild(item);
+      }
+    }
+
     function renderQr(status) {
       /* The QR view shows the code it was opened for and no other. A newer
        * code on the descriptor, a line that is no longer linked, or no
@@ -319,6 +405,7 @@
         show(note, false);
       }
 
+      renderLines(status);
       renderQr(status);
       renderDevices(status);
     }
@@ -390,10 +477,13 @@
     function restoreFocus(held) {
       if (!held || !state.open || held.disabled || typeof held.focus !== "function") return;
       if (held.hasAttribute && held.hasAttribute("hidden")) return;
+      // A line button is rebuilt on every render; the one that was pressed
+      // is gone by now, and focus stays parked on the panel.
+      if (panel.contains && !panel.contains(held)) return;
       held.focus();
     }
 
-    async function ask(name, actionKey) {
+    async function ask(name, actionKey, args) {
       if (!connection || state.pending) return null;
       state.pending = actionKey;
       setNote("", "");
@@ -401,9 +491,10 @@
       render();
       let result;
       try {
-        result = await connection.request(name);
+        result = args ? await connection.request(name, args) : await connection.request(name);
       } finally {
         state.pending = null;
+        state.pendingLine = "";
       }
       render();
       restoreFocus(held);
@@ -433,6 +524,21 @@
       } else {
         setNote("error", (drawn && drawn.message) || "The QR code could not be drawn.");
       }
+      render();
+    }
+
+    /* Make one of the remembered lines this desktop's line. Offered only
+     * while offersLines() holds (the buttons exist only then), and asked
+     * of the application by id alone: the bridge checks the id, the
+     * application refuses one this device does not remember, and the new
+     * line - if it is new - arrives on the next descriptor like any other
+     * connection change. Nothing is chosen here. */
+    async function selectLine(id) {
+      if (!offersLines(state.status, admin)) return;
+      state.pendingLine = id;
+      const result = await ask("selectWorkspace", "select-line", { id });
+      if (!result) return;
+      if (!result.ok) setNote("error", result.message || "That line could not be selected.");
       render();
     }
 
@@ -467,6 +573,12 @@
     } else {
       render();
     }
+    /* An administrator signing in or out changes what the panel offers
+     * and nothing else; the descriptor is redrawn as it stands. */
+    let unsubscribeAdmin = () => {};
+    if (admin && typeof admin.subscribe === "function") {
+      unsubscribeAdmin = admin.subscribe(() => { if (state.status) render(); });
+    }
 
     return Object.freeze({
       element: rootEl,
@@ -477,10 +589,11 @@
       showingQr: () => !!state.qr,
       destroy() {
         unsubscribe();
+        unsubscribeAdmin();
         if (state.open) closePanel();
       }
     });
   }
 
-  return Object.freeze({ create, summarize, guidance });
+  return Object.freeze({ create, summarize, guidance, offersLines });
 });

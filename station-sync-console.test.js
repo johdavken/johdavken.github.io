@@ -100,7 +100,7 @@ function line9State(overrides) {
 
 function producer(initial, actionOverrides) {
   const bridge = bridgeModule.create({ scheduler: run => run() });
-  const env = { state: initial || line9State(), busy: false, calls: [] };
+  const env = { state: initial || line9State(), busy: false, calls: [], facts: [] };
   const actions = Object.assign({
     refresh: async () => { env.calls.push("refresh"); return { ok: true }; },
     reconnect: async () => { env.calls.push("reconnect"); return { ok: true }; },
@@ -113,13 +113,55 @@ function producer(initial, actionOverrides) {
     renderJoinQr: async () => { env.calls.push("renderJoinQr"); return { ok: true, code: env.state.generatedCode, svg: "<svg data-code='AB12'></svg>" }; }
   }, actionOverrides || {});
   env.handle = bridge.connect({
-    read: () => bridgeModule.project(env.state, { lineNumber: 9, busy: env.busy, joinUrl: env.state.generatedCode ? `https://resin.tools/?rtSyncCode=${env.state.generatedCode}` : "" }),
+    // The selected line's number and display name resolve the way app.js
+    // resolves them: from the same facts as the remembered lines' - Line 9
+    // when the producer lists no facts at all.
+    read: () => {
+      const fact = env.facts.find(item => item.id === env.state.selectedWorkspaceId) || null;
+      return bridgeModule.project(env.state, {
+        lineNumber: fact ? fact.lineNumber : 9, displayName: fact ? fact.displayName : "",
+        busy: env.busy, workspaces: env.facts,
+        joinUrl: env.state.generatedCode ? `https://resin.tools/?rtSyncCode=${env.state.generatedCode}` : ""
+      });
+    },
     actions
   });
   env.bridge = bridge;
   env.set = changes => { env.state = Object.assign({}, env.state, changes); env.handle.publish(); };
   return env;
 }
+
+/* The admin bridge as the console reads it: a window (getAccess) and its
+ * notifications (subscribe), nothing else. `signedIn` is the one fact. */
+function adminBridge(signedIn) {
+  const listeners = new Set();
+  const env = {
+    signedIn: !!signedIn,
+    calls: [],
+    bridge: {
+      getAccess() { env.calls.push("getAccess"); return { access: { ready: true, signedIn: env.signedIn, email: env.signedIn ? "admin@example.com" : "" }, device: { ready: true, label: "Line 9 Desktop", userIdShort: "", deviceIdShort: "" } }; },
+      subscribe(fn) { env.calls.push("subscribe"); listeners.add(fn); return () => listeners.delete(fn); }
+    },
+    set(on) { env.signedIn = !!on; for (const fn of listeners) fn(); }
+  };
+  return env;
+}
+
+/* A desktop that remembers Line 9 (selected) and Line 12, and a
+ * selectWorkspace that records the id and moves the selection. */
+function twoLines(actionOverrides) {
+  const env = producer(line9State({ workspaces: [{ id: "ws-9", name: "Line 9" }, { id: "ws-12", name: "Line 12 workspace" }] }), Object.assign({
+    selectWorkspace: async args => {
+      env.calls.push(`selectWorkspace:${args.id}`);
+      env.set({ selectedWorkspaceId: args.id, selectedWorkspace: { id: args.id, name: args.id === "ws-12" ? "Line 12 workspace" : "Line 9" }, members: [] });
+      return { ok: true };
+    }
+  }, actionOverrides || {}));
+  env.facts = [{ id: "ws-9", lineNumber: 9, displayName: "" }, { id: "ws-12", lineNumber: 12, displayName: "Line 12 · East" }];
+  env.handle.publish();
+  return env;
+}
+const lineOptions = root => root.querySelectorAll("[data-action='select-line']");
 
 function mount(env, options) {
   const doc = fakeDocument();
@@ -382,6 +424,158 @@ test("controls the descriptor says are not available are disabled rather than de
   assert.equal(hidden(byAction(c.root, "reconnect")), true, "no reconnect where only an administrator can help");
   assert.match(byClass(c.root, "station-sync__note").textContent, /Ask an administrator/);
   assert.equal(c.root.getAttribute("data-state"), "error");
+});
+
+/* ----------------------------------------------------------------------
+ *   The administrator's line choice
+ * -------------------------------------------------------------------- */
+
+test("offersLines: an administrator and more than one remembered line, and nothing less", () => {
+  const admin = adminBridge(true).bridge;
+  const two = bridgeModule.project(line9State({ workspaces: [{ id: "ws-9", name: "Line 9" }, { id: "ws-12", name: "Line 12" }] }), {});
+  const one = bridgeModule.project(line9State({ workspaces: [{ id: "ws-9", name: "Line 9" }] }), {});
+  assert.equal(consoleModule.offersLines(two, admin), true);
+  assert.equal(consoleModule.offersLines(one, admin), false, "one line is not a choice");
+  assert.equal(consoleModule.offersLines(two, adminBridge(false).bridge), false, "an operator is never offered one");
+  assert.equal(consoleModule.offersLines(two, null), false, "no admin bridge, no choice");
+  assert.equal(consoleModule.offersLines(two, {}), false, "a bridge without a window is no bridge");
+  assert.equal(consoleModule.offersLines(Object.assign({}, two, { enabled: false }), admin), false, "RT Sync off, nothing to choose");
+  assert.equal(consoleModule.offersLines(null, admin), false);
+});
+
+test("without an admin bridge, or with an operator signed in, a two-line desktop is offered no line choice - the panel reads as before", () => {
+  const env = twoLines();
+  const plain = mount(env);
+  plain.built.open();
+  assert.equal(hidden(byClass(plain.root, "station-sync__lines")), true);
+  assert.equal(lineOptions(plain.root).length, 0);
+  const operator = adminBridge(false);
+  const gated = mount(env, { admin: operator.bridge });
+  gated.built.open();
+  assert.equal(hidden(byClass(gated.root, "station-sync__lines")), true);
+  assert.equal(lineOptions(gated.root).length, 0);
+  assert.equal(env.calls.length, 0);
+});
+
+test("an administrator on a two-line desktop sees both lines named as the descriptor names them, the current one pressed and not offered", () => {
+  const env = twoLines();
+  const admin = adminBridge(true);
+  const { root, built } = mount(env, { admin: admin.bridge });
+  built.open();
+  const section = byClass(root, "station-sync__lines");
+  assert.equal(hidden(section), false);
+  assert.equal(byClass(section, "station-sync__lines-heading").textContent, "Lines on this desktop (2)");
+  assert.match(byClass(section, "station-sync__lines-hint").textContent, /Administrator/);
+  const options = lineOptions(root);
+  assert.equal(options.length, 2);
+  assert.deepEqual(options.map(node => node.getAttribute("data-id")), ["ws-9", "ws-12"]);
+  assert.deepEqual(options.map(node => byClass(node, "station-sync__line-name").textContent), ["Line 9", "Line 12 · East"]);
+  assert.equal(options[0].getAttribute("aria-pressed"), "true");
+  assert.equal(options[0].disabled, true, "the current line is named, not offered");
+  assert.ok(options[0].classList.contains("is-current"));
+  assert.match(byClass(options[0], "station-sync__line-detail").textContent, /This desktop's line/);
+  assert.equal(options[1].getAttribute("aria-pressed"), "false");
+  assert.equal(options[1].disabled, false);
+  assert.equal(byClass(options[1], "station-sync__line-detail").textContent, "Line 12 workspace", "the workspace name, when it differs from the display name");
+});
+
+test("one remembered line is not a choice, even for an administrator", () => {
+  const env = producer(line9State({ workspaces: [{ id: "ws-9", name: "Line 9" }] }));
+  const { root, built } = mount(env, { admin: adminBridge(true).bridge });
+  built.open();
+  assert.equal(hidden(byClass(root, "station-sync__lines")), true);
+  assert.equal(lineOptions(root).length, 0);
+});
+
+test("choosing a line asks the bridge for selectWorkspace with that id exactly once, holds every control meanwhile, and the next descriptor names the new line", async () => {
+  const env = twoLines();
+  const { root, built } = mount(env, { admin: adminBridge(true).bridge });
+  built.open();
+  const before = env.calls.length;
+  click(lineOptions(root)[1]);
+  // In flight: every control is held, the asked-for line says so.
+  assert.equal(byAction(root, "refresh").disabled, true);
+  assert.equal(byAction(root, "add-device").disabled, true);
+  const inFlight = lineOptions(root);
+  assert.equal(inFlight[1].disabled, true);
+  assert.match(byClass(inFlight[1], "station-sync__line-detail").textContent, /Connecting…/);
+  await tick(); await tick();
+  assert.deepEqual(env.calls.slice(before), ["selectWorkspace:ws-12"]);
+  // The descriptor moved: the trigger and the title name Line 12, and the
+  // options swap which one is current.
+  assert.equal(byClass(root, "station-sync__line").textContent, "Line 12 · East");
+  assert.equal(byClass(root, "station-sync__title").textContent, "Line 12 · East");
+  const after = lineOptions(root);
+  assert.equal(after[1].getAttribute("aria-pressed"), "true");
+  assert.equal(after[1].disabled, true);
+  assert.equal(after[0].getAttribute("aria-pressed"), "false");
+  assert.equal(after[0].disabled, false);
+  assert.equal(built.isOpen(), true, "the panel stays open on the new line");
+  assert.equal(hidden(byClass(root, "station-sync__note")), true, "no note on success");
+});
+
+test("a refused selection shows the application's message and leaves the current line as it was", async () => {
+  const env = twoLines({ selectWorkspace: async args => { env.calls.push(`selectWorkspace:${args.id}`); return { ok: false, code: "failed", message: "That line is not remembered on this device." }; } });
+  const { root, built } = mount(env, { admin: adminBridge(true).bridge });
+  built.open();
+  click(lineOptions(root)[1]);
+  await tick(); await tick();
+  assert.deepEqual(env.calls, ["selectWorkspace:ws-12"]);
+  const note = byClass(root, "station-sync__note");
+  assert.equal(hidden(note), false);
+  assert.equal(note.getAttribute("data-kind"), "error");
+  assert.equal(note.textContent, "That line is not remembered on this device.");
+  assert.equal(byClass(root, "station-sync__line").textContent, "Line 9");
+  assert.equal(lineOptions(root)[0].getAttribute("aria-pressed"), "true");
+  assert.equal(lineOptions(root)[1].disabled, false, "offered again");
+});
+
+test("a second press while one is in flight is ignored; the descriptor's busy flag holds the options too", async () => {
+  let release;
+  const env = twoLines({ selectWorkspace: async args => { env.calls.push(`selectWorkspace:${args.id}`); await new Promise(resolve => { release = resolve; }); return { ok: true }; } });
+  const { root, built } = mount(env, { admin: adminBridge(true).bridge });
+  built.open();
+  click(lineOptions(root)[1]);
+  click(lineOptions(root)[1]);
+  await tick();
+  assert.deepEqual(env.calls, ["selectWorkspace:ws-12"]);
+  release();
+  await tick(); await tick();
+  env.busy = true; env.handle.publish();
+  assert.equal(lineOptions(root)[1].disabled, true);
+  env.busy = false; env.handle.publish();
+  assert.equal(lineOptions(root)[1].disabled, false);
+});
+
+test("an administrator signing in or out while the panel is open adds or withdraws the section; the descriptor itself is untouched", () => {
+  const env = twoLines();
+  const admin = adminBridge(false);
+  const { root, built } = mount(env, { admin: admin.bridge });
+  built.open();
+  assert.equal(hidden(byClass(root, "station-sync__lines")), true);
+  admin.set(true);
+  assert.equal(hidden(byClass(root, "station-sync__lines")), false);
+  assert.equal(lineOptions(root).length, 2);
+  admin.set(false);
+  assert.equal(hidden(byClass(root, "station-sync__lines")), true);
+  assert.equal(lineOptions(root).length, 0);
+  assert.equal(byClass(root, "station-sync__line").textContent, "Line 9");
+  assert.equal(env.calls.length, 0);
+});
+
+test("the console reads the admin bridge through getAccess and subscribe only, never asks it for anything, and unsubscribes on destroy", () => {
+  const env = twoLines();
+  const admin = adminBridge(true);
+  const used = new Set();
+  const spy = new Proxy(admin.bridge, { get(target, prop) { used.add(String(prop)); return target[prop]; } });
+  const { root, built } = mount(env, { admin: spy });
+  built.open();
+  click(lineOptions(root)[1]);
+  built.close();
+  built.destroy();
+  assert.deepEqual([...used].sort(), ["getAccess", "subscribe"]);
+  admin.set(false);
+  assert.equal(hidden(byClass(root, "station-sync__lines")), false, "after destroy nothing is redrawn");
 });
 
 test("the console never touches the bridge but through subscribe, getStatus and request, and unsubscribes on destroy", () => {

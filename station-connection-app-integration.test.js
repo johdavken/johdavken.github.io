@@ -186,7 +186,10 @@ test("the shell reserves one header slot for the console, and the boot file moun
   assert.equal(slot.attrs.class, "station-header__connection");
   assert.match(boot, /const syncConsole = root\.PolynStationSyncConsole \|\| null;/);
   assert.match(boot, /const connection = root\.PolynStationConnectionBridge \|\| null;/);
-  assert.match(boot, /if \(syncConsole && mounts\.connection\) \{\s*\n\s*const lineConsole = syncConsole\.create\(doc, \{ connection \}\);\s*\n\s*mounts\.connection\.appendChild\(lineConsole\.element\);/);
+  // The console is handed the connection bridge and the admin bridge - the
+  // latter read for one fact, whether an administrator is signed in - and
+  // never the globals.
+  assert.match(boot, /if \(syncConsole && mounts\.connection\) \{\s*\n\s*const lineConsole = syncConsole\.create\(doc, \{ connection, admin \}\);\s*\n\s*mounts\.connection\.appendChild\(lineConsole\.element\);/);
   assert.equal((boot.match(/syncConsole\.create\(/g) || []).length, 1);
   // The boot file hands the bridge over and reads nothing from it itself.
   assert.doesNotMatch(boot, /connection\.(getStatus|request|subscribe)/);
