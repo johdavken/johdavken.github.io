@@ -685,11 +685,15 @@
     // TSM blender's (station-tsm-assets.js) - the same classes, the same
     // target, the same placement; only the polygons differ.
     const blender = m.blender === "tsm" && tsmAssets ? "tsm" : "batch";
-    const asset = (blender === "tsm" ? tsmAssets : mixerAssets).views[m.view];
+    // The TSM blender's variant: the six-loader machine with its side
+    // storage, or the four-loader core machine without.
+    const variant = blender === "tsm" ? (m.variant === "core" && tsmAssets.core ? "core" : "storage") : null;
+    const asset = (blender === "tsm" ? (variant === "core" ? tsmAssets.core : tsmAssets) : mixerAssets).views[m.view];
     const g = group(doc, "station-mixer", "mixer", {
       "data-layer": bank.id,
       "data-station-target": "mixer",
       "data-blender": blender,
+      "data-variant": variant,
       "data-view": m.view,
       "data-mirrored": m.mirrored ? "true" : "false",
       "data-yaw": round(m.yaw)

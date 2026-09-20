@@ -58,9 +58,9 @@ const ASSET_DIR = path.join(ROOT, "station", "assets");
 const MODULE_PATH = path.join(ROOT, "station", "station-tsm-assets.js");
 
 const VIEWS = [
-  { name: "front", yaw: 0, file: "tsm-front.svg", downcomerFile: "tsm-downcomer-front.svg" },
-  { name: "intermediate", yaw: 30, file: "tsm-intermediate.svg", downcomerFile: "tsm-downcomer-intermediate.svg" },
-  { name: "angled", yaw: 60, file: "tsm-angled.svg", downcomerFile: "tsm-downcomer-angled.svg" }
+  { name: "front", yaw: 0, file: "tsm-front.svg", coreFile: "tsm-core-front.svg", downcomerFile: "tsm-downcomer-front.svg" },
+  { name: "intermediate", yaw: 30, file: "tsm-intermediate.svg", coreFile: "tsm-core-intermediate.svg", downcomerFile: "tsm-downcomer-intermediate.svg" },
+  { name: "angled", yaw: 60, file: "tsm-angled.svg", coreFile: "tsm-core-angled.svg", downcomerFile: "tsm-downcomer-angled.svg" }
 ];
 
 /* The mixer masters' camera and scale, so the two blenders are one family. */
@@ -84,7 +84,14 @@ const M = Object.freeze({
   port: { r: 5, h: 296 },
   sensor: { cx: 48, h: 226, r: 6, proud: 9 },
   rim: { h0: 338, h1: 344 },
-  collar: { x: 150, z: 76, h0: 344, h1: 420 }
+  collar: { x: 150, z: 76, h0: 344, h1: 420 },
+  /* The side storage on the six-loader machine (the photographs' 5A and
+   * A6): a wedge on each side of the funnel, its top open at the funnel's
+   * top - the collar rides above the funnel alone, and the side loader
+   * stands on the wedge - its front in the funnel's own front plane, its
+   * outer wall sloping in and down to a small outlet beside the funnel's
+   * bottom, which lands on a chute block on the weigh unit's side. */
+  storage: { reach: 260, top: 338, outlet: { x0: 104, x1: 50, h: 192 }, chute: { x0: 70, x1: 112, z: 30, h0: 160, h1: 192 } }
 });
 
 /* The downcomer, in the same units, its outlet at the origin. */
@@ -139,7 +146,10 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
  *   One view
  * ---------------------------------------------------------------------- */
 
-function render(yaw) {
+/* `options.storage` false draws the four-loader machine: the same body
+ * without the side storage - the core layer's blender. */
+function render(yaw, options) {
+  const withStorage = !options || options.storage !== false;
   const cam = camera(yaw);
   const faces = [];
 
@@ -267,6 +277,12 @@ function render(yaw) {
 
   // The hood over the body, and the transition flange the funnel sits on.
   box(-M.hood.x, M.hood.x, -M.hood.z, M.hood.z, M.hood.h0, M.hood.h1, "weigh-hood", ["blue", "dark", "blue"]);
+  // The chute blocks the side storage's outlets land on, on the hood's sides.
+  if (withStorage) {
+    const c = M.storage.chute;
+    box(-c.x1, -c.x0, -c.z, c.z, c.h0, c.h1, "storage-chute", ["blue", "dark", "blue"]);
+    box(c.x0, c.x1, -c.z, c.z, c.h0, c.h1, "storage-chute", ["blue", "dark", "blue"]);
+  }
   box(-M.transition.x, M.transition.x, -M.transition.z, M.transition.z, M.transition.h0, M.transition.h1, "transition", ["dark", "dark", "steel"]);
 
   // The funnel: the right side, then the front, both sloping inward.
@@ -297,6 +313,26 @@ function render(yaw) {
       return [u[0] * Math.cos(t) + v[0] * Math.sin(t), u[1] * Math.cos(t) + v[1] * Math.sin(t), u[2] * Math.cos(t) + v[2] * Math.sin(t)];
     }, t => (Math.sin(t) > 0.3 ? "accent" : "dark"), "level-sensor");
     face(disc(side * M.sensor.cx, M.sensor.h, M.sensor.r, M.sensor.proud, 12), "accent", "level-sensor", { normal: frontNormal });
+  }
+
+  // The side storage: a wedge each side, front and back in the funnel's
+  // own planes, the top open at the funnel's top, the outer wall an
+  // undercut seen from the near side when the machine is turned.
+  if (withStorage) {
+    const st = M.storage;
+    const backNormal = [0, -frontNormal[1], frontNormal[2]];
+    const outerLen = Math.hypot(st.reach - st.outlet.x0, st.top - st.outlet.h);
+    for (const side of [-1, 1]) {
+      const xO = side * st.reach, xI = side * M.funnel.top.x;
+      const xBo = side * st.outlet.x0, xBi = side * st.outlet.x1;
+      const zT = fz(st.top), zB = fz(st.outlet.h);
+      face([[xO, -zT, st.top], [xI, -zT, st.top], [xBi, -zB, st.outlet.h], [xBo, -zB, st.outlet.h]], "light", "side-storage", { normal: frontNormal });
+      face([[xO, zT, st.top], [xI, zT, st.top], [xBi, zB, st.outlet.h], [xBo, zB, st.outlet.h]], "light", "side-storage", { normal: backNormal });
+      face([[xO, -zT, st.top], [xI, -zT, st.top], [xI, zT, st.top], [xO, zT, st.top]], "edge", "side-storage", { normal: [0, 0, 1] });
+      // The outer wall faces out and DOWN: an undercut.
+      face([[xO, -zT, st.top], [xO, zT, st.top], [xBo, zB, st.outlet.h], [xBo, -zB, st.outlet.h]], "edge", "side-storage",
+        { normal: [(side * (st.top - st.outlet.h)) / outerLen, 0, -(st.reach - st.outlet.x0) / outerLen] });
+    }
   }
 
   // The rim between funnel and collar, then the collar the loaders stand on.
@@ -426,6 +462,7 @@ function classesFor(polygon) {
 
 function standaloneSvg(name, view, rules, machine) {
   const what = machine || "blender";
+  const label = what === "core" ? "blender, four-loader (no side storage)" : what;
   const margin = 6;
   const b = view.bounds;
   const viewBox = [b.left - margin, b.top - margin, b.right - b.left + margin * 2, b.bottom - b.top + margin * 2]
@@ -433,7 +470,7 @@ function standaloneSvg(name, view, rules, machine) {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" role="img" aria-labelledby="station-tsm-${what}-${name}-title"`,
     `     data-view="${name}" data-yaw="${view.yaw}" data-outlet-x="0" data-outlet-y="0" data-inlet-x="${view.inlet.x}" data-inlet-y="${view.inlet.y}">`,
-    `  <title id="station-tsm-${what}-${name}-title">Station TSM ${what} — ${name} view</title>`,
+    `  <title id="station-tsm-${what}-${name}-title">Station TSM ${label} — ${name} view</title>`,
     `  <!-- GENERATED by tools/station-tsm/generate.js. Do not edit; edit the tool and regenerate.`,
     `       Coordinates are stage units; the discharge (where the extruder's feed anchor goes) is the`,
     `       origin. Colour comes from station/styles (the mixer's tone classes), inlined here with the`,
@@ -447,7 +484,7 @@ function standaloneSvg(name, view, rules, machine) {
   ].join("\n");
 }
 
-function moduleSource(views, downcomerViews, unit) {
+function moduleSource(views, coreViews, downcomerViews, unit) {
   const flat = points => points.map(q => `${q[0]},${q[1]}`).join(", ");
   const literal = view => [
     `      yaw: ${view.yaw},`,
@@ -483,6 +520,10 @@ function moduleSource(views, downcomerViews, unit) {
  * There is no rotor: \`rotor\` is null and \`rotorAfter\` is the polygon
  * count, so the renderer paints every polygon in order and nothing else.
  *
+ * \`views\` is the six-loader machine, with the side storage (the
+ * photographs' 5A and A6 wedges) on each side of the funnel; \`core.views\`
+ * is the same body without it - the four-loader machine a core layer runs.
+ *
  * \`downcomer\` is the second machine, the same way: the downcomer that
  * stands between the blender's discharge and the extruder's feed on these
  * lines, its outlet at ITS origin.
@@ -502,6 +543,11 @@ function moduleSource(views, downcomerViews, unit) {
 ${VIEWS.map(v => `    ${v.name}: {\n${literal(views[v.name])}\n    }`).join(",\n")}
   };
 
+  /* The four-loader machine: the body alone, no side storage. */
+  const core = {
+${VIEWS.map(v => `    ${v.name}: {\n${literal(coreViews[v.name])}\n    }`).join(",\n")}
+  };
+
   /* The downcomer under the blender: the same three views, its OUTLET at
    * the origin and its \`inlet\` the centre of its top, where the blender's
    * discharge lands. */
@@ -515,6 +561,7 @@ ${VIEWS.map(v => `    ${v.name}: {\n${literal(downcomerViews[v.name])}\n    }`).
     UNIT: ${unit},
     ORDER: Object.freeze(${JSON.stringify(VIEWS.map(v => v.name))}),
     views: Object.freeze(views),
+    core: Object.freeze({ ORDER: Object.freeze(${JSON.stringify(VIEWS.map(v => v.name))}), views: Object.freeze(core) }),
     downcomer: Object.freeze({ ORDER: Object.freeze(${JSON.stringify(VIEWS.map(v => v.name))}), views: Object.freeze(downcomer) })
   });
 });
@@ -527,19 +574,22 @@ ${VIEWS.map(v => `    ${v.name}: {\n${literal(downcomerViews[v.name])}\n    }`).
 
 function generate() {
   const views = {};
+  const core = {};
   const downcomer = {};
   for (const v of VIEWS) {
     views[v.name] = normalise(render(v.yaw), UNIT);
+    core[v.name] = normalise(render(v.yaw, { storage: false }), UNIT);
     downcomer[v.name] = normalise(renderDowncomer(v.yaw), UNIT);
   }
   const rules = shared.stationRules(shared.readTokens(), "station-mixer__");
   const files = {};
   for (const v of VIEWS) {
     files[path.join(ASSET_DIR, v.file)] = standaloneSvg(v.name, views[v.name], rules, "blender");
+    files[path.join(ASSET_DIR, v.coreFile)] = standaloneSvg(v.name, core[v.name], rules, "core");
     files[path.join(ASSET_DIR, v.downcomerFile)] = standaloneSvg(v.name, downcomer[v.name], rules, "downcomer");
   }
-  files[MODULE_PATH] = moduleSource(views, downcomer, UNIT);
-  return { views, downcomer, unit: UNIT, files };
+  files[MODULE_PATH] = moduleSource(views, core, downcomer, UNIT);
+  return { views, core, downcomer, unit: UNIT, files };
 }
 
 function main(argv) {
