@@ -1077,9 +1077,10 @@
     /* Extruder, then the throat, then the mixer. The throat lands on the feed
      * flange, which stands in front of the gearbox and motor; drawn the other
      * way round the motor would paint over it and the two would look
-     * unconnected. */
-    g.appendChild(extruder(doc, bank));
-    g.appendChild(throat(doc, bank));
+     * unconnected. Neither is drawn with the extruders off (the layout
+     * places neither): the train is then the blender alone. */
+    if (bank.extruder) g.appendChild(extruder(doc, bank));
+    if (bank.throat) g.appendChild(throat(doc, bank));
     // The downcomer, on a TSM line, under the blender and over the throat.
     const dc = downcomer(doc, bank);
     if (dc) g.appendChild(dc);

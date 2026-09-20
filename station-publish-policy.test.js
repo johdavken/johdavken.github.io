@@ -134,12 +134,15 @@ test("commands are on offer only for the live source: demo data pinned in the ho
 
 test("a publish goes through the policy, never straight to a full render", () => {
   assert.match(boot, /bridge\?\.subscribe\(\(\) => \{ onPublish\(\); \}\);/);
-  assert.doesNotMatch(boot, /subscribe\(\(\) => \{ renderAll\(\); \}\)/);
-  // Four subscriptions and no more: the state bridge, into the policy;
+  assert.doesNotMatch(boot, /bridge\?\.subscribe\(\(\) => \{ renderAll\(\); \}\)/);
+  // Five subscriptions and no more: the state bridge, into the policy;
   // the recipes bridge, the weight-profiles bridge and the admin bridge,
   // each of which only tells the Handbook something it shows moved -
-  // never the stage.
-  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 4, "a fifth subscription appeared");
+  // never the stage; and the display preferences (station-display.js),
+  // which carry no state at all - the extruders on or off is structural
+  // for the drawing, so that one is the full render, as a changed line is.
+  assert.equal((boot.match(/\.subscribe\(/g) || []).length, 5, "a sixth subscription appeared");
+  assert.match(boot, /displayController\?\.subscribe\(\(\) => \{ renderAll\(\); \}\);/);
   assert.match(boot, /recipes\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);
   assert.match(boot, /weightProfiles\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);
   assert.match(boot, /admin\?\.subscribe\(\(\) => \{ if \(handbookPanel\) handbookPanel\.update\(\); \}\);/);

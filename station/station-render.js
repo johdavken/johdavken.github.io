@@ -90,6 +90,10 @@
    * @param {string} [options.raiseLayer]    layer to paint last (in transit)
    * @param {number} [options.stageAspect]  the stage's width/height, for the focus canvas
    * @param {object} [options.dimensions]   layout overrides
+   * @param {boolean} [options.showExtruders] false draws the train without
+   *        its extruder on a canvas that ends at the blenders (the layout's
+   *        rule); omitted or true, the train whole. The device preference
+   *        (station-display.js), read by the boot file
    */
   function renderStage(model, options) {
     const settings = options || {};
@@ -103,7 +107,8 @@
       // the layout needs the runtime state too - not just the renderer.
       hopperState: settings.hopperState || null,
       dimensions: settings.dimensions,
-      stageAspect: settings.stageAspect
+      stageAspect: settings.stageAspect,
+      showExtruders: settings.showExtruders
     });
     if (!layout) return null;
 
@@ -118,7 +123,9 @@
       role: (layout.workspace && settings.workspace) || carded ? "group" : "img",
       "aria-label": `${model.line.displayName}: ${model.line.layerCount} layer extrusion train`,
       "data-layer-count": model.line.layerCount,
-      "data-focus-layer": layout.focusLayer || null
+      "data-focus-layer": layout.focusLayer || null,
+      // Which train this drawing shows: with its extruders, or the blenders alone.
+      "data-extruders": layout.dimensions.extruders === false ? "hidden" : "shown"
     });
 
     /* The reserved workspace goes down first: it is a surface the focused
@@ -228,8 +235,8 @@
    * @param {Element} mount
    * @param {object} model
    * @param {object} [options]  hopperState, layerState, focusLayer,
-   *        selectedHopper, hopperControls, layerShare, dimensions, stageAspect -
-   *        as for renderStage
+   *        selectedHopper, hopperControls, layerShare, dimensions, stageAspect,
+   *        showExtruders - as for renderStage
    */
   function patchStage(mount, model, options) {
     if (!mount || !model) return null;
@@ -240,7 +247,8 @@
       focusLayer: settings.focusLayer || null,
       hopperState: settings.hopperState || null,
       dimensions: settings.dimensions,
-      stageAspect: settings.stageAspect
+      stageAspect: settings.stageAspect,
+      showExtruders: settings.showExtruders
     });
     if (!layout) return null;
 
@@ -373,7 +381,8 @@
       raiseLayer: settings.raiseLayer,
       showHint: settings.showHint,
       dimensions: settings.dimensions,
-      stageAspect
+      stageAspect,
+      showExtruders: settings.showExtruders
     });
     mount.appendChild(svg);
     mount.setAttribute("data-layer-count", String(model.line.layerCount));

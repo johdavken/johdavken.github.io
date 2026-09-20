@@ -8,6 +8,13 @@
  * controller to change the authoritative root attribute immediately; CSS
  * does the rest, and the tiles keep showing their own themes because each
  * miniature resolves its tokens in its own scope, not the root's.
+ *
+ * In the heading, beside the theme's copy, the page's one other
+ * preference: Show Extruders, a switch over the display controller
+ * (station-display.js). Off, the default, the stage draws each layer's
+ * blender alone and larger; on, the extruder under it. The switch asks
+ * the controller and reads its state back, as the tiles do the theme's;
+ * the stage redraws from the controller, not from here.
  */
 (function (root, factory) {
   const api = factory();
@@ -60,15 +67,42 @@
     return [...order.values()].filter(family => family.themes.length);
   }
 
+  /* The extruders' switch: a labelled two-position switch, I for on and
+   * O for off marked on the knob's track, in the console's own controls
+   * (handbook.css). role="switch" with aria-checked, so it reads as the
+   * on/off it is and not as a pressed button. */
+  function extruderSwitch(doc, display) {
+    const control = element(doc, "button", "station-appearance__switch", {
+      type: "button", role: "switch", "aria-checked": "false", "data-preference": "show-extruders",
+      title: "Draw each layer's extruder under its blender. Off, the blenders are drawn larger in the room the extruders took."
+    });
+    control.appendChild(text(doc, "span", "station-appearance__switch-label", "Show Extruders"));
+    const track = element(doc, "span", "station-appearance__switch-track", { "aria-hidden": "true" });
+    track.appendChild(text(doc, "span", "station-appearance__switch-mark station-appearance__switch-mark--on", "I"));
+    track.appendChild(text(doc, "span", "station-appearance__switch-mark station-appearance__switch-mark--off", "O"));
+    track.appendChild(element(doc, "span", "station-appearance__switch-knob"));
+    control.appendChild(track);
+    control.addEventListener("click", () => {
+      if (display && typeof display.setShowExtruders === "function") display.setShowExtruders(!display.getShowExtruders());
+    });
+    return control;
+  }
+
   function create(doc, context) {
     const settings = context || {};
     const controller = settings.theme;
+    const display = settings.display && typeof settings.display.getShowExtruders === "function" ? settings.display : null;
     const preview = settings.preview && typeof settings.preview.create === "function" ? settings.preview : null;
     const rootEl = element(doc, "div", "station-appearance");
     const intro = element(doc, "div", "station-appearance__intro");
     intro.appendChild(text(doc, "h2", "station-appearance__title", "Appearance"));
     intro.appendChild(text(doc, "p", "station-appearance__copy",
       "Choose this Station's display theme. The preference stays on this device."));
+    /* The switch stands at the heading's far end, after the copy; without
+     * a display controller (a harness with none) the page is the gallery
+     * alone, as it was. */
+    const extruders = display ? extruderSwitch(doc, display) : null;
+    if (extruders) intro.appendChild(extruders);
     rootEl.appendChild(intro);
 
     const gallery = element(doc, "div", "station-appearance__gallery", { role: "radiogroup", "aria-label": "Station theme" });
@@ -102,8 +136,14 @@
     function update() {
       const selected = controller && typeof controller.getTheme === "function" ? controller.getTheme() : "";
       for (const [id, tile] of tiles) tile.setAttribute("aria-checked", id === selected ? "true" : "false");
+      if (extruders) extruders.setAttribute("aria-checked", display.getShowExtruders() ? "true" : "false");
     }
 
+    /* The switch follows the controller, whoever moved it - this page, or
+     * a second Appearance page over the same controller. The theme tiles
+     * have no such listener: the controller writes the root attribute the
+     * tiles read their check from on the page's own update. */
+    if (display && typeof display.subscribe === "function") display.subscribe(() => update());
     update();
     return {
       element: rootEl,

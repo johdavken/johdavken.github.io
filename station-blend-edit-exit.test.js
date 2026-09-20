@@ -396,9 +396,11 @@ function boot(options) {
     builtCards: () => machine.querySelectorAll("[data-role='blend-card']"),
     chips: () => machine.querySelectorAll("[data-station-target='flip']"),
     /* Turning a layer over or back is its own train's click while the
-     * mode is on: the layer's extruder, the same target an operator
-     * clicks to open it outside the mode. */
-    flipLayer: layer => api.clickTarget("extruder", layer),
+     * mode is on: the layer's mixer, the same target an operator clicks
+     * to open it outside the mode. (The mixer, not the extruder: the
+     * extruders are off by default - station-display.js - so a booted
+     * Station draws none.) */
+    flipLayer: layer => api.clickTarget("mixer", layer),
     flipped: () => machine.querySelectorAll("[data-role='layer'].is-flipped").map(n => n.getAttribute("data-layer")),
     clusters: () => machine.querySelectorAll(".station-hopper-cluster").length,
     modeOn: () => machine.getAttribute("data-blend-edit") === "true",
@@ -524,7 +526,7 @@ test("a field being entered on a card commits along the editor's own path before
   assertModeCleared(s);
   assert.equal(s.state().layers[1].hoppers[1].pct, 35, "the application holds the value the field handed over");
   // The rebuilt stage shows it: the layer's full editor opens on 35.
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   const row = s.machine.querySelectorAll("[data-role='focus-editor'] input").find(i => /blend percentage/.test(i.getAttribute("aria-label") || "") && !i.hasAttribute("readonly"));
   assert.ok(row, "the focused editor has the editable percentage field");
   assert.equal(row.value, "35");
@@ -537,7 +539,7 @@ test("a draft the application refuses on the way out is not applied and strands 
   assert.deepEqual(s.calls.map(c => c.command), ["setHopperBlend"], "the draft was offered to the application once");
   assert.equal(s.state().layers[1].hoppers[1].pct, 40, "and refused: the application's value stands");
   assertModeCleared(s);
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   const row = s.machine.querySelectorAll("[data-role='focus-editor'] input").find(i => /blend percentage/.test(i.getAttribute("aria-label") || "") && !i.hasAttribute("readonly"));
   assert.equal(row.value, "40");
 });
@@ -645,7 +647,7 @@ test("normal interactions work at once after the exit: the train opens a layer, 
   s.flipLayer("B");
   s.clickBlend();
   // The train opens the layer's detailed editor - the full one, not a card.
-  s.clickTarget("extruder", "A");
+  s.clickTarget("mixer", "A");
   const editor = s.machine.querySelector("[data-role='focus-editor']");
   assert.ok(editor, "the focused editor opened");
   assert.equal(editor.getAttribute("data-variant"), "full");
@@ -731,7 +733,7 @@ test("Blend Edit state is fully cleared: entering again turns every layer over a
 test("with the mode on, a layer's train turns that layer back to its hoppers and over again, opens nothing, and clears the hint", () => {
   const s = boot().enterBlendEdit();
   assert.ok(s.status.textContent.startsWith(HINT));
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   assert.deepEqual(s.flipped(), ["A", "C"], "B is back as hoppers");
   assert.equal(s.cards().length, 2);
   assert.equal(s.machine.querySelector("[data-role='focus-editor']"), null, "nothing opened");
@@ -744,7 +746,7 @@ test("with the mode on, a layer's train turns that layer back to its hoppers and
   assert.deepEqual(s.calls, []);
   // Every layer turned back by hand leaves the mode ON: only the switch
   // and Escape end it.
-  for (const layer of ["A", "B", "C"]) s.clickTarget("extruder", layer);
+  for (const layer of ["A", "B", "C"]) s.clickTarget("mixer", layer);
   assert.deepEqual(s.flipped(), []);
   assert.equal(s.modeOn(), true, "the mode is still on with every layer showing hoppers");
   assert.equal(s.blendSwitch().getAttribute("aria-pressed"), "true");
@@ -754,7 +756,7 @@ test("with the mode on, a layer's train turns that layer back to its hoppers and
 test("a field being entered on a card commits when the layer is turned back by its train", () => {
   const s = boot().enterBlendEdit();
   s.draftOnCard("B", 35);
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   assert.deepEqual(s.calls.map(c => [c.command, c.args]), [["setHopperBlend", { recipe: "current", layer: "B", index: 1, pct: 35 }]]);
   assert.deepEqual(s.flipped(), ["A", "C"]);
   assert.equal(s.state().layers[1].hoppers[1].pct, 35);
@@ -911,7 +913,7 @@ test("entering and leaving the mode by each exit in turn leaves nothing behind: 
     assert.equal(s.isHandbookOpen(), false, `round ${round + 1}: the Handbook is closed again`);
     assertModeCleared(s);
     // The stage is the stage: the train opens the layer's full editor.
-    s.clickTarget("extruder", "C");
+    s.clickTarget("mixer", "C");
     const editor = s.machine.querySelector("[data-role='focus-editor']");
     assert.ok(editor && editor.getAttribute("data-variant") === "full", `round ${round + 1}: the focused editor opened`);
     assert.equal(count(s.status.textContent, HINT), 0);
@@ -1051,12 +1053,12 @@ test("the rail steps back while a layer is open and returns when it closes; ente
   const rail = s.rail;
   assert.ok(!rail.classList.contains("is-withdrawn"));
   assert.ok(!rail.hidden);
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   assert.ok(s.machine.querySelector("[data-role='focus-editor']"), "the layer opened");
   assert.ok(rail.classList.contains("is-withdrawn"), "the rail stepped back for the focused layout");
   s.escapeOnStage();
   assert.ok(!rail.classList.contains("is-withdrawn"), "and returned");
-  s.clickTarget("extruder", "B");
+  s.clickTarget("mixer", "B");
   assert.ok(rail.classList.contains("is-withdrawn"));
   // The switch is out of the pointer's way, but the mode's entry closes
   // the layer as it always did: driven here the way a keyboard would.
