@@ -1,0 +1,160 @@
+/* Slate base layer.
+ *
+ * Intentionally tiny. The only element selectors in the entire Slate
+ * stylesheet set are here, they are all inside .slate-root, and they exist
+ * so components never have to undo a browser default. Everything else is a
+ * class.
+ */
+
+.slate-root {
+  box-sizing: border-box;
+  min-height: 100vh;
+  margin: 0;
+  background-color: var(--slate-bg);
+  color: var(--slate-text);
+  color-scheme: var(--slate-color-scheme);
+  font-family: var(--slate-font);
+  font-size: var(--slate-text-md);
+  line-height: var(--slate-line-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+.slate-root *,
+.slate-root *::before,
+.slate-root *::after {
+  box-sizing: inherit;
+}
+
+/* A component's display rule (flex, grid) would otherwise out-specify
+ * the browser's own `[hidden] { display: none }`. */
+.slate-root [hidden] {
+  display: none;
+}
+
+/* The standalone harness puts `slate-root` on <html>, so its <body> is the
+ * one element in a Slate page the reset would otherwise miss. In the hosted
+ * view `slate-root` sits on a div, so this matches nothing. */
+.slate-root > body {
+  margin: 0;
+}
+
+.slate-root h1,
+.slate-root h2,
+.slate-root h3,
+.slate-root p,
+.slate-root dl,
+.slate-root dd {
+  margin: 0;
+}
+
+/* The button reset is deliberately wider than it looks like it needs to be.
+ *
+ * When Slate runs inside the application (?view=slate), the legacy
+ * stylesheet's bare `button { ... }` rule matches Slate's buttons too. This
+ * rule out-specifies it (0,1,1 against 0,0,1), but only for the properties it
+ * actually declares - anything legacy sets and Slate does not would leak
+ * through. So this covers every property that rule sets, not just the ones
+ * Slate cares about. slate-host-isolation.test.js derives that list from
+ * the legacy stylesheets and fails if they gain a property this misses. */
+.slate-root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  transition: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The input reset, for the same reason as the button reset, and wider
+ * again: the legacy stylesheet styles inputs at several specificities -
+ * bare `input`, `input:not([type="checkbox"]):not([type="radio"])`,
+ * `input[readonly]`, and each of those on :focus - so a flat `.slate-root
+ * input` rule would lose to all but the first inside ?view=slate. The
+ * second rule below repeats legacy's own selector shapes under .slate-root,
+ * so every one of them is out-specified.
+ *
+ * That raises a second problem: a component's class (0,1,0) cannot then
+ * restyle an input either. So the reset does not fix values - it reads
+ * them from the --slate-field-* custom properties (tokens.css), and a
+ * component sets the PROPERTY on its input's class. Custom properties are
+ * not subject to the specificity of the declaration that spends them. */
+.slate-root input {
+  width: var(--slate-field-width);
+  min-height: var(--slate-field-min-height);
+  padding: var(--slate-field-padding);
+  margin: 0;
+  border: var(--slate-field-border);
+  border-radius: var(--slate-field-radius);
+  background: var(--slate-field-bg);
+  box-shadow: var(--slate-field-shadow);
+  color: inherit;
+  font: inherit;
+  outline: none;
+  opacity: var(--slate-field-opacity);
+  cursor: var(--slate-field-cursor);
+  transition: none;
+}
+
+.slate-root input:not([type="checkbox"]):not([type="radio"]),
+.slate-root input[readonly],
+.slate-root input:focus,
+.slate-root input[readonly]:focus,
+.slate-root input:not([type="checkbox"]):not([type="radio"]):focus {
+  min-height: var(--slate-field-min-height);
+  padding: var(--slate-field-padding);
+  border: var(--slate-field-border);
+  border-radius: var(--slate-field-radius);
+  background: var(--slate-field-bg);
+  box-shadow: var(--slate-field-shadow);
+  opacity: var(--slate-field-opacity);
+  cursor: var(--slate-field-cursor);
+}
+
+.slate-root input::placeholder {
+  color: var(--slate-text-faint);
+  opacity: 1;
+}
+
+.slate-root input:disabled {
+  color: var(--slate-text-disabled);
+  cursor: default;
+}
+
+.slate-root input[aria-invalid="true"]:focus-visible {
+  outline-color: var(--slate-danger);
+}
+
+.slate-root ol,
+.slate-root ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.slate-root :focus-visible {
+  outline: 2px solid var(--slate-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Utility: visible to assistive tech, not on screen. */
+.slate-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

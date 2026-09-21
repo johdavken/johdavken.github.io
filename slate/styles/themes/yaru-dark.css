@@ -1,0 +1,56 @@
+/* Slate theme: Yaru Dark.
+ *
+ * Ubuntu's Yaru palette on Slate's semantic contract: neutral graphite
+ * surfaces, white text, Ubuntu orange for the accent, Yaru's status
+ * colours lifted to hold against the dark. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="yaru-dark"],
+.slate-theme-scope[data-theme="yaru-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #1e1e1e;
+  --slate-surface: #262626;
+  --slate-surface-raised: #2f2f2f;
+  --slate-surface-sunken: #171717;
+  --slate-surface-hover: #353535;
+  --slate-surface-selected: #3d3d3d;
+
+  --slate-text: #f7f7f7;
+  --slate-text-muted: #c8c8c8;
+  --slate-text-faint: #a0a0a0;
+  --slate-text-disabled: #777777;
+  --slate-text-on-accent: #1e1e1e;
+
+  --slate-border-subtle: #2f2f2f;
+  --slate-border: #3d3d3d;
+  --slate-border-strong: #5f5f5f;
+  --slate-focus-ring: #f99b11;
+
+  --slate-accent: #e95420;
+  --slate-accent-hover: #f0692f;
+  --slate-accent-active: #c7411a;
+  --slate-accent-soft: rgba(233, 84, 32, 0.17);
+
+  --slate-success: #3eb34f;
+  --slate-warning: #f99b11;
+  --slate-danger: #f0657a;
+  --slate-info: #3d8ff5;
+  --slate-success-soft: rgba(62, 179, 79, 0.16);
+  --slate-warning-soft: rgba(249, 155, 17, 0.16);
+  --slate-danger-soft: rgba(240, 101, 122, 0.16);
+
+  --slate-tracking: #3eb34f;
+  --slate-pump-off: #d06fd0;
+  --slate-overdue: #f0657a;
+
+  --slate-layer-outside: #3d8ff5;
+  --slate-layer-subskin: #3eb34f;
+  --slate-layer-core: #f99b11;
+  --slate-layer-inside: #c56fc0;
+  --slate-layer-single: #a0a0a0;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.48);
+  --slate-qr-surface: #f7f7f7;
+}

@@ -1,0 +1,128 @@
+/* The Settings section. */
+
+.slate-settings__group {
+  margin-bottom: var(--slate-space-6);
+}
+
+.slate-settings__heading {
+  margin-bottom: var(--slate-space-3);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-settings__note {
+  margin-top: var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Theme tiles ---- */
+
+.slate-settings__themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--slate-space-4);
+}
+
+.slate-root .slate-theme-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-3);
+  border: 2px solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-theme-tile:hover {
+  border-color: var(--slate-border);
+}
+
+.slate-root .slate-theme-tile.is-selected {
+  border-color: var(--slate-accent);
+}
+
+/* The swatch draws in the TILE'S theme, not the live one: the theme
+   files declare their tokens on .slate-theme-scope as well. */
+.slate-theme-tile__swatch {
+  position: relative;
+  display: block;
+  height: 64px;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-bg);
+  overflow: hidden;
+}
+
+.slate-theme-tile__swatch-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28%;
+  height: 100%;
+  border-right: var(--slate-stroke) solid var(--slate-border-subtle);
+  background: var(--slate-surface);
+}
+
+.slate-theme-tile__swatch-accent {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--slate-accent);
+}
+
+.slate-theme-tile__name {
+  font-weight: 600;
+}
+
+.slate-theme-tile__description {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Safety: the read-only mode ---- */
+
+.slate-settings__lead {
+  max-width: 60ch;
+  margin-bottom: var(--slate-space-3);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-settings__modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--slate-space-3);
+}
+
+.slate-root .slate-settings__mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3);
+  border: 2px solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-settings__mode:hover {
+  border-color: var(--slate-border);
+}
+
+.slate-root .slate-settings__mode.is-selected {
+  border-color: var(--slate-accent);
+}
+
+.slate-settings__mode-label {
+  font-weight: 600;
+}
+
+.slate-settings__mode-note {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}

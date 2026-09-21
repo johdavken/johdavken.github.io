@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="slate-root">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Resin.Tools Slate</title>
+
+  <!-- Theme state restores before the first stylesheet can paint, so the
+       standalone harness never flashes the default before a saved choice. -->
+  <script src="../slate-theme.js?v=0.1.0"></script>
+  <!-- The display preferences (read-only mode) restore with it. -->
+  <script src="../slate-display.js?v=0.1.0"></script>
+  <script>
+    if (globalThis.PolynSlateTheme && typeof globalThis.PolynSlateTheme.initialize === "function") {
+      document.documentElement.slateTheme = globalThis.PolynSlateTheme.initialize(document.documentElement, globalThis);
+    } else {
+      document.documentElement.setAttribute("data-theme", "yaru-light");
+    }
+    if (globalThis.PolynSlateDisplay && typeof globalThis.PolynSlateDisplay.initialize === "function") {
+      document.documentElement.slateDisplay = globalThis.PolynSlateDisplay.initialize(document.documentElement, globalThis);
+    }
+  </script>
+
+  <!-- THE ISOLATED HARNESS.
+       This page exists to develop and inspect Slate's components with no
+       application around them: the demo line (slate-demo.js) stands in
+       for the state bridge's producer. It is NOT how Slate reaches live
+       state - that is /?view=slate in the real application, which runs the
+       same modules and the same shell builder as this page.
+
+       Slate loads NONE of the application's stylesheets. The legacy cascade
+       is not inherited and then overridden, it is simply not present. -->
+  <link rel="stylesheet" href="styles/tokens.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/themes/yaru-light.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/themes/yaru-dark.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/base.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/shell.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/rail.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/header.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/section.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/stat-cards.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/recipe.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/sync.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/settings.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/summary.css?v=0.1.0">
+
+  <!-- The application's own changeover reading (parseChangeoverDate,
+       isChangeoverStale): the run-down resolves the job's clock time
+       through it, so Slate and the floor UI agree on the day. -->
+  <script src="../scheduling.js?v=0.18.4" defer></script>
+  <!-- The command contract and command bridge: the write direction's
+       vocabulary and transport. Nothing connects a producer on this page,
+       so every command is answered "unavailable" and Slate stays read-only. -->
+  <script src="../station-command-contract.js?v=0.11.0" defer></script>
+  <script src="../station-command-bridge.js?v=0.1.0" defer></script>
+  <!-- The read-only state bridge. Nothing connects to it here, so Slate
+       falls back to the demo line. That is the fallback working. -->
+  <script src="../station-state-bridge.js?v=0.7.0" defer></script>
+  <!-- The line connection bridge and the admin bridge: no producer here,
+       so the RT Sync trigger stays hidden. -->
+  <script src="../station-connection-bridge.js?v=0.2.0" defer></script>
+  <script src="../station-admin-bridge.js?v=0.5.0" defer></script>
+
+  <!-- Slate's own layer, in the same order the application host loads it. -->
+  <script src="../station/station-rundown.js?v=0.1.0" defer></script>
+  <script src="slate-logo.js?v=0.1.0" defer></script>
+  <script src="slate-line.js?v=0.1.0" defer></script>
+  <script src="slate-demo.js?v=0.1.0" defer></script>
+  <script src="slate-source.js?v=0.1.0" defer></script>
+  <script src="slate-tracking.js?v=0.1.0" defer></script>
+  <script src="slate-recipe.js?v=0.1.0" defer></script>
+  <script src="slate-stat-cards.js?v=0.1.0" defer></script>
+  <script src="slate-sync.js?v=0.1.0" defer></script>
+  <script src="slate-settings.js?v=0.1.0" defer></script>
+  <script src="slate-rundown-summary.js?v=0.1.0" defer></script>
+  <script src="slate-rail.js?v=0.1.0" defer></script>
+  <script src="slate-sections.js?v=0.1.0" defer></script>
+  <script src="slate-shell.js?v=0.1.0" defer></script>
+  <script src="slate.js?v=0.1.0" defer></script>
+</head>
+<body>
+
+  <!-- The shell is built by slate-shell.js, so this page and the application
+       host cannot drift apart. -->
+  <div data-slate-app></div>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+/* The header: the section's title at the left, the way back, a notice
+   when something is wrong with the page, and the RT Sync trigger at the
+   right. */
+
+.slate-header__title {
+  font-size: var(--slate-text-xl);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.slate-header__legacy {
+  font-size: var(--slate-text-sm);
+  color: var(--slate-text-faint);
+  transition: color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-header__legacy:hover {
+  color: var(--slate-text);
+  text-decoration: underline;
+}
+
+.slate-header__notice {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+  font-size: var(--slate-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-header__notice.is-quiet {
+  background: none;
+  color: var(--slate-text-faint);
+}
+
+.slate-header__sync {
+  position: relative;
+  margin-left: auto;
+  flex: none;
+}
+
+/* Read-only: a badge that opens Settings. */
+.slate-root .slate-header__readonly {
+  flex: none;
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-warning);
+  border-radius: 999px;
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-header__readonly:hover {
+  background: var(--slate-surface-hover);
+}

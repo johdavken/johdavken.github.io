@@ -1,0 +1,146 @@
+/* The section rail. */
+
+.slate-rail__inner {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--slate-space-4) var(--slate-space-3);
+  overflow-y: auto;
+}
+
+/* ---- Brand ---- */
+
+.slate-rail__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  height: calc(var(--slate-header-height) - var(--slate-space-4));
+  padding: 0 var(--slate-space-2);
+  margin-bottom: var(--slate-space-4);
+  color: var(--slate-text);
+}
+
+.slate-logo {
+  width: 72px;
+  height: auto;
+  flex: none;
+}
+
+.slate-rail__word {
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* ---- Items ---- */
+
+.slate-rail__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+}
+
+.slate-root .slate-rail__item {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  width: 100%;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-md);
+  font-weight: 500;
+  line-height: var(--slate-line-tight);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-rail__item:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-rail__item.is-active {
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-rail__glyph {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.slate-rail__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Tools drop-down ---- */
+
+.slate-rail__tools {
+  position: relative;
+}
+
+.slate-rail__chevron {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-rail__tools.is-open .slate-rail__chevron {
+  transform: rotate(180deg);
+}
+
+.slate-rail__menu {
+  margin-top: var(--slate-space-1);
+  padding: var(--slate-space-1) 0 var(--slate-space-1) var(--slate-space-5);
+  border-left: 2px solid var(--slate-border-subtle);
+  margin-left: var(--slate-space-4);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-rail__menu-empty {
+  padding: var(--slate-space-2) var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-rail__menu-item {
+  margin: 0;
+}
+
+/* ---- Foot ---- */
+
+.slate-rail__foot {
+  margin-top: auto;
+  padding-top: var(--slate-space-4);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+/* ---- Motion ----
+   A menu drops the few pixels it opens over. The sync panel (sync.css)
+   drops the same way; the keyframes are declared once, here. */
+@keyframes slate-menu-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-rail__menu {
+    animation: none;
+  }
+}

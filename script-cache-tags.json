@@ -67,6 +67,18 @@
     "v": "0.4.73",
     "hash": "e46ac7a3d68b27a5"
   },
+  "slate-theme.js": {
+    "v": "0.1.0",
+    "hash": "3f80056e8c056da0"
+  },
+  "slate-display.js": {
+    "v": "0.1.0",
+    "hash": "0fa5e3f449ab586d"
+  },
+  "slate-host.js": {
+    "v": "0.1.1",
+    "hash": "a97413115b7dc477"
+  },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
     "hash": "c76d4cfdd0d0de1f"

@@ -1,0 +1,114 @@
+/* The job's cards over the working pane. */
+
+.slate-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--slate-space-4);
+}
+
+.slate-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  transition: box-shadow var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-card:hover {
+  border-color: var(--slate-border);
+}
+
+.slate-card.is-editing {
+  border-color: var(--slate-accent);
+}
+
+.slate-card.is-stale {
+  border-color: var(--slate-warning);
+}
+
+.slate-root .slate-card__trigger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  width: 100%;
+  padding: var(--slate-space-4);
+  border-radius: var(--slate-radius-lg);
+}
+
+.slate-card.is-readonly .slate-card__trigger {
+  cursor: default;
+}
+
+.slate-card__label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-card__value {
+  color: var(--slate-text);
+  font-size: var(--slate-text-2xl);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-card.is-unset .slate-card__value {
+  color: var(--slate-text-faint);
+  font-weight: 500;
+}
+
+.slate-card__sub {
+  min-height: calc(var(--slate-text-sm) * var(--slate-line-normal));
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-card.is-stale .slate-card__sub {
+  color: var(--slate-warning);
+}
+
+/* The editor takes the value's place. */
+.slate-card.is-editing .slate-card__trigger {
+  display: none;
+}
+
+.slate-card__editor {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-4);
+}
+
+.slate-card__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-2) var(--slate-space-3);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 40px;
+  min-width: 0;
+  font-size: var(--slate-text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-card__unit {
+  flex: none;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-card__note {
+  padding: 0 var(--slate-space-4) var(--slate-space-3);
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}

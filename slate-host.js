@@ -1,0 +1,158 @@
+/* Slate host - the switch that lets the Slate presentation run inside the
+ * real Resin.Tools runtime.
+ *
+ * THE PROBLEM THIS SOLVES
+ *
+ * slate/slate.html cannot show live state, because app.js deliberately does
+ * not run there. The state bridge has no producer on that page and Slate
+ * falls back to demo data. To see real state, Slate has to run in the
+ * document where the application is already running - one app, one backend
+ * connection, one RT Sync runtime, one bridge producer - with Slate as a
+ * presentation layer over it, the way Station is.
+ *
+ * WHAT THIS FILE IS, AND IS NOT
+ *
+ * It is an activation switch and an asset loader. It starts nothing, owns no
+ * state, and never touches application state. app.js starts exactly as it
+ * always does, connects the bridges exactly as it always does, and Slate
+ * subscribes to those same bridges as an ordinary consumer beside Station.
+ *
+ * NORMAL STARTUP IS PROTECTED BY DOING NOTHING
+ *
+ * Without ?view=slate this file returns before it touches the document. No
+ * attribute is set, no element is created, no stylesheet is linked, no
+ * script is fetched. In normal mode the Slate rules are not in the document
+ * at all. Loading is dynamic for the same reason: a statically linked Slate
+ * stylesheet would be inert but present, and "inert but present" is a thing
+ * that stops being true one edit later.
+ */
+(function (root) {
+  "use strict";
+
+  const doc = root.document;
+  if (!doc) return;
+
+  const FLAG = "view";
+  const VALUE = "slate";
+  const ATTRIBUTE = "data-slate-view";
+
+  /* Assets, in load order. Slate's own modules are order-dependent -
+   * slate.js reads the others' globals when it executes - so they are
+   * injected with async=false, which preserves execution order for
+   * dynamically inserted scripts. */
+  const STYLESHEETS = [
+    "slate/styles/host.css",
+    "slate/styles/tokens.css",
+    "slate/styles/themes/yaru-light.css",
+    "slate/styles/themes/yaru-dark.css",
+    "slate/styles/base.css",
+    "slate/styles/shell.css",
+    "slate/styles/components/rail.css",
+    "slate/styles/components/header.css",
+    "slate/styles/components/section.css",
+    "slate/styles/components/stat-cards.css",
+    "slate/styles/components/recipe.css",
+    "slate/styles/components/sync.css",
+    "slate/styles/components/settings.css",
+    "slate/styles/components/summary.css"
+  ];
+
+  const SCRIPTS = [
+    // The run-down projection, shared with Station: pure arithmetic over
+    // the snapshot, no DOM, no timers. The one asset outside slate/.
+    "station/station-rundown.js",
+    "slate/slate-logo.js",
+    "slate/slate-line.js",
+    "slate/slate-demo.js",
+    "slate/slate-source.js",
+    "slate/slate-tracking.js",
+    "slate/slate-recipe.js",
+    "slate/slate-stat-cards.js",
+    "slate/slate-sync.js",
+    "slate/slate-settings.js",
+    "slate/slate-rundown-summary.js",
+    "slate/slate-rail.js",
+    "slate/slate-sections.js",
+    "slate/slate-shell.js",
+    "slate/slate.js"
+  ];
+
+  /* The one cache tag for every Slate asset. Bumped on every Slate change,
+   * together with this file's own ?v= in index.html - a stale app.js under
+   * fresh Slate modules reads as "the application did not connect". */
+  const VERSION = "0.1.1";
+
+  function requested() {
+    try {
+      return new URL(root.location.href).searchParams.get(FLAG) === VALUE;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Everything below this line runs only in Slate mode.
+  if (!requested()) return;
+
+  function linkStylesheet(href) {
+    const link = doc.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `${href}?v=${VERSION}`;
+    doc.head.appendChild(link);
+  }
+
+  function loadScript(src) {
+    const script = doc.createElement("script");
+    script.src = `${src}?v=${VERSION}`;
+    // Preserves order for dynamically inserted scripts; without it they race.
+    script.async = false;
+    doc.head.appendChild(script);
+  }
+
+  function activate() {
+    if (doc.body.hasAttribute(ATTRIBUTE)) return;
+
+    // The host container. slate.js mounts into [data-slate-app] and builds
+    // the shell there from the shared builder, so the host does not restate
+    // the shell's markup and the two cannot drift.
+    const host = doc.createElement("div");
+    host.setAttribute("data-slate-host", "");
+    host.setAttribute("data-slate-app", "");
+    host.className = "slate-root";
+    const theme = root.PolynSlateTheme;
+    host.slateTheme = theme && typeof theme.initialize === "function"
+      ? theme.initialize(host, root)
+      : null;
+    if (!host.slateTheme) host.setAttribute("data-theme", "yaru-light");
+    /* The display preferences (slate-display.js) the same way: read here,
+     * before the boot draws, so the first render already honours them. */
+    const display = root.PolynSlateDisplay;
+    host.slateDisplay = display && typeof display.initialize === "function"
+      ? display.initialize(host, root)
+      : null;
+
+    /* FOCUS STOPS AT THE HOST'S EDGE
+     *
+     * host.css hides the application's shell; this is the same exclusion
+     * for the one application behaviour that reaches Slate through the
+     * document rather than the stylesheet. app.js listens for `focusin`
+     * on the document and, for every input that takes the focus, defers a
+     * focus-and-select-all (selectAllSoon) - right for its own numeric
+     * fields, wrong for Slate's, where a deferred refocus lands after the
+     * operator has moved on and can take the focus back from the control
+     * Slate just gave it to. */
+    if (typeof host.addEventListener === "function") {
+      host.addEventListener("focusin", event => { if (event && typeof event.stopPropagation === "function") event.stopPropagation(); });
+    }
+    doc.body.appendChild(host);
+
+    // Set last: the moment this lands, host.css hides the application shell,
+    // so the container it reveals already exists.
+    doc.body.setAttribute(ATTRIBUTE, VALUE);
+
+    STYLESHEETS.forEach(linkStylesheet);
+    SCRIPTS.forEach(loadScript);
+  }
+
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", activate);
+  else activate();
+})(typeof globalThis !== "undefined" ? globalThis : this);
