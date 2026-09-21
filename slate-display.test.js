@@ -80,7 +80,7 @@ test("the effective mode: automatic follows the line, an explicit choice does no
  *   What the sections do with it
  * -------------------------------------------------------------------- */
 
-const ALL = ["setHopperTracking", "setPumpOff", "resetTracking", "setChangeover", "setLineRate", "setProductionPounds", "setScrapPounds"];
+const ALL = [...require("./station-command-contract.js").COMMANDS];
 
 function resolved() {
   const snap = demo.snapshot(5000);
@@ -104,7 +104,7 @@ test("with read-only on, a toggle click dispatches nothing and explains; flippin
   const commands = makeCommands({ capabilities: ALL });
   let readOnly = true;
   const said = [];
-  const view = recipe.create(doc, { commands: () => commands, say: message => said.push(message), readOnly: () => readOnly, timers: { setTimeout: () => 1, clearTimeout() {} } });
+  const view = recipe.create(doc, { commands: () => commands, say: message => said.push(message), readOnly: () => readOnly, timers: { setTimeout: () => 1, clearTimeout() {} }, print: { print: () => ({ ok: true }) } });
   view.update(resolved(), { kind: "structural" });
   const toggle = view.element.querySelector(".slate-hopper[data-hopper='A1'] [data-slate-control='tracking']");
   assert.equal(toggle.getAttribute("data-able"), "false");
@@ -217,6 +217,12 @@ test("hosted on a linked line, Slate is read-only by default: badge shown, toggl
   toggle.dispatchEvent({ type: "click", target: toggle, stopPropagation() {} });
   assert.equal(executed.length, 0);
   assert.ok(hostEl.querySelector(".slate-card--rate").classList.contains("is-readonly"));
+  // The recipe's edits are withheld too: a cell never opens, the badge never lifts.
+  const resinCell = hostEl.querySelector(".slate-hopper[data-hopper='A3'] .slate-hopper__resin");
+  assert.equal(resinCell.getAttribute("data-able"), "false");
+  resinCell.dispatchEvent({ type: "click", target: resinCell, stopPropagation() {} });
+  assert.equal(hostEl.querySelector(".slate-combobox"), null, "a resin editor opened under read-only");
+  assert.ok(!hostEl.querySelector(".slate-hopper[data-hopper='A3']").classList.contains("is-movable"));
 
   // The badge opens Settings; choosing Off makes the line writable at once.
   badge.dispatchEvent({ type: "click", target: badge, stopPropagation() {} });
@@ -227,6 +233,8 @@ test("hosted on a linked line, Slate is read-only by default: badge shown, toggl
   assert.equal(toggle.getAttribute("data-able"), "true");
   toggle.dispatchEvent({ type: "click", target: toggle, stopPropagation() {} });
   assert.equal(executed.length, 1);
+  assert.equal(resinCell.getAttribute("data-able"), "true");
+  assert.ok(hostEl.querySelector(".slate-hopper[data-hopper='A3']").classList.contains("is-movable"));
 });
 
 test("hosted on the device's own session, automatic is writable; an explicit On still holds", () => {

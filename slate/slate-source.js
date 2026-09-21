@@ -57,6 +57,62 @@
     return state;
   }
 
+  /* Resin codes compare the way the application compares them: trimmed,
+   * whitespace collapsed, case-insensitive. */
+  function normalizeResin(value) {
+    return String(value == null ? "" : value).trim().replace(/\s+/g, " ").toUpperCase();
+  }
+
+  function sameResin(a, b) {
+    return normalizeResin(a) === normalizeResin(b);
+  }
+
+  /* The planned recipe by slot, keyed as Current's. Deliberately without
+   * track, pump-off or weight: a plan carries none, and a key that is
+   * absent cannot be read as false. */
+  function nextHopperStateFrom(snapshot) {
+    const state = {};
+    const plan = snapshot && snapshot.nextRecipe;
+    if (!plan || !Array.isArray(plan.layers)) return state;
+    for (const layer of plan.layers) {
+      const name = String((layer && layer.name) || "");
+      for (const hopper of (Array.isArray(layer && layer.hoppers) ? layer.hoppers : [])) {
+        const index = Number(hopper && hopper.index);
+        if (!Number.isInteger(index)) continue;
+        state[`${name}:${index}`] = {
+          resinName: hopper && hopper.resinName ? String(hopper.resinName) : "",
+          pct: finite(hopper && hopper.pct)
+        };
+      }
+    }
+    return state;
+  }
+
+  function nextLayerStateFrom(snapshot) {
+    const state = {};
+    const plan = snapshot && snapshot.nextRecipe;
+    if (!plan || !Array.isArray(plan.layers)) return state;
+    for (const layer of plan.layers) {
+      state[String((layer && layer.name) || "")] = { layerPct: finite(layer && layer.layerPct) };
+    }
+    return state;
+  }
+
+  /* Whether anything is planned at all. */
+  function planFrom(snapshot) {
+    const plan = snapshot && snapshot.nextRecipe;
+    return { planned: !!(plan && Array.isArray(plan.layers) && plan.layers.length > 0) };
+  }
+
+  function historyFrom(snapshot) {
+    const history = (snapshot && snapshot.history) || {};
+    const one = key => ({
+      canUndo: !!(history[key] && history[key].canUndo),
+      canRedo: !!(history[key] && history[key].canRedo)
+    });
+    return { current: one("current"), next: one("next") };
+  }
+
   function jobStateFrom(snapshot) {
     const job = (snapshot && snapshot.job) || {};
     const rate = finite(job.lineRate);
@@ -90,12 +146,52 @@
       line: model,
       hopperState: hopperStateFrom(snapshot),
       layerState: layerStateFrom(snapshot),
+      nextHopperState: nextHopperStateFrom(snapshot),
+      nextLayerState: nextLayerStateFrom(snapshot),
+      plan: planFrom(snapshot),
+      history: historyFrom(snapshot),
       job: jobStateFrom(snapshot),
       label: live ? "Live" : "Demo",
       detail: live
         ? (model && model.line.linked ? "The application's linked line." : "The application's own session; no line is linked.")
         : "No application is connected to the state bridge."
     };
+  }
+
+  /* The runtime and layer state of one recipe, by name. */
+  function stateFor(resolved, recipe) {
+    if (recipe === "next") {
+      return { hoppers: (resolved && resolved.nextHopperState) || {}, layers: (resolved && resolved.nextLayerState) || {} };
+    }
+    return { hoppers: (resolved && resolved.hopperState) || {}, layers: (resolved && resolved.layerState) || {} };
+  }
+
+  /* The OTHER recipe's assignment beside each slot of the recipe shown,
+   * for the Compare switch: null when nothing is planned (there is nothing
+   * to compare against, either way round). `differs` is true when the
+   * resin (compared as the application compares it) or the blend moved. */
+  function compareFor(resolved, recipe) {
+    if (!resolved || !resolved.plan || !resolved.plan.planned || !resolved.line) return null;
+    const shown = stateFor(resolved, recipe);
+    const other = stateFor(resolved, recipe === "next" ? "current" : "next");
+    const hoppers = {};
+    const layers = {};
+    for (const layer of resolved.line.layers) {
+      const mine = shown.layers[layer.id] ? shown.layers[layer.id].layerPct : 0;
+      const theirs = other.layers[layer.id] ? other.layers[layer.id].layerPct : 0;
+      layers[layer.id] = { share: theirs, differs: mine !== theirs };
+      for (const hopper of layer.hoppers) {
+        const key = `${layer.id}:${hopper.index}`;
+        const a = shown.hoppers[key] || { resinName: "", pct: 0 };
+        const b = other.hoppers[key] || { resinName: "", pct: 0 };
+        hoppers[key] = {
+          resin: b.resinName || "",
+          pct: finite(b.pct),
+          differs: !sameResin(a.resinName, b.resinName) || finite(a.pct) !== finite(b.pct)
+        };
+      }
+    }
+    return { hoppers, layers };
   }
 
   /* --------------------------------------------------------------------
@@ -108,7 +204,9 @@
     return JSON.stringify({
       kind: resolved.kind,
       line: model ? model.line : null,
-      layers: model ? model.layers.map(layer => ({ id: layer.id, role: layer.role, hopperCount: layer.hopperCount })) : null
+      layers: model ? model.layers.map(layer => ({ id: layer.id, role: layer.role, hopperCount: layer.hopperCount })) : null,
+      // A plan appearing or disappearing changes what the Next body holds.
+      planned: !!(resolved.plan && resolved.plan.planned)
     });
   }
 
@@ -116,6 +214,9 @@
     return JSON.stringify({
       hopperState: resolved.hopperState || {},
       layerState: resolved.layerState || {},
+      nextHopperState: resolved.nextHopperState || {},
+      nextLayerState: resolved.nextLayerState || {},
+      history: resolved.history || null,
       job: resolved.job || null
     });
   }
@@ -126,5 +227,8 @@
     return valuesKey(before) === valuesKey(after) ? "none" : "values";
   }
 
-  return Object.freeze({ hopperStateFrom, layerStateFrom, jobStateFrom, resolveSource, structureKey, valuesKey, classifyChange });
+  return Object.freeze({
+    normalizeResin, sameResin, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, historyFrom,
+    jobStateFrom, stateFor, compareFor, resolveSource, structureKey, valuesKey, classifyChange
+  });
 });

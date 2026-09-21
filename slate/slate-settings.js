@@ -68,7 +68,7 @@
     const display = settings.display || null;
     const safety = element(doc, "section", "slate-settings__group", { "aria-label": "Safety" });
     safety.appendChild(text(doc, "h2", "slate-settings__heading", "Safety"));
-    safety.appendChild(text(doc, "p", "slate-settings__lead", "Read-only keeps Slate from changing the line's job: tracking, pump-off, the changeover and the output stay as they are. Connecting to and leaving lines is not affected."));
+    safety.appendChild(text(doc, "p", "slate-settings__lead", "Read-only keeps Slate from changing the line's job: the recipe, the plan, tracking, pump-off, the changeover and the output stay as they are. Connecting to and leaving lines is not affected."));
     const modes = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Read-only" });
     const modeButtons = new Map();
     for (const [mode, label, note] of [["auto", "Automatic", "Read-only whenever a line is linked; writable on this device's own session."], ["on", "On", "Always read-only."], ["off", "Off", "Always writable."]]) {

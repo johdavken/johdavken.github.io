@@ -91,3 +91,75 @@ test("classifyChange: values move in place, structure rebuilds, nothing is nothi
   const bumped = live({ revision: 8 });
   assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: bumped })), "none");
 });
+
+/* ----------------------------------------------------------------------
+ *   The planned recipe, history and compare
+ * -------------------------------------------------------------------- */
+
+function withPlan(mutate) {
+  const snap = live();
+  snap.nextRecipe = {
+    layers: snap.layers.map(layer => ({
+      name: layer.name,
+      layerPct: layer.layerPct,
+      hoppers: layer.hoppers.map(hopper => ({ index: hopper.index, pct: hopper.pct, resinName: hopper.resinName }))
+    }))
+  };
+  snap.history = { current: { canUndo: true, canRedo: false }, next: { canUndo: false, canRedo: true } };
+  if (mutate) mutate(snap);
+  return snap;
+}
+
+test("the plan is keyed like Current and carries no runtime keys; no plan is no plan", () => {
+  const none = source.resolveSource({ snapshot: live() });
+  assert.deepEqual(none.nextHopperState, {});
+  assert.deepEqual(none.nextLayerState, {});
+  assert.deepEqual(none.plan, { planned: false });
+  assert.deepEqual(none.history, { current: { canUndo: false, canRedo: false }, next: { canUndo: false, canRedo: false } });
+
+  const planned = source.resolveSource({ snapshot: withPlan() });
+  assert.deepEqual(planned.plan, { planned: true });
+  assert.deepEqual(planned.nextHopperState["A:0"], { resinName: "HX204", pct: 60 });
+  assert.deepEqual(Object.keys(planned.nextHopperState["A:0"]).sort(), ["pct", "resinName"], "a plan slot carries runtime keys");
+  assert.deepEqual(planned.nextLayerState.B, { layerPct: 50 });
+  assert.deepEqual(planned.history, { current: { canUndo: true, canRedo: false }, next: { canUndo: false, canRedo: true } });
+  assert.deepEqual(source.planFrom({ nextRecipe: { layers: [] } }), { planned: false });
+  assert.deepEqual(source.stateFor(planned, "next").hoppers, planned.nextHopperState);
+  assert.deepEqual(source.stateFor(planned, "current").layers, planned.layerState);
+});
+
+test("compareFor: nothing to compare without a plan; with one, each slot names the other recipe and whether it differs", () => {
+  assert.equal(source.compareFor(source.resolveSource({ snapshot: live() }), "current"), null);
+  const same = source.compareFor(source.resolveSource({ snapshot: withPlan() }), "current");
+  assert.deepEqual(same.hoppers["A:0"], { resin: "HX204", pct: 60, differs: false });
+  assert.deepEqual(same.layers.A, { share: 25, differs: false });
+  assert.ok(Object.values(same.hoppers).every(one => !one.differs));
+
+  const changed = source.resolveSource({ snapshot: withPlan(snap => {
+    snap.nextRecipe.layers[0].hoppers[0].resinName = " hx204 ";  // the same resin, spelt differently
+    snap.nextRecipe.layers[0].hoppers[1].resinName = "LL318";     // a different resin
+    snap.nextRecipe.layers[0].hoppers[2].pct = 15;                // a different blend
+    snap.nextRecipe.layers[1].layerPct = 40;                      // a different share
+  }) });
+  const fromCurrent = source.compareFor(changed, "current");
+  assert.equal(fromCurrent.hoppers["A:0"].differs, false, "case and whitespace made a resin differ");
+  assert.deepEqual(fromCurrent.hoppers["A:1"], { resin: "LL318", pct: 30, differs: true });
+  assert.deepEqual(fromCurrent.hoppers["A:2"], { resin: "AB120", pct: 15, differs: true });
+  assert.deepEqual(fromCurrent.layers.B, { share: 40, differs: true });
+  // From the Next tab the "other" is Current.
+  const fromNext = source.compareFor(changed, "next");
+  assert.deepEqual(fromNext.hoppers["A:1"], { resin: "LD105", pct: 30, differs: true });
+  assert.deepEqual(fromNext.layers.B, { share: 50, differs: true });
+  assert.equal(source.sameResin("a b", "A  B "), true);
+});
+
+test("a Next-only edit, a history flip and a plan appearing are all changes Slate redraws for", () => {
+  const before = source.resolveSource({ snapshot: withPlan() });
+  const nextEdit = source.resolveSource({ snapshot: withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; }) });
+  assert.equal(source.classifyChange(before, nextEdit), "values");
+  const history = source.resolveSource({ snapshot: withPlan(snap => { snap.history.next.canUndo = true; }) });
+  assert.equal(source.classifyChange(before, history), "values");
+  const unplanned = source.resolveSource({ snapshot: live() });
+  assert.equal(source.classifyChange(unplanned, before), "structural", "a plan appearing did not rebuild");
+  assert.equal(source.classifyChange(before, unplanned), "structural");
+});

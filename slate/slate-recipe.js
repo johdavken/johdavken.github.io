@@ -1,45 +1,58 @@
-/* The Recipe section: the running recipe, layer by layer, down the page.
+/* The Recipe section: the running recipe and the planned one, layer by
+ * layer, down the page.
  *
- * Each layer is a block with its name, role and share in a column at the
- * left and its hoppers as rows beside it: id, resin, blend, effective
- * weight, and - in Track mode - the tracking and pump-off toggles. The
- * mode switch at the top offers Track, Edit, Compare and Print; in phase 1
- * only Track does anything, and the other three say so.
+ * Two tabs, one per recipe. Current carries the job's runtime state - the
+ * tracking and pump-off toggles, the receiver weight, the reset - and
+ * Next carries none of it: a plan is resin and blend only. Everything
+ * else is the same on both: a layer's name, role and share in a column
+ * at the left, its hoppers as rows beside it, and every value editable in
+ * place - the resin through the catalog search, the blend and the share
+ * as numbers, an assignment moved by dragging its badge onto another row.
+ * The bar holds the Compare switch (the other recipe under each row: green
+ * where the two agree, red where they differ), the plan's two moves on
+ * the Next tab, and Print.
  *
- * The section dispatches nothing itself. Track's toggles and the reset
- * go through slate-tracking.js on the command bridge the boot hands in,
- * and the boot is told of every committed change (onCommitted) so the
- * bridge's echo can be recognised as the operator's own.
+ * The section dispatches nothing itself. Its seams - slate-tracking.js,
+ * slate-recipe-actions.js, slate-plan-actions.js - are handed the command
+ * bridge the boot gives this section, and the boot is told of every
+ * committed change (onCommitted) so the bridge's echo can be recognised
+ * as the operator's own.
  *
- * A values change patches rows in place; only a structural change
- * rebuilds them. A row is never re-created for a value, so an armed reset
- * or a focused toggle keeps its element under another device's edit.
+ * A values publish patches rows in place and never touches an open
+ * editor: the operator's own echo takes the value; another device's
+ * change is marked on the row and said; a structural publish abandons the
+ * edit and says so. Rows are never re-created for a value, so an armed
+ * reset, a focused editor or a drag in flight keeps its element.
  */
 (function (root, factory) {
-  const tracking = typeof require === "function"
-    ? require("./slate-tracking.js")
-    : (root && root.PolynSlateTracking);
-  const line = typeof require === "function"
-    ? require("./slate-line.js")
-    : (root && root.PolynSlateLine);
-  const api = factory(tracking, line);
+  const pick = (name, file) => (typeof require === "function" ? require(file) : (root && root[name]));
+  const api = factory(
+    pick("PolynSlateTracking", "./slate-tracking.js"),
+    pick("PolynSlateLine", "./slate-line.js"),
+    pick("PolynSlateSource", "./slate-source.js"),
+    pick("PolynSlateRecipeActions", "./slate-recipe-actions.js"),
+    pick("PolynSlatePlanActions", "./slate-plan-actions.js"),
+    pick("PolynSlateResinSearch", "./slate-resin-search.js"),
+    pick("PolynSlateRecipeDrag", "./slate-recipe-drag.js"),
+    pick("PolynSlateLayerMenu", "./slate-layer-menu.js"),
+    pick("PolynSlatePrint", "./slate-print.js")
+  );
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateRecipe = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule) {
   "use strict";
 
-  const MODES = Object.freeze(["track", "edit", "compare", "print"]);
-  const MODE_LABEL = Object.freeze({ track: "Track", edit: "Edit", compare: "Compare", print: "Print" });
-  const STUB = Object.freeze({
-    track: "",
-    edit: "Edit arrives in phase 2. Resin and blend are edited in Resin.Tools (Legacy) or Station for now.",
-    compare: "Compare against the next recipe arrives in phase 2.",
-    print: "Print arrives in phase 2. Print the recipe sheet from Resin.Tools (Legacy) for now."
-  });
+  const RECIPES = Object.freeze(["current", "next"]);
+  const RECIPE_LABEL = Object.freeze({ current: "Current", next: "Next" });
   const RESET_LABEL = "Reset tracking";
   const RESET_ARMED_LABEL = "Confirm reset";
   const RESET_ARM_MS = 4000;
+  const PROMOTE_ARMED_LABEL = "Confirm promote";
   const EMPTY = "—";
+  const NO_PLAN = "Nothing is planned yet. Start from the running recipe, then change what the changeover needs.";
+  const CHANGED_UNDERNEATH = "changed in the application while you were editing; what you are entering here has not been applied.";
+  const ABANDONED = "The line changed on another device; the edit you had open was not applied.";
+  const SLOT_LABEL = Object.freeze({ resin: "resin", pct: "blend", share: "share" });
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -54,6 +67,11 @@
     return node;
   }
 
+  function show(node, on) {
+    if (on) node.removeAttribute("hidden");
+    else node.setAttribute("hidden", "");
+  }
+
   function formatPct(value) {
     const number = Number(value);
     if (!Number.isFinite(number) || number <= 0) return EMPTY;
@@ -66,13 +84,15 @@
     return `${Number(number.toFixed(1)).toLocaleString("en-US")} lb`;
   }
 
-  /* What a row shows, from a slot's runtime state. Compared field by
-   * field on a values change, so only what moved is rewritten. */
+  /* What a row shows, from a slot's state. Compared field by field on a
+   * values change, so only what moved is rewritten. */
   function cellsFor(runtime) {
     const state = runtime || {};
     const assigned = !!(state.resinName && String(state.resinName).trim());
     return {
       assigned,
+      resinName: assigned ? String(state.resinName) : "",
+      pctValue: Number(state.pct) || 0,
       resin: assigned ? String(state.resinName) : EMPTY,
       pct: assigned ? formatPct(state.pct) : EMPTY,
       weight: assigned ? formatWeight(state.effectiveWeight) : EMPTY,
@@ -92,10 +112,13 @@
   /**
    * @param {Document} doc
    * @param {object} ctx
-   * @param {function} ctx.commands     () -> the command bridge, or null
+   * @param {function} ctx.commands      () -> the command bridge, or null
    * @param {function} [ctx.onCommitted] told of every ok+changed result
-   * @param {function} [ctx.say]        a line for the operator (refusals)
-   * @param {object} [ctx.timers]       { setTimeout, clearTimeout }
+   * @param {function} [ctx.say]         a line for the operator
+   * @param {function} [ctx.readOnly]    () -> whether Slate is read-only now
+   * @param {function} [ctx.resins]      () -> the resin catalog
+   * @param {object} [ctx.timers]        { setTimeout, clearTimeout }
+   * @param {object} [ctx.print]         a printer (slate-print.js's create) - built here by default
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -104,224 +127,410 @@
     const say = typeof settings.say === "function" ? settings.say : () => {};
     const timers = settings.timers || { setTimeout, clearTimeout };
     const readOnly = typeof settings.readOnly === "function" ? settings.readOnly : () => false;
+    const resins = typeof settings.resins === "function" ? settings.resins : () => [];
     const guard = () => ({ readOnly: !!readOnly() });
+    const commands = () => commandsFor(current);
 
-    const rootEl = element(doc, "div", "slate-recipe", { "data-mode": "track" });
+    const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current" });
 
-    // The bar: what is shown, and the mode switch.
+    /* ---- The bar ---- */
+
     const bar = element(doc, "div", "slate-section__bar");
     const subtitle = text(doc, "p", "slate-section__subtitle", "");
     bar.appendChild(subtitle);
-    const modes = element(doc, "div", "slate-modes", { role: "tablist", "aria-label": "Recipe mode" });
-    const tabs = new Map();
-    for (const mode of MODES) {
-      const tab = text(doc, "button", "slate-modes__tab", MODE_LABEL[mode], {
-        type: "button", role: "tab", "data-mode": mode, "aria-selected": mode === "track" ? "true" : "false"
-      });
-      tabs.set(mode, tab);
-      modes.appendChild(tab);
+
+    const tabs = element(doc, "div", "slate-tabs", { role: "tablist", "aria-label": "Recipe" });
+    const tabButtons = new Map();
+    for (const id of RECIPES) {
+      const tab = text(doc, "button", "slate-tabs__tab", RECIPE_LABEL[id], { type: "button", role: "tab", "data-recipe": id, "aria-selected": id === "current" ? "true" : "false" });
+      tabButtons.set(id, tab);
+      tabs.appendChild(tab);
     }
-    bar.appendChild(modes);
+    bar.appendChild(tabs);
+
+    const compareSwitch = text(doc, "button", "slate-switch", "Compare", { type: "button", role: "switch", "aria-checked": "false", "data-slate-compare": "", "data-able": "false" });
+    bar.appendChild(compareSwitch);
+
+    const planStrip = element(doc, "div", "slate-recipe__plan");
+    const copyButton = text(doc, "button", "slate-recipe__plan-action", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" });
+    const promoteButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", planModule.LABEL.promote, { type: "button", "data-slate-plan": "promote", "data-able": "false" });
+    planStrip.appendChild(copyButton);
+    planStrip.appendChild(promoteButton);
+    bar.appendChild(planStrip);
+
+    const printBox = element(doc, "div", "slate-print");
+    const printTrigger = text(doc, "button", "slate-print__trigger", "Print", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
+    const printMenu = element(doc, "div", "slate-print__menu", { role: "menu", hidden: "" });
+    const printItems = new Map();
+    for (const which of printModule ? printModule.PAGES : ["current", "next", "both"]) {
+      const item = text(doc, "button", "slate-print__item", printModule ? printModule.LABEL[which] : which, { type: "button", role: "menuitem", "data-print": which, "aria-disabled": "true" });
+      printItems.set(which, item);
+      printMenu.appendChild(item);
+    }
+    printBox.appendChild(printTrigger);
+    printBox.appendChild(printMenu);
+    bar.appendChild(printBox);
     rootEl.appendChild(bar);
 
-    const stub = element(doc, "p", "slate-stub", { hidden: "" });
-    rootEl.appendChild(stub);
-
-    // The column headings, then the layers.
-    const columns = element(doc, "div", "slate-recipe__columns", { "aria-hidden": "true" });
-    for (const [className, label] of [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["weight", "Weight"], ["controls", "Tracking"], ["mark", ""]]) {
-      columns.appendChild(text(doc, "span", `slate-recipe__column slate-recipe__column--${className}`, label));
-    }
-    rootEl.appendChild(columns);
-    const layersEl = element(doc, "div", "slate-recipe__layers");
-    rootEl.appendChild(layersEl);
-
-    // The foot: the reset, armed on the first click.
-    const foot = element(doc, "div", "slate-recipe__foot");
-    const reset = text(doc, "button", "slate-recipe__reset", RESET_LABEL, { type: "button", "data-able": "false" });
-    foot.appendChild(reset);
-    rootEl.appendChild(foot);
-
-    let mode = "track";
+    let recipe = "current";
+    let compare = false;
     let current = null;
-    const rows = new Map();
-    let armTimer = null;
+    let editing = null;
     let marks = {};
+    let armTimer = null;
+    let promoteTimer = null;
+    let printOpen = false;
 
-    /* ---- Mode ---- */
+    /* ---- Results ---- */
 
-    function setMode(next) {
-      if (!MODES.includes(next)) return mode;
-      mode = next;
-      rootEl.setAttribute("data-mode", mode);
-      for (const [id, tab] of tabs) tab.setAttribute("aria-selected", id === mode ? "true" : "false");
-      if (STUB[mode]) {
-        stub.textContent = STUB[mode];
-        stub.removeAttribute("hidden");
+    function settle(result) {
+      if (!result) return result;
+      if (result.ok && result.changed) onCommitted(result);
+      else if (!result.ok) say(result.message || "The application refused the change.");
+      return result;
+    }
+
+    /* ---- The bodies ---- */
+
+    function makeBody(id) {
+      const el = element(doc, "div", "slate-recipe__body", { "data-recipe": id });
+      const columns = element(doc, "div", "slate-recipe__columns", { "aria-hidden": "true" });
+      const headings = id === "current"
+        ? [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["weight", "Weight"], ["controls", "Tracking"], ["mark", ""]]
+        : [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["mark", ""]];
+      for (const [className, label] of headings) columns.appendChild(text(doc, "span", `slate-recipe__column slate-recipe__column--${className}`, label));
+      el.appendChild(columns);
+      const layersEl = element(doc, "div", "slate-recipe__layers");
+      el.appendChild(layersEl);
+      const body = { recipe: id, el, columns, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null };
+      if (id === "next") {
+        const empty = element(doc, "div", "slate-recipe__empty", { hidden: "" });
+        empty.appendChild(text(doc, "p", "slate-recipe__empty-text", NO_PLAN));
+        empty.appendChild(text(doc, "button", "slate-recipe__plan-action", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" }));
+        el.appendChild(empty);
+        body.empty = empty;
       } else {
-        stub.textContent = "";
-        stub.setAttribute("hidden", "");
+        const foot = element(doc, "div", "slate-recipe__foot");
+        const reset = text(doc, "button", "slate-recipe__reset", RESET_LABEL, { type: "button", "data-able": "false" });
+        foot.appendChild(reset);
+        el.appendChild(foot);
+        body.reset = reset;
       }
-      disarm();
-      return mode;
-    }
-
-    modes.addEventListener("click", event => {
-      const target = event && event.target;
-      const tab = target && typeof target.closest === "function" ? target.closest("[data-mode]") : null;
-      if (tab) setMode(tab.getAttribute("data-mode"));
-    });
-
-    /* ---- Abilities ---- */
-
-    function abilities() {
-      return trackingModule.abilities(commandsFor(current), guard());
-    }
-
-    function applyAbilities() {
-      const able = abilities();
-      for (const entry of rows.values()) {
-        if (entry.layer) continue;
-        entry.toggles.tracking.setAttribute("data-able", able.tracking ? "true" : "false");
-        entry.toggles.pump.setAttribute("data-able", able.pump ? "true" : "false");
-        for (const control of trackingModule.CONTROLS) {
-          const button = entry.toggles[control];
-          const on = button.getAttribute("aria-pressed") === "true";
-          const label = trackingModule.stateLabel(control, on);
-          button.setAttribute("title", button.getAttribute("data-able") === "true"
-            ? `${label} — click to ${trackingModule.actionLabel(control, on)}`
-            : `${label} — ${trackingModule.reason(commandsFor(current), control, guard())}`);
-        }
+      if (dragModule) {
+        body.drag = dragModule.create(doc, {
+          list: layersEl,
+          mount: rootEl,
+          view: doc,
+          able: () => actionsModule.abilities(commands(), guard()).move,
+          values: row => {
+            const entry = body.rows.get(`${row.getAttribute("data-layer")}:${row.getAttribute("data-index")}`);
+            const last = entry && entry.last ? entry.last : {};
+            return { id: row.getAttribute("data-hopper") || "", resin: last.resin || "", pct: last.pct || "" };
+          },
+          onDrop: ({ from, to }) => settle(actionsModule.move(commands(), id, from, to))
+        });
       }
-      reset.setAttribute("data-able", able.reset ? "true" : "false");
-      reset.setAttribute("title", able.reset ? "Clear tracking and pump-off on every hopper" : `Unavailable: ${trackingModule.reason(commandsFor(current), "reset", guard())}`);
-      rootEl.classList.toggle("is-readonly", !!readOnly());
+      rootEl.appendChild(el);
+      return body;
     }
+
+    const bodies = { current: makeBody("current"), next: makeBody("next") };
+    show(bodies.next.el, false);
+
+    const printer = settings.print && typeof settings.print.print === "function"
+      ? settings.print
+      : (printModule && typeof printModule.create === "function" ? printModule.create(doc, { mount: rootEl }) : null);
 
     /* ---- Rows ---- */
 
     function toggleButton(control, hopper) {
       const button = element(doc, "button", `slate-toggle slate-toggle--${control}`, {
-        type: "button",
-        "data-slate-control": control,
-        "data-layer": hopper.layer,
-        "data-index": String(hopper.index),
-        "aria-pressed": "false",
-        "data-able": "false"
+        type: "button", "data-slate-control": control, "data-layer": hopper.layer, "data-index": String(hopper.index), "aria-pressed": "false", "data-able": "false"
       });
-      const dot = element(doc, "span", "slate-toggle__dot", { "aria-hidden": "true" });
-      button.appendChild(dot);
+      button.appendChild(element(doc, "span", "slate-toggle__dot", { "aria-hidden": "true" }));
       button.appendChild(text(doc, "span", "slate-toggle__label", control === "tracking" ? "Track" : "Pump off"));
       return button;
     }
 
-    function buildRow(layer, hopper, cells) {
-      const row = element(doc, "div", "slate-hopper", {
-        "data-layer": layer.id, "data-index": String(hopper.index), "data-hopper": hopper.id
-      });
-      const id = text(doc, "span", "slate-hopper__id", hopper.id);
-      const resin = text(doc, "span", "slate-hopper__resin", cells.resin);
-      const pct = text(doc, "span", "slate-hopper__pct", cells.pct);
-      const weight = text(doc, "span", "slate-hopper__weight", cells.weight);
-      const controls = element(doc, "div", "slate-hopper__controls");
-      const toggles = { tracking: toggleButton("tracking", hopper), pump: toggleButton("pump", hopper) };
-      controls.appendChild(toggles.tracking);
-      controls.appendChild(toggles.pump);
-      const mark = element(doc, "span", "slate-hopper__mark");
-      for (const cell of [id, resin, pct, weight, controls, mark]) row.appendChild(cell);
-      const entry = { row, cells: { resin, pct, weight }, toggles, mark, last: null };
-      paintRow(entry, cells);
+    function buildRow(body, layer, hopper, cells) {
+      const row = element(doc, "div", "slate-hopper", { "data-layer": layer.id, "data-index": String(hopper.index), "data-hopper": hopper.id, "data-recipe": body.recipe });
+      const id = text(doc, "span", "slate-hopper__id", hopper.id, { "data-slate-handle": "" });
+      const resin = text(doc, "button", "slate-hopper__resin", cells.resin, { type: "button", "data-slate-edit": "resin", "data-able": "false", "aria-label": `Resin for ${hopper.id}` });
+      const pct = text(doc, "button", "slate-hopper__pct", cells.pct, { type: "button", "data-slate-edit": "pct", "data-able": "false", "aria-label": `Blend for ${hopper.id}` });
+      if (hopper.index === 0) {
+        pct.setAttribute("data-derived", "");
+        pct.setAttribute("title", "Calculated from hoppers 2–6");
+      }
+      row.appendChild(id);
+      row.appendChild(resin);
+      row.appendChild(pct);
+      const entry = { row, cells: { resin, pct }, toggles: null, mark: null, other: null, note: null, last: null, layer: layer.id, index: hopper.index, hopper: hopper.id };
+      if (body.recipe === "current") {
+        const weight = text(doc, "span", "slate-hopper__weight", cells.weight);
+        const controls = element(doc, "div", "slate-hopper__controls");
+        entry.toggles = { tracking: toggleButton("tracking", hopper), pump: toggleButton("pump", hopper) };
+        controls.appendChild(entry.toggles.tracking);
+        controls.appendChild(entry.toggles.pump);
+        entry.cells.weight = weight;
+        row.appendChild(weight);
+        row.appendChild(controls);
+      }
+      entry.mark = element(doc, "span", "slate-hopper__mark");
+      entry.other = element(doc, "span", "slate-hopper__other", { hidden: "" });
+      entry.note = element(doc, "p", "slate-hopper__note", { role: "status", hidden: "" });
+      row.appendChild(entry.mark);
+      row.appendChild(entry.other);
+      row.appendChild(entry.note);
+      paintRow(entry, cells, null);
       return entry;
     }
 
-    function paintRow(entry, cells) {
+    function paintRow(entry, cells, skip) {
       const last = entry.last || {};
-      if (last.resin !== cells.resin) entry.cells.resin.textContent = cells.resin;
-      if (last.pct !== cells.pct) entry.cells.pct.textContent = cells.pct;
-      if (last.weight !== cells.weight) entry.cells.weight.textContent = cells.weight;
+      if (skip !== "resin" && last.resin !== cells.resin) entry.cells.resin.textContent = cells.resin;
+      if (skip !== "pct" && last.pct !== cells.pct) entry.cells.pct.textContent = cells.pct;
+      if (entry.cells.weight && last.weight !== cells.weight) entry.cells.weight.textContent = cells.weight;
       if (last.assigned !== cells.assigned) {
         entry.row.classList.toggle("is-empty", !cells.assigned);
-        for (const control of trackingModule.CONTROLS) {
-          if (cells.assigned) entry.toggles[control].removeAttribute("disabled");
-          else entry.toggles[control].setAttribute("disabled", "");
+        if (entry.toggles) {
+          for (const control of trackingModule.CONTROLS) {
+            if (cells.assigned) entry.toggles[control].removeAttribute("disabled");
+            else entry.toggles[control].setAttribute("disabled", "");
+          }
         }
       }
-      if (last.track !== cells.track) {
-        entry.toggles.tracking.setAttribute("aria-pressed", cells.track ? "true" : "false");
-        entry.row.classList.toggle("is-tracked", cells.track);
-      }
-      if (last.pumpOff !== cells.pumpOff) {
-        entry.toggles.pump.setAttribute("aria-pressed", cells.pumpOff ? "true" : "false");
-        entry.row.classList.toggle("is-pump-off", cells.pumpOff);
+      if (entry.toggles) {
+        if (last.track !== cells.track) {
+          entry.toggles.tracking.setAttribute("aria-pressed", cells.track ? "true" : "false");
+          entry.row.classList.toggle("is-tracked", cells.track);
+        }
+        if (last.pumpOff !== cells.pumpOff) {
+          entry.toggles.pump.setAttribute("aria-pressed", cells.pumpOff ? "true" : "false");
+          entry.row.classList.toggle("is-pump-off", cells.pumpOff);
+        }
       }
       const changed = !!entry.last && ["resin", "pct", "weight", "track", "pumpOff", "assigned"].some(key => last[key] !== cells[key]);
       entry.last = cells;
       return changed;
     }
 
-    function rebuild(resolved) {
-      rows.clear();
-      while (layersEl.firstChild) layersEl.removeChild(layersEl.firstChild);
+    function buildHead(body, layer, resolved, share) {
+      const head = element(doc, "div", "slate-layer__head");
+      head.appendChild(text(doc, "span", "slate-layer__name", `Layer ${layer.id}`));
+      head.appendChild(text(doc, "span", "slate-layer__role", layer.roleLabel));
+      const shareButton = text(doc, "button", "slate-layer__share", formatPct(share), { type: "button", "data-slate-edit": "share", "data-layer": layer.id, "data-able": "false", "aria-label": `Share for layer ${layer.id}` });
+      head.appendChild(shareButton);
+      const shareOther = element(doc, "span", "slate-layer__share-other", { hidden: "" });
+      head.appendChild(shareOther);
+      const note = element(doc, "p", "slate-layer__note", { role: "status", hidden: "" });
+      head.appendChild(note);
+      const others = resolved.line.layers.map(one => one.id).filter(id => id !== layer.id);
+      const menu = menuModule ? menuModule.create(doc, {
+        layer: layer.id,
+        others,
+        timers,
+        say,
+        able: () => { const able = actionsModule.abilities(commands(), guard()); return { copy: able.copyLayer, clear: able.clearLayer }; },
+        reason: action => actionsModule.reason(commands(), action === "copy" ? "copyLayer" : "clearLayer", guard()),
+        onCopyTo: toLayer => settle(actionsModule.copyLayer(commands(), body.recipe, layer.id, toLayer)),
+        onClear: () => settle(actionsModule.clearLayer(commands(), body.recipe, layer.id))
+      }) : null;
+      if (menu) { head.appendChild(menu.element); body.menus.push(menu); }
+      return { head, share: shareButton, shareOther, note, last: formatPct(share), shareValue: Number(share) || 0, layer: layer.id, menu };
+    }
+
+    function clearBody(body) {
+      for (const menu of body.menus) menu.close();
+      body.menus = [];
+      body.rows.clear();
+      body.heads.clear();
+      while (body.layersEl.firstChild) body.layersEl.removeChild(body.layersEl.firstChild);
+    }
+
+    function rebuild(body, resolved) {
+      clearBody(body);
       const model = resolved && resolved.line;
-      if (!model) return;
+      const planned = body.recipe !== "next" || !!(resolved && resolved.plan && resolved.plan.planned);
+      if (body.empty) show(body.empty, !!model && !planned);
+      show(body.columns, !!model && planned);
+      if (!model || !planned) return;
+      const state = sourceModule.stateFor(resolved, body.recipe);
       let position = 0;
       for (const layer of model.layers) {
-        const block = element(doc, "div", "slate-layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });
-        const head = element(doc, "div", "slate-layer__head");
-        head.appendChild(text(doc, "span", "slate-layer__name", `Layer ${layer.id}`));
-        head.appendChild(text(doc, "span", "slate-layer__role", layer.roleLabel));
-        const share = resolved.layerState[layer.id] ? resolved.layerState[layer.id].layerPct : 0;
-        head.appendChild(text(doc, "span", "slate-layer__share", formatPct(share)));
-        block.appendChild(head);
+        const block = element(doc, "div", "slate-layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone, "data-recipe": body.recipe });
+        const share = state.layers[layer.id] ? state.layers[layer.id].layerPct : 0;
+        const head = buildHead(body, layer, resolved, share);
+        block.appendChild(head.head);
+        body.heads.set(layer.id, head);
         const list = element(doc, "div", "slate-layer__rows");
         for (const hopper of layer.hoppers) {
           const key = `${layer.id}:${hopper.index}`;
-          const entry = buildRow(layer, hopper, cellsFor(resolved.hopperState[key]));
+          const entry = buildRow(body, layer, hopper, cellsFor(state.hoppers[key]));
           entry.row.classList.add("slate-row-enter");
           entry.row.style.setProperty("--slate-row-i", String(position));
           entry.row.addEventListener("animationend", () => entry.row.classList.remove("slate-row-enter", "is-updated"));
           position += 1;
-          rows.set(key, entry);
+          body.rows.set(key, entry);
           list.appendChild(entry.row);
         }
         block.appendChild(list);
-        layersEl.appendChild(block);
-        rows.set(`layer:${layer.id}`, { layer: true, share: head.lastChild, last: formatPct(share) });
+        body.layersEl.appendChild(block);
       }
     }
 
-    function patch(resolved, own) {
+    function flash(row) {
+      // Restart the flash: the class is removed on animationend, and
+      // reading the width between remove and add restarts a running one.
+      row.classList.remove("is-updated");
+      void row.offsetWidth;
+      row.classList.add("is-updated");
+    }
+
+    function patch(body, resolved, own) {
       const model = resolved && resolved.line;
       if (!model) return;
+      const state = sourceModule.stateFor(resolved, body.recipe);
       for (const layer of model.layers) {
-        const share = formatPct(resolved.layerState[layer.id] ? resolved.layerState[layer.id].layerPct : 0);
-        const head = rows.get(`layer:${layer.id}`);
-        if (head && head.last !== share) {
-          head.share.textContent = share;
-          head.last = share;
+        const head = body.heads.get(layer.id);
+        const shareValue = state.layers[layer.id] ? state.layers[layer.id].layerPct : 0;
+        if (head) {
+          const editingHere = !!(editing && editing.slot === "share" && editing.recipe === body.recipe && editing.layer === layer.id);
+          const shareText = formatPct(shareValue);
+          if (!editingHere && head.last !== shareText) { head.share.textContent = shareText; head.last = shareText; }
+          if (editingHere && !own && head.shareValue !== shareValue) markUnderneath(`Layer ${layer.id}'s share`);
+          head.shareValue = shareValue;
+          head.last = shareText;
         }
         for (const hopper of layer.hoppers) {
           const key = `${layer.id}:${hopper.index}`;
-          const entry = rows.get(key);
+          const entry = body.rows.get(key);
           if (!entry) continue;
-          const changed = paintRow(entry, cellsFor(resolved.hopperState[key]));
-          if (changed && !own) {
-            // Restart the flash: the class is removed on animationend, and
-            // reading the width between remove and add restarts a running one.
-            entry.row.classList.remove("is-updated");
-            void entry.row.offsetWidth;
-            entry.row.classList.add("is-updated");
+          const cells = cellsFor(state.hoppers[key]);
+          const editingHere = editing && editing.recipe === body.recipe && editing.key === key ? editing.slot : null;
+          const before = entry.last || {};
+          const changed = paintRow(entry, cells, editingHere);
+          if (editingHere && !own) {
+            const moved = editingHere === "resin" ? before.resinName !== cells.resinName : before.pctValue !== cells.pctValue;
+            if (moved) markUnderneath(`${entry.hopper}'s ${SLOT_LABEL[editingHere]}`);
+          }
+          if (changed && !own && !editingHere) flash(entry.row);
+        }
+      }
+    }
+
+    /* ---- Compare ---- */
+
+    function paintCompare() {
+      const comparison = compare ? sourceModule.compareFor(current, recipe) : null;
+      rootEl.classList.toggle("is-comparing", !!comparison);
+      const tag = recipe === "next" ? "Current" : "Next";
+      for (const id of RECIPES) {
+        const body = bodies[id];
+        const here = id === recipe ? comparison : null;
+        for (const [key, entry] of body.rows) {
+          const other = here ? here.hoppers[key] : null;
+          // A line under the row only where the other recipe has something
+          // to say: an assignment, or a difference (the other side emptied).
+          if (other && (other.resin || other.differs)) {
+            entry.other.textContent = `${tag}: ${other.resin || EMPTY} · ${other.resin ? formatPct(other.pct) : EMPTY}`;
+            show(entry.other, true);
+            entry.row.classList.toggle("is-differs", !!other.differs);
+            entry.row.classList.toggle("is-same", !other.differs);
+          } else {
+            show(entry.other, false);
+            entry.row.classList.remove("is-differs", "is-same");
+          }
+        }
+        for (const [layerId, head] of body.heads) {
+          const other = here ? here.layers[layerId] : null;
+          if (other) {
+            head.shareOther.textContent = `${tag} ${formatPct(other.share)}`;
+            show(head.shareOther, true);
+            head.head.classList.toggle("is-differs", !!other.differs);
+            head.head.classList.toggle("is-same", !other.differs);
+          } else {
+            show(head.shareOther, false);
+            head.head.classList.remove("is-differs", "is-same");
           }
         }
       }
     }
 
-    /* ---- Marks from the run-down ---- */
+    function setCompare(on) {
+      const can = !!(current && current.plan && current.plan.planned);
+      compare = !!on && can;
+      compareSwitch.setAttribute("aria-checked", compare ? "true" : "false");
+      paintCompare();
+      return compare;
+    }
+
+    /* ---- Abilities ---- */
+
+    function applyAbilities() {
+      const bridge = commands();
+      const options = guard();
+      const able = actionsModule.abilities(bridge, options);
+      const track = trackingModule.abilities(bridge, options);
+      const planned = !!(current && current.plan && current.plan.planned);
+      const plan = planModule.can(bridge, { readOnly: options.readOnly, planned });
+      rootEl.classList.toggle("is-readonly", !!readOnly());
+
+      for (const id of RECIPES) {
+        const body = bodies[id];
+        for (const entry of body.rows.values()) {
+          entry.cells.resin.setAttribute("data-able", able.resin ? "true" : "false");
+          entry.cells.resin.setAttribute("title", able.resin ? "Change the resin" : `Cannot change here: ${actionsModule.reason(bridge, "resin", options)}`);
+          const derived = entry.index === 0;
+          entry.cells.pct.setAttribute("data-able", able.blend && !derived ? "true" : "false");
+          if (!derived) entry.cells.pct.setAttribute("title", able.blend ? "Change the blend" : `Cannot change here: ${actionsModule.reason(bridge, "blend", options)}`);
+          entry.row.classList.toggle("is-movable", able.move && !entry.row.classList.contains("is-empty"));
+          if (entry.toggles) {
+            entry.toggles.tracking.setAttribute("data-able", track.tracking ? "true" : "false");
+            entry.toggles.pump.setAttribute("data-able", track.pump ? "true" : "false");
+            for (const control of trackingModule.CONTROLS) {
+              const button = entry.toggles[control];
+              const on = button.getAttribute("aria-pressed") === "true";
+              const label = trackingModule.stateLabel(control, on);
+              button.setAttribute("title", button.getAttribute("data-able") === "true"
+                ? `${label} — click to ${trackingModule.actionLabel(control, on)}`
+                : `${label} — ${trackingModule.reason(bridge, control, options)}`);
+            }
+          }
+        }
+        for (const head of body.heads.values()) {
+          head.share.setAttribute("data-able", able.share ? "true" : "false");
+          head.share.setAttribute("title", able.share ? "Change the layer's share" : `Cannot change here: ${actionsModule.reason(bridge, "share", options)}`);
+          if (head.menu) head.menu.refresh();
+        }
+        if (body.reset) {
+          body.reset.setAttribute("data-able", track.reset ? "true" : "false");
+          body.reset.setAttribute("title", track.reset ? "Clear tracking and pump-off on every hopper" : `Unavailable: ${trackingModule.reason(bridge, "reset", options)}`);
+        }
+      }
+
+      const planButtons = [copyButton, promoteButton].concat(bodies.next.empty ? Array.from(bodies.next.empty.querySelectorAll("[data-slate-plan]")) : []);
+      for (const button of planButtons) {
+        const action = button.getAttribute("data-slate-plan");
+        button.setAttribute("data-able", plan[action] ? "true" : "false");
+        button.setAttribute("title", plan[action] ? planModule.LABEL[action] : `${planModule.LABEL[action]} is unavailable: ${planModule.reason(bridge, action, { readOnly: options.readOnly, planned })}`);
+      }
+
+      compareSwitch.setAttribute("data-able", planned ? "true" : "false");
+      compareSwitch.setAttribute("title", planned ? "Show the other recipe under each hopper" : "Nothing is planned to compare against");
+      if (!planned && compare) setCompare(false);
+
+      for (const [which, item] of printItems) {
+        const can = !!printer && !!printModule && printModule.available(which, current);
+        item.setAttribute("aria-disabled", can ? "false" : "true");
+        item.setAttribute("title", can ? "" : (which === "current" ? "Nothing is assigned to print" : "Nothing is planned to print"));
+      }
+    }
+
+    /* ---- Marks from the run-down (Current only) ---- */
 
     function applyMarks(next) {
       marks = next || {};
-      for (const [key, entry] of rows) {
-        if (entry.layer) continue;
+      for (const [key, entry] of bodies.current.rows) {
         const mark = marks[key] || null;
         const overdue = !!(mark && mark.overdue);
         const late = !!(mark && mark.late && !mark.overdue);
@@ -331,58 +540,325 @@
       }
     }
 
-    /* ---- Track ---- */
+    /* ---- Editors ---- */
+
+    function noteFor(target) {
+      return target.entry ? target.entry.note : target.head.note;
+    }
+
+    function setNote(target, message, invalid) {
+      const note = noteFor(target);
+      note.textContent = message || "";
+      show(note, !!message);
+      const control = target.control;
+      if (control && typeof control.setAttribute === "function") {
+        if (invalid) control.setAttribute("aria-invalid", "true");
+        else control.removeAttribute("aria-invalid");
+      }
+    }
+
+    function markUnderneath(what) {
+      if (!editing) return;
+      const target = editing;
+      (target.entry ? target.entry.row : target.head.head).classList.add("is-changed-underneath");
+      setNote(target, `${what} ${CHANGED_UNDERNEATH}`, false);
+    }
+
+    function closeEditor() {
+      if (!editing) return;
+      const target = editing;
+      editing = null;
+      if (target.search && typeof target.search.close === "function") target.search.close();
+      if (target.input && target.input.parentNode) target.input.parentNode.removeChild(target.input);
+      show(target.button, true);
+      const host = target.entry ? target.entry.row : target.head.head;
+      host.classList.remove("is-editing", "is-changed-underneath");
+      const note = noteFor(target);
+      note.textContent = "";
+      show(note, false);
+      // The cell shows the canonical value again.
+      if (target.entry) {
+        const last = target.entry.last || {};
+        if (target.slot === "resin") target.entry.cells.resin.textContent = last.resin || EMPTY;
+        else target.entry.cells.pct.textContent = last.pct || EMPTY;
+      } else {
+        target.head.share.textContent = target.head.last;
+      }
+      if (typeof target.button.focus === "function") target.button.focus();
+    }
+
+    function abandonEdit(own) {
+      if (!editing) return;
+      closeEditor();
+      if (!own) say(ABANDONED);
+    }
+
+    function commitValue(target, value) {
+      if (!editing || editing !== target) return null;
+      const bridge = commands();
+      const able = actionsModule.abilities(bridge, guard());
+      const control = target.slot === "pct" ? "blend" : target.slot;
+      const slotAble = target.slot === "resin" ? able.resin : (target.slot === "pct" ? able.blend : able.share);
+      if (!slotAble) {
+        const reason = actionsModule.reason(bridge, control, guard());
+        setNote(target, `Cannot change here: ${reason}`, true);
+        return { ok: false, code: "unavailable", message: reason };
+      }
+      let result;
+      if (target.slot === "resin") result = actionsModule.setResin(bridge, target.recipe, target.layer, target.index, value);
+      else if (target.slot === "pct") result = actionsModule.setBlend(bridge, target.recipe, target.layer, target.index, value);
+      else result = actionsModule.setShare(bridge, target.recipe, target.layer, value);
+      if (result && result.ok) {
+        closeEditor();
+        if (result.changed) onCommitted(result);
+      } else {
+        setNote(target, (result && result.message) || "The application refused the change.", true);
+      }
+      return result;
+    }
+
+    /* The resin search over a row's cell. A refused code reopens the
+     * search on that code, with the application's words in the row's note,
+     * so the operator can go on from where they were. */
+    function openSearch(target, value) {
+      target.search = searchModule.open(doc, target.entry.row, {
+        value,
+        resins,
+        id: `slate-resin-${target.recipe}-${target.layer}-${target.index}`,
+        label: `Resin for ${target.entry.hopper}`,
+        // The search stands in the resin cell, not at the row's end.
+        before: target.button.nextSibling,
+        onChoose: code => {
+          if (!editing || editing !== target) return;
+          target.search = null;
+          target.control = null;
+          if ((code === "" && !target.base) || sourceModule.sameResin(code, target.base)) { closeEditor(); return; }
+          const result = commitValue(target, code);
+          if (result && !result.ok && editing === target) {
+            const message = noteFor(target).textContent;
+            openSearch(target, code);
+            setNote(target, message, true);
+          }
+        },
+        onCancel: () => { if (editing === target) { target.search = null; target.control = null; closeEditor(); } }
+      });
+      target.control = target.search.input;
+    }
+
+    function openEditor(target) {
+      if (editing) closeEditor();
+      const bridge = commands();
+      const able = actionsModule.abilities(bridge, guard());
+      const control = target.slot === "pct" ? "blend" : target.slot;
+      const slotAble = target.slot === "resin" ? able.resin : (target.slot === "pct" ? able.blend : able.share);
+      if (target.slot === "pct" && target.index === 0) { say("Hopper 1's blend is calculated from hoppers 2–6."); return null; }
+      if (!slotAble) { say(`Cannot change the ${SLOT_LABEL[target.slot]} here: ${actionsModule.reason(bridge, control, guard())}`); return null; }
+      editing = target;
+      const host = target.entry ? target.entry.row : target.head.head;
+      host.classList.add("is-editing");
+      show(target.button, false);
+      if (target.slot === "resin") {
+        const last = target.entry.last || {};
+        target.base = last.resinName || "";
+        openSearch(target, target.base);
+        return target;
+      }
+      const input = element(doc, "input", target.entry ? "slate-hopper__input" : "slate-layer__input", {
+        type: "text", inputmode: "decimal", "aria-label": target.entry ? `Blend for ${target.entry.hopper}` : `Share for layer ${target.layer}`
+      });
+      const baseValue = target.entry ? (target.entry.last ? target.entry.last.pctValue : 0) : target.head.shareValue;
+      target.base = baseValue;
+      input.value = baseValue > 0 ? String(baseValue) : "";
+      target.input = input;
+      target.control = input;
+      const commit = () => {
+        if (!editing || editing !== target) return;
+        const raw = String(input.value).trim();
+        if (raw === "" || Number(raw.replace(/,/g, "")) === target.base) { closeEditor(); return; }
+        commitValue(target, raw);
+      };
+      input.addEventListener("keydown", event => {
+        if (!event) return;
+        if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); commit(); }
+        else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeEditor(); }
+      });
+      input.addEventListener("blur", () => { if (editing === target) commit(); });
+      host.insertBefore(input, target.button.nextSibling);
+      if (typeof input.focus === "function") input.focus();
+      if (typeof input.select === "function") input.select();
+      return target;
+    }
+
+    function editTargetFrom(button, body) {
+      const slot = button.getAttribute("data-slate-edit");
+      if (slot === "share") {
+        const head = body.heads.get(button.getAttribute("data-layer"));
+        return head ? { slot, recipe: body.recipe, layer: head.layer, index: null, key: null, head, button } : null;
+      }
+      const row = button.closest(".slate-hopper");
+      const entry = row ? body.rows.get(`${row.getAttribute("data-layer")}:${row.getAttribute("data-index")}`) : null;
+      return entry ? { slot, recipe: body.recipe, layer: entry.layer, index: entry.index, key: `${entry.layer}:${entry.index}`, entry, button } : null;
+    }
+
+    /* ---- Tabs, compare, plan, print ---- */
+
+    function closeMenus() {
+      for (const id of RECIPES) for (const menu of bodies[id].menus) menu.close();
+      closePrint();
+    }
+
+    function setRecipe(id) {
+      if (!RECIPES.includes(id)) return recipe;
+      if (id !== recipe) {
+        closeEditor();
+        for (const key of RECIPES) if (bodies[key].drag) bodies[key].drag.cancel();
+        disarm();
+        disarmPromote();
+        closeMenus();
+        recipe = id;
+        rootEl.setAttribute("data-recipe", recipe);
+        for (const [key, tab] of tabButtons) tab.setAttribute("aria-selected", key === recipe ? "true" : "false");
+        for (const key of RECIPES) show(bodies[key].el, key === recipe);
+      }
+      applyAbilities();
+      paintCompare();
+      return recipe;
+    }
+
+    tabs.addEventListener("click", event => {
+      const target = event && event.target;
+      const tab = target && typeof target.closest === "function" ? target.closest("[data-recipe]") : null;
+      if (tab && tabs.contains(tab)) setRecipe(tab.getAttribute("data-recipe"));
+    });
+
+    compareSwitch.addEventListener("click", () => {
+      if (compareSwitch.getAttribute("data-able") !== "true") { say("Nothing is planned to compare against."); return; }
+      setCompare(!compare);
+    });
+
+    function disarmPromote() {
+      if (promoteTimer !== null) { timers.clearTimeout(promoteTimer); promoteTimer = null; }
+      promoteButton.removeAttribute("data-armed");
+      promoteButton.textContent = planModule.LABEL.promote;
+    }
+
+    function onPlan(button) {
+      const action = button.getAttribute("data-slate-plan");
+      if (button.getAttribute("data-able") !== "true") { say(button.getAttribute("title") || `${planModule.LABEL[action]} is unavailable.`); return; }
+      if (action === "copy") { closeEditor(); settle(planModule.copy(commands())); return; }
+      if (!promoteButton.hasAttribute("data-armed")) {
+        promoteButton.setAttribute("data-armed", "");
+        promoteButton.textContent = PROMOTE_ARMED_LABEL;
+        promoteTimer = timers.setTimeout(() => { promoteTimer = null; disarmPromote(); }, RESET_ARM_MS);
+        return;
+      }
+      disarmPromote();
+      closeEditor();
+      settle(planModule.promote(commands()));
+    }
+
+    for (const host of [planStrip, bodies.next.empty]) {
+      if (!host) continue;
+      host.addEventListener("click", event => {
+        const target = event && event.target;
+        const button = target && typeof target.closest === "function" ? target.closest("[data-slate-plan]") : null;
+        if (button) onPlan(button);
+      });
+    }
+
+    function outsidePrint(event) {
+      if (event && event.target && printBox.contains(event.target)) return;
+      closePrint();
+    }
+    function openPrint() {
+      if (printOpen) return;
+      printOpen = true;
+      show(printMenu, true);
+      printTrigger.setAttribute("aria-expanded", "true");
+      printBox.classList.add("is-open");
+      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outsidePrint, true);
+    }
+    function closePrint() {
+      if (!printOpen) return;
+      printOpen = false;
+      show(printMenu, false);
+      printTrigger.setAttribute("aria-expanded", "false");
+      printBox.classList.remove("is-open");
+      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outsidePrint, true);
+    }
+    printTrigger.addEventListener("click", () => { if (printOpen) closePrint(); else openPrint(); });
+    printMenu.addEventListener("click", event => {
+      const target = event && event.target;
+      const item = target && typeof target.closest === "function" ? target.closest("[data-print]") : null;
+      if (!item) return;
+      const which = item.getAttribute("data-print");
+      if (item.getAttribute("aria-disabled") === "true") { say(item.getAttribute("title") || "Nothing to print."); return; }
+      closePrint();
+      if (!printer) { say("Printing is not available on this page."); return; }
+      const result = printer.print(which, current);
+      if (!result || !result.ok) say((result && result.message) || "The sheet could not be printed.");
+    });
+
+    /* ---- Track (Current body) ---- */
 
     function disarm() {
-      if (armTimer !== null) {
-        timers.clearTimeout(armTimer);
-        armTimer = null;
-      }
+      if (armTimer !== null) { timers.clearTimeout(armTimer); armTimer = null; }
+      const reset = bodies.current.reset;
       reset.removeAttribute("data-armed");
       reset.textContent = RESET_LABEL;
     }
 
-    function arm() {
-      reset.setAttribute("data-armed", "");
-      reset.textContent = RESET_ARMED_LABEL;
-      armTimer = timers.setTimeout(() => { armTimer = null; disarm(); }, RESET_ARM_MS);
-    }
-
-    function settle(result) {
-      if (!result) return;
-      if (result.ok && result.changed) onCommitted(result);
-      else if (!result.ok) say(result.message || "The application refused the change.");
-    }
-
-    reset.addEventListener("click", () => {
+    bodies.current.reset.addEventListener("click", () => {
+      const reset = bodies.current.reset;
       if (reset.getAttribute("data-able") !== "true") {
-        say(`Reset is unavailable: ${trackingModule.reason(commandsFor(current), "reset", guard())}`);
+        say(`Reset is unavailable: ${trackingModule.reason(commands(), "reset", guard())}`);
         return;
       }
       if (!reset.hasAttribute("data-armed")) {
-        arm();
+        reset.setAttribute("data-armed", "");
+        reset.textContent = RESET_ARMED_LABEL;
+        armTimer = timers.setTimeout(() => { armTimer = null; disarm(); }, RESET_ARM_MS);
         return;
       }
       disarm();
-      settle(trackingModule.resetTracking(commandsFor(current)));
+      settle(trackingModule.resetTracking(commands()));
     });
 
-    layersEl.addEventListener("click", event => {
-      const target = event && event.target;
-      const button = target && typeof target.closest === "function" ? target.closest("[data-slate-control]") : null;
-      if (!button || !layersEl.contains(button) || button.hasAttribute("disabled")) return;
-      const request = trackingModule.requestFrom(button);
-      if (!request) return;
-      if (!request.able) {
-        say(`${trackingModule.stateLabel(request.control, request.on)}: ${trackingModule.reason(commandsFor(current), request.control, guard())}`);
-        return;
-      }
-      settle(trackingModule.toggle(commandsFor(current), { control: request.control, layer: request.layer, index: request.index, next: !request.on }));
-    });
+    /* ---- Clicks inside a body: toggles and edit cells ---- */
+
+    for (const id of RECIPES) {
+      const body = bodies[id];
+      body.layersEl.addEventListener("click", event => {
+        if (body.drag && body.drag.consumeClick()) return;
+        const target = event && event.target;
+        if (!target || typeof target.closest !== "function") return;
+        const toggle = target.closest("[data-slate-control]");
+        if (toggle && body.layersEl.contains(toggle)) {
+          if (toggle.hasAttribute("disabled")) return;
+          const request = trackingModule.requestFrom(toggle);
+          if (!request) return;
+          if (!request.able) {
+            say(`${trackingModule.stateLabel(request.control, request.on)}: ${trackingModule.reason(commands(), request.control, guard())}`);
+            return;
+          }
+          settle(trackingModule.toggle(commands(), { control: request.control, layer: request.layer, index: request.index, next: !request.on }));
+          return;
+        }
+        const edit = target.closest("[data-slate-edit]");
+        if (edit && body.layersEl.contains(edit)) {
+          if (editing && editing.button === edit) return;
+          const found = editTargetFrom(edit, body);
+          if (found) openEditor(found);
+        }
+      });
+    }
 
     rootEl.addEventListener("keydown", event => {
-      if (event && event.key === "Escape" && reset.hasAttribute("data-armed")) {
+      if (!event || event.key !== "Escape") return;
+      if (editing) { closeEditor(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
+      if (bodies.current.reset.hasAttribute("data-armed") || promoteButton.hasAttribute("data-armed")) {
         disarm();
+        disarmPromote();
         if (typeof event.stopPropagation === "function") event.stopPropagation();
       }
     });
@@ -395,13 +871,26 @@
       current = resolved;
       subtitle.textContent = subtitleFor(resolved);
       if (kind === "structural") {
+        abandonEdit(!!options.own);
+        for (const id of RECIPES) if (bodies[id].drag) bodies[id].drag.cancel();
         disarm();
-        rebuild(resolved);
+        disarmPromote();
+        closeMenus();
+        for (const id of RECIPES) rebuild(bodies[id], resolved);
       } else if (kind === "values") {
-        patch(resolved, !!options.own);
+        for (const id of RECIPES) patch(bodies[id], resolved, !!options.own);
       }
       applyAbilities();
+      paintCompare();
       applyMarks(marks);
+    }
+
+    function onHide() {
+      closeEditor();
+      for (const id of RECIPES) if (bodies[id].drag) bodies[id].drag.cancel();
+      disarm();
+      disarmPromote();
+      closeMenus();
     }
 
     return Object.freeze({
@@ -409,12 +898,19 @@
       update,
       refresh: applyAbilities,
       applyMarks,
-      setMode,
-      getMode: () => mode,
-      rowCount: () => [...rows.values()].filter(entry => !entry.layer).length,
-      onHide: disarm
+      setRecipe,
+      getRecipe: () => recipe,
+      setCompare,
+      getCompare: () => compare,
+      body: id => (bodies[id] ? bodies[id].el : null),
+      rowCount: id => bodies[id || recipe].rows.size,
+      editing: () => (editing ? { slot: editing.slot, recipe: editing.recipe, layer: editing.layer, index: editing.index } : null),
+      onHide
     });
   }
 
-  return Object.freeze({ MODES, MODE_LABEL, STUB, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, EMPTY, formatPct, formatWeight, cellsFor, subtitleFor, create });
+  return Object.freeze({
+    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
+    formatPct, formatWeight, cellsFor, subtitleFor, create
+  });
 });

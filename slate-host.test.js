@@ -223,7 +223,7 @@ test("every asset loaded is a Slate asset, or the one pure Station module Slate 
   }
   for (const url of result.scripts()) {
     const file = url.split("?")[0];
-    assert.ok(/^slate\//.test(file) || file === "station/station-rundown.js",
+    assert.ok(/^slate\//.test(file) || ["station/station-rundown.js", "station/station-print-sheet.js"].includes(file),
       `the host loaded ${file}, which is not part of the Slate presentation`);
     assert.doesNotMatch(url, /app\.js/);
     assert.doesNotMatch(url, /cloud-sync|supabase|active-job|line-identity/);
@@ -245,6 +245,10 @@ test("Slate's own scripts are loaded in dependency order and cannot race", () =>
   }
   // The summary reads the run-down module's global when it executes.
   assert.ok(scripts.indexOf("station/station-rundown.js") < scripts.indexOf("slate/slate-rundown-summary.js"));
+  assert.ok(scripts.indexOf("station/station-print-sheet.js") < scripts.indexOf("slate/slate-print.js"));
+  for (const dependency of ["slate/slate-recipe-actions.js", "slate/slate-plan-actions.js", "slate/slate-resin-search.js", "slate/slate-recipe-drag.js", "slate/slate-layer-menu.js", "slate/slate-print.js"]) {
+    assert.ok(scripts.indexOf(dependency) > -1 && scripts.indexOf(dependency) < scripts.indexOf("slate/slate-recipe.js"), `${dependency} must load before the recipe section`);
+  }
 
   // Dynamically inserted scripts default to async, which would let them run in
   // any order. This is the one line that stops that.

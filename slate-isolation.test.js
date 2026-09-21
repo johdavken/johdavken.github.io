@@ -24,12 +24,17 @@ const STYLES = path.join(SLATE, "styles");
 const SLATE_FILES = [
   "slate.js", "slate-shell.js", "slate-logo.js", "slate-line.js", "slate-source.js", "slate-demo.js",
   "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
+  "slate-recipe-actions.js", "slate-plan-actions.js", "slate-resin-search.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-sync.js", "slate-settings.js", "slate-rundown-summary.js"
 ];
-const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js"];
+const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js"];
 const REQUESTS = { connection: ["slate-sync.js"] };
 const INNER_HTML = ["slate-sync.js"];
-const TIMEOUTS = ["slate-rundown-summary.js", "slate-recipe.js", "slate.js"];
+const TIMEOUTS = ["slate-rundown-summary.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js"];
+/* The pure Station modules Slate shares: the run-down arithmetic and the
+ * floor UI's print sheet. Both draw into whatever they are handed and
+ * spend no Station token. */
+const SHARED_STATION = ["station/station-rundown.js", "station/station-print-sheet.js"];
 
 function read(file) {
   return fs.readFileSync(path.join(SLATE, file), "utf8");
@@ -85,10 +90,10 @@ test("every file in slate/ is on the roster, and every roster file exists", () =
 
 test("the harness and the host load the same Slate modules in the same order", () => {
   const host = codeOnly(fs.readFileSync(path.join(ROOT, "slate-host.js"), "utf8"));
-  const hostOrder = [...host.matchAll(/"(slate\/[^"]+\.js|station\/station-rundown\.js)"/g)].map(match => match[1].replace(/^slate\//, ""));
+  const hostOrder = [...host.matchAll(/"(slate\/[^"]+\.js|station\/[^"]+\.js)"/g)].map(match => match[1].replace(/^slate\//, ""));
   const harness = fs.readFileSync(path.join(SLATE, "slate.html"), "utf8");
   const harnessOrder = [...harness.matchAll(/src="(?:\.\.\/)?((?:station\/)?[^"?]+\.js)\?v=/g)].map(match => match[1])
-    .filter(file => (/^slate/.test(file) && file !== "slate-theme.js" && file !== "slate-display.js") || file === "station/station-rundown.js");
+    .filter(file => (/^slate/.test(file) && file !== "slate-theme.js" && file !== "slate-display.js") || SHARED_STATION.includes(file));
   assert.deepEqual(harnessOrder, hostOrder);
   const hostSheets = [...host.matchAll(/"slate\/styles\/([^"]+\.css)"/g)].map(match => match[1]).filter(name => name !== "host.css");
   const harnessSheets = [...harness.matchAll(/href="styles\/([^"?]+\.css)\?v=/g)].map(match => match[1]);
@@ -262,7 +267,7 @@ test("Slate never writes through a bridge - it only reads and subscribes", () =>
   }
 });
 
-test("exactly two Slate files dispatch commands - tracking and the job's cards - and only through the bridge they are handed", () => {
+test("exactly four Slate files dispatch commands - tracking, the job's cards, the recipe's edits and the plan's moves - and only through the bridge they are handed", () => {
   for (const file of SLATE_FILES) {
     const source = codeOnly(read(file));
     if (DISPATCHES.includes(file)) {

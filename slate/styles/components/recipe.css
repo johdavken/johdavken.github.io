@@ -1,9 +1,15 @@
-/* The Recipe section: the mode switch, the column headings, and one
-   block per layer - its head down the left, its hoppers as rows. */
+/* The Recipe section: the bar (tabs, Compare, the plan's moves, Print), the column headings, and one block per layer - its head down the
+   left, its hoppers as rows. The editors, the drag and the menus are in
+   recipe-edit.css. */
 
-/* ---- Mode switch ---- */
+/* The section anchors the print frame. */
+.slate-recipe {
+  position: relative;
+}
 
-.slate-modes {
+/* ---- Tabs: which recipe is shown ---- */
+
+.slate-tabs {
   display: inline-flex;
   flex: none;
   padding: 2px;
@@ -11,7 +17,7 @@
   background: var(--slate-surface-sunken);
 }
 
-.slate-root .slate-modes__tab {
+.slate-root .slate-tabs__tab {
   padding: var(--slate-space-1) var(--slate-space-3);
   border-radius: var(--slate-radius-sm);
   color: var(--slate-text-muted);
@@ -21,13 +27,100 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-modes__tab:hover {
+.slate-root .slate-tabs__tab:hover {
   color: var(--slate-text);
 }
 
-.slate-root .slate-modes__tab[aria-selected="true"] {
+.slate-root .slate-tabs__tab[aria-selected="true"] {
   background: var(--slate-accent);
   color: var(--slate-text-on-accent);
+}
+
+/* ---- The Compare switch ---- */
+
+.slate-root .slate-switch {
+  flex: none;
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-switch:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-switch[aria-checked="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent);
+}
+
+.slate-root .slate-switch[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- The plan's moves (Next tab only) ---- */
+
+.slate-recipe__plan {
+  display: none;
+  flex: none;
+  gap: var(--slate-space-2);
+}
+
+.slate-recipe[data-recipe="next"] .slate-recipe__plan {
+  display: inline-flex;
+}
+
+.slate-root .slate-recipe__plan-action {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-recipe__plan-action:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-recipe__plan-action[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slate-root .slate-recipe__plan-action--promote {
+  border-color: var(--slate-accent);
+  color: var(--slate-accent);
+}
+
+.slate-root .slate-recipe__plan-action[data-armed] {
+  border-color: var(--slate-danger);
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+/* The Next body with nothing planned. */
+.slate-recipe__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-5);
+  border: var(--slate-stroke) dashed var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  color: var(--slate-text-muted);
+}
+
+.slate-recipe__empty-text {
+  max-width: 48ch;
 }
 
 /* ---- Columns ---- */
@@ -38,6 +131,12 @@
   grid-template-columns: 56px minmax(0, 1fr) 72px 96px auto 80px;
   align-items: center;
   gap: var(--slate-space-3);
+}
+
+/* The plan's rows: no weight, no toggles. */
+.slate-recipe__body[data-recipe="next"] .slate-recipe__columns,
+.slate-recipe__body[data-recipe="next"] .slate-hopper {
+  grid-template-columns: 56px minmax(0, 1fr) 72px 80px;
 }
 
 .slate-recipe__columns {
@@ -110,7 +209,7 @@
   font-size: var(--slate-text-sm);
 }
 
-.slate-layer__share {
+.slate-root .slate-layer__share {
   margin-top: auto;
   color: var(--slate-text);
   font-size: var(--slate-text-xl);
@@ -127,6 +226,7 @@
 /* ---- Hopper rows ---- */
 
 .slate-hopper {
+  position: relative;
   padding: var(--slate-space-2) var(--slate-space-3);
   border-radius: var(--slate-radius);
   font-variant-numeric: tabular-nums;
@@ -156,7 +256,9 @@
   white-space: nowrap;
 }
 
-.slate-hopper__pct,
+/* The blend is a button (recipe-edit.css); the base reset's text-align
+   is out-specified here. */
+.slate-root .slate-hopper__pct,
 .slate-hopper__weight {
   text-align: right;
 }
@@ -170,15 +272,6 @@
   gap: var(--slate-space-2);
 }
 
-.slate-recipe[data-mode="edit"] .slate-hopper__controls,
-.slate-recipe[data-mode="compare"] .slate-hopper__controls,
-.slate-recipe[data-mode="print"] .slate-hopper__controls,
-.slate-recipe[data-mode="edit"] .slate-recipe__foot,
-.slate-recipe[data-mode="compare"] .slate-recipe__foot,
-.slate-recipe[data-mode="print"] .slate-recipe__foot {
-  visibility: hidden;
-}
-
 .slate-hopper__mark {
   color: var(--slate-overdue);
   font-size: var(--slate-text-xs);
@@ -190,6 +283,44 @@
 
 .slate-hopper.is-late .slate-hopper__mark {
   color: var(--slate-warning);
+}
+
+/* ---- Compare: the other recipe under each row ---- */
+
+.slate-hopper__other {
+  grid-column: 1 / -1;
+  padding-left: calc(56px + var(--slate-space-3));
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* Green where the two recipes agree, red where they differ. */
+.slate-hopper.is-same {
+  background: var(--slate-success-soft);
+}
+
+.slate-hopper.is-differs {
+  background: var(--slate-danger-soft);
+}
+
+.slate-layer__share-other {
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-layer__head.is-same .slate-layer__share-other {
+  color: var(--slate-success);
+}
+
+.slate-layer__head.is-differs .slate-layer__share-other {
+  color: var(--slate-danger);
+  font-weight: 600;
+}
+
+/* Another device moved the value under an open editor. */
+.slate-hopper.is-changed-underneath,
+.slate-layer__head.is-changed-underneath {
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-info);
 }
 
 .slate-hopper.is-overdue {

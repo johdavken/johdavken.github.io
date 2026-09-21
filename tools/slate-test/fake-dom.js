@@ -166,7 +166,23 @@ function makeNode(tag, doc, namespace) {
       child.parentNode = this;
       this.childNodes.push(child);
       this._text = "";
+      if (child.tagName === "IFRAME" && typeof child._attach === "function") child._attach();
       return child;
+    },
+    insertBefore(child, before) {
+      if (!before) return this.appendChild(child);
+      if (child.parentNode) child.parentNode.removeChild(child);
+      const index = this.childNodes.indexOf(before);
+      child.parentNode = this;
+      this.childNodes.splice(index === -1 ? this.childNodes.length : index, 0, child);
+      this._text = "";
+      return child;
+    },
+    remove() { if (this.parentNode) this.parentNode.removeChild(this); },
+    get nextSibling() {
+      if (!this.parentNode) return null;
+      const index = this.parentNode.childNodes.indexOf(this);
+      return this.parentNode.childNodes[index + 1] || null;
     },
     removeChild(child) {
       const index = this.childNodes.indexOf(child);
@@ -211,13 +227,48 @@ function makeNode(tag, doc, namespace) {
         for (const handler of (current.listeners[event.type] || []).slice()) handler.call(current, event);
         current = current.parentNode;
       }
+      if (!event._stopped && this.ownerDocument && this.isConnected) {
+        for (const handler of (this.ownerDocument.listeners[event.type] || []).slice()) handler.call(this.ownerDocument, event);
+      }
       return !event._defaultPrevented;
     },
     focus() { this.focused = true; if (this.ownerDocument) this.ownerDocument.activeElement = this; },
     blur() { this.focused = false; },
-    select() { this.selected = true; }
+    select() { this.selected = true; },
+    /* Pointer capture is recorded, never enforced: the tests drive the
+     * pointer events by hand at whatever node they choose. */
+    captured: null,
+    setPointerCapture(id) { this.captured = id; },
+    releasePointerCapture(id) { if (this.captured === id) this.captured = null; },
+    hasPointerCapture(id) { return this.captured === id; },
+    /* Geometry the tests set: node._rect = {left, top, width, height}. */
+    _rect: null,
+    getBoundingClientRect() {
+      const rect = this._rect || { left: 0, top: 0, width: 0, height: 0 };
+      return Object.assign({ right: rect.left + rect.width, bottom: rect.top + rect.height, x: rect.left, y: rect.top }, rect);
+    },
+    /* Attached to the document's tree, as the real property reads. */
+    get isConnected() {
+      let current = this;
+      while (current) {
+        if (current === (this.ownerDocument && this.ownerDocument.documentElement)) return true;
+        current = current.parentNode;
+      }
+      return false;
+    }
   };
   node.classList = makeClassList(node);
+  /* An iframe gets a document of its own and a window that records print(). */
+  if (node.tagName === "IFRAME") {
+    node.contentDocument = null;
+    node.contentWindow = null;
+    node._attach = () => {
+      if (node.contentDocument) return;
+      const inner = makeDocument({ href: "about:blank" });
+      node.contentDocument = inner;
+      node.contentWindow = { document: inner, prints: 0, print() { this.prints += 1; }, focus() {} };
+    };
+  }
   return node;
 }
 
@@ -246,7 +297,10 @@ function makeDocument(options) {
       if (index > -1) list.splice(index, 1);
     },
     querySelector(selector) { return doc.body.querySelector(selector); },
-    querySelectorAll(selector) { return doc.body.querySelectorAll(selector); }
+    querySelectorAll(selector) { return doc.body.querySelectorAll(selector); },
+    /* What is under the pointer: the tests set doc._elementAt = (x, y) => node. */
+    _elementAt: null,
+    elementFromPoint(x, y) { return typeof doc._elementAt === "function" ? doc._elementAt(x, y) : null; }
   };
   doc.documentElement = makeNode("html", doc);
   doc.head = makeNode("head", doc);
@@ -259,6 +313,14 @@ function makeDocument(options) {
 /* Fire a click on a node, bubbling. */
 function click(node, init) {
   const event = makeEvent("click", init);
+  node.dispatchEvent(event);
+  return event;
+}
+
+/* Fire a pointer event on a node, bubbling. Defaults are a primary mouse
+ * press at (0,0) with pointerId 1. */
+function pointer(type, node, init) {
+  const event = makeEvent(type, Object.assign({ pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: 0, clientY: 0 }, init || {}));
   node.dispatchEvent(event);
   return event;
 }
@@ -305,11 +367,14 @@ function makeCommands(options) {
     capabilities: () => capabilities.slice(),
     dispatch(command, args) {
       calls.push({ command, args });
-      if (typeof settings.answer === "function") return settings.answer(command, args);
+      if (typeof settings.answer === "function") {
+        const answered = settings.answer(command, args);
+        if (answered !== undefined) return answered;
+      }
       revision += 1;
       return { ok: true, changed: true, revision, persisted: true, snapshot: null };
     }
   };
 }
 
-module.exports = { makeDocument, makeNode, makeEvent, click, key, makeTimers, makeCommands, matchesSelector };
+module.exports = { makeDocument, makeNode, makeEvent, click, key, pointer, makeTimers, makeCommands, matchesSelector };

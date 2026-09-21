@@ -1,0 +1,320 @@
+/* Editing the recipe in place: the cells that open, the fields that take
+   their place, the resin search, the drag, the layer menu and the print
+   menu. recipe.css holds the table itself. */
+
+/* ---- Editable cells ---- */
+
+.slate-root .slate-hopper__resin,
+.slate-root .slate-layer__share {
+  border-radius: var(--slate-radius-sm);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-hopper__pct {
+  border-radius: var(--slate-radius-sm);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-hopper__resin[data-able="true"]:hover,
+.slate-root .slate-hopper__pct[data-able="true"]:hover,
+.slate-root .slate-layer__share[data-able="true"]:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-hopper__resin[data-able="false"],
+.slate-root .slate-hopper__pct[data-able="false"],
+.slate-root .slate-layer__share[data-able="false"] {
+  cursor: default;
+}
+
+.slate-root .slate-hopper__pct[data-derived] {
+  color: var(--slate-text-faint);
+}
+
+/* ---- The fields ---- */
+
+.slate-hopper__input,
+.slate-layer__input,
+.slate-combobox__input {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-hopper__input {
+  text-align: right;
+}
+
+.slate-layer__input {
+  font-size: var(--slate-text-xl);
+  font-weight: 600;
+}
+
+.slate-root .slate-hopper__input[aria-invalid="true"],
+.slate-root .slate-layer__input[aria-invalid="true"],
+.slate-root .slate-combobox__input[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+/* The application's answer under the row or in the layer's head. */
+.slate-hopper__note {
+  grid-column: 1 / -1;
+  padding-left: calc(56px + var(--slate-space-3));
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-layer__note {
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- The resin search ---- */
+
+.slate-combobox {
+  position: relative;
+  min-width: 0;
+}
+
+.slate-combobox__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 260px;
+  margin-top: var(--slate-space-1);
+  padding: var(--slate-space-1) 0;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-combobox__option {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-1) var(--slate-space-3);
+  cursor: pointer;
+}
+
+.slate-combobox__option.is-active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-combobox__option.is-custom {
+  color: var(--slate-text-muted);
+  font-style: italic;
+}
+
+.slate-combobox__code {
+  font-weight: 500;
+}
+
+.slate-combobox__note {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-combobox__empty {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- The drag ---- */
+
+.slate-hopper.is-movable .slate-hopper__id {
+  cursor: grab;
+}
+
+.slate-recipe__layers.is-moving {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.slate-hopper.is-dragging {
+  opacity: 0.55;
+  background: var(--slate-surface-hover);
+}
+
+.slate-hopper.is-drop-target {
+  background: var(--slate-accent-soft);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+.slate-drag-proxy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.slate-drag-proxy__id {
+  font-weight: 600;
+}
+
+.slate-drag-proxy__pct {
+  text-align: right;
+}
+
+/* ---- The layer menu ---- */
+
+.slate-layer-menu {
+  position: relative;
+  margin-top: var(--slate-space-2);
+}
+
+.slate-root .slate-layer-menu__button {
+  display: inline-flex;
+  gap: 3px;
+  padding: var(--slate-space-1);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-faint);
+  transition: color var(--slate-motion-ack) var(--slate-motion-ease), background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-layer-menu__button:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-layer-menu__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.slate-layer-menu__list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  margin-top: var(--slate-space-1);
+  padding: var(--slate-space-1) 0;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-root .slate-layer-menu__item {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  font-size: var(--slate-text-sm);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-layer-menu__item:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-layer-menu__item[aria-disabled="true"] {
+  color: var(--slate-text-faint);
+  cursor: not-allowed;
+}
+
+.slate-root .slate-layer-menu__item--danger {
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-layer-menu__item[data-armed] {
+  background: var(--slate-danger-soft);
+  font-weight: 600;
+}
+
+/* ---- The print menu ---- */
+
+.slate-print {
+  position: relative;
+  flex: none;
+}
+
+.slate-root .slate-print__trigger {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-print__trigger:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-print__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  margin-top: var(--slate-space-1);
+  padding: var(--slate-space-1) 0;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-root .slate-print__item {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  font-size: var(--slate-text-sm);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-print__item:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-print__item[aria-disabled="true"] {
+  color: var(--slate-text-faint);
+  cursor: not-allowed;
+}
+
+/* The frame the sheet prints from: laid out, so every browser prints it,
+   but out of sight. */
+.slate-print__frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-combobox__list,
+  .slate-layer-menu__list,
+  .slate-print__menu {
+    animation: none;
+  }
+}

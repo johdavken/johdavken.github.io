@@ -5,8 +5,9 @@
  * decides for each publish whether the sections are rebuilt, patched or
  * left alone. It never connects a producer and never publishes: the
  * application is the only writer of the bridges, and Slate is one of the
- * readers. It dispatches nothing itself either - the two files that do
- * (slate-tracking.js, slate-stat-cards.js) are handed the command bridge
+ * readers. It dispatches nothing itself either - the four files that do
+ * (slate-tracking.js, slate-stat-cards.js, slate-recipe-actions.js,
+ * slate-plan-actions.js) are handed the command bridge
  * and tell this file of every change they commit, so the bridge's echo of
  * the operator's own edit is recognised as such.
  *
@@ -25,6 +26,9 @@
   const connection = root.PolynStationConnectionBridge || null;
   const admin = root.PolynStationAdminBridge || null;
   const rundown = root.PolynStationRundown || null;
+  // The shared resin catalog, for the recipe's resin search. Optional: with
+  // none, the search offers only what is typed.
+  const catalog = root.PolynResinCatalog || null;
   const themeModule = root.PolynSlateTheme || null;
   const displayModule = root.PolynSlateDisplay || null;
 
@@ -229,6 +233,10 @@
       display: displayController,
       readOnly: readOnlyNow,
       rundown,
+      resins: () => {
+        if (!catalog || typeof catalog.getResins !== "function") return [];
+        try { return catalog.getResins() || []; } catch (error) { return []; }
+      },
       now: () => Date.now(),
       timers: { setTimeout: (fn, ms) => root.setTimeout(fn, ms), clearTimeout: id => root.clearTimeout(id) },
       onCommitted,

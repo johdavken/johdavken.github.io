@@ -231,7 +231,7 @@ test("the host loads no application module, no bridge, and no Station UI module"
   const scripts = [...codeOnly(host).matchAll(/"([^"]+\.js)"/g)].map(match => match[1]);
   assert.ok(scripts.length > 0);
   for (const script of scripts) {
-    assert.ok(/^slate\//.test(script) || script === "station/station-rundown.js",
+    assert.ok(/^slate\//.test(script) || ["station/station-rundown.js", "station/station-print-sheet.js"].includes(script),
       `the host loads ${script}`);
   }
   // The bridges are loaded by index.html, once, before app.js. Loading one

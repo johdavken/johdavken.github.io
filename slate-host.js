@@ -52,6 +52,7 @@
     "slate/styles/components/section.css",
     "slate/styles/components/stat-cards.css",
     "slate/styles/components/recipe.css",
+    "slate/styles/components/recipe-edit.css",
     "slate/styles/components/sync.css",
     "slate/styles/components/settings.css",
     "slate/styles/components/summary.css"
@@ -61,11 +62,20 @@
     // The run-down projection, shared with Station: pure arithmetic over
     // the snapshot, no DOM, no timers. The one asset outside slate/.
     "station/station-rundown.js",
+    // The floor UI's recipe print sheet, shared the same way: it draws into
+    // any document and carries its own stylesheet.
+    "station/station-print-sheet.js",
     "slate/slate-logo.js",
     "slate/slate-line.js",
     "slate/slate-demo.js",
     "slate/slate-source.js",
     "slate/slate-tracking.js",
+    "slate/slate-recipe-actions.js",
+    "slate/slate-plan-actions.js",
+    "slate/slate-resin-search.js",
+    "slate/slate-recipe-drag.js",
+    "slate/slate-layer-menu.js",
+    "slate/slate-print.js",
     "slate/slate-recipe.js",
     "slate/slate-stat-cards.js",
     "slate/slate-sync.js",
@@ -80,7 +90,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.1.1";
+  const VERSION = "0.2.0";
 
   function requested() {
     try {
