@@ -232,3 +232,135 @@
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
 }
+
+/* ---- Administrator access ----
+   The last group: a row an operator passes over, which opens into the
+   sign-in the application's own admin session takes. Signed in, the row
+   carries the email and the body offers the way out. */
+
+.slate-settings__admin {
+  padding-top: var(--slate-space-4);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-settings__admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  width: 100%;
+  padding: var(--slate-space-2);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  text-align: left;
+}
+
+.slate-root .slate-settings__admin-toggle:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-settings__admin-mark {
+  display: inline-block;
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-settings__admin.is-open .slate-settings__admin-mark {
+  transform: rotate(90deg);
+}
+
+.slate-settings__admin-title {
+  flex: 1 1 auto;
+}
+
+/* Who is signed in, on the closed row. */
+.slate-settings__admin-who {
+  color: var(--slate-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-settings__admin-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-3) var(--slate-space-2) 0;
+}
+
+.slate-settings__admin-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-settings__admin-field {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  --slate-field-width: 100%;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slate-root .slate-settings__admin-field:focus {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+}
+
+.slate-root .slate-settings__admin-action {
+  flex: none;
+  padding: var(--slate-space-1) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-root .slate-settings__admin-action:not(:disabled):not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-settings__admin-action[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slate-root .slate-settings__admin-action:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.slate-root .slate-settings__admin-action--primary {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-settings__admin-action--primary:not(:disabled):not([data-able="false"]):hover {
+  background: var(--slate-accent-hover);
+}
+
+.slate-settings__admin-email {
+  flex: 1 1 auto;
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-settings__admin-opens {
+  max-width: 60ch;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-settings__admin-note {
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-settings__admin-note.is-error {
+  color: var(--slate-danger);
+}

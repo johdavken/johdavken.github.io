@@ -9,6 +9,12 @@
 .slate-root {
   box-sizing: border-box;
   min-height: 100vh;
+  /* The frame is centred, so a scrollbar arriving would narrow the viewport
+     and slide the whole sheet sideways. The gutter is reserved whether or
+     not the page scrolls, so the sheet never moves between sections. On the
+     standalone page `slate-root` is the root element, where this reaches the
+     viewport; in the hosted view it is a div, and host.css says it there. */
+  scrollbar-gutter: stable;
   margin: 0;
   background-color: var(--slate-bg);
   color: var(--slate-text);

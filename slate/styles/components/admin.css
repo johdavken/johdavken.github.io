@@ -1,0 +1,19 @@
+/* The administrator's sections: Workspace Management, Line Configuration
+   and Resin Database. They stand in the centre pane, so they take the
+   section bar and the Recipe Book's list-and-detail chrome rather than
+   the aside's sticky panel; what is here is only what those do not
+   already give. */
+
+.slate-admin__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+}
+
+/* Signed out, or with no application behind the tools: the one line that
+   says so, in the body's place. */
+.slate-admin__gate {
+  max-width: 60ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}

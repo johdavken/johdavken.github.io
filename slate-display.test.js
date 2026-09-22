@@ -205,7 +205,7 @@ test("Settings offers Automatic / Assisted / Manual tracking as radios after Saf
   const doc = makeDocument();
   const controller = display.create(node(), storage());
   const view = settings.create(doc, { theme: null, themes: [], display: controller });
-  assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")), ["Appearance", "Safety", "Tracking", "More settings"]);
+  assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")), ["Appearance", "Safety", "Tracking", "More settings", "Administrator access"]);
   const group = view.element.querySelector("[role='radiogroup'][aria-label='Tracking']");
   assert.ok(group, "no Tracking radiogroup");
   const modes = view.element.querySelectorAll("[data-tracking-mode]");

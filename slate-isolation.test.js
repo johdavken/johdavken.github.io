@@ -24,13 +24,14 @@ const STYLES = path.join(SLATE, "styles");
 const SLATE_FILES = [
   "slate.js", "slate-shell.js", "slate-logo.js", "slate-line.js", "slate-source.js", "slate-demo.js",
   "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
-  "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js",
+  "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-recipe-book.js", "slate-weights.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
-  "slate-pressure.js", "slate-winding-tension.js"
+  "slate-pressure.js", "slate-winding-tension.js",
+  "slate-workspaces.js", "slate-line-config.js", "slate-resin-db.js"
 ];
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];
-const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"] };
+const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"], admin: ["slate-admin-actions.js"] };
 const INNER_HTML = ["slate-sync.js"];
 const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js"];
 /* The pure Station modules Slate shares: the run-down arithmetic and the
@@ -284,18 +285,21 @@ test("exactly five Slate files dispatch commands - tracking, the job's cards, th
   assert.doesNotMatch(codeOnly(read("slate.js")), /dispatch\s*\(/);
 });
 
-test("exactly one Slate file requests connection actions, one recipe actions, one weight-profile actions, and none asks the admin bridge for anything", () => {
+test("exactly one Slate file requests connection actions, one recipe actions, one weight-profile actions, and one administrator actions", () => {
   for (const file of SLATE_FILES) {
     const source = codeOnly(read(file));
     if (REQUESTS.connection.includes(file)) assert.match(source, /connection\.request\s*\(/);
     else if (REQUESTS.recipes.includes(file)) assert.match(source, /recipes\.request\s*\(/);
     else if (REQUESTS.weightProfiles.includes(file)) assert.match(source, /profiles\.request\s*\(/);
+    else if (REQUESTS.admin.includes(file)) assert.match(source, /admin\.request\s*\(/);
     else assert.doesNotMatch(source, /\.request\s*\(/, `${file} requests a bridge action`);
-    assert.doesNotMatch(source, /admin\.request/, `${file} asks the admin bridge to act`);
-    // The recipes and weight-profiles bridges are read from their globals
-    // once each, by the boot file, and handed on: the seams act on the
-    // bridge they are given.
-    for (const [global, name] of [["PolynStationRecipesBridge", "recipes"], ["PolynStationWeightProfilesBridge", "weight-profiles"]]) {
+    // The administrator's session opens and ends through one seam, as
+    // every other bridge does: no other file may ask it to act.
+    if (!REQUESTS.admin.includes(file)) assert.doesNotMatch(source, /admin\.request/, `${file} asks the admin bridge to act`);
+    // The recipes, weight-profiles and admin bridges are read from their
+    // globals once each, by the boot file, and handed on: the seams act
+    // on the bridge they are given.
+    for (const [global, name] of [["PolynStationRecipesBridge", "recipes"], ["PolynStationWeightProfilesBridge", "weight-profiles"], ["PolynStationAdminBridge", "admin"]]) {
       if (file === "slate.js") assert.equal((source.match(new RegExp(global, "g")) || []).length, 1, `slate.js reads the ${name} bridge other than once`);
       else assert.ok(!source.includes(global), `${file} reaches the ${name} bridge global`);
     }

@@ -219,8 +219,18 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   const balanceWrap = hostEl.querySelector(".slate-aside .slate-section[data-section='resin-balance']");
   assert.ok(timelineWrap && balanceWrap, "the aside does not hold both the Timeline and the tool");
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
-  const listed = hostEl.querySelectorAll(".slate-rail__sections [data-section]").map(item => item.getAttribute("data-section"));
+  const railItems = hostEl.querySelectorAll(".slate-rail__sections [data-section]");
+  const listed = railItems.filter(item => !item.hasAttribute("hidden")).map(item => item.getAttribute("data-section"));
   assert.deepEqual(listed, ["recipe", "recipe-book", "weights", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Recipe Book, Weights, Resin Balance, with the two calculators in the Tools menu after");
+  // The administrator's three are built with the rest and stand unlisted:
+  // no administrator is signed in on this boot (no producer connects the
+  // admin bridge), so they are not on the rail and the rule above them is
+  // not drawn.
+  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["workspaces", "line-config", "resins"]);
+  assert.ok(hostEl.querySelector(".slate-rail__divider").hasAttribute("hidden"), "the administrator's rule is drawn with nobody signed in");
+  for (const id of ["workspaces", "line-config", "resins"]) {
+    assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);
+  }
   assert.deepEqual(hostEl.querySelectorAll(".slate-rail__menu [data-section]").map(item => item.getAttribute("data-section")), ["pressure", "winding-tension"]);
   const toolItem = hostEl.querySelector(".slate-rail__sections [data-section='resin-balance']");
   toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });

@@ -61,6 +61,10 @@
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
+  const adminActions = root.PolynSlateAdminActions;
+  const workspacesModule = root.PolynSlateWorkspaces;
+  const lineConfigModule = root.PolynSlateLineConfig;
+  const resinDbModule = root.PolynSlateResinDb;
   const pressureModule = root.PolynSlatePressure;
   const windingModule = root.PolynSlateWindingTension;
 
@@ -290,6 +294,13 @@
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => home("aside") })) },
+      // The administrator's three. Listed under Resin Balance and marked
+      // `admin`, so the rail keeps them off an operator's rail until one
+      // is signed in; they are built with the rest and read nothing until
+      // they are both shown and open.
+      { id: "workspaces", label: workspacesModule.TITLE, group: "sections", admin: true, icon: "workspaces", create: (d, c) => workspacesModule.create(d, c) },
+      { id: "line-config", label: lineConfigModule.TITLE, group: "sections", admin: true, icon: "lines", create: (d, c) => lineConfigModule.create(d, c) },
+      { id: "resins", label: resinDbModule.TITLE, group: "sections", admin: true, icon: "resins", create: (d, c) => resinDbModule.create(d, c) },
       { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
       { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
@@ -338,6 +349,20 @@
       }
     });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
+
+    // The administrator's sections appear and vanish with the one session,
+    // wherever it was opened or ended - here, the floor UI or Station. A
+    // section left open when access goes hands the centre back to Recipe.
+    const adminSections = definitions.filter(definition => definition.admin).map(definition => definition.id);
+    function applyAdmin() {
+      const open = !!(adminActions && adminActions.signedIn(admin));
+      for (const id of adminSections) railView.setListed(id, open);
+      if (open) return;
+      const showing = sections.current();
+      if (showing && adminSections.includes(showing.id)) sections.show(DEFAULT_SECTION);
+    }
+    applyAdmin();
+    if (admin && typeof admin.subscribe === "function") admin.subscribe(applyAdmin);
 
     sync = syncModule.create(doc, { connection, admin });
     if (mounts.sync) mounts.sync.appendChild(sync.element);

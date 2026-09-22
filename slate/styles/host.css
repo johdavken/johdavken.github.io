@@ -24,6 +24,12 @@
  * <dialog>.showModal(); a modal makes the rest of the document inert and
  * stays that way when a stylesheet hides it. So a modal is let through - by
  * what it IS (:modal), not by naming any dialog.
+ *
+ * The third rule is the scrollbar's gutter. Slate's frame is centred, so a
+ * scrollbar arriving with a tall section would narrow the viewport and slide
+ * the sheet sideways; reserving the gutter keeps it still. It has to be said
+ * on the root element, which is the only place it reaches the viewport - and
+ * only while Slate is the view, which is what the :has() asks.
  */
 body[data-slate-view="slate"] > :not([data-slate-host]):not(:modal) {
   display: none !important;
@@ -33,4 +39,8 @@ body[data-slate-view="slate"] {
   margin: 0;
   padding: 0;
   overflow: auto;
+}
+
+html:has(> body[data-slate-view="slate"]) {
+  scrollbar-gutter: stable;
 }

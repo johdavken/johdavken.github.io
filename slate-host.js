@@ -66,6 +66,7 @@
     "slate/styles/components/panel.css",
     "slate/styles/components/timeline.css",
     "slate/styles/components/resin-balance.css",
+    "slate/styles/components/admin.css",
     "slate/styles/components/pressure.css",
     "slate/styles/components/winding-tension.css"
   ];
@@ -87,6 +88,7 @@
     "slate/slate-book-actions.js",
     "slate/slate-weight-actions.js",
     "slate/slate-profile-actions.js",
+    "slate/slate-admin-actions.js",
     "slate/slate-resin-search.js",
     "slate/slate-recipe-draft.js",
     "slate/slate-recipe-form.js",
@@ -102,6 +104,9 @@
     "slate/slate-timeline-layout.js",
     "slate/slate-timeline.js",
     "slate/slate-resin-balance.js",
+    "slate/slate-workspaces.js",
+    "slate/slate-line-config.js",
+    "slate/slate-resin-db.js",
     "slate/slate-pressure.js",
     "slate/slate-winding-tension.js",
     "slate/slate-rail.js",
@@ -113,7 +118,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.10.0";
+  const VERSION = "0.11.0";
 
   function requested() {
     try {

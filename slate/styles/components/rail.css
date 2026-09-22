@@ -211,3 +211,10 @@
     opacity: 0;
   }
 }
+
+/* The rule above the administrator's sections, shown with them. */
+.slate-rail__divider {
+  height: var(--slate-stroke);
+  margin: var(--slate-space-2) var(--slate-space-2);
+  background: var(--slate-border-subtle);
+}
