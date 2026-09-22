@@ -360,3 +360,18 @@
 .slate-settings__admin-note.is-error {
   color: var(--slate-danger);
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-settings__admin-toggle {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-settings__admin-field {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-settings__admin-action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-5);
+}

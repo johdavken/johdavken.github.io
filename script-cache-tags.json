@@ -76,12 +76,12 @@
     "hash": "4af13823c0c17947"
   },
   "slate-display.js": {
-    "v": "0.3.0",
-    "hash": "0aab2fcb475e7226"
+    "v": "0.5.0",
+    "hash": "2aa99e07e69e9a2e"
   },
   "slate-host.js": {
-    "v": "0.17.0",
-    "hash": "10fecbb44beceb6f"
+    "v": "0.28.0",
+    "hash": "308b02722129a601"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -140,8 +140,8 @@
     "hash": "9e52614e31c9ec4b"
   },
   "android-back-button.js": {
-    "v": "0.2.0",
-    "hash": "ed66f007633e83e1"
+    "v": "0.2.1",
+    "hash": "ee178bd20070d151"
   },
   "install-hint.js": {
     "v": "0.1.0",

@@ -149,3 +149,84 @@ test("with `before` the combobox stands where the caller says, and is placed bef
   assert.equal(box.input.focused, true);
   assert.equal(cancelled, 0);
 });
+
+/* ----------------------------------------------------------------------
+ *   Under a finger (the touch tier)
+ * -------------------------------------------------------------------- */
+
+test("every search field asks the keyboard for capitals and a Done key; only a touch combobox carries a Cancel", () => {
+  const mouse = open({ value: "" });
+  assert.equal(mouse.box.input.getAttribute("autocapitalize"), "characters");
+  assert.equal(mouse.box.input.getAttribute("enterkeyhint"), "done");
+  assert.equal(mouse.box.element.querySelector("[data-slate-cancel]"), null, "a mouse combobox grew a Cancel");
+  assert.equal(mouse.box.options().length, search.RESULT_LIMIT);
+  const finger = open({ value: "", touch: true });
+  assert.equal(finger.box.options().length, search.TOUCH_LIMIT, "the touch list is not the shorter one");
+  assert.ok(finger.box.cancelButton === finger.box.element.querySelector("[data-slate-cancel]"));
+});
+
+test("under a finger a blur keeps the search open - the keyboard's hide key is not a cancel - and Cancel, pressed without taking the focus, ends it", () => {
+  const { box, chosen, cancelled } = open({ value: "HX204", touch: true });
+  box.input.dispatchEvent({ type: "blur", relatedTarget: null });
+  assert.equal(box.isOpen(), true, "a blur cancelled the touch search");
+  assert.equal(cancelled(), 0);
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of box.cancelButton.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true, "the Cancel press would take the field's focus");
+  click(box.cancelButton);
+  assert.equal(cancelled(), 1);
+  assert.equal(box.isOpen(), false);
+  assert.deepEqual(chosen, []);
+  const escaped = open({ value: "HX204", touch: true });
+  key(escaped.box.input, "Escape");
+  assert.equal(escaped.cancelled(), 1, "Escape still cancels");
+});
+
+test("a finger or a pen chooses on release, once - the click that follows is spent; a mouse release waits for its click", () => {
+  const finger = open({ value: "", touch: true });
+  const option = finger.box.list.querySelectorAll("[role='option']")[1];
+  option.dispatchEvent({ type: "pointerup", pointerType: "touch" });
+  click(option);
+  assert.deepEqual(finger.chosen, [CATALOG[1].resin_code]);
+
+  const mouse = open({ value: "" });
+  const item = mouse.box.list.querySelectorAll("[role='option']")[2];
+  item.dispatchEvent({ type: "pointerup", pointerType: "mouse" });
+  assert.deepEqual(mouse.chosen, []);
+  click(item);
+  assert.deepEqual(mouse.chosen, [CATALOG[2].resin_code]);
+
+  const doc = makeDocument();
+  const field = doc.createElement("input");
+  const host = doc.createElement("div");
+  host.appendChild(field);
+  doc.body.appendChild(host);
+  const picked = [];
+  const attached = search.attach(doc, field, { resins: () => CATALOG, onChoose: code => picked.push(code), touch: true });
+  field.value = "l";
+  field.dispatchEvent({ type: "input" });
+  assert.ok(attached.options().length <= search.TOUCH_LIMIT + 1);
+  const first = attached.list.querySelectorAll("[role='option']")[0];
+  first.dispatchEvent({ type: "pointerup", pointerType: "pen" });
+  click(first);
+  assert.equal(picked.length, 1, "the attached list chose twice for one tap");
+});
+
+test("under a finger a list with no room below its field stands above it, measured against the visual viewport, and stops listening when it closes", () => {
+  const listeners = new Set();
+  const viewport = { offsetTop: 0, height: 500, addEventListener: (type, fn) => listeners.add(fn), removeEventListener: (type, fn) => listeners.delete(fn) };
+  const { box } = open({ value: "", touch: true, view: { visualViewport: viewport } });
+  assert.equal(listeners.size, 1);
+  box.input._rect = { left: 0, top: 400, width: 200, height: 44 };
+  box.list._rect = { left: 0, top: 444, width: 260, height: 200 };
+  for (const fn of listeners) fn();
+  assert.ok(box.list.classList.contains("is-above"), "the list stayed under the keyboard");
+  box.input._rect = { left: 0, top: 60, width: 200, height: 44 };
+  for (const fn of listeners) fn();
+  assert.ok(!box.list.classList.contains("is-above"));
+  box.close();
+  assert.equal(listeners.size, 0, "the viewport listener outlived the search");
+  const mouse = open({ value: "", view: { visualViewport: viewport } });
+  assert.equal(listeners.size, 0, "a mouse search listens to the viewport");
+  mouse.box.close();
+});

@@ -76,3 +76,16 @@
 .slate-pressure .slate-card__note {
   padding: 0;
 }
+
+/* ---- Touch (data-input="touch" on the root): the unit chip is the only
+   way to read the figure the other way, so it is a real target. */
+
+.slate-root[data-input="touch"] .slate-pressure__unit {
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"] .slate-pressure__input {
+  --slate-field-min-height: var(--slate-tap);
+}

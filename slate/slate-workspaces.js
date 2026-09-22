@@ -49,6 +49,10 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (actionsModule) {
   "use strict";
 
+  /* A row tapped while a request is out is turned away (the race it would
+   * lose); said, so a finger on a slow line does not read it as a dead screen. */
+  const BUSY_WAIT = "Still working on the last request - try again in a moment.";
+
   const TITLE = "Workspaces";
   const LEAD = "Every line this project holds, and the devices on each.";
   const SIGNED_OUT = "No administrator is signed in. Sign in under Administrator access in Settings.";
@@ -342,7 +346,7 @@
         ? "The line's name, as every connected device will see it"
         : "A new line, created with this device's current setup and connected to it"));
       const input = element(doc, "input", "slate-book__name", {
-        type: "text", autocomplete: "off", spellcheck: "false", maxlength: "80",
+        type: "text", autocomplete: "off", spellcheck: "false", enterkeyhint: "done", maxlength: "80",
         placeholder: "Line name", "aria-label": "Line name", "data-field": "name"
       });
       input.value = view.value || "";
@@ -599,7 +603,7 @@
      * it is turned away here. (reload() reaches this after its request
      * has finished, so nothing is in flight and it passes through.) */
     async function choose(id) {
-      if (busy()) return null;
+      if (busy()) { say(BUSY_WAIT); return null; }
       state.focusId = id || null;
       state.view = null;
       state.mergeTargetId = null;

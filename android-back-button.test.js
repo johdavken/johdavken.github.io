@@ -129,3 +129,34 @@ test("the vendored Capacitor browser bundles were removed from the repo, not jus
   assert.equal(fs.existsSync("vendor/capacitor-core.js"), false);
   assert.equal(fs.existsSync("vendor/capacitor-app.js"), false);
 });
+
+test("Back asks the page first: a listener that cancels takes the key (minimizing only when it says so); with none, handleAndroidBack decides as before", () => {
+  const vm = require("node:vm");
+  function run(listener, handled) {
+    const calls = { minimized: 0, handled: 0 };
+    let backHandler = null;
+    const listeners = [];
+    const document = {
+      readyState: "complete",
+      addEventListener(type, fn) { if (type === "polyn:android-back") listeners.push(fn); },
+      dispatchEvent(event) { for (const fn of listeners) fn(event); return !event.defaultPrevented; }
+    };
+    class CustomEvent {
+      constructor(type, init) { this.type = type; this.detail = init.detail; this.cancelable = !!init.cancelable; this.defaultPrevented = false; }
+      preventDefault() { if (this.cancelable) this.defaultPrevented = true; }
+    }
+    const window = {
+      Capacitor: { isNativePlatform: () => true, Plugins: { App: { addListener: (name, fn) => { backHandler = fn; }, minimizeApp: () => { calls.minimized += 1; } } } },
+      handleAndroidBack: () => { calls.handled += 1; return handled; }
+    };
+    if (listener) document.addEventListener("polyn:android-back", listener);
+    vm.runInNewContext(backButtonJs, { window, document, CustomEvent });
+    backHandler();
+    return calls;
+  }
+  assert.deepEqual(run(null, true), { minimized: 0, handled: 1 });
+  assert.deepEqual(run(null, false), { minimized: 1, handled: 1 });
+  assert.deepEqual(run(event => event.preventDefault(), false), { minimized: 0, handled: 0 }, "a page that took the key still reached the floor UI");
+  assert.deepEqual(run(event => { event.detail.minimize = true; event.preventDefault(); }, true), { minimized: 1, handled: 0 });
+  assert.deepEqual(run(() => {}, true), { minimized: 0, handled: 1 }, "a listener that did not cancel took the key");
+});

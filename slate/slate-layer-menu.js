@@ -12,6 +12,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const ARM_MS = 4000;
   const CLEAR_LABEL = "Clear layer";
   const CLEAR_ARMED_LABEL = "Confirm clear";
@@ -88,10 +96,7 @@
       clear.textContent = CLEAR_LABEL;
     }
 
-    function outside(event) {
-      if (event && event.target && rootEl.contains(event.target)) return;
-      close();
-    }
+    const outsideCloser = dismissal(doc, node => rootEl.contains(node), () => close());
 
     function show() {
       if (open) return;
@@ -100,7 +105,7 @@
       list.removeAttribute("hidden");
       button.setAttribute("aria-expanded", "true");
       rootEl.classList.add("is-open");
-      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outside, true);
+      outsideCloser.start();
     }
 
     function close() {
@@ -110,7 +115,7 @@
       list.setAttribute("hidden", "");
       button.setAttribute("aria-expanded", "false");
       rootEl.classList.remove("is-open");
-      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outside, true);
+      outsideCloser.stop();
     }
 
     button.addEventListener("click", () => { if (open) close(); else show(); });

@@ -218,3 +218,66 @@
   margin: var(--slate-space-2) var(--slate-space-2);
   background: var(--slate-border-subtle);
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-rail__item {
+  min-height: 48px;
+}
+
+.slate-root[data-input="touch"] .slate-rail__sections {
+  gap: var(--slate-space-2);
+}
+
+/* ---- The compact rail (touch) ----
+   Icons alone, each item a finger's square; the names stay on the items
+   as their accessible labels and in the Tools flyout, which floats beside
+   the rail over the page (slate-rail.js closes it on a press outside). */
+
+.slate-root[data-input="touch"] .slate-rail__inner {
+  top: var(--slate-inset-top);
+  height: calc(100dvh - var(--slate-inset-top) - var(--slate-inset-bottom));
+  padding: var(--slate-space-3) var(--slate-space-2);
+  overscroll-behavior: contain;
+}
+
+.slate-root[data-input="touch"] .slate-rail__brand {
+  padding: 0;
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-rail__label {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-rail__chevron {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-rail__item {
+  justify-content: center;
+  padding: 0;
+}
+
+.slate-root[data-input="touch"] .slate-rail__menu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + var(--slate-space-2));
+  z-index: 30;
+  min-width: 220px;
+  margin: 0;
+  padding: var(--slate-space-1);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"] .slate-rail__item--menu {
+  justify-content: flex-start;
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-rail__label--menu {
+  display: block;
+}

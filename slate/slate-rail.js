@@ -18,6 +18,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule) {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const SVG_NS = "http://www.w3.org/2000/svg";
   const TOOLS_EMPTY = "No tools yet";
   /* The pane a definition without one shows in. */
@@ -69,7 +77,7 @@
   function item(doc, definition) {
     // The label is ellipsised at the rail's width, so the whole of it is
     // carried on the item itself for a name too long to fit.
-    const button = element(doc, "button", "slate-rail__item", { type: "button", "data-section": definition.id, title: definition.label });
+    const button = element(doc, "button", "slate-rail__item", { type: "button", "data-section": definition.id, title: definition.label, "aria-label": definition.label });
     button.appendChild(glyph(doc, definition.icon || definition.id));
     const label = element(doc, "span", "slate-rail__label");
     label.textContent = definition.label;
@@ -83,11 +91,17 @@
    * @param {object[]} options.sections   section definitions ({id, label, group, icon, pane?})
    * @param {function} options.onSelect   called with a section id
    * @param {string} [options.brand]      the mark's accessible name
+   * @param {function} [options.flyout]   () => true while the rail is the compact icon rail
+   *        (the touch tier): the Tools menu then floats beside it and closes on a press
+   *        outside or on a selection, since it covers the page
    */
   function create(doc, options) {
     const settings = options || {};
     const definitions = settings.sections || [];
     const onSelect = typeof settings.onSelect === "function" ? settings.onSelect : () => {};
+    const flyout = () => {
+      try { return typeof settings.flyout === "function" && !!settings.flyout(); } catch (error) { return false; }
+    };
     const rail = element(doc, "div", "slate-rail__inner");
 
     // The brand: the mark alone, filling the width of the rail. It carries
@@ -137,6 +151,10 @@
       const li = element(doc, "li", "slate-rail__menu-item", { role: "presentation" });
       const button = item(doc, definition);
       button.setAttribute("role", "menuitem");
+      // Named in the flyout, where the rail's own labels are hidden.
+      button.classList.add("slate-rail__item--menu");
+      const label = button.querySelector(".slate-rail__label");
+      if (label) label.classList.add("slate-rail__label--menu");
       items.set(definition.id, button);
       li.appendChild(button);
       menu.appendChild(li);
@@ -159,12 +177,15 @@
        again, or Escape while the rail has focus. The tools are used
        side by side, and the list is the way to them. */
     let toolsOpen = false;
+    const outsideCloser = dismissal(doc, node => typeof tools.contains === "function" && tools.contains(node), () => closeTools());
     function openTools() {
       if (toolsOpen) return;
       toolsOpen = true;
       menu.removeAttribute("hidden");
       toolsButton.setAttribute("aria-expanded", "true");
       tools.classList.add("is-open");
+      // Only the flyout closes on a press outside; the sidebar's menu stays.
+      if (flyout()) outsideCloser.start();
     }
     function closeTools() {
       if (!toolsOpen) return;
@@ -172,6 +193,7 @@
       menu.setAttribute("hidden", "");
       toolsButton.setAttribute("aria-expanded", "false");
       tools.classList.remove("is-open");
+      outsideCloser.stop();
     }
 
     toolsButton.addEventListener("click", () => { if (toolsOpen) closeTools(); else openTools(); });
@@ -187,6 +209,7 @@
       const button = target && typeof target.closest === "function" ? target.closest("[data-section]") : null;
       if (!button || !rail.contains(button)) return;
       onSelect(button.getAttribute("data-section"));
+      if (toolsOpen && flyout() && menu.contains(button)) closeTools();
     });
 
     /* Several things are current at once: the centre's section, and what

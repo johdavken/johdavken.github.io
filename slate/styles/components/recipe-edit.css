@@ -494,3 +494,91 @@
   right: 0;
   left: auto;
 }
+
+/* ---- Touch (the tier on the root; recipe.css says the rest) ----
+   Where a control's box would move the layout around it (the ⋯ in a head
+   aligned on its text), the box stays compact and an invisible ::after
+   carries the finger-sized target instead. */
+
+.slate-root[data-input="touch"] .slate-hopper__input,
+.slate-root[data-input="touch"] .slate-layer__input,
+.slate-root[data-input="touch"] .slate-combobox__input,
+.slate-root[data-input="touch"] .slate-hopper__draft-resin,
+.slate-root[data-input="touch"] .slate-hopper__draft-pct,
+.slate-root[data-input="touch"] .slate-recipe__fill-resin,
+.slate-root[data-input="touch"] .slate-recipe__fill-pct {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-combobox__option {
+  padding: var(--slate-space-3);
+}
+
+/* No room below the field (the keyboard, the page's end): the list
+   stands above it instead. slate-resin-search.js decides. */
+.slate-root[data-input="touch"] .slate-combobox__list.is-above {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: var(--slate-space-1);
+}
+
+/* The field and its Cancel side by side; the list stays absolute. */
+.slate-root[data-input="touch"] .slate-combobox {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-1);
+}
+
+/* A blend or share being typed: the field and its Cancel. In a row the
+   pair takes the full width under the resin, since the blend's column
+   cannot hold a field and a finger-sized button. */
+.slate-root[data-input="touch"] .slate-editor-field {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-1);
+  min-width: 0;
+}
+
+/* The inline editors' Cancel: blur keeps a touch editor open, so the way
+   out without a change is a button. */
+.slate-root[data-input="touch"] .slate-editor-cancel {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--slate-tap);
+  height: var(--slate-tap);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-lg);
+}
+
+.slate-root[data-input="touch"] .slate-layer-menu__button {
+  position: relative;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 28px;
+  color: var(--slate-text-muted);
+}
+
+.slate-root[data-input="touch"] .slate-layer-menu__button::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.slate-root[data-input="touch"] .slate-layer-menu__item {
+  padding: var(--slate-space-3) var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-print__trigger {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-print__item {
+  padding: var(--slate-space-3) var(--slate-space-4);
+}

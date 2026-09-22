@@ -19,12 +19,23 @@
  *
  * WHICH VIEW A LOAD GETS
  *
- * Slate is the desktop's default. A URL that names a view gets that view:
- * ?view=slate is Slate, ?view=legacy the floor UI, ?view=station Station
- * (station-host.js reads the same flag). A URL that names none boots Slate
- * when the window is a desktop's - at least MIN_WIDTH wide and not the
- * native Android shell - and the floor UI otherwise: a phone, and the app
- * on it, keep the mobile interface Slate was never drawn for.
+ * A URL that names a view gets that view: ?view=slate is Slate,
+ * ?view=legacy the floor UI, ?view=station Station (station-host.js reads
+ * the same flag). A URL that names none asks, in order:
+ *
+ *   1. the device's own choice (slate-display.js `host`), which the Android
+ *      app needs since it has no address bar: `legacy` is the floor UI
+ *      everywhere; `slate` is Slate anywhere but a phone's screen;
+ *   2. otherwise the device: Slate on a desktop's window (at least
+ *      MIN_WIDTH wide, outside the app), on a tablet's screen with a touch
+ *      pointer, and in the Android app on a tablet's screen; the floor UI
+ *      on a phone, in the browser or the app. Slate draws for a finger
+ *      there on its own (slate/slate-tier.js).
+ *
+ * A tablet's screen is judged by the screen, not the window, so turning
+ * the device never flips the view: its short side at least
+ * TABLET_MIN_SHORT CSS px and its long side at least TABLET_MIN_LONG.
+ * A phone's short side is under ~450, in either orientation.
  *
  * STARTUP THAT IS NOT SLATE'S IS PROTECTED BY DOING NOTHING
  *
@@ -45,6 +56,11 @@
   const VALUE = "slate";
   /* The narrowest window Slate is drawn for (slate-shell.js says the same). */
   const MIN_WIDTH = 1100;
+  const TABLET_MIN_SHORT = 600;
+  /* 900, not 960: the unfolded Galaxy Z Fold reports 933x704 and gets Slate
+   * (the user's choice, 2026-09-22). The short side keeps phones out - and
+   * the Fold's folded cover screen - whatever their long side. */
+  const TABLET_MIN_LONG = 900;
   const ATTRIBUTE = "data-slate-view";
 
   /* Assets, in load order. Slate's own modules are order-dependent -
@@ -99,6 +115,7 @@
     // any document and carries its own stylesheet.
     "station/station-print-sheet.js",
     "slate/slate-logo.js",
+    "slate/slate-dismiss.js",
     "slate/slate-line.js",
     "slate/slate-demo.js",
     "slate/slate-source.js",
@@ -134,6 +151,7 @@
     "slate/slate-resin-db.js",
     "slate/slate-pressure.js",
     "slate/slate-winding-tension.js",
+    "slate/slate-tier.js",
     "slate/slate-rail.js",
     "slate/slate-sections.js",
     "slate/slate-shell.js",
@@ -143,24 +161,72 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.17.0";
+  const VERSION = "0.28.0";
 
-  /* A desktop's window: wide enough for the sheet, and not the native
-   * Android shell, whose bridge is on the page before any script runs.
-   * Nothing to measure with reads as not a desktop: never assume yes. */
-  function desktop() {
+  /* The native Android shell, whose bridge is on the page before any
+   * script runs. A throwing bridge reads as the app: never assume a
+   * desktop. */
+  function nativeApp() {
     try {
       const capacitor = root.Capacitor;
-      if (capacitor && typeof capacitor.isNativePlatform === "function" && capacitor.isNativePlatform()) return false;
+      return !!(capacitor && typeof capacitor.isNativePlatform === "function" && capacitor.isNativePlatform());
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function matches(query) {
+    try {
+      return typeof root.matchMedia === "function" ? !!root.matchMedia(query).matches : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /* Wide enough for the sheet. Nothing to measure with reads as not. */
+  function wideWindow() {
+    const wide = matches(`(min-width: ${MIN_WIDTH}px)`);
+    if (wide !== null) return wide;
+    return Number(root.innerWidth) >= MIN_WIDTH;
+  }
+
+  /* A tablet's screen, in either orientation. Nothing to measure with
+   * reads as not: a phone is never given Slate by guesswork. */
+  function tabletScreen() {
+    let width = NaN;
+    let height = NaN;
+    try {
+      width = Number(root.screen && root.screen.width);
+      height = Number(root.screen && root.screen.height);
     } catch (error) {
       return false;
     }
+    if (!(width > 0 && height > 0)) return false;
+    return Math.min(width, height) >= TABLET_MIN_SHORT && Math.max(width, height) >= TABLET_MIN_LONG;
+  }
+
+  /* The device's own choice (slate-display.js), when it made one. */
+  function hostChoice() {
     try {
-      if (typeof root.matchMedia === "function") return !!root.matchMedia(`(min-width: ${MIN_WIDTH}px)`).matches;
+      const display = root.PolynSlateDisplay;
+      if (!display || typeof display.readFrom !== "function") return "auto";
+      const record = display.readFrom(root);
+      return record && typeof record.host === "string" ? record.host : "auto";
     } catch (error) {
-      /* fall through to the width */
+      return "auto";
     }
-    return Number(root.innerWidth) >= MIN_WIDTH;
+  }
+
+  /* Slate's device: see WHICH VIEW A LOAD GETS above. */
+  function slateDevice() {
+    const choice = hostChoice();
+    if (choice === "legacy") return false;
+    const native = nativeApp();
+    const tablet = tabletScreen();
+    if (choice === "slate") return tablet || (!native && wideWindow());
+    if (native) return tablet;
+    if (wideWindow()) return true;
+    return tablet && matches("(pointer: coarse)") === true;
   }
 
   function requested() {
@@ -168,7 +234,7 @@
       const view = new URL(root.location.href).searchParams.get(FLAG);
       if (view === VALUE) return true;
       if (view !== null) return false;
-      return desktop();
+      return slateDevice();
     } catch (error) {
       return false;
     }
@@ -227,6 +293,18 @@
     if (typeof host.addEventListener === "function") {
       host.addEventListener("focusin", event => { if (event && typeof event.stopPropagation === "function") event.stopPropagation(); });
     }
+    /* A PROVISIONAL TIER
+     *
+     * The boot (slate/slate.js) decides the tier; it runs only after every
+     * stylesheet and module has arrived. Until then the sheets would draw
+     * the 1440px desktop frame, and on a touch screen the browser settles
+     * its zoom against that frame for good. So the host marks the root with
+     * the tier the device most likely has - the boot corrects it, and the
+     * operator's Settings choice with it - and the frame is fluid from the
+     * first paint. */
+    const touchDevice = nativeApp() || matches("(pointer: coarse)") === true;
+    host.setAttribute("data-input", touchDevice ? "touch" : "pointer");
+    host.setAttribute("data-viewport", wideWindow() ? "wide" : "narrow");
     doc.body.appendChild(host);
 
     // Set last: the moment this lands, host.css hides the application shell,
@@ -235,6 +313,28 @@
 
     STYLESHEETS.forEach(linkStylesheet);
     SCRIPTS.forEach(loadScript);
+    if (touchDevice) settleZoom();
+  }
+
+  /* ZOOM
+   *
+   * A touch browser (the Android WebView most of all) can keep a page
+   * magnified from before Slate drew - a zoom the operator never chose,
+   * which reads as sideways scrolling. Once the page has loaded, the
+   * viewport's zoom is capped at 1 for a moment, which brings it back,
+   * and the viewport is then restored as it was, so a pinch still zooms. */
+  function settleZoom() {
+    const view = root;
+    const meta = doc.querySelector ? doc.querySelector("meta[name='viewport']") : null;
+    if (!meta || typeof view.addEventListener !== "function" || typeof view.setTimeout !== "function") return;
+    const reset = () => {
+      const original = meta.getAttribute("content") || "";
+      if (/maximum-scale/.test(original)) return;
+      meta.setAttribute("content", `${original},maximum-scale=1`);
+      view.setTimeout(() => meta.setAttribute("content", original), 300);
+    };
+    if (doc.readyState === "complete") view.setTimeout(reset, 0);
+    else view.addEventListener("load", () => view.setTimeout(reset, 0));
   }
 
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", activate);

@@ -80,7 +80,7 @@ function boot(options) {
   const admin = "admin" in settings ? settings.admin : makeAdmin(settings.adminOptions);
   const connection = "connection" in settings ? settings.connection : makeConnection(5);
   const said = [];
-  const view = lines.create(doc, { admin, connection, lineIdentity: identity, say: message => said.push(message) });
+  const view = lines.create(doc, { admin, connection, lineIdentity: identity, say: message => said.push(message), tier: settings.tier });
   doc.body.appendChild(view.element);
   const el = view.element;
   return {
@@ -624,4 +624,40 @@ test("a producer that does not offer the save withholds every control that would
   assert.equal(view.view.getState().focusId, null, "a withheld control opened the editor");
   assert.equal(view.admin.calls.length, before);
   assert.match(view.said[view.said.length - 1], /unavailable: the application does not offer saveLineConfiguration/);
+});
+
+test("under a finger Enter is the keyboard's Done key: it moves to the next field, and only the last field's saves", async () => {
+  const view = boot({ tier: () => ({ input: "touch", width: "wide" }) });
+  await view.open();
+  click(view.row("l-5"));
+  await settle();
+  const before = view.admin.calls.length;
+  view.type("displayName", "Line Five");
+  key(view.field("displayName"), "Enter");
+  await settle();
+  assert.equal(view.admin.calls.length, before, "Enter saved from a field that is not the last");
+  const fields = view.el.querySelectorAll("input[data-field]").filter(one => !one.hasAttribute("disabled") && !one.hasAttribute("readonly"));
+  const at = fields.indexOf(view.field("displayName"));
+  assert.ok(at > -1 && at < fields.length - 1);
+  assert.equal(fields[at + 1].focused, true, "Enter did not move to the next field");
+  key(fields[fields.length - 1], "Enter");
+  await settle();
+  assert.equal(view.admin.calls[before].action, "saveLineConfiguration");
+});
+
+test("a row tapped while a request is out is turned away and says so, rather than doing nothing a finger can see", async () => {
+  const admin = makeAdmin({ hold: "saveLineConfiguration" });
+  const view = boot({ admin });
+  await view.open();
+  click(view.row("l-5"));
+  await settle();
+  view.type("displayName", "Line Five");
+  click(view.action("save"));
+  await tick();
+  click(view.row("l-8"));
+  await tick();
+  assert.equal(view.view.getState().focusId, "l-5");
+  assert.match(view.said[view.said.length - 1], /Still working on the last request/);
+  admin.release();
+  await settle();
 });

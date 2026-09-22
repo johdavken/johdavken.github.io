@@ -342,3 +342,73 @@
 .slate-root[data-layer-order="reversed"] .slate-weights__layer {
   order: calc(-1 * var(--slate-layer-i, 0));
 }
+
+/* ---- Touch (data-input="touch" on the root) ----
+   The fields grow to a finger and the rows stand apart, so a tap on one
+   hopper's weight never lands on the next. Rows stay one line while the
+   section has the room, and stack as the Top layout's do when it is
+   narrow (the container query below). */
+
+.slate-root[data-input="touch"] .slate-weights__field {
+  --slate-field-min-height: var(--slate-tap-cell);
+}
+
+/* The section's width decides the row format, as the recipe's does. */
+.slate-root[data-input="touch"] .slate-weights {
+  container: slate-weights / inline-size;
+}
+
+.slate-root[data-input="touch"] .slate-weights__rows {
+  gap: var(--slate-space-1);
+}
+
+/* The way out of a typed weight without a change: shown beside the field
+   being edited (slate-weights.js lifts its hidden), since Escape is out
+   of reach and a blur commits. */
+.slate-weights__revert {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-weights__revert:not([hidden]) {
+  display: inline-block;
+  flex: none;
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  text-align: center;
+}
+
+@container slate-weights (max-width: 699px) {
+  .slate-root[data-input="touch"] .slate-weights__columns {
+    display: none;
+  }
+
+  .slate-root[data-input="touch"] .slate-weights__row[data-key] {
+    grid-template-columns: 40px minmax(0, 1fr);
+    column-gap: var(--slate-space-2);
+    row-gap: var(--slate-space-1);
+    padding: var(--slate-space-1) var(--slate-space-2);
+  }
+
+  .slate-root[data-input="touch"] .slate-weights__wrap {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .slate-root[data-input="touch"] .slate-weights__field[data-kind="weight"],
+  .slate-root[data-input="touch"] .slate-weights__field[data-kind="geometry"] {
+    --slate-field-width: 7em;
+  }
+
+  .slate-root[data-input="touch"] .slate-weights__computed {
+    grid-column: 2;
+    white-space: normal;
+  }
+
+  .slate-root[data-input="touch"] .slate-weights__row-note {
+    padding-left: calc(40px + var(--slate-space-2));
+  }
+}

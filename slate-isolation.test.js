@@ -22,8 +22,8 @@ const STYLES = path.join(SLATE, "styles");
 /* The roster. A new module is added here on purpose, with its place in
  * slate-host.js's SCRIPTS and slate.html. */
 const SLATE_FILES = [
-  "slate.js", "slate-shell.js", "slate-logo.js", "slate-line.js", "slate-source.js", "slate-demo.js",
-  "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
+  "slate.js", "slate-shell.js", "slate-logo.js", "slate-dismiss.js", "slate-line.js", "slate-source.js", "slate-demo.js",
+  "slate-sections.js", "slate-tier.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
@@ -333,10 +333,16 @@ test("Slate queries only inside its own container, never the document", () => {
 });
 
 /* ----------------------------------------------------------------------
- *   Slate ships to the web only
+ *   What the Android shell carries
+ *
+ * Slate was web-only until the tablet work: www/ carried none of it. It
+ * now carries exactly what slate-host.js loads - so a tablet in the app
+ * can run Slate - and nothing else under slate/: not the harness, not a
+ * plan or a test. Whether the app ACTIVATES Slate is slate-host.js's
+ * decision, pinned in slate-host.test.js.
  * -------------------------------------------------------------------- */
 
-test("Slate is not bundled into the Android shell", () => {
+test("the Android shell carries exactly the Slate assets the host loads, and nothing else from slate/", () => {
   const www = path.join(ROOT, "www");
   if (!fs.existsSync(www)) return;
   const files = [];
@@ -344,8 +350,11 @@ test("Slate is not bundled into the Android shell", () => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else files.push(path.relative(www, full));
+      else files.push(path.relative(www, full).split(path.sep).join("/"));
     }
   })(www);
-  assert.deepEqual(files.filter(file => file.startsWith("slate/")), [], "www/ carries Slate's modules");
+  const host = codeOnly(fs.readFileSync(path.join(ROOT, "slate-host.js"), "utf8"));
+  const loaded = new Set([...host.matchAll(/"(slate\/[^"]+)"/g)].map(match => match[1]));
+  const extra = files.filter(file => file.startsWith("slate/") && !loaded.has(file));
+  assert.deepEqual(extra, [], "www/ carries Slate files the host never loads");
 });

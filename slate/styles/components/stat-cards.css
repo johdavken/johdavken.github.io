@@ -120,6 +120,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Save and Cancel under the typed field: a finger's way out (the touch
+   tier below shows them; a mouse has Enter, Escape and the blur). */
+.slate-card__actions {
+  display: none;
+}
+
 .slate-card__unit {
   flex: none;
   color: var(--slate-text-faint);
@@ -130,4 +136,42 @@
   padding: 0 var(--slate-space-4) var(--slate-space-3);
   color: var(--slate-danger);
   font-size: var(--slate-text-sm);
+}
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-card__editor {
+  flex-wrap: wrap;
+}
+
+.slate-root[data-input="touch"] .slate-card__input {
+  --slate-field-min-height: var(--slate-tap);
+  flex: 1 1 6em;
+}
+
+.slate-root[data-input="touch"] .slate-card__actions {
+  display: flex;
+  flex: 1 0 100%;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"] .slate-card__action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  text-align: center;
+}
+
+.slate-root[data-input="touch"] .slate-card__action--save {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }

@@ -129,3 +129,34 @@
     animation: none;
   }
 }
+
+/* ---- Touch (data-input="touch" on the root): the same sheet as the
+   calculators (wizard.css), tiles a finger can hit, and Clear - which
+   clears the changeover - kept apart from Cancel. */
+
+.slate-root[data-input="touch"] .slate-time {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-header-height) + var(--slate-space-3));
+  right: 0;
+  left: 0;
+  width: min(400px, calc(100vw - 2 * var(--slate-space-4)));
+  max-height: calc(100dvh - var(--slate-inset-top) - var(--slate-inset-bottom) - var(--slate-header-height) - 2 * var(--slate-space-3));
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.slate-root[data-input="touch"] .slate-time__tile {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-time__minute {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-time__clear {
+  margin-right: auto;
+}
+
+.slate-root[data-input="touch"] .slate-time__actions {
+  gap: var(--slate-space-3);
+}

@@ -177,3 +177,14 @@
 .slate-root .slate-winding__clear:hover {
   background: var(--slate-surface-hover);
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-winding__input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-winding__clear {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}

@@ -262,7 +262,7 @@
     book.appendChild(bookBar);
     const entry = element(doc, "div", "slate-book__entry", { hidden: "" });
     const entryLabel = text(doc, "span", "slate-book__entry-label", "");
-    const nameInput = element(doc, "input", "slate-book__name", { type: "text", "aria-label": "Profile name", maxlength: "120", autocomplete: "off" });
+    const nameInput = element(doc, "input", "slate-book__name", { type: "text", "aria-label": "Profile name", maxlength: "120", autocomplete: "off", enterkeyhint: "done" });
     const entryConfirm = text(doc, "button", "slate-book__action slate-book__action--primary", "Save", { type: "button", "data-book-action": "confirm-entry" });
     const entryReplace = text(doc, "button", "slate-book__action", "Replace existing", { type: "button", "data-book-action": "replace", hidden: "" });
     const entryCancel = text(doc, "button", "slate-book__action slate-book__action--quiet", "Cancel", { type: "button", "data-book-action": "cancel-entry" });
@@ -414,11 +414,34 @@
     }
 
     function wireField(input, key, kind) {
+      // Revert, beside the field while it is edited - shown only under a
+      // finger (weights.css), where Escape is out of reach and a blur
+      // commits. Its press keeps the field's focus; if a blur comes anyway,
+      // it reverts rather than commits.
+      let reverting = false;
+      const revert = text(doc, "button", "slate-weights__revert", "Revert", { type: "button", hidden: "", "data-slate-revert": kind });
+      const hold = event => { reverting = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+      revert.addEventListener("pointerdown", hold);
+      revert.addEventListener("mousedown", hold);
+      revert.addEventListener("click", () => {
+        if (editingIs(key, kind)) {
+          cancelField(key, kind);
+          if (typeof input.blur === "function") input.blur();
+          if (editingIs(key, kind)) { state.editing = null; markEditing(key, false); revert.setAttribute("hidden", ""); }
+        }
+        reverting = false;
+      });
+      if (input.parentNode) input.parentNode.appendChild(revert);
+      // A locked field says why on a tap: its title is a mouse's only.
+      input.addEventListener("click", () => {
+        if (input.hasAttribute("readonly") && input.getAttribute("title")) say(input.getAttribute("title"));
+      });
       input.addEventListener("focus", () => {
         if (input.hasAttribute("readonly")) return;
         state.editing = { key, kind, base: actionsModule.fieldText(valueOf(key, kind)) };
         input.classList.remove("is-changed-underneath");
         markEditing(key, true);
+        revert.removeAttribute("hidden");
       });
       input.addEventListener("input", () => {
         input.removeAttribute("aria-invalid");
@@ -436,11 +459,13 @@
       });
       input.addEventListener("blur", () => {
         if (editingIs(key, kind)) {
-          commitField(key, kind);
+          if (reverting) cancelField(key, kind);
+          else commitField(key, kind);
           state.editing = null;
           input.classList.remove("is-changed-underneath");
           markEditing(key, false);
         }
+        revert.setAttribute("hidden", "");
       });
     }
 

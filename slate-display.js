@@ -52,6 +52,23 @@
  * is the same hoppers as rows in time order, without the clock. The
  * Timeline reads the word on every refresh and redraws; its rows are
  * kept and moved, never rebuilt.
+ *
+ * INPUT
+ *
+ * Whether Slate draws for a finger or a mouse. `auto`, the default, is
+ * touch on a coarse primary pointer or inside the Android app, pointer
+ * otherwise; `touch` and `pointer` are the operator's choice either way.
+ * This keeps the word; what it resolves to is slate/slate-tier.js's, and
+ * the boot writes the result onto the root as data-input.
+ *
+ * HOST
+ *
+ * What this device opens when the address names no view: `auto`, the
+ * default, is slate-host.js's own rule (Slate on a desktop's window and a
+ * tablet's screen, the floor UI on a phone); `slate` and `legacy` are the
+ * operator's choice. It lives here, beside the rest, because the Android
+ * app has no address bar: a ?view= in the URL lasts one visit, this lasts.
+ * slate-host.js reads it before anything of Slate's loads.
  */
 (function (root, factory) {
   const api = factory();
@@ -61,13 +78,15 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const READ_ONLY_MODES = Object.freeze(["auto", "on", "off"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
   const LAYER_ORIENTATIONS = Object.freeze(["left", "top"]);
   const LAYER_ORDERS = Object.freeze(["forward", "reversed"]);
   const TIMELINE_VIEWS = Object.freeze(["realtime", "list"]);
+  const INPUT_MODES = Object.freeze(["auto", "touch", "pointer"]);
+  const HOST_CHOICES = Object.freeze(["auto", "slate", "legacy"]);
 
   /* A stored value, or anything else, to a full set of preferences:
    * every key present, unknown keys dropped, a bad value its default. A
@@ -79,7 +98,9 @@
       tracking: TRACKING_MODES.includes(source.tracking) ? source.tracking : DEFAULTS.tracking,
       layers: LAYER_ORIENTATIONS.includes(source.layers) ? source.layers : DEFAULTS.layers,
       layerOrder: LAYER_ORDERS.includes(source.layerOrder) ? source.layerOrder : DEFAULTS.layerOrder,
-      timeline: TIMELINE_VIEWS.includes(source.timeline) ? source.timeline : DEFAULTS.timeline
+      timeline: TIMELINE_VIEWS.includes(source.timeline) ? source.timeline : DEFAULTS.timeline,
+      input: INPUT_MODES.includes(source.input) ? source.input : DEFAULTS.input,
+      host: HOST_CHOICES.includes(source.host) ? source.host : DEFAULTS.host
     };
   }
 
@@ -136,6 +157,16 @@
     return TIMELINE_VIEWS.includes(value) ? value : DEFAULTS.timeline;
   }
 
+  /* An input mode, or the default for anything that is not one. */
+  function inputModeOf(value) {
+    return INPUT_MODES.includes(value) ? value : DEFAULTS.input;
+  }
+
+  /* A host choice, or the default for anything that is not one. */
+  function hostChoiceOf(value) {
+    return HOST_CHOICES.includes(value) ? value : DEFAULTS.host;
+  }
+
   /** The effective mode: the preference resolved against the line. */
   function effectiveReadOnly(readOnly, linked) {
     if (typeof readOnly === "boolean") return readOnly;
@@ -172,6 +203,10 @@
       setLayerOrder: value => apply({ layerOrder: layerOrderOf(value) }).layerOrder,
       getTimelineView: () => current.timeline,
       setTimelineView: value => apply({ timeline: timelineViewOf(value) }).timeline,
+      getInputMode: () => current.input,
+      setInputMode: value => apply({ input: inputModeOf(value) }).input,
+      getHostChoice: () => current.host,
+      setHostChoice: value => apply({ host: hostChoiceOf(value) }).host,
       subscribe(listener) {
         if (typeof listener !== "function") return () => {};
         listeners.add(listener);
@@ -180,11 +215,20 @@
     });
   }
 
+  /* The stored preferences of an environment (a window), read the way
+   * initialize does - so slate-host.js can ask what this device opens
+   * without touching storage itself. */
+  function readFrom(environment) {
+    let storage = null;
+    try { storage = environment && environment.localStorage; } catch (error) { storage = null; }
+    return read(storage);
+  }
+
   function initialize(element, environment) {
     let storage = null;
     try { storage = environment && environment.localStorage; } catch (error) { storage = null; }
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, LAYER_ORIENTATIONS, LAYER_ORDERS, TIMELINE_VIEWS, normalize, read, modeOf, readOnlyOf, trackingModeOf, layerOrientationOf, layerOrderOf, timelineViewOf, effectiveReadOnly, create, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, LAYER_ORIENTATIONS, LAYER_ORDERS, TIMELINE_VIEWS, INPUT_MODES, HOST_CHOICES, normalize, read, modeOf, readOnlyOf, trackingModeOf, layerOrientationOf, layerOrderOf, timelineViewOf, inputModeOf, hostChoiceOf, effectiveReadOnly, create, readFrom, initialize });
 });

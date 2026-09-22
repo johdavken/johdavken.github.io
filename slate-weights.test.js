@@ -589,3 +589,37 @@ test("read-only keeps only Refresh among the profile actions and says why; Refre
   assert.equal(without.view.element.querySelector(".slate-book__empty").textContent, weights.emptyText(null, false));
   assert.equal(without.view.element.querySelector(".slate-weights__profiles .slate-section__subtitle").textContent, "Not connected");
 });
+
+test("a weight being edited carries Revert: its press wins over the blur it causes - the draft goes back and nothing is sent", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const input = field(view, "A:1");
+  const revert = input.parentNode.querySelector("[data-slate-revert]");
+  assert.ok(revert, "the field has no Revert");
+  assert.ok(revert.hasAttribute("hidden"), "Revert shows before the field is edited");
+  const resting = input.value;
+  type(input, "999");
+  assert.ok(!revert.hasAttribute("hidden"), "Revert is not offered while the field is edited");
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of revert.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true);
+  blur(input);
+  click(revert);
+  assert.deepEqual(commands.calls, [], "Revert sent the draft");
+  assert.equal(input.value, resting);
+  assert.ok(revert.hasAttribute("hidden"));
+
+  // Without Revert, a blur commits as it always has.
+  type(input, "999");
+  blur(input);
+  assert.equal(commands.calls.length, 1);
+});
+
+test("a locked weight says why on a tap, since its title never shows under a finger", () => {
+  const { view, said } = boot({ readOnly: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const input = field(view, "A:1");
+  assert.ok(input.hasAttribute("readonly"));
+  click(input);
+  assert.match(said[said.length - 1], /^Cannot be changed here: /);
+});

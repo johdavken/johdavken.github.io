@@ -57,6 +57,10 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (actionsModule, lineModule) {
   "use strict";
 
+  /* A row tapped while a request is out is turned away (the race it would
+   * lose); said, so a finger on a slow line does not read it as a dead screen. */
+  const BUSY_WAIT = "Still working on the last request - try again in a moment.";
+
   const TITLE = "Line Configuration";
   const LEAD = "Every line definition: layers, orientation, hoppers and naming.";
   const SIGNED_OUT = "No administrator is signed in. Sign in under Administrator access in Settings.";
@@ -526,7 +530,7 @@
 
     function textField(field, value, attributes) {
       const input = element(doc, "input", "slate-lines__input", Object.assign({
-        type: "text", autocomplete: "off", spellcheck: "false", "data-field": field
+        type: "text", autocomplete: "off", spellcheck: "false", enterkeyhint: "next", "data-field": field
       }, attributes || {}));
       input.value = value === null || value === undefined ? "" : String(value);
       if (busy()) input.setAttribute("disabled", "");
@@ -750,7 +754,7 @@
      * The buttons disable themselves for the same moment; a row cannot,
      * so it is turned away here. */
     function choose(id) {
-      if (busy()) return;
+      if (busy()) { say(BUSY_WAIT); return; }
       if (id === state.focusId) return;
       if (dirty()) {
         const line = chosen() || { displayName: state.draft && state.draft.displayName };
@@ -1043,6 +1047,19 @@
       const field = target && typeof target.getAttribute === "function" ? target.getAttribute("data-field") : null;
       if (!field) return;
       if (typeof event.preventDefault === "function") event.preventDefault();
+      // Under a finger Enter is the keyboard's own Done/Next key, pressed to
+      // move on or to put the keyboard away - not a decision to save. It
+      // moves to the next field; only the last one's saves.
+      let touch = false;
+      try { touch = typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { touch = false; }
+      if (touch) {
+        const fields = Array.from(rootEl.querySelectorAll("input[data-field]")).filter(one => !one.hasAttribute("disabled") && !one.hasAttribute("readonly") && !(typeof one.closest === "function" && one.closest("[hidden]")));
+        const at = fields.indexOf(target);
+        if (at > -1 && at < fields.length - 1) {
+          if (typeof fields[at + 1].focus === "function") fields[at + 1].focus();
+          return;
+        }
+      }
       if (dirty()) void save();
     });
 

@@ -184,7 +184,7 @@
     // The name entry, built once.
     const entry = element(doc, "div", "slate-book__entry", { hidden: "" });
     const entryLabel = text(doc, "span", "slate-book__entry-label", "");
-    const nameInput = element(doc, "input", "slate-book__name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off" });
+    const nameInput = element(doc, "input", "slate-book__name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off", enterkeyhint: "done" });
     const entryConfirm = text(doc, "button", "slate-book__action slate-book__action--primary", "Save", { type: "button", "data-book-action": "confirm-entry" });
     const entryReplace = text(doc, "button", "slate-book__action", "Replace existing", { type: "button", "data-book-action": "replace", hidden: "" });
     const entryCancel = text(doc, "button", "slate-book__action slate-book__action--quiet", "Cancel", { type: "button", "data-book-action": "cancel-entry" });

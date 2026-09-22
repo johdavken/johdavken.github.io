@@ -54,3 +54,55 @@
   background: var(--slate-surface-hover);
   color: var(--slate-text);
 }
+
+/* ---- Touch (data-input="touch" on the root): the close keeps its size
+   in the head; an invisible ::after is the finger's target. Shared by the
+   aside's panels, the calculators and the time picker. */
+
+.slate-root[data-input="touch"] .slate-panel__close {
+  position: relative;
+}
+
+.slate-root[data-input="touch"] .slate-panel__close::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+/* ---- The drawer (touch, narrow) ----
+   The aside, taken out of the grid and laid over the page's right edge.
+   Closed it stays where it opens, clipped to nothing and hidden from
+   focus - never moved past the screen's edge, where Android lets a fixed
+   box widen the page into a sideways scroll. Still laid out, so the
+   Timeline keeps measuring its axis and nothing re-lays out when it opens;
+   it opens as a wipe from the right. The panel fills the drawer. */
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-aside {
+  position: fixed;
+  top: var(--slate-inset-top);
+  right: 0;
+  bottom: var(--slate-inset-bottom);
+  z-index: 30;
+  width: min(var(--slate-drawer-width), calc(100vw - var(--slate-rail-width-compact)));
+  padding: var(--slate-space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-left: var(--slate-stroke) solid var(--slate-border);
+  background: var(--slate-surface);
+  box-shadow: var(--slate-shadow-pop);
+  clip-path: inset(0 0 0 100%);
+  visibility: hidden;
+  transition: clip-path var(--slate-motion-move) var(--slate-motion-ease), visibility 0s linear var(--slate-motion-move);
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-aside.is-open {
+  clip-path: inset(0);
+  visibility: visible;
+  transition: clip-path var(--slate-motion-move) var(--slate-motion-ease), visibility 0s linear 0s;
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-panel {
+  position: static;
+  height: 100%;
+  min-height: 0;
+}

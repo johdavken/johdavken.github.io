@@ -20,6 +20,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const SVG_NS = "http://www.w3.org/2000/svg";
   const NEXT = "Next";
   const BACK = "Back";
@@ -293,10 +301,7 @@
 
     /* ---- Open and close ---- */
 
-    function outside(event) {
-      if (event && event.target && (rootEl.contains(event.target) || (settings.anchor && settings.anchor.contains(event.target)))) return;
-      close();
-    }
+    const outsideCloser = dismissal(view, node => rootEl.contains(node) || !!(settings.anchor && settings.anchor.contains(node)), () => close());
 
     function open() {
       if (state.open) return;
@@ -305,7 +310,7 @@
       state.answers = Object.assign({}, read() || {});
       show(rootEl, true);
       render();
-      if (typeof view.addEventListener === "function") view.addEventListener("pointerdown", outside, true);
+      outsideCloser.start();
       onChange(true);
     }
 
@@ -317,7 +322,7 @@
       state.controls = {};
       state.useButton = null;
       state.result = null;
-      if (typeof view.removeEventListener === "function") view.removeEventListener("pointerdown", outside, true);
+      outsideCloser.stop();
       onChange(false);
       if (settings.anchor && typeof settings.anchor.focus === "function") settings.anchor.focus();
     }

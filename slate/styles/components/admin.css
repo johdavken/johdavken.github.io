@@ -422,3 +422,35 @@
   font-size: var(--slate-text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-admin__chip {
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-lines__chips {
+  gap: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"] .slate-admin__fold {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-lines__input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-lines__layers {
+  gap: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"] .slate-resins__search {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-admin__device-actions {
+  gap: var(--slate-space-3);
+}

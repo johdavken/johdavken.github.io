@@ -89,14 +89,19 @@
     header.appendChild(element(doc, "p", "slate-header__notice", { "data-slate-mount": "notice", role: "status", hidden: "" }));
     // Read-only, when Slate is: a badge that opens Settings, where the mode is chosen.
     header.appendChild(text(doc, "button", "slate-header__readonly", "Read-only", { type: "button", "data-slate-readonly": "", hidden: "", title: "Slate is read-only on this line. Open Settings to change." }));
+    // The aside's way in on a narrow touch screen, where the aside is a
+    // drawer over the page (components/panel.css); shown only there.
+    header.appendChild(text(doc, "button", "slate-header__aside", "Timeline", { type: "button", "data-slate-aside-toggle": "", "aria-expanded": "false", "aria-controls": "slate-aside" }));
     header.appendChild(element(doc, "div", "slate-header__sync", { "data-slate-mount": "sync" }));
     shell.appendChild(header);
 
     shell.appendChild(element(doc, "section", "slate-stats", { "data-slate-mount": "stats", "aria-label": "Job" }));
     shell.appendChild(element(doc, "section", "slate-centre", { "data-slate-mount": "centre", "aria-label": "Workspace" }));
-    shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline" }));
+    shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline", id: "slate-aside" }));
 
     root.appendChild(shell);
+    // Behind the aside's drawer: a press on it closes the drawer.
+    root.appendChild(element(doc, "div", "slate-shell__scrim", { "data-slate-scrim": "", hidden: "" }));
     return root;
   }
 

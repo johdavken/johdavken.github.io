@@ -298,3 +298,45 @@
     animation: none;
   }
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-sync__trigger {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-sync__button {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-sync__input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-sync__actions {
+  gap: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-sync__inline {
+  gap: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-sync__item {
+  min-height: var(--slate-tap);
+}
+
+/* Leave line is kept away from Close. */
+.slate-root[data-input="touch"] .slate-sync__button--danger {
+  margin-right: auto;
+}
+
+/* On a narrow touch screen the panel stands off the screen's edge, not
+   the header's, and stops above the keyboard's reach of the viewport. */
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-sync__panel {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-header-height) + var(--slate-space-2));
+  right: var(--slate-space-4);
+  width: min(420px, calc(100vw - 2 * var(--slate-space-4)));
+  max-height: calc(100dvh - var(--slate-header-height) - 2 * var(--slate-space-4));
+}

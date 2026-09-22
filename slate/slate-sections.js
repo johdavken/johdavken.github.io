@@ -65,6 +65,10 @@
       const next = sections.get(id);
       if (!next) return false;
       if (shown && shown !== next) {
+        // A field left focused in a hidden section keeps a tablet's
+        // keyboard up over the one arriving.
+        const active = doc && doc.activeElement;
+        if (active && typeof shown.wrapper.contains === "function" && shown.wrapper.contains(active) && typeof active.blur === "function") active.blur();
         shown.wrapper.setAttribute("hidden", "");
         shown.wrapper.classList.remove(ENTERING);
         if (typeof shown.built.onHide === "function") shown.built.onHide();

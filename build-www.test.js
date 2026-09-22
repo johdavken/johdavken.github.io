@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { buildWww, localRuntimeReferences, ROOT, OUT } = require("./scripts/build-www.js");
+const { buildWww, localRuntimeReferences, hostAssetReferences, FOLLOWED_HOSTS, ROOT, OUT } = require("./scripts/build-www.js");
 
 // This runs the real build (writes www/, same as `npm run build:android`)
 // and inspects its actual output - not just the script's source - so a
@@ -25,11 +25,13 @@ function allFiles(dir) {
 test("build-www produces www/ from an explicit allowlist, not a blocklist over the repo", () => {
   buildWww();
   assert.ok(fs.existsSync(OUT));
-  const files = allFiles(OUT).map(f => path.relative(OUT, f));
+  const hostFiles = new Set(FOLLOWED_HOSTS.flatMap(hostAssetReferences));
+  const files = allFiles(OUT).map(f => path.relative(OUT, f)).filter(f => !hostFiles.has(f));
   assert.ok(files.length > 0);
   // A sanity ceiling, not an exact contract: the repo tracks ~370 files, so
   // this catches "the whole repo got copied" while leaving room for the
-  // runtime set to grow normally (62 at the time of writing).
+  // runtime set to grow normally (62 at the time of writing). A followed
+  // host's own list is counted apart: it is exact, and pinned below.
   assert.ok(files.length < 90, `expected a small, explicit runtime set, got ${files.length} files`);
 });
 
@@ -105,4 +107,31 @@ test("build-www throws loudly instead of silently skipping if index.html referen
       }
     }
   }, /does not exist/);
+});
+
+test("every asset the Slate host loads reaches www/, and nothing else under slate/ or station/ does", () => {
+  // slate-host.js loads its stylesheets and modules dynamically, so index.html
+  // never names them; without the follow, Slate inside the Android app boots
+  // into a page of 404s and reports a stale application.
+  buildWww();
+  const wanted = hostAssetReferences("slate-host.js");
+  assert.ok(wanted.includes("slate/slate.js") && wanted.includes("slate/styles/tokens.css"));
+  const missing = wanted.filter(file => !fs.existsSync(path.join(OUT, file)));
+  assert.deepEqual(missing, [], "these Slate assets were not copied into www/");
+  const shipped = allFiles(OUT).map(f => path.relative(OUT, f).split(path.sep).join("/"))
+    .filter(file => file.startsWith("slate/") || file.startsWith("station/"));
+  assert.deepEqual(shipped.filter(file => !wanted.includes(file)), [],
+    "only the host's own lists are followed - no directory is copied wholesale (the harness, TABLET-PLAN.md and Station's UI stay out)");
+});
+
+test("a host is followed only when index.html loads it, and a host without its lists fails loudly", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  for (const host of FOLLOWED_HOSTS) assert.ok(localRuntimeReferences(html).includes(host), `${host} is followed but index.html does not load it`);
+  const tmp = path.join(ROOT, "scripts", ".build-www-fake-host.js");
+  fs.writeFileSync(tmp, "const SCRIPTS = [\"a.js\"];\n");
+  try {
+    assert.throws(() => hostAssetReferences(path.relative(ROOT, tmp)), /no STYLESHEETS list/);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 });

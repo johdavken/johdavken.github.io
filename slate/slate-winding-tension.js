@@ -181,9 +181,13 @@
       return reading;
     }
 
+    // Under a finger nothing pops the keyboard unasked (slate/slate-tier.js):
+    // the operator taps the field they want.
     function focusFirst() {
+      let touch = false;
+      try { touch = typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { touch = false; }
       const first = inputs[FIELDS[0].key];
-      if (calc && typeof first.focus === "function") first.focus();
+      if (calc && !touch && typeof first.focus === "function") first.focus();
     }
 
     function reset() {

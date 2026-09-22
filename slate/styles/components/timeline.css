@@ -431,3 +431,30 @@
     animation: none;
   }
 }
+
+/* ---- Touch (data-input="touch" on the root) ----
+   The card geometry is mirrored in slate-timeline.js (MEMBER_ROW and the
+   rest), so nothing here changes a box: invisible ::after areas carry the
+   finger's target instead - the whole 28px member row for Pump off, never
+   into the next row, where another hopper's control stands. */
+
+.slate-root[data-input="touch"] .slate-timeline__range {
+  position: relative;
+  min-width: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-timeline__range::after {
+  content: "";
+  position: absolute;
+  inset: -12px 0;
+}
+
+.slate-root[data-input="touch"] .slate-timeline__pump {
+  position: relative;
+}
+
+.slate-root[data-input="touch"] .slate-timeline__pump::after {
+  content: "";
+  position: absolute;
+  inset: -5px -8px;
+}

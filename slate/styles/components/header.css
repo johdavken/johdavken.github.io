@@ -63,3 +63,42 @@
 .slate-root .slate-header__readonly:hover {
   background: var(--slate-surface-hover);
 }
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-header__legacy {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-2);
+  text-decoration: underline;
+}
+
+.slate-root[data-input="touch"] .slate-header__readonly {
+  min-height: 36px;
+}
+
+/* A problem with the page is read whole: two lines rather than an
+   ellipsis a finger cannot hover. */
+.slate-root[data-input="touch"] .slate-header__notice {
+  line-height: var(--slate-line-tight);
+  white-space: normal;
+}
+
+/* The aside's drawer button: only on a narrow touch screen (shell.css). */
+.slate-header__aside {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-header__aside {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}

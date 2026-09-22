@@ -57,7 +57,8 @@ function boot(options) {
     resins: () => CATALOG,
     timers,
     print: printer,
-    recipes: settings.recipes === undefined ? null : settings.recipes
+    recipes: settings.recipes === undefined ? null : settings.recipes,
+    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined
   });
   doc.body.appendChild(view.element);
   return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
@@ -1478,4 +1479,94 @@ test("Fill writes one resin and/or one blend into every picked row's fields - bl
     { layer: "A", index: 4, resin: "LL318", pct: 20 }
   ]);
   assert.equal(view.bulk(), null);
+});
+
+/* ----------------------------------------------------------------------
+ *   Under a finger (the touch tier)
+ * -------------------------------------------------------------------- */
+
+test("under a finger the blend field carries a Cancel that wins over the blur: pressed, then blurred, then clicked - nothing is sent", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  const input = a2.querySelector(".slate-hopper__input");
+  const wrap = a2.querySelector(".slate-editor-field");
+  assert.ok(wrap && input.parentNode === wrap, "the field and its Cancel do not stand together");
+  const cancel = wrap.querySelector("[data-slate-cancel]");
+  assert.ok(cancel);
+  input.value = "45";
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of cancel.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true);
+  input.dispatchEvent({ type: "blur" });
+  click(cancel);
+  assert.deepEqual(commands.calls, [], "Cancel under a finger dispatched the draft");
+  assert.equal(view.editing(), null);
+  assert.equal(a2.querySelector(".slate-editor-field"), null, "the field's wrapper was left behind");
+
+  // A blur without Cancel still commits, as with a mouse.
+  click(a2.querySelector(".slate-hopper__pct"));
+  a2.querySelector(".slate-hopper__input").value = "45";
+  a2.querySelector(".slate-hopper__input").dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperBlend");
+});
+
+test("with a mouse the blend field stands alone, as before: no wrapper, no Cancel", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  assert.equal(a2.querySelector(".slate-editor-field"), null);
+  assert.equal(a2.querySelector("[data-slate-cancel]"), null);
+  assert.ok(a2.querySelector(".slate-hopper__input").parentNode === a2);
+});
+
+test("under a finger the resin search opens with the touch rules, and a blur leaves the edit open", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__resin"));
+  const input = a2.querySelector(".slate-combobox__input");
+  assert.ok(input);
+  assert.ok(a2.querySelector(".slate-combobox [data-slate-cancel]"), "the touch search has no Cancel");
+  input.dispatchEvent({ type: "blur", relatedTarget: null });
+  assert.ok(view.editing(), "the keyboard's hide key ended the edit");
+  click(a2.querySelector(".slate-combobox [data-slate-cancel]"));
+  assert.equal(view.editing(), null);
+  assert.deepEqual(commands.calls, []);
+});
+
+test("Bulk edit focuses its first field with a mouse, and none under a finger - the keyboard would cover the form's foot", () => {
+  const mouse = boot();
+  mouse.view.update(withPlan(), { kind: "structural" });
+  click(bulkButton(mouse.view));
+  const firstMouse = mouse.view.element.querySelector(".slate-recipe__body[data-recipe='current'] [data-slate-draft='resin']");
+  assert.equal(firstMouse.focused, true, "the mouse form lost its first-field focus");
+
+  const finger = boot({ touch: true });
+  finger.view.update(withPlan(), { kind: "structural" });
+  click(bulkButton(finger.view));
+  assert.ok(finger.view.bulk(), "the form did not open under a finger");
+  const drafts = finger.view.element.querySelectorAll("[data-slate-draft]");
+  assert.ok(drafts.length > 0);
+  assert.ok(drafts.every(one => !one.focused), "a touch form focused a field on open");
+  assert.equal(drafts.find(one => one.getAttribute("data-slate-draft") === "resin").getAttribute("enterkeyhint"), "next");
+});
+
+test("an abandoned Cancel press under a finger is forgotten once the blend field is taken again", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  const input = a2.querySelector(".slate-hopper__input");
+  const cancel = a2.querySelector("[data-slate-cancel]");
+  input.value = "45";
+  for (const handler of cancel.listeners.pointerdown) handler({ type: "pointerdown", pointerType: "touch", preventDefault() {} });
+  input.dispatchEvent({ type: "blur" });
+  assert.deepEqual(commands.calls, []);
+  input.dispatchEvent({ type: "focus" });
+  input.dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 1);
 });

@@ -176,3 +176,16 @@ test("a sheet module handed in is the one used, with the request shape the sheet
   assert.equal(printModule.create(doc, { mount, sheet: null }) === null, false, "the shared module is the default");
   assert.equal(printModule.create(doc, {}), null);
 });
+
+test("the layer card never clips its menu: the Left layout's card is not overflow-hidden, and its head rounds its own corners", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "slate/styles/components/recipe.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const card = css.match(/\n\.slate-layer \{([^}]*)\}/);
+  assert.ok(card, "the .slate-layer rule is missing");
+  assert.doesNotMatch(card[1], /overflow:\s*hidden/, "an overflow-hidden card clips the ⋯ menu in the Left layout");
+  const head = css.match(/\n\.slate-layer__head \{([^}]*)\}/);
+  assert.match(head[1], /border-top-left-radius: var\(--slate-radius-lg\)/);
+  assert.match(head[1], /border-bottom-left-radius: var\(--slate-radius-lg\)/);
+  assert.match(css, /\.slate-root\[data-layers="top"\] \.slate-layer__head \{[^}]*border-bottom-left-radius: 0;/, "the Top head must square its bottom-left corner: it sits above the rows, not beside them");
+});

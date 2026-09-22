@@ -24,6 +24,9 @@
   "use strict";
 
   const RESULT_LIMIT = 8;
+  /* Under a finger the list is shorter, so it fits above the keyboard. */
+  const TOUCH_LIMIT = 5;
+  const CANCEL_LABEL = "Cancel";
   const CODE_MAX = 100;
   const NO_CATALOG = "No catalog on this page";
 
@@ -103,11 +106,50 @@
       // Keep the input's focus through the press, so blur cannot close
       // the list before the click chooses.
       item.addEventListener("mousedown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
-      item.addEventListener("click", () => choose(option.code));
+      // A finger or a pen chooses on release, so the choice never depends
+      // on the compatibility mouse events a touch may not produce. The
+      // click that follows is then spent, not a second choice.
+      let taken = false;
+      item.addEventListener("pointerup", event => {
+        if (!event || !event.pointerType || event.pointerType === "mouse") return;
+        taken = true;
+        choose(option.code);
+      });
+      item.addEventListener("click", () => {
+        if (taken) { taken = false; return; }
+        choose(option.code);
+      });
       list.appendChild(item);
     });
     input.setAttribute("aria-activedescendant", `${base}-option-${at}`);
     return at;
+  }
+
+  /* Under a finger, a list with no room below its field - the keyboard
+   * up, the page's end - stands above it (is-above). Measured against the
+   * visual viewport, which the keyboard shrinks; the layout viewport does
+   * not move. Returns the re-place and the stop for its listener. */
+  function keepInView(view, input, list) {
+    const viewport = view && view.visualViewport ? view.visualViewport : null;
+    function place() {
+      try {
+        if (typeof input.getBoundingClientRect !== "function" || typeof list.getBoundingClientRect !== "function") return;
+        const bottom = viewport ? viewport.offsetTop + viewport.height : Number(view && view.innerHeight);
+        if (!Number.isFinite(bottom) || bottom <= 0) return;
+        const field = input.getBoundingClientRect();
+        const height = list.getBoundingClientRect().height;
+        const top = viewport ? viewport.offsetTop : 0;
+        list.classList.toggle("is-above", field.bottom + height > bottom && field.top - height >= top);
+      } catch (error) {
+        /* placement is a courtesy */
+      }
+    }
+    place();
+    if (viewport && typeof viewport.addEventListener === "function") {
+      viewport.addEventListener("resize", place);
+      return { place, stop: () => viewport.removeEventListener("resize", place) };
+    }
+    return { place, stop: () => {} };
   }
 
   /**
@@ -123,6 +165,10 @@
    * @param {string} [options.label]
    * @param {string} [options.id]          the listbox id base
    * @param {Node} [options.before]        where in `host` the combobox stands (appended by default)
+   * @param {boolean} [options.touch]      drawn for a finger: a shorter list kept in view, a
+   *                                       Cancel button, and a blur that does NOT cancel - the
+   *                                       keyboard's own hide key blurs the field
+   * @param {Window} [options.view]        the window, for keeping the list in view
    */
   function open(doc, host, options) {
     const settings = options || {};
@@ -141,11 +187,24 @@
       "aria-label": settings.label || "Resin",
       autocomplete: "off",
       spellcheck: "false",
+      autocapitalize: "characters",
+      enterkeyhint: "done",
       maxlength: String(CODE_MAX)
     });
     input.value = normalize(settings.value);
+    const touch = !!settings.touch;
+    const limit = touch ? TOUCH_LIMIT : RESULT_LIMIT;
     const list = element(doc, "ul", "slate-combobox__list", { role: "listbox", id: `${base}-list` });
     wrapper.appendChild(input);
+    let cancelButton = null;
+    if (touch) {
+      cancelButton = text(doc, "button", "slate-editor-cancel", "×", { type: "button", "aria-label": CANCEL_LABEL, title: CANCEL_LABEL, "data-slate-cancel": "" });
+      // The press keeps the field's focus, as an option's does.
+      cancelButton.addEventListener("pointerdown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
+      cancelButton.addEventListener("mousedown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
+      cancelButton.addEventListener("click", () => cancel());
+      wrapper.appendChild(cancelButton);
+    }
     wrapper.appendChild(list);
     // Placed before the input takes focus: moving a focused field afterwards
     // blurs it, and the blur would close the search it just opened.
@@ -156,6 +215,7 @@
     let active = -1;
     let closed = false;
     let catalog = null;
+    let placement = null;
 
     function catalogNow() {
       if (catalog === null) {
@@ -167,13 +227,15 @@
     }
 
     function render() {
-      options2 = optionsFor(catalogNow(), input.value);
+      options2 = optionsFor(catalogNow(), input.value, limit);
       active = paint(doc, list, input, base, options2, active, catalogNow().length === 0, choose);
+      if (placement) placement.place();
     }
 
     function close() {
       if (closed) return;
       closed = true;
+      if (placement) placement.stop();
       if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
     }
 
@@ -207,12 +269,16 @@
       }
     });
     input.addEventListener("blur", event => {
+      // Under a finger a blur is the keyboard going down, an app switch, a
+      // notification: the editor stays; Cancel, Escape or a choice end it.
+      if (touch) return;
       const related = event && event.relatedTarget;
       if (related && typeof list.contains === "function" && list.contains(related)) return;
       cancel();
     });
 
     render();
+    if (touch) placement = keepInView(settings.view || null, input, list);
     if (typeof input.focus === "function") input.focus();
     if (typeof input.select === "function") input.select();
 
@@ -223,7 +289,8 @@
       close,
       isOpen: () => !closed,
       options: () => options2.slice(),
-      active: () => active
+      active: () => active,
+      cancelButton
     });
   }
 
@@ -245,9 +312,14 @@
    * @param {function} [options.onChoose]  (code) after the field took it
    * @param {Element} [options.host]    where the list stands (the field's parent by default)
    * @param {string} [options.id]       the listbox id base
+   * @param {boolean} [options.touch]   a shorter list, kept in view above the keyboard
+   * @param {Window} [options.view]     the window, for keeping the list in view
    */
   function attach(doc, input, options) {
     const settings = options || {};
+    const touch = !!settings.touch;
+    const limit = touch ? TOUCH_LIMIT : RESULT_LIMIT;
+    let placement = null;
     const resins = typeof settings.resins === "function" ? settings.resins : () => [];
     const onChoose = typeof settings.onChoose === "function" ? settings.onChoose : () => {};
     const base = settings.id || "slate-resin";
@@ -275,8 +347,9 @@
     }
 
     function render() {
-      options2 = optionsFor(catalogNow(), input.value);
+      options2 = optionsFor(catalogNow(), input.value, limit);
       active = paint(doc, list, input, base, options2, active, catalogNow().length === 0, choose);
+      if (placement) placement.place();
     }
 
     function show() {
@@ -286,11 +359,13 @@
       shown = true;
       list.removeAttribute("hidden");
       input.setAttribute("aria-expanded", "true");
+      if (touch) placement = keepInView(settings.view || null, input, list);
     }
 
     function hide() {
       if (!shown) return;
       shown = false;
+      if (placement) { placement.stop(); placement = null; }
       list.setAttribute("hidden", "");
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
@@ -355,5 +430,5 @@
     });
   }
 
-  return Object.freeze({ RESULT_LIMIT, CODE_MAX, NO_CATALOG, normalize, filterResins, optionsFor, densityNote, open, attach });
+  return Object.freeze({ RESULT_LIMIT, TOUCH_LIMIT, CODE_MAX, NO_CATALOG, normalize, filterResins, optionsFor, densityNote, open, attach });
 });

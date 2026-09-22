@@ -73,8 +73,11 @@
 
 /* ---- The name entry ---- */
 
+/* Wraps: a long label (the Workspaces entry names what the line is) takes
+   its own line rather than squeezing the field to nothing. */
 .slate-book__entry {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--slate-space-2);
   margin-bottom: var(--slate-space-3);
@@ -85,9 +88,9 @@
 }
 
 .slate-book__entry-label {
+  flex: 0 1 auto;
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
-  white-space: nowrap;
 }
 
 .slate-book__name {
@@ -97,7 +100,7 @@
   --slate-field-bg: var(--slate-surface);
   --slate-field-min-height: 30px;
   --slate-field-width: auto;
-  flex: 1 1 auto;
+  flex: 1 1 12em;
   min-width: 0;
 }
 
@@ -359,4 +362,28 @@
 
 .slate-book__hopper-pct {
   color: var(--slate-text-muted);
+}
+
+/* ---- Touch (data-input="touch" on the root) ----
+   One rule sizes every action in the Recipe Book, Weights profiles and the
+   administrator's sections. A confirm's answers stand one above another:
+   "Load into Current" and "Load into Next" are never a slip apart. */
+
+.slate-root[data-input="touch"] .slate-book__action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-book__name {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-book__confirm-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-book__overflow {
+  gap: var(--slate-space-3);
 }

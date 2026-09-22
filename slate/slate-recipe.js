@@ -67,6 +67,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule) {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const RECIPES = Object.freeze(["current", "next"]);
   const RECIPE_LABEL = Object.freeze({ current: "Current", next: "Next" });
   const RESET_LABEL = "Reset tracking";
@@ -192,6 +200,13 @@
     const commands = () => commandsFor(current);
     const recipesFor = typeof settings.recipes === "function" ? settings.recipes : () => settings.recipes || null;
     const validate = typeof settings.validate === "function" ? settings.validate : null;
+    // Drawn for a finger (slate/slate-tier.js, via the boot): editors keep
+    // the keyboard's hide key from cancelling or committing, and nothing
+    // pops the keyboard unasked.
+    const touch = () => {
+      try { return typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { return false; }
+    };
+    const view = doc.defaultView || null;
 
     const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current" });
 
@@ -305,9 +320,9 @@
       const fill = element(doc, "div", "slate-recipe__fill", { hidden: "" });
       const fillCount = text(doc, "span", "slate-recipe__fill-count", "");
       const fillBox = element(doc, "div", "slate-recipe__fill-field");
-      const fillResin = element(doc, "input", "slate-recipe__fill-resin", { type: "text", autocomplete: "off", spellcheck: "false", maxlength: String(searchModule.CODE_MAX), "aria-label": "Resin to fill into the selected hoppers", placeholder: "Resin (no change)", "data-slate-fill-field": "resin" });
+      const fillResin = element(doc, "input", "slate-recipe__fill-resin", { type: "text", autocomplete: "off", spellcheck: "false", autocapitalize: "characters", enterkeyhint: "done", maxlength: String(searchModule.CODE_MAX), "aria-label": "Resin to fill into the selected hoppers", placeholder: "Resin (no change)", "data-slate-fill-field": "resin" });
       fillBox.appendChild(fillResin);
-      const fillPct = element(doc, "input", "slate-recipe__fill-pct", { type: "text", inputmode: "decimal", autocomplete: "off", "aria-label": "Blend to fill into the selected hoppers", placeholder: "Blend (no change)", "data-slate-fill-field": "pct" });
+      const fillPct = element(doc, "input", "slate-recipe__fill-pct", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Blend to fill into the selected hoppers", placeholder: "Blend (no change)", "data-slate-fill-field": "pct" });
       const fillButton = text(doc, "button", "slate-recipe__plan-action", FILL_LABEL, { type: "button", "data-slate-fill": "fill" });
       const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Clear selection", { type: "button", "data-slate-fill": "clear" });
       for (const node of [fillCount, fillBox, fillPct, fillButton, fillClear]) fill.appendChild(node);
@@ -325,7 +340,7 @@
       // takes the operator's typing.
       const entry = element(doc, "div", "slate-recipe__save-entry", { hidden: "" });
       const label = text(doc, "span", "slate-recipe__save-label", SAVE_ENTRY_LABEL[id]);
-      const name = element(doc, "input", "slate-recipe__save-name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off" });
+      const name = element(doc, "input", "slate-recipe__save-name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off", enterkeyhint: "done" });
       const confirm = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", "Save", { type: "button", "data-slate-save-do": "save" });
       const replace = text(doc, "button", "slate-recipe__plan-action", "Replace existing", { type: "button", "data-slate-save-do": "replace", hidden: "" });
       const cancel = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Cancel", { type: "button", "data-slate-save-do": "cancel" });
@@ -790,6 +805,7 @@
       editing = null;
       if (target.search && typeof target.search.close === "function") target.search.close();
       if (target.input && target.input.parentNode) target.input.parentNode.removeChild(target.input);
+      if (target.wrap && target.wrap.parentNode) target.wrap.parentNode.removeChild(target.wrap);
       show(target.button, true);
       const host = target.entry ? target.entry.row : target.head.head;
       host.classList.remove("is-editing", "is-changed-underneath");
@@ -848,6 +864,8 @@
         label: `Resin for ${target.entry.hopper}`,
         // The search stands in the resin cell, not at the row's end.
         before: target.button.nextSibling,
+        touch: touch(),
+        view,
         onChoose: code => {
           if (!editing || editing !== target) return;
           target.search = null;
@@ -903,8 +921,27 @@
         if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); commit(); }
         else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeEditor(); }
       });
-      input.addEventListener("blur", () => { if (editing === target) commit(); });
+      input.addEventListener("blur", () => { if (editing === target && !target.cancelling) commit(); });
+      // An abandoned Cancel press (no click followed) is forgotten when the
+      // field is taken again, so its blur commits as before.
+      input.addEventListener("focus", () => { target.cancelling = false; });
       host.insertBefore(input, target.button.nextSibling);
+      // Under a finger Escape is out of reach, and a blur commits: Cancel is
+      // a button whose press keeps the field's focus, so it wins over the blur.
+      // The field and its Cancel stand together, before the field has focus
+      // (moving a focused field would blur it, and the blur commits).
+      if (touch()) {
+        const wrap = element(doc, "div", "slate-editor-field");
+        const cancel = text(doc, "button", "slate-editor-cancel", "×", { type: "button", "aria-label": "Cancel", title: "Cancel", "data-slate-cancel": "" });
+        const hold = event => { target.cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+        cancel.addEventListener("pointerdown", hold);
+        cancel.addEventListener("mousedown", hold);
+        cancel.addEventListener("click", () => { if (editing === target) closeEditor(); });
+        host.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        wrap.appendChild(cancel);
+        target.wrap = wrap;
+      }
       if (typeof input.focus === "function") input.focus();
       if (typeof input.select === "function") input.select();
       return target;
@@ -1104,17 +1141,14 @@
       });
     }
 
-    function outsidePrint(event) {
-      if (event && event.target && printBox.contains(event.target)) return;
-      closePrint();
-    }
+    const printCloser = dismissal(doc, node => printBox.contains(node), () => closePrint());
     function openPrint() {
       if (printOpen) return;
       printOpen = true;
       show(printMenu, true);
       printTrigger.setAttribute("aria-expanded", "true");
       printBox.classList.add("is-open");
-      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outsidePrint, true);
+      printCloser.start();
     }
     function closePrint() {
       if (!printOpen) return;
@@ -1122,7 +1156,7 @@
       show(printMenu, false);
       printTrigger.setAttribute("aria-expanded", "false");
       printBox.classList.remove("is-open");
-      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outsidePrint, true);
+      printCloser.stop();
     }
     printTrigger.addEventListener("click", () => { if (printOpen) closePrint(); else openPrint(); });
     printMenu.addEventListener("click", event => {
@@ -1217,7 +1251,7 @@
       disarmPromote();
       closeMenus();
       const state = sourceModule.stateFor(current, body.recipe);
-      const view = formModule.create(doc, body, {
+      const formView = formModule.create(doc, body, {
         base: draftModule.baseFrom(state, model),
         model,
         resins,
@@ -1225,16 +1259,20 @@
         validate,
         onChange: () => paintForm(),
         onLast: () => { if (typeof body.bulk.apply.focus === "function") body.bulk.apply.focus(); },
-        onPick: () => paintFill()
+        onPick: () => paintFill(),
+        touch: touch(),
+        view
       });
-      form = { recipe: body.recipe, body, view, armTimer: null };
+      form = { recipe: body.recipe, body, view: formView, armTimer: null };
       resetFill(body);
       show(body.bulk.hint, true);
       show(body.foot, false);
       show(body.bulk.el, true);
       setBulkNote("");
       applyAbilities();
-      view.focusFirst();
+      // A finger taps the field it wants; focusing one would pop the
+      // keyboard over the form's own foot.
+      if (!touch()) formView.focusFirst();
     }
 
     // The form goes; the cells show the canonical value again, as
