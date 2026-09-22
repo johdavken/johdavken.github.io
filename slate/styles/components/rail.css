@@ -114,9 +114,17 @@
   color: var(--slate-text);
 }
 
+.slate-root .slate-rail__item:active {
+  background: var(--slate-surface-selected);
+}
+
 .slate-root .slate-rail__item.is-active {
   background: var(--slate-accent);
   color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-rail__item.is-active:active {
+  background: var(--slate-accent-active);
 }
 
 .slate-rail__glyph {

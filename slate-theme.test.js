@@ -35,8 +35,22 @@ function storage(initial) {
   };
 }
 
-function relativeLuminance(hex) {
-  const channels = hex.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16) / 255);
+function rgb(value) {
+  if (Array.isArray(value)) return value;
+  if (value.startsWith("#")) return value.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+  assert.match(value, /^rgba\(/, `unsupported colour: ${value}`);
+  return value.match(/[\d.]+/g).map(Number);
+}
+
+function composite(foreground, background) {
+  const front = rgb(foreground);
+  const back = rgb(background);
+  const alpha = front.length === 4 ? front[3] : 1;
+  return front.slice(0, 3).map((channel, i) => channel * alpha + back[i] * (1 - alpha));
+}
+
+function relativeLuminance(value) {
+  const channels = rgb(value).map(channel => channel / 255);
   const linear = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
   return (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
 }
@@ -146,7 +160,8 @@ test("every theme declares the identical token set", () => {
     assert.deepEqual([...set.tokens.keys()].sort(), reference, `${set.id}.css declares a different token set`);
   }
   for (const required of ["--slate-bg", "--slate-surface", "--slate-text", "--slate-text-muted", "--slate-accent",
-    "--slate-focus-ring", "--slate-tracking", "--slate-pump-off", "--slate-overdue", "--slate-smart",
+    "--slate-accent-text", "--slate-focus-ring", "--slate-tracking", "--slate-pump-off", "--slate-pump-off-soft",
+    "--slate-overdue", "--slate-smart",
     "--slate-layer-outside", "--slate-layer-subskin", "--slate-layer-core", "--slate-layer-inside", "--slate-layer-single",
     "--slate-color-scheme"]) {
     assert.ok(reference.includes(required), `the contract lacks ${required}`);
@@ -172,7 +187,7 @@ test("every theme meets the contrast floors for text and status colours", () => 
     const get = name => tokens.get(`--slate-${name}`);
     const bg = get("bg");
     const surface = get("surface");
-    for (const name of ["text", "text-muted", "text-faint", "accent", "success", "warning", "danger", "info"]) {
+    for (const name of ["text", "text-muted", "text-faint", "accent-text", "success", "warning", "danger", "info"]) {
       const ratio = contrastRatio(get(name), bg);
       assert.ok(ratio >= 4.5, `${id}: ${name} ${get(name)} on bg ${bg} is ${ratio.toFixed(2)}:1`);
     }
@@ -184,4 +199,99 @@ test("every theme meets the contrast floors for text and status colours", () => 
     assert.ok(onAccent >= 4.5, `${id}: text-on-accent on accent is ${onAccent.toFixed(2)}:1`);
     assert.equal(get("color-scheme"), theme.THEMES.find(item => item.id === id).scheme);
   }
+});
+
+test("text stays readable on raised, recessed, hovered and selected surfaces", () => {
+  for (const id of GALLERY_ORDER) {
+    const tokens = tokensOf(fs.readFileSync(path.join(THEMES_DIR, `${id}.css`), "utf8"));
+    const get = name => tokens.get(`--slate-${name}`);
+    for (const surface of ["bg", "surface", "surface-raised", "surface-sunken", "surface-hover", "surface-selected"]) {
+      for (const foreground of ["text", "text-muted", "text-faint", "accent-text"]) {
+        const ratio = contrastRatio(get(foreground), get(surface));
+        assert.ok(ratio >= 4.5, `${id}: ${foreground} on ${surface}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+    for (const state of ["accent", "accent-hover", "accent-active"]) {
+      const ratio = contrastRatio(get("text-on-accent"), get(state));
+      assert.ok(ratio >= 4.5, `${id}: filled control ${state}: ${ratio.toFixed(2)}:1`);
+    }
+  }
+});
+
+test("status and accent text meet contrast floors on their composited tinted backgrounds", () => {
+  const pairs = [
+    ["tracking", "success-soft"], ["success", "success-soft"],
+    ["warning", "warning-soft"], ["danger", "danger-soft"], ["overdue", "danger-soft"],
+    ["pump-off", "pump-off-soft"], ["accent-text", "accent-soft"],
+    ["text-muted", "danger-soft"], ["text-faint", "danger-soft"]
+  ];
+  for (const id of GALLERY_ORDER) {
+    const tokens = tokensOf(fs.readFileSync(path.join(THEMES_DIR, `${id}.css`), "utf8"));
+    const get = name => tokens.get(`--slate-${name}`);
+    for (const surface of ["bg", "surface", "surface-raised"]) {
+      for (const [foreground, tint] of pairs) {
+        const ratio = contrastRatio(get(foreground), composite(get(tint), get(surface)));
+        assert.ok(ratio >= 4.5, `${id}: ${foreground} on ${tint} over ${surface}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+  }
+});
+
+test("focus rings and dark control borders remain distinct from every control surface", () => {
+  for (const id of GALLERY_ORDER) {
+    const tokens = tokensOf(fs.readFileSync(path.join(THEMES_DIR, `${id}.css`), "utf8"));
+    const get = name => tokens.get(`--slate-${name}`);
+    for (const surface of ["bg", "surface", "surface-raised", "surface-sunken", "surface-hover", "surface-selected"]) {
+      const ratio = contrastRatio(get("focus-ring"), get(surface));
+      assert.ok(ratio >= 3, `${id}: focus ring on ${surface}: ${ratio.toFixed(2)}:1`);
+    }
+    if (id === "yaru-dark") {
+      for (const surface of ["surface", "surface-raised"]) {
+        const ratio = contrastRatio(get("border"), get(surface));
+        assert.ok(ratio >= 3, `${id}: control border on ${surface}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+  }
+});
+
+test("enabled controls own pressed states and disabled controls do not own hover states", () => {
+  const component = file => fs.readFileSync(path.join(ROOT, "slate/styles/components", file), "utf8");
+  const base = fs.readFileSync(path.join(ROOT, "slate/styles/base.css"), "utf8");
+  assert.match(base, /button:not\(:disabled\):not\(\[aria-disabled="true"\]\):not\(\[data-able="false"\]\):active/);
+  for (const file of ["rail.css", "recipe.css", "recipe-book.css", "sync.css", "timeline.css"]) {
+    assert.match(component(file), /background:\s*var\(--slate-accent-active\)/, `${file} lacks an active accent state`);
+  }
+  assert.match(component("recipe.css"), /\.slate-toggle:not\(:disabled\):not\(\[data-able="false"\]\):hover/);
+  assert.match(component("recipe-book.css"), /\.slate-book__action:not\(:disabled\):not\(\[data-able="false"\]\):hover/);
+  assert.match(component("sync.css"), /\.slate-sync__button:not\(:disabled\):hover/);
+  for (const control of ["slate-layer-menu__item", "slate-print__item"]) {
+    assert.match(component("recipe-edit.css"), new RegExp(`\\.${control}:not\\(\\[aria-disabled="true"\\]\\):hover`));
+  }
+  assert.match(component("timeline.css"), /\.slate-timeline__range:focus-visible\s*\{[^}]*outline-offset:\s*-2px/s);
+  for (const [file, selector, token] of [
+    ["recipe.css", "slate-switch[^\\n{]*\\[aria-checked=\\\"true\\\"\\][^\\n{]*:active", "slate-accent-soft"],
+    ["recipe.css", "slate-toggle--tracking[^\\n{]*\\[aria-pressed=\\\"true\\\"\\][^\\n{]*:active", "slate-success-soft"],
+    ["recipe.css", "slate-toggle--pump[^\\n{]*\\[aria-pressed=\\\"true\\\"\\][^\\n{]*:active", "slate-pump-off-soft"],
+    ["recipe-book.css", "slate-book__action--danger[^\\n{]*:active", "slate-danger-soft"],
+    ["sync.css", "slate-sync__button--danger[^\\n{]*:active", "slate-danger-soft"]
+  ]) {
+    assert.match(component(file), new RegExp(`\\.${selector}\\s*\\{[^}]*background:\\s*var\\(--${token}\\)`, "s"));
+  }
+});
+
+test("accent text consumers use the text role, not the filled-control colour", () => {
+  for (const file of ["recipe.css", "timeline.css"]) {
+    const css = fs.readFileSync(path.join(ROOT, "slate/styles/components", file), "utf8");
+    assert.doesNotMatch(css, /(?:^|[;{])\s*color:\s*var\(--slate-accent\)/m);
+    assert.match(css, /color:\s*var\(--slate-accent-text\)/);
+  }
+});
+
+test("the overdue pulse animates only the line and respects reduced motion", () => {
+  const css = fs.readFileSync(path.join(ROOT, "slate/styles/components/timeline.css"), "utf8");
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  const pulse = rules.filter(match => /animation:\s*slate-now-pulse/.test(match[2]));
+  assert.equal(pulse.length, 1);
+  assert.match(pulse[0][1], /\.slate-timeline__now::before\s*$/);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.slate-timeline__now::before,[^{]*\{\s*animation:\s*none/);
 });

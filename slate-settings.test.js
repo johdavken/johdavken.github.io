@@ -27,6 +27,10 @@ test("the picker offers every registered theme as a radio, marks the current one
   assert.equal(view.element.querySelector("[role='radiogroup']").getAttribute("aria-label"), "Theme");
   // The swatch draws in the tile's own theme, not the live one.
   assert.equal(tiles[1].querySelector(".slate-theme-scope").getAttribute("data-theme"), "yaru-dark");
+  assert.equal(tiles[0].querySelector(".slate-theme-tile__selected-mark").textContent, "✓");
+  assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-title"));
+  assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-status"));
+  assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-action"));
 
   click(tiles[1]);
   assert.equal(controller.getTheme(), "yaru-dark");

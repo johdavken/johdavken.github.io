@@ -36,7 +36,7 @@
   transition: box-shadow var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-card:hover {
+.slate-card:not(.is-readonly):hover {
   border-color: var(--slate-border);
 }
 

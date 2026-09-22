@@ -227,8 +227,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-layer-menu__item:hover {
+.slate-root .slate-layer-menu__item:not([aria-disabled="true"]):hover {
   background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-layer-menu__item:not([aria-disabled="true"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-layer-menu__item[aria-disabled="true"] {
@@ -243,6 +247,11 @@
 .slate-root .slate-layer-menu__item[data-armed] {
   background: var(--slate-danger-soft);
   font-weight: 600;
+}
+
+.slate-root .slate-layer-menu__item[data-armed]:not([aria-disabled="true"]):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
 }
 
 /* ---- The print menu ---- */
@@ -289,8 +298,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-print__item:hover {
+.slate-root .slate-print__item:not([aria-disabled="true"]):hover {
   background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-print__item:not([aria-disabled="true"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-print__item[aria-disabled="true"] {

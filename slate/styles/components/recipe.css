@@ -31,9 +31,17 @@
   color: var(--slate-text);
 }
 
+.slate-root .slate-tabs__tab:active {
+  background: var(--slate-surface-selected);
+}
+
 .slate-root .slate-tabs__tab[aria-selected="true"] {
   background: var(--slate-accent);
   color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-tabs__tab[aria-selected="true"]:active {
+  background: var(--slate-accent-active);
 }
 
 /* ---- The Compare switch ---- */
@@ -49,15 +57,25 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-switch:hover {
+.slate-root .slate-switch:not([data-able="false"]):hover {
   background: var(--slate-surface-hover);
   color: var(--slate-text);
+}
+
+.slate-root .slate-switch:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-switch[aria-checked="true"] {
   border-color: var(--slate-accent);
   background: var(--slate-accent-soft);
-  color: var(--slate-accent);
+  color: var(--slate-accent-text);
+}
+
+.slate-root .slate-switch[aria-checked="true"]:not([data-able="false"]):active {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
 }
 
 .slate-root .slate-switch[data-able="false"] {
@@ -83,8 +101,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-recipe__plan-action:hover {
+.slate-root .slate-recipe__plan-action:not([data-able="false"]):hover {
   background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-recipe__plan-action:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-recipe__plan-action[data-able="false"] {
@@ -99,8 +121,12 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-recipe__plan-action--promote:hover {
+.slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):hover {
   background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):active {
+  background: var(--slate-accent-active);
 }
 
 .slate-root .slate-recipe__plan-action--quiet {
@@ -110,6 +136,11 @@
 
 .slate-root .slate-recipe__plan-action[data-armed] {
   border-color: var(--slate-danger);
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-recipe__plan-action[data-armed]:not([data-able="false"]):active {
   background: var(--slate-danger-soft);
   color: var(--slate-danger);
 }
@@ -309,7 +340,7 @@
    The row itself, a row whose blend alone moves, and one that agrees are
    left plain. */
 .slate-hopper.is-differs .slate-hopper__id {
-  color: var(--slate-accent);
+  color: var(--slate-accent-text);
 }
 
 /* The other recipe's value under a row that moves (Compare on). */
@@ -321,7 +352,7 @@
 }
 
 .slate-hopper.is-differs .slate-hopper__other {
-  color: var(--slate-accent);
+  color: var(--slate-accent-text);
   font-weight: 500;
 }
 
@@ -359,9 +390,13 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-toggle:hover {
+.slate-root .slate-toggle:not(:disabled):not([data-able="false"]):hover {
   background: var(--slate-surface-hover);
   color: var(--slate-text);
+}
+
+.slate-root .slate-toggle:not(:disabled):not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-toggle:disabled {
@@ -370,6 +405,7 @@
 }
 
 .slate-root .slate-toggle[data-able="false"] {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -391,14 +427,26 @@
   background: var(--slate-tracking);
 }
 
+.slate-root .slate-toggle--tracking[aria-pressed="true"]:not(:disabled):not([data-able="false"]):active {
+  border-color: var(--slate-tracking);
+  background: var(--slate-success-soft);
+  color: var(--slate-tracking);
+}
+
 .slate-root .slate-toggle--pump[aria-pressed="true"] {
   border-color: var(--slate-pump-off);
-  background: var(--slate-accent-soft);
+  background: var(--slate-pump-off-soft);
   color: var(--slate-pump-off);
 }
 
 .slate-toggle--pump[aria-pressed="true"] .slate-toggle__dot {
   background: var(--slate-pump-off);
+}
+
+.slate-root .slate-toggle--pump[aria-pressed="true"]:not(:disabled):not([data-able="false"]):active {
+  border-color: var(--slate-pump-off);
+  background: var(--slate-pump-off-soft);
+  color: var(--slate-pump-off);
 }
 
 /* ---- Foot ---- */
@@ -472,9 +520,13 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-recipe__reset:hover {
+.slate-root .slate-recipe__reset:not([data-able="false"]):hover {
   background: var(--slate-surface-hover);
   color: var(--slate-text);
+}
+
+.slate-root .slate-recipe__reset:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-recipe__reset[data-able="false"] {
@@ -484,6 +536,11 @@
 
 .slate-root .slate-recipe__reset[data-armed] {
   border-color: var(--slate-danger);
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-recipe__reset[data-armed]:not([data-able="false"]):active {
   background: var(--slate-danger-soft);
   color: var(--slate-danger);
 }

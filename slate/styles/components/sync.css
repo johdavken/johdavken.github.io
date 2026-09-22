@@ -238,8 +238,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-sync__button:hover {
+.slate-root .slate-sync__button:not(:disabled):hover {
   background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-sync__button:not(:disabled):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-sync__button:disabled {
@@ -253,8 +257,12 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-sync__button--primary:hover {
+.slate-root .slate-sync__button--primary:not(:disabled):hover {
   background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-sync__button--primary:not(:disabled):active {
+  background: var(--slate-accent-active);
 }
 
 .slate-root .slate-sync__button--danger {
@@ -264,6 +272,11 @@
 
 .slate-root .slate-sync__button--danger[data-armed] {
   background: var(--slate-danger-soft);
+}
+
+.slate-root .slate-sync__button--danger:not(:disabled):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
 }
 
 .slate-root .slate-sync__button--quiet {

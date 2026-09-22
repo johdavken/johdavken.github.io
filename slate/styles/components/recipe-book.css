@@ -16,8 +16,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-book__action:hover {
+.slate-root .slate-book__action:not(:disabled):not([data-able="false"]):hover {
   background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-book__action:not(:disabled):not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
 }
 
 .slate-root .slate-book__action[data-able="false"] {
@@ -36,8 +40,12 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-book__action--primary:hover {
+.slate-root .slate-book__action--primary:not(:disabled):not([data-able="false"]):hover {
   background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-book__action--primary:not(:disabled):not([data-able="false"]):active {
+  background: var(--slate-accent-active);
 }
 
 .slate-root .slate-book__action--danger {
@@ -45,8 +53,13 @@
   color: var(--slate-danger);
 }
 
-.slate-root .slate-book__action--danger:hover {
+.slate-root .slate-book__action--danger:not(:disabled):not([data-able="false"]):hover {
   background: var(--slate-danger-soft);
+}
+
+.slate-root .slate-book__action--danger:not(:disabled):not([data-able="false"]):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
 }
 
 .slate-root .slate-book__action--quiet {
@@ -157,6 +170,10 @@
 
 .slate-root .slate-book__row[aria-pressed="true"] {
   border-color: var(--slate-accent);
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-book__row:active {
   background: var(--slate-surface-selected);
 }
 

@@ -71,6 +71,20 @@
   cursor: pointer;
 }
 
+.slate-root button:disabled {
+  cursor: default;
+}
+
+.slate-root button[aria-disabled="true"],
+.slate-root button[data-able="false"] {
+  cursor: not-allowed;
+}
+
+/* A small physical acknowledgement shared by every enabled control. */
+.slate-root button:not(:disabled):not([aria-disabled="true"]):not([data-able="false"]):active {
+  transform: translateY(1px);
+}
+
 /* The input reset, for the same reason as the button reset, and wider
  * again: the legacy stylesheet styles inputs at several specificities -
  * bare `input`, `input:not([type="checkbox"]):not([type="radio"])`,

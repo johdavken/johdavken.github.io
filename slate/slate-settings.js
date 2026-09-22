@@ -53,6 +53,16 @@
       const swatch = element(doc, "span", "slate-theme-tile__swatch slate-theme-scope", { "data-theme": item.id, "aria-hidden": "true" });
       swatch.appendChild(element(doc, "span", "slate-theme-tile__swatch-bar"));
       swatch.appendChild(element(doc, "span", "slate-theme-tile__swatch-accent"));
+      const preview = element(doc, "span", "slate-theme-tile__preview");
+      preview.appendChild(element(doc, "span", "slate-theme-tile__preview-title"));
+      preview.appendChild(element(doc, "span", "slate-theme-tile__preview-copy"));
+      const previewStatus = element(doc, "span", "slate-theme-tile__preview-status");
+      previewStatus.appendChild(element(doc, "span", "slate-theme-tile__preview-status-dot"));
+      previewStatus.appendChild(element(doc, "span", "slate-theme-tile__preview-status-label"));
+      preview.appendChild(previewStatus);
+      preview.appendChild(element(doc, "span", "slate-theme-tile__preview-action"));
+      swatch.appendChild(preview);
+      tile.appendChild(text(doc, "span", "slate-theme-tile__selected-mark", "✓", { "aria-hidden": "true" }));
       tile.appendChild(swatch);
       tile.appendChild(text(doc, "span", "slate-theme-tile__name", item.label));
       tile.appendChild(text(doc, "span", "slate-theme-tile__description", item.description || ""));
