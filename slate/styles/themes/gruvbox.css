@@ -1,0 +1,61 @@
+/* Slate theme: Gruvbox.
+ *
+ * Gruvbox's dark palette (the softer material contrast) on Slate's
+ * semantic contract: warm charcoal surfaces, sand text, the palette's
+ * blue-teal for the accent, its green, yellow, red and aqua for the
+ * statuses, purple for a pumped-off hopper. Same token set as
+ * yaru-light.css.
+ */
+.slate-root[data-theme="gruvbox"],
+.slate-theme-scope[data-theme="gruvbox"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #1d2021;
+  --slate-surface: #282828;
+  --slate-surface-raised: #32302f;
+  --slate-surface-sunken: #1e1e1e;
+  --slate-surface-hover: #3c3836;
+  --slate-surface-selected: #504945;
+
+  --slate-text: #ebdbb2;
+  --slate-text-muted: #d4be98;
+  --slate-text-faint: #cfbd98;
+  --slate-text-disabled: #7c6f64;
+  --slate-text-on-accent: #1d2021;
+
+  --slate-border-subtle: #3c3836;
+  --slate-border: #877b6f;
+  --slate-border-strong: #928374;
+  --slate-focus-ring: #7daea3;
+
+  --slate-accent: #7daea3;
+  --slate-accent-text: #9acbc0;
+  --slate-accent-hover: #8fbfb4;
+  --slate-accent-active: #6c9d92;
+  --slate-accent-soft: rgba(125, 174, 163, 0.18);
+  --slate-pump-off-soft: rgba(211, 134, 155, 0.12);
+
+  --slate-success: #b4c072;
+  --slate-warning: #e0b264;
+  --slate-danger: #f28b85;
+  --slate-info: #7daea3;
+  --slate-success-soft: rgba(169, 182, 101, 0.12);
+  --slate-warning-soft: rgba(216, 166, 87, 0.12);
+  --slate-danger-soft: rgba(234, 105, 98, 0.12);
+
+  --slate-tracking: #b4c072;
+  --slate-pump-off: #dc9bad;
+  --slate-overdue: #f28b85;
+  --slate-smart: #89b482;
+
+  --slate-layer-outside: #7daea3;
+  --slate-layer-subskin: #a9b665;
+  --slate-layer-core: #e1875c;
+  --slate-layer-inside: #d3869b;
+  --slate-layer-single: #928374;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.52);
+  --slate-qr-surface: #ebdbb2;
+}

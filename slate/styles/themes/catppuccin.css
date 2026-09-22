@@ -1,0 +1,60 @@
+/* Slate theme: Catppuccin.
+ *
+ * Catppuccin Mocha on Slate's semantic contract: soft navy surfaces,
+ * pale text, the palette's blue for the accent, its green, yellow, red
+ * and sky for the statuses, mauve for a pumped-off hopper, teal for a
+ * computed weight. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="catppuccin"],
+.slate-theme-scope[data-theme="catppuccin"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #181825;
+  --slate-surface: #1e1e2e;
+  --slate-surface-raised: #24243a;
+  --slate-surface-sunken: #11111b;
+  --slate-surface-hover: #313244;
+  --slate-surface-selected: #45475a;
+
+  --slate-text: #cdd6f4;
+  --slate-text-muted: #bac2de;
+  --slate-text-faint: #b5bdd7;
+  --slate-text-disabled: #6c7086;
+  --slate-text-on-accent: #181825;
+
+  --slate-border-subtle: #313244;
+  --slate-border: #6c7086;
+  --slate-border-strong: #9399b2;
+  --slate-focus-ring: #89b4fa;
+
+  --slate-accent: #89b4fa;
+  --slate-accent-text: #96bffd;
+  --slate-accent-hover: #9cc2ff;
+  --slate-accent-active: #78a3ea;
+  --slate-accent-soft: rgba(137, 180, 250, 0.18);
+  --slate-pump-off-soft: rgba(203, 166, 247, 0.16);
+
+  --slate-success: #a6e3a1;
+  --slate-warning: #f9e2af;
+  --slate-danger: #f38ba8;
+  --slate-info: #89dceb;
+  --slate-success-soft: rgba(166, 227, 161, 0.16);
+  --slate-warning-soft: rgba(249, 226, 175, 0.18);
+  --slate-danger-soft: rgba(243, 139, 168, 0.16);
+
+  --slate-tracking: #a6e3a1;
+  --slate-pump-off: #cba6f7;
+  --slate-overdue: #f38ba8;
+  --slate-smart: #94e2d5;
+
+  --slate-layer-outside: #89b4fa;
+  --slate-layer-subskin: #a6e3a1;
+  --slate-layer-core: #fab387;
+  --slate-layer-inside: #cba6f7;
+  --slate-layer-single: #7f849c;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.52);
+  --slate-qr-surface: #cdd6f4;
+}

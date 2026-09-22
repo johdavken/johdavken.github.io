@@ -18,11 +18,19 @@
 
   const STORAGE_KEY = "polyn.slate.theme.v1";
   const DEFAULT_THEME = "yaru-light";
-  /* The registry, in gallery order: a light theme over its dark one.
-   * Yaru is Ubuntu's palette, mapped onto Slate's contract. */
+  /* The registry, in gallery order: Yaru's light and dark first, then
+   * the light Rosé Pine, then the dark palettes. Each is a well-known
+   * palette mapped onto Slate's contract; these are Slate's own files,
+   * not Station's. */
   const THEMES = Object.freeze([
     Object.freeze({ id: "yaru-light", label: "Yaru Light", scheme: "light", description: "Cool white, near-black text, Ubuntu orange." }),
-    Object.freeze({ id: "yaru-dark", label: "Yaru Dark", scheme: "dark", description: "Neutral graphite, white text, Ubuntu orange." })
+    Object.freeze({ id: "yaru-dark", label: "Yaru Dark", scheme: "dark", description: "Neutral graphite, white text, Ubuntu orange." }),
+    Object.freeze({ id: "rose-pine", label: "Rosé Pine", scheme: "light", description: "Dawn: warm parchment, ink-violet text, pine accent." }),
+    Object.freeze({ id: "tokyo-night", label: "Tokyo Night", scheme: "dark", description: "Deep blue-black, lavender text, blue accent." }),
+    Object.freeze({ id: "gruvbox", label: "Gruvbox", scheme: "dark", description: "Warm charcoal, sand text, blue-teal accent." }),
+    Object.freeze({ id: "everforest", label: "Everforest", scheme: "dark", description: "Green-grey, parchment text, blue accent." }),
+    Object.freeze({ id: "catppuccin", label: "Catppuccin", scheme: "dark", description: "Mocha: soft navy, pale text, blue accent." }),
+    Object.freeze({ id: "retro-82", label: "Retro 82", scheme: "dark", description: "Deep navy, cream text, orange accent." })
   ]);
   const THEME_IDS = Object.freeze(THEMES.map(theme => theme.id));
   const VALID = new Set(THEME_IDS);

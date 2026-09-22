@@ -15,7 +15,7 @@ const theme = require("./slate-theme.js");
 
 const ROOT = __dirname;
 const THEMES_DIR = path.join(ROOT, "slate/styles/themes");
-const GALLERY_ORDER = ["yaru-light", "yaru-dark"];
+const GALLERY_ORDER = ["yaru-light", "yaru-dark", "rose-pine", "tokyo-night", "gruvbox", "everforest", "catppuccin", "retro-82"];
 
 function node(tag) {
   return {
@@ -71,12 +71,12 @@ function tokensOf(css) {
  *   Registry and controller
  * -------------------------------------------------------------------- */
 
-test("the Slate registry is Yaru Light over Yaru Dark, default light, and its own storage key", () => {
+test("the Slate registry is Yaru Light over Yaru Dark, then the six palettes, default light, and its own storage key", () => {
   assert.deepEqual([...theme.THEME_IDS], GALLERY_ORDER);
   assert.equal(theme.DEFAULT_THEME, "yaru-light");
   assert.equal(theme.STORAGE_KEY, "polyn.slate.theme.v1");
-  assert.deepEqual(theme.THEMES.map(item => item.scheme), ["light", "dark"]);
-  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark"]);
+  assert.deepEqual(theme.THEMES.map(item => item.scheme), ["light", "dark", "light", "dark", "dark", "dark", "dark", "dark"]);
+  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine", "Tokyo Night", "Gruvbox", "Everforest", "Catppuccin", "Retro 82"]);
   assert.ok(Object.isFrozen(theme.THEMES) && theme.THEMES.every(Object.isFrozen));
   // Station's preference is a different key: choosing here never recolours Station.
   const station = require("./station-theme.js");
@@ -245,7 +245,7 @@ test("focus rings and dark control borders remain distinct from every control su
       const ratio = contrastRatio(get("focus-ring"), get(surface));
       assert.ok(ratio >= 3, `${id}: focus ring on ${surface}: ${ratio.toFixed(2)}:1`);
     }
-    if (id === "yaru-dark") {
+    if (theme.THEMES.find(item => item.id === id).scheme === "dark") {
       for (const surface of ["surface", "surface-raised"]) {
         const ratio = contrastRatio(get("border"), get(surface));
         assert.ok(ratio >= 3, `${id}: control border on ${surface}: ${ratio.toFixed(2)}:1`);
