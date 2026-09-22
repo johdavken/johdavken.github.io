@@ -47,18 +47,20 @@ function boot(options) {
   const printed = [];
   const printer = { print(which, resolved) { printed.push({ which, planned: !!(resolved && resolved.plan && resolved.plan.planned) }); return { ok: true, which, pages: [which] }; } };
   let readOnly = !!settings.readOnly;
+  let trackingMode = settings.trackingMode || "assisted";
   const view = recipe.create(doc, {
     commands: () => commands,
     onCommitted: result => committed.push(result),
     say: message => said.push(message),
     readOnly: () => readOnly,
+    trackingMode: () => trackingMode,
     resins: () => CATALOG,
     timers,
     print: printer,
     recipes: settings.recipes === undefined ? null : settings.recipes
   });
   doc.body.appendChild(view.element);
-  return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; } };
+  return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
 }
 
 /* A fake recipes bridge for "Save as recipe": records requests, answers as told. */
@@ -347,6 +349,138 @@ test("with a plan, Track is offered only where the resin goes away - swapped or 
 
   view.update(resolvedFrom(), { kind: "structural" });
   for (const id of ["A3", "A4"]) assert.ok(!toggle(id).hasAttribute("hidden"), `${id}: Track still withheld without a plan`);
+});
+
+/* ----------------------------------------------------------------------
+ *   The tracking mode: Manual offers Track everywhere, Automatic never
+ *   and tracks for the operator
+ * -------------------------------------------------------------------- */
+
+const toggleOf = (view, id) => row(view, id).querySelector("[data-slate-control='tracking']");
+const trackingCalls = commands => commands.calls.filter(call => call.command === "setHopperTracking").map(call => `${call.args.layer}:${call.args.index}:${call.args.track}:${call.args.recipe}`);
+/* The plan with changes, with A1 untracked too, so two hoppers - A1
+ * swapped and B3 emptied - want tracking and the tracked ones (A2, B1),
+ * the continuing ones (A3, C1) and the one that fills (A4) do not. */
+const planForAutomatic = extra => planWithChanges(snap => { snap.layers[0].hoppers[0].track = false; if (extra) extra(snap); });
+
+test("Manual offers Track on every Current row whatever the plan says - still disabled where nothing is assigned - and never on Next", () => {
+  const { view, commands, timers } = boot({ trackingMode: "manual" });
+  view.update(planWithChanges(), { kind: "structural" });
+  for (const id of ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "C1"]) assert.ok(!toggleOf(view, id).hasAttribute("hidden"), `${id}: Track withheld under Manual`);
+  assert.ok(toggleOf(view, "A4").hasAttribute("disabled"), "an empty hopper offers a live Track");
+  assert.ok(!toggleOf(view, "A1").hasAttribute("disabled"));
+  assert.equal(row(view, "A1", "next").querySelector("[data-slate-control='tracking']"), null);
+  view.update(resolvedFrom(), { kind: "structural" });
+  for (const id of ["A3", "A4"]) assert.ok(!toggleOf(view, id).hasAttribute("hidden"));
+  assert.equal(timers.pending(), 0, "Manual scheduled a batch");
+  assert.equal(commands.calls.length, 0);
+});
+
+test("Automatic offers no Track at all, keeps Reset, and tracks the hoppers whose resin goes away one tick after the publish - once, never the tracked, the continuing or the filling", () => {
+  const { view, commands, timers, committed, said } = boot({ trackingMode: "automatic" });
+  view.update(planForAutomatic(), { kind: "structural" });
+  for (const id of ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "C1"]) assert.ok(toggleOf(view, id).hasAttribute("hidden"), `${id}: Track offered under Automatic`);
+  assert.equal(view.body("current").querySelector(".slate-recipe__reset").getAttribute("data-able"), "true", "Reset withheld under Automatic");
+  assert.equal(commands.calls.length, 0, "a command ran inside the publish");
+  assert.equal(timers.pending(), 1);
+  // A second publish before the tick coalesces into the same batch.
+  view.update(planForAutomatic(), { kind: "values" });
+  assert.equal(timers.pending(), 1);
+
+  timers.advance(0);
+  assert.deepEqual(trackingCalls(commands), ["A:0:true:current", "B:2:true:current"]);
+  assert.equal(committed.length, 1, "the boot was told per hopper, not once");
+  assert.equal(said.length, 0);
+
+  // The application's echo: both tracked now, and nothing more is asked.
+  view.update(planForAutomatic(snap => { snap.layers[0].hoppers[0].track = true; snap.layers[1].hoppers[2].track = true; }), { kind: "values", own: true });
+  assert.equal(timers.pending(), 1);
+  timers.advance(0);
+  assert.equal(commands.calls.length, 2, "a tracked hopper was tracked again");
+  // A plan that swaps one more resin tracks that one alone.
+  view.update(planForAutomatic(snap => { snap.layers[0].hoppers[0].track = true; snap.layers[1].hoppers[2].track = true; snap.nextRecipe.layers[2].hoppers[0].resinName = "ZZ9"; }), { kind: "values" });
+  timers.advance(0);
+  assert.deepEqual(trackingCalls(commands).slice(2), ["C:0:true:current"]);
+});
+
+test("Automatic tracks nothing without a plan, without a bridge, or while Slate is read-only - and tracks at once when read-only lifts", () => {
+  const bare = boot({ trackingMode: "automatic" });
+  bare.view.update(resolvedFrom(), { kind: "structural" });
+  bare.timers.advance(0);
+  assert.equal(bare.commands.calls.length, 0, "tracked without a plan");
+
+  const unplugged = boot({ trackingMode: "automatic", commands: null });
+  unplugged.view.update(planForAutomatic(), { kind: "structural" });
+  unplugged.timers.advance(0);
+  assert.equal(unplugged.said.length, 0, "a refusal was said with no bridge");
+  assert.equal(unplugged.committed.length, 0);
+
+  const guarded = boot({ trackingMode: "automatic", readOnly: true });
+  guarded.view.update(planForAutomatic(), { kind: "structural" });
+  guarded.timers.advance(0);
+  assert.equal(guarded.commands.calls.length, 0, "tracked under read-only");
+  guarded.setReadOnly(false);
+  guarded.view.refresh();
+  assert.equal(guarded.commands.calls.length, 0, "a command ran inside refresh");
+  guarded.timers.advance(0);
+  assert.deepEqual(trackingCalls(guarded.commands), ["A:0:true:current", "B:2:true:current"]);
+});
+
+test("a refusal under Automatic is said once, told to nobody, and not asked again for the same pair until the plan or a preference moves", () => {
+  const commands = makeCommands({ capabilities: ALL, answer: (command, args) => (args.layer === "B" ? { ok: false, code: "unknown_hopper", message: "No such hopper." } : undefined) });
+  const { view, timers, committed, said } = boot({ trackingMode: "automatic", commands });
+  view.update(planForAutomatic(), { kind: "structural" });
+  timers.advance(0);
+  assert.deepEqual(trackingCalls(commands), ["A:0:true:current", "B:2:true:current"]);
+  assert.equal(committed.length, 1, "the accepted hopper was not committed");
+  assert.deepEqual(said, ["Automatic tracking: No such hopper."]);
+
+  // The echo of the accepted one: B3 is still wanted, still refused, not asked.
+  view.update(planForAutomatic(snap => { snap.layers[0].hoppers[0].track = true; }), { kind: "values", own: true });
+  timers.advance(0);
+  assert.equal(commands.calls.length, 2, "the refused pair was asked again on a values publish");
+  assert.equal(said.length, 1);
+  // A preference moved: asked once more, refused once more.
+  view.refresh();
+  timers.advance(0);
+  assert.equal(commands.calls.length, 3);
+  assert.equal(said.length, 2);
+  // The plan puts another resin there: a new pair, asked.
+  view.update(planForAutomatic(snap => { snap.layers[0].hoppers[0].track = true; snap.nextRecipe.layers[1].hoppers[2] = { index: 2, pct: 5, resinName: "ZZ7" }; }), { kind: "values" });
+  timers.advance(0);
+  assert.equal(commands.calls.length, 4);
+  // A structural publish forgets the refusal too.
+  view.update(planForAutomatic(snap => { snap.layers[0].hoppers[0].track = true; }), { kind: "structural" });
+  timers.advance(0);
+  assert.equal(commands.calls.length, 5);
+});
+
+test("the mode moving under a plan: Assisted to Automatic hides Track and tracks on refresh; to Manual shows every Track and asks nothing", () => {
+  const { view, commands, timers, setTrackingMode } = boot();
+  view.update(planForAutomatic(), { kind: "structural" });
+  assert.ok(!toggleOf(view, "A1").hasAttribute("hidden"));
+  assert.ok(toggleOf(view, "A3").hasAttribute("hidden"));
+  assert.equal(timers.pending(), 0, "Assisted scheduled a batch");
+
+  setTrackingMode("automatic");
+  view.refresh();
+  assert.ok(toggleOf(view, "A1").hasAttribute("hidden"));
+  assert.equal(timers.pending(), 1);
+  timers.advance(0);
+  assert.deepEqual(trackingCalls(commands), ["A:0:true:current", "B:2:true:current"]);
+
+  setTrackingMode("manual");
+  view.refresh();
+  for (const id of ["A1", "A3", "A4", "C1"]) assert.ok(!toggleOf(view, id).hasAttribute("hidden"), `${id}: Track withheld under Manual`);
+  assert.equal(timers.pending(), 0);
+  timers.advance(0);
+  assert.equal(commands.calls.length, 2);
+
+  // An unknown word is Assisted.
+  setTrackingMode("whatever");
+  view.refresh();
+  assert.ok(!toggleOf(view, "A1").hasAttribute("hidden"));
+  assert.ok(toggleOf(view, "A3").hasAttribute("hidden"));
 });
 
 /* ----------------------------------------------------------------------

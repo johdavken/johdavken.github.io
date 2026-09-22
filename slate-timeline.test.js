@@ -49,6 +49,7 @@ function boot(options) {
   const committed = [];
   let now = settings.now || NOW;
   let readOnly = !!settings.readOnly;
+  let trackingMode = settings.trackingMode || "assisted";
   const commands = settings.commands === null ? null : (settings.commands || makeCommands({ capabilities: ["setPumpOff", "setHopperTracking", "resetTracking"] }));
   const view = timelineModule.create(doc, {
     now: () => now,
@@ -59,13 +60,14 @@ function boot(options) {
     view: settings.view,
     commands: () => commands,
     readOnly: () => readOnly,
+    trackingMode: () => trackingMode,
     onCommitted: result => committed.push(result),
     say: message => said.push(message)
   });
   doc.body.appendChild(view.element);
   const axis = view.element.querySelector(".slate-timeline__axis");
   if (settings.height) axis._rect = { left: 0, top: 0, width: 276, height: settings.height };
-  return { doc, timers, ticks, said, committed, commands, view, axis, setNow: value => { now = value; }, setReadOnly: value => { readOnly = value; } };
+  return { doc, timers, ticks, said, committed, commands, view, axis, setNow: value => { now = value; }, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
 }
 
 const q = (view, selector) => view.element.querySelector(selector);
@@ -144,9 +146,23 @@ test("with nothing tracked or no line the pane says so; with a job the head carr
   view.update(null);
   assert.equal(q(view, ".slate-timeline__notice").textContent, timelineModule.NO_LINE);
   assert.ok(view.element.classList.contains("is-idle"));
-  view.update(resolvedAt(NOW, snap => { for (const layer of snap.layers) for (const hopper of layer.hoppers) hopper.track = false; }));
+  const untracked = () => resolvedAt(NOW, snap => { for (const layer of snap.layers) for (const hopper of layer.hoppers) hopper.track = false; });
+  view.update(untracked());
   assert.equal(q(view, ".slate-timeline__notice").textContent, timelineModule.NONE_TRACKED);
   assert.ok(view.element.classList.contains("is-idle"));
+  // Under Automatic tracking there is no Track to turn on; the notice says what happens instead.
+  const automatic = boot({ trackingMode: "automatic" });
+  automatic.view.update(untracked());
+  assert.equal(q(automatic.view, ".slate-timeline__notice").textContent, timelineModule.NONE_TRACKED_AUTOMATIC);
+  assert.match(timelineModule.NONE_TRACKED_AUTOMATIC, /tracked automatically/);
+  // The mode moving in Settings changes the line on refresh, before any tick.
+  automatic.setTrackingMode("manual");
+  automatic.view.refresh();
+  assert.equal(q(automatic.view, ".slate-timeline__notice").textContent, timelineModule.NONE_TRACKED);
+  automatic.setTrackingMode("automatic");
+  automatic.view.refresh();
+  assert.equal(q(automatic.view, ".slate-timeline__notice").textContent, timelineModule.NONE_TRACKED_AUTOMATIC);
+  assert.doesNotMatch(timelineModule.NONE_TRACKED_AUTOMATIC, /Turn on Track/);
   assert.equal(qa(view, ".slate-timeline__member").length, 0);
   assert.equal(q(view, ".slate-timeline__counts").textContent, "");
 

@@ -261,6 +261,7 @@
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
       readOnly: readOnlyNow,
+      trackingMode: () => (displayController && typeof displayController.getTrackingMode === "function" ? displayController.getTrackingMode() : "assisted"),
       rundown,
       resins: () => {
         if (!catalog || typeof catalog.getResins !== "function") return [];

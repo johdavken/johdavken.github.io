@@ -1,5 +1,13 @@
 /* The Track mode's seam to the application: a hopper's tracking and
- * pump-off toggles, and the reset over the whole job.
+ * pump-off toggles, the reset over the whole job, and - under Automatic
+ * tracking - the batch the recipe section asks for on the operator's
+ * behalf.
+ *
+ * The tracking MODE (slate-display.js keeps the word) decides how the
+ * Track toggle is offered: `assisted` where a planned resin goes away,
+ * `manual` on every hopper, `automatic` never - the recipe section then
+ * tracks those hoppers itself, and only ever turns tracking on. The rule
+ * for each is here, pure, so the section and its tests share one.
  *
  * Slate's recipe section builds the toggles; this is the one file that
  * hands them to the command bridge, as small as the seam it is. It never
@@ -63,6 +71,43 @@
     });
   }
 
+  /* ---- The tracking mode ---- */
+
+  const MODES = Object.freeze(["automatic", "assisted", "manual"]);
+  const DEFAULT_MODE = "assisted";
+
+  function modeOf(value) {
+    return MODES.includes(value) ? value : DEFAULT_MODE;
+  }
+
+  /* Whether a Current row shows its Track toggle. `row` is what the
+   * recipe section knows of the hopper against the plan:
+   *   planned      a Next Recipe exists
+   *   resinDiffers the plan puts another resin, or none, in this hopper
+   *   assigned     the hopper holds a resin now
+   *   track        it is tracked
+   *   pumpOff      its pump is off
+   * Assisted: with a plan, only a resin that goes away - swapped or
+   * emptied - has a run-down to track; a toggle already on stays, so it
+   * can be turned off; a hopper that only fills next has nothing to
+   * track; without a plan, every row. Manual: every row, whatever the
+   * plan. Automatic: none - the section tracks for the operator. */
+  function offersToggle(mode, row) {
+    const r = row || {};
+    const m = modeOf(mode);
+    if (m === "automatic") return false;
+    if (m === "manual") return true;
+    return !r.planned || (!!r.resinDiffers && !!r.assigned) || !!r.track || !!r.pumpOff;
+  }
+
+  /* Whether Automatic tracking wants this row tracked: the resin goes
+   * away and it is not tracked yet. Never the reverse - Automatic only
+   * turns tracking on. */
+  function wantsTracking(mode, row) {
+    const r = row || {};
+    return modeOf(mode) === "automatic" && !!r.planned && !!r.resinDiffers && !!r.assigned && !r.track;
+  }
+
   function reason(commands, control, options) {
     if (options && options.readOnly) return READ_ONLY_REASON;
     if (!connected(commands)) return "no application is connected to Slate commands.";
@@ -111,6 +156,22 @@
     return commands.dispatch(COMMAND[r.control], args);
   }
 
+  /**
+   * Automatic tracking's batch: one setHopperTracking(true) per request,
+   * synchronous, the application's answers in the requests' order. With
+   * no bridge every answer is the same refusal, and nothing throws.
+   *
+   * @param {object|null} commands
+   * @param {{layer:string,index:number}[]} requests
+   */
+  function trackMany(commands, requests) {
+    const list = Array.isArray(requests) ? requests : [];
+    if (!commands || typeof commands.dispatch !== "function") {
+      return list.map(() => unavailable("No application is connected to Slate commands."));
+    }
+    return list.map(r => commands.dispatch(COMMAND.tracking, { recipe: "current", layer: r.layer, index: r.index, track: true }));
+  }
+
   /** One resetTracking, addressed to Current. */
   function resetTracking(commands) {
     if (!commands || typeof commands.dispatch !== "function") {
@@ -120,7 +181,8 @@
   }
 
   return Object.freeze({
-    CONTROLS, COMMAND, RESET_COMMAND, FLAG, LABEL, STATE, READ_ONLY_REASON,
-    stateLabel, actionLabel, abilities, reason, requestFrom, toggle, resetTracking
+    CONTROLS, COMMAND, RESET_COMMAND, FLAG, LABEL, STATE, READ_ONLY_REASON, MODES, DEFAULT_MODE,
+    stateLabel, actionLabel, abilities, reason, requestFrom, toggle, resetTracking,
+    modeOf, offersToggle, wantsTracking, trackMany
   });
 });

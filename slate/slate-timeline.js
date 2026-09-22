@@ -36,6 +36,9 @@
   const TICK_MS = 20000;
   const FALLBACK_HEIGHT = 640;
   const NONE_TRACKED = "No hoppers tracked. Turn on Track in the recipe.";
+  // Under Automatic tracking there is no Track to turn on: the recipe
+  // tracks a hopper once a plan changes its resin.
+  const NONE_TRACKED_AUTOMATIC = "No hoppers tracked. Plan a Next Recipe; hoppers whose resin changes are tracked automatically.";
   const STALE_CHANGEOVER = "Changeover needs confirming";
   const NO_LINE = "No line to project.";
 
@@ -124,6 +127,7 @@
    * @param {object} [options.view]        the window (ResizeObserver)
    * @param {function} [options.commands]  () -> the command bridge, or null
    * @param {function} [options.readOnly]
+   * @param {function} [options.trackingMode] () -> "automatic"|"assisted"|"manual"; only the idle notice reads it
    * @param {function} [options.onCommitted]
    * @param {function} [options.say]
    */
@@ -135,6 +139,7 @@
     const onTick = typeof settings.onTick === "function" ? settings.onTick : () => {};
     const commands = typeof settings.commands === "function" ? settings.commands : () => null;
     const readOnly = typeof settings.readOnly === "function" ? settings.readOnly : () => false;
+    const trackingMode = typeof settings.trackingMode === "function" ? settings.trackingMode : () => "assisted";
     const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
     const say = typeof settings.say === "function" ? settings.say : () => {};
     const guard = () => ({ readOnly: !!readOnly() });
@@ -373,6 +378,22 @@
 
     /* ---- Abilities ---- */
 
+    // The idle line: no line, nothing tracked (in the tracking mode's
+    // words), or a stale changeover.
+    function paintNotice(model, tracked) {
+      const noneTracked = trackingMode() === "automatic" ? NONE_TRACKED_AUTOMATIC : NONE_TRACKED;
+      const noticeText = !model ? NO_LINE : (tracked === 0 ? noneTracked : (state.changeover.stale ? STALE_CHANGEOVER : ""));
+      setText(notice, noticeText);
+      show(notice, !!noticeText);
+    }
+
+    // A preference moved: the pump toggles re-read their ability, and the
+    // idle line follows the tracking mode.
+    function refresh() {
+      applyAbilities();
+      paintNotice(state.inputs && state.inputs.model, state.entries.length);
+    }
+
     function applyAbilities() {
       const bridge = commands();
       const options = guard();
@@ -419,9 +440,7 @@
       const idle = !model || tracked === 0;
       rootEl.classList.toggle("is-idle", idle);
       setText(counts, idle ? "" : countsFor(entries));
-      const noticeText = !model ? NO_LINE : (tracked === 0 ? NONE_TRACKED : (state.changeover.stale ? STALE_CHANGEOVER : ""));
-      setText(notice, noticeText);
-      show(notice, !!noticeText);
+      paintNotice(model, tracked);
 
       const height = measuredHeight();
       state.height = height;
@@ -613,7 +632,7 @@
     return Object.freeze({
       element: rootEl,
       update,
-      refresh: applyAbilities,
+      refresh,
       tick,
       wake,
       marks,
@@ -628,7 +647,7 @@
   }
 
   return Object.freeze({
-    TICK_MS, FALLBACK_HEIGHT, NONE_TRACKED, STALE_CHANGEOVER, NO_LINE,
+    TICK_MS, FALLBACK_HEIGHT, NONE_TRACKED, NONE_TRACKED_AUTOMATIC, STALE_CHANGEOVER, NO_LINE,
     TOP_INSET, BOTTOM_INSET, CHANGEOVER_INSET, GAP, CARD_PAD, CARD_HEAD, MEMBER_ROW, CARD_FACTS,
     cardHeight, facts, countsFor, changeoverText, create
   });

@@ -17,6 +17,14 @@
  * operator's explicit choice either way. The EFFECTIVE mode (automatic
  * resolved against the line) is the boot's to compute; this only keeps
  * the preference.
+ *
+ * TRACKING
+ *
+ * How Slate offers the per-hopper Track toggle. `assisted`, the default,
+ * offers it where a planned resin goes away (the recipe section's rule);
+ * `manual` offers it on every hopper; `automatic` offers none and has the
+ * recipe section track those hoppers itself. This keeps the word; what it
+ * means is slate-tracking.js's, and the dispatching is the recipe's.
  */
 (function (root, factory) {
   const api = factory();
@@ -26,16 +34,18 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ readOnly: null });
+  const DEFAULTS = Object.freeze({ readOnly: null, tracking: "assisted" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const READ_ONLY_MODES = Object.freeze(["auto", "on", "off"]);
+  const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
 
   /* A stored value, or anything else, to a full set of preferences:
    * every key present, unknown keys dropped, a bad value its default. */
   function normalize(value) {
     const source = value && typeof value === "object" ? value : {};
     return {
-      readOnly: typeof source.readOnly === "boolean" ? source.readOnly : DEFAULTS.readOnly
+      readOnly: typeof source.readOnly === "boolean" ? source.readOnly : DEFAULTS.readOnly,
+      tracking: TRACKING_MODES.includes(source.tracking) ? source.tracking : DEFAULTS.tracking
     };
   }
 
@@ -72,6 +82,11 @@
     return null;
   }
 
+  /* A tracking mode, or the default for anything that is not one. */
+  function trackingModeOf(value) {
+    return TRACKING_MODES.includes(value) ? value : DEFAULTS.tracking;
+  }
+
   /** The effective mode: the preference resolved against the line. */
   function effectiveReadOnly(readOnly, linked) {
     if (typeof readOnly === "boolean") return readOnly;
@@ -100,6 +115,8 @@
       getReadOnly: () => current.readOnly,
       getReadOnlyMode: () => modeOf(current.readOnly),
       setReadOnly: value => apply({ readOnly: readOnlyOf(value) }).readOnly,
+      getTrackingMode: () => current.tracking,
+      setTrackingMode: value => apply({ tracking: trackingModeOf(value) }).tracking,
       subscribe(listener) {
         if (typeof listener !== "function") return () => {};
         listeners.add(listener);
@@ -114,5 +131,5 @@
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, normalize, read, modeOf, readOnlyOf, effectiveReadOnly, create, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, normalize, read, modeOf, readOnlyOf, trackingModeOf, effectiveReadOnly, create, initialize });
 });

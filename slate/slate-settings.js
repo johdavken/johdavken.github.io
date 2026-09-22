@@ -1,4 +1,5 @@
-/* The Settings section: the theme, and room for what comes after it.
+/* The Settings section: the theme, read-only, the tracking mode, and
+ * room for what comes after them.
  *
  * The theme picker drives the controller slate-host.js (or the harness)
  * created on the root; the controller writes the attribute and the
@@ -30,7 +31,7 @@
    * @param {object} ctx
    * @param {object|null} ctx.theme    the theme controller {getTheme, setTheme, subscribe}
    * @param {object[]} [ctx.themes]    the registry (PolynSlateTheme.THEMES)
-   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, subscribe}
+   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, subscribe}
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -93,6 +94,28 @@
     if (!display) safety.appendChild(text(doc, "p", "slate-settings__note", "Read-only cannot be changed on this page."));
     rootEl.appendChild(safety);
 
+    // Tracking: how the Track toggle is offered.
+    const tracking = element(doc, "section", "slate-settings__group", { "aria-label": "Tracking" });
+    tracking.appendChild(text(doc, "h2", "slate-settings__heading", "Tracking"));
+    tracking.appendChild(text(doc, "p", "slate-settings__lead", "How the recipe offers Track on each hopper. Automatic tracks hoppers whose resin changes at the changeover for you and only ever turns tracking on; it needs Slate writable (Read-only Off) and changes nothing otherwise."));
+    const trackingModes = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Tracking" });
+    const trackingButtons = new Map();
+    for (const [mode, label, note] of [
+      ["automatic", "Automatic", "No Track toggles. Once a Next Recipe swaps or empties a hopper's resin, that hopper is tracked at once. Reset tracking clears pump-off; those hoppers are tracked again."],
+      ["assisted", "Assisted", "Track is offered where a Next Recipe swaps or empties the resin, and everywhere without a plan."],
+      ["manual", "Manual", "Track is offered on every hopper, whatever is planned."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-tracking-mode": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setTrackingMode === "function") display.setTrackingMode(mode); });
+      trackingButtons.set(mode, button);
+      trackingModes.appendChild(button);
+    }
+    tracking.appendChild(trackingModes);
+    if (!display) tracking.appendChild(text(doc, "p", "slate-settings__note", "Tracking cannot be changed on this page."));
+    rootEl.appendChild(tracking);
+
     // What comes next.
     const later = element(doc, "section", "slate-settings__group", { "aria-label": "More settings" });
     later.appendChild(text(doc, "h2", "slate-settings__heading", "More"));
@@ -112,13 +135,19 @@
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
+      const trackingMode = display && typeof display.getTrackingMode === "function" ? display.getTrackingMode() : null;
+      for (const [id, button] of trackingButtons) {
+        const on = id === trackingMode;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
     }
 
     if (controller && typeof controller.subscribe === "function") controller.subscribe(paint);
     if (display && typeof display.subscribe === "function") display.subscribe(paint);
     paint();
 
-    return Object.freeze({ element: rootEl, paint, tile: id => tiles.get(id) || null, mode: id => modeButtons.get(id) || null });
+    return Object.freeze({ element: rootEl, paint, tile: id => tiles.get(id) || null, mode: id => modeButtons.get(id) || null, trackingMode: id => trackingButtons.get(id) || null });
   }
 
   return Object.freeze({ create });

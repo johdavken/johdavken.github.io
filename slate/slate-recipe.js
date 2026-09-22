@@ -10,11 +10,16 @@
  * place - the resin through the catalog search, the blend and the share
  * as numbers, an assignment moved by dragging its badge onto another row.
  * With a plan, a row whose resin changes at the changeover carries a
- * band on either tab, and on Current only those rows (and any already
- * tracked or pumped off) offer Track: a resin that continues has no
- * run-down to follow. The bar holds the Compare switch (the other
- * recipe's value under each row that moves), the plan's two moves on the
- * Next tab, and Print.
+ * band on either tab. How Current offers Track is the tracking MODE's
+ * (slate-display.js keeps the preference, slate-tracking.js the rules):
+ * Assisted, the default, offers it only on those rows (and any already
+ * tracked or pumped off) - a resin that continues has no run-down to
+ * follow; Manual offers it on every row; Automatic offers none and has
+ * this section track those hoppers itself, one deferred batch after a
+ * publish or a mode change, only ever turning tracking on, and never
+ * while Slate is read-only or without a live bridge. The bar holds the
+ * Compare switch (the other recipe's value under each row that moves),
+ * the plan's two moves on the Next tab, and Print.
  *
  * The section dispatches nothing itself. Its seams - slate-tracking.js,
  * slate-recipe-actions.js, slate-plan-actions.js - are handed the command
@@ -135,6 +140,7 @@
    * @param {function} [ctx.onCommitted] told of every ok+changed result
    * @param {function} [ctx.say]         a line for the operator
    * @param {function} [ctx.readOnly]    () -> whether Slate is read-only now
+   * @param {function} [ctx.trackingMode] () -> "automatic"|"assisted"|"manual" (assisted by default)
    * @param {function} [ctx.resins]      () -> the resin catalog
    * @param {object} [ctx.timers]        { setTimeout, clearTimeout }
    * @param {object} [ctx.print]         a printer (slate-print.js's create) - built here by default
@@ -149,6 +155,8 @@
     const readOnly = typeof settings.readOnly === "function" ? settings.readOnly : () => false;
     const resins = typeof settings.resins === "function" ? settings.resins : () => [];
     const guard = () => ({ readOnly: !!readOnly() });
+    const trackingMode = typeof settings.trackingMode === "function" ? settings.trackingMode : () => trackingModule.DEFAULT_MODE;
+    const modeNow = () => trackingModule.modeOf(trackingMode());
     const commands = () => commandsFor(current);
     const recipesFor = typeof settings.recipes === "function" ? settings.recipes : () => settings.recipes || null;
 
@@ -203,6 +211,11 @@
     let promoteTimer = null;
     let printOpen = false;
     let saving = null;
+    // Automatic tracking: the one pending batch, whether one is running,
+    // and the refusals not to ask again (key -> the pair refused).
+    let autoTimer = null;
+    let autoRunning = false;
+    const declined = new Map();
 
     /* ---- Results ---- */
 
@@ -473,14 +486,14 @@
     }
 
     // With a plan, every row knows whether its resin changes at the
-    // changeover, on either tab: that carries the row's band and decides
-    // whether Track is offered (only a resin that goes away - swapped or
-    // emptied - has a run-down to track; a toggle already on stays, so it
-    // can be turned off; a hopper that only fills next has nothing to
-    // track). The Compare switch adds the lines that say what the other
-    // recipe holds; the blend alone moving is a line, no band.
+    // changeover, on either tab: that carries the row's band and, with
+    // the tracking mode, decides whether Track is offered (the rule is
+    // slate-tracking.js's offersToggle). The Compare switch adds the
+    // lines that say what the other recipe holds; the blend alone moving
+    // is a line, no band.
     function paintCompare() {
       rootEl.classList.toggle("is-comparing", compare);
+      const mode = modeNow();
       for (const id of RECIPES) {
         const body = bodies[id];
         const changes = sourceModule.compareFor(current, id);
@@ -493,7 +506,9 @@
           show(entry.other, !!line);
           if (entry.toggles) {
             const last = entry.last || {};
-            const offered = !other || (other.resinDiffers && !!last.assigned) || !!last.track || !!last.pumpOff;
+            const offered = trackingModule.offersToggle(mode, {
+              planned: !!other, resinDiffers: !!(other && other.resinDiffers), assigned: !!last.assigned, track: !!last.track, pumpOff: !!last.pumpOff
+            });
             show(entry.toggles.tracking, offered);
           }
         }
@@ -582,6 +597,64 @@
         item.setAttribute("aria-disabled", can ? "false" : "true");
         item.setAttribute("title", can ? "" : (which === "current" ? "Nothing is assigned to print" : "Nothing is planned to print"));
       }
+    }
+
+    /* ---- Automatic tracking (Current only) ---- */
+
+    // The rows Automatic wants tracked now: the plan swaps or empties
+    // their resin and they are not tracked yet - less any the application
+    // refused for the same pair, until the plan or the mode moves.
+    function wantedRows() {
+      const changes = sourceModule.compareFor(current, "current");
+      if (!changes) return [];
+      const mode = modeNow();
+      const rows = [];
+      for (const [key, entry] of bodies.current.rows) {
+        const other = changes.hoppers[key];
+        const last = entry.last || {};
+        if (!trackingModule.wantsTracking(mode, { planned: !!other, resinDiffers: !!(other && other.resinDiffers), assigned: !!last.assigned, track: !!last.track })) continue;
+        const signature = `${last.resinName}|${other.resin}`;
+        if (declined.get(key) === signature) continue;
+        rows.push({ key, layer: entry.layer, index: entry.index, signature });
+      }
+      return rows;
+    }
+
+    // The batch, on the tick after the publish that called for it, so no
+    // command runs inside the bridge's own publish. Everything is asked
+    // again here: the mode, the bridge and the plan may all have moved
+    // since the batch was scheduled. The boot is told once, of the last
+    // change, so its own-revision matches the flush the bridge coalesces
+    // the batch into; the operator hears the first refusal once.
+    function autoTrack() {
+      autoTimer = null;
+      if (autoRunning || modeNow() !== "automatic") return;
+      const bridge = commands();
+      if (!trackingModule.abilities(bridge, guard()).tracking) return;
+      const rows = wantedRows();
+      if (!rows.length) return;
+      autoRunning = true;
+      try {
+        const results = trackingModule.trackMany(bridge, rows);
+        let last = null;
+        let failure = null;
+        results.forEach((result, i) => {
+          if (result && result.ok && result.changed) last = result;
+          else if (result && !result.ok) {
+            declined.set(rows[i].key, rows[i].signature);
+            if (!failure) failure = result;
+          }
+        });
+        if (last) onCommitted(last);
+        if (failure) say(`Automatic tracking: ${failure.message || "the application refused the change."}`);
+      } finally {
+        autoRunning = false;
+      }
+    }
+
+    function scheduleAutoTrack() {
+      if (autoRunning || autoTimer !== null || modeNow() !== "automatic") return;
+      autoTimer = timers.setTimeout(autoTrack, 0);
     }
 
     /* ---- Marks from the run-down (Current only) ---- */
@@ -1050,6 +1123,7 @@
         disarm();
         disarmPromote();
         closeMenus();
+        declined.clear();
         for (const id of RECIPES) rebuild(bodies[id], resolved);
       } else if (kind === "values") {
         for (const id of RECIPES) patch(bodies[id], resolved, !!options.own);
@@ -1057,6 +1131,19 @@
       applyAbilities();
       paintCompare();
       applyMarks(marks);
+      scheduleAutoTrack();
+    }
+
+    // A preference moved (read-only, the tracking mode): every control
+    // re-reads its ability, Track is offered afresh, and Automatic - if
+    // that is what moved, or what read-only now allows - tracks at once.
+    // A refusal is forgotten here: the operator's own change is a fair
+    // moment to ask again.
+    function refresh() {
+      declined.clear();
+      applyAbilities();
+      paintCompare();
+      scheduleAutoTrack();
     }
 
     function onHide() {
@@ -1071,7 +1158,7 @@
     return Object.freeze({
       element: rootEl,
       update,
-      refresh: applyAbilities,
+      refresh,
       applyMarks,
       setRecipe,
       getRecipe: () => recipe,

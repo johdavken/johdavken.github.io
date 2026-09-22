@@ -72,12 +72,12 @@
     "hash": "55ee9cbc420917e7"
   },
   "slate-display.js": {
-    "v": "0.1.0",
-    "hash": "0fa5e3f449ab586d"
+    "v": "0.2.0",
+    "hash": "cb84fba93b7a1f85"
   },
   "slate-host.js": {
-    "v": "0.8.0",
-    "hash": "0e56691aa1bbe622"
+    "v": "0.9.0",
+    "hash": "655d826b6d84ab13"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

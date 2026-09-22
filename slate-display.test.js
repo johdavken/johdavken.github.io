@@ -35,9 +35,9 @@ function node() {
 test("the preference is three-valued, defaults to automatic, and persists under its own key", () => {
   assert.equal(display.STORAGE_KEY, "polyn.slate.display.v1");
   assert.notEqual(display.STORAGE_KEY, theme.STORAGE_KEY);
-  assert.deepEqual(display.normalize(null), { readOnly: null });
-  assert.deepEqual(display.normalize({ readOnly: "yes", other: 1 }), { readOnly: null });
-  assert.deepEqual(display.normalize({ readOnly: false }), { readOnly: false });
+  assert.deepEqual(display.normalize(null), { readOnly: null, tracking: "assisted" });
+  assert.deepEqual(display.normalize({ readOnly: "yes", other: 1 }), { readOnly: null, tracking: "assisted" });
+  assert.deepEqual(display.normalize({ readOnly: false }), { readOnly: false, tracking: "assisted" });
   assert.equal(display.modeOf(null), "auto");
   assert.equal(display.modeOf(true), "on");
   assert.equal(display.modeOf(false), "off");
@@ -66,6 +66,37 @@ test("the preference is three-valued, defaults to automatic, and persists under 
   const blocked = {};
   Object.defineProperty(blocked, "localStorage", { get() { throw new Error("denied"); } });
   assert.equal(display.initialize(node(), blocked).getReadOnly(), null);
+});
+
+test("the tracking mode is one of three words, defaults to assisted, persists beside read-only, and an old record without it reads assisted", () => {
+  assert.deepEqual(display.TRACKING_MODES, ["automatic", "assisted", "manual"]);
+  assert.equal(display.DEFAULTS.tracking, "assisted");
+  assert.deepEqual(display.normalize({ tracking: "manual" }), { readOnly: null, tracking: "manual" });
+  assert.deepEqual(display.normalize({ tracking: "nope" }), { readOnly: null, tracking: "assisted" });
+  assert.equal(display.trackingModeOf("automatic"), "automatic");
+  assert.equal(display.trackingModeOf("AUTOMATIC"), "assisted");
+  assert.equal(display.trackingModeOf(undefined), "assisted");
+
+  const saved = storage();
+  const controller = display.create(node(), saved);
+  assert.equal(controller.getTrackingMode(), "assisted");
+  const heard = [];
+  controller.subscribe(value => heard.push(`${value.tracking}/${value.readOnly}`));
+  assert.equal(controller.setTrackingMode("automatic"), "automatic");
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: null, tracking: "automatic" });
+  controller.setTrackingMode("automatic");
+  assert.equal(controller.setTrackingMode("nonsense"), "assisted");
+  controller.setReadOnly("on");
+  assert.equal(controller.getTrackingMode(), "assisted", "read-only moved the tracking mode");
+  assert.deepEqual(heard, ["automatic/null", "assisted/null", "assisted/true"]);
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: true, tracking: "assisted" });
+
+  // The record a browser saved before the mode existed.
+  const older = display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ readOnly: false }) }));
+  assert.equal(older.getReadOnly(), false);
+  assert.equal(older.getTrackingMode(), "assisted");
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ tracking: "manual" }) })).getTrackingMode(), "manual");
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: "{broken" })).getTrackingMode(), "assisted");
 });
 
 test("the effective mode: automatic follows the line, an explicit choice does not", () => {
@@ -170,6 +201,35 @@ test("Settings offers Automatic / On / Off as radios, marks the current one, and
   assert.match(inert.element.querySelectorAll(".slate-settings__note").map(one => one.textContent).join(" "), /Read-only cannot be changed/);
 });
 
+test("Settings offers Automatic / Assisted / Manual tracking as radios after Safety, marks the current one, and drives the controller", () => {
+  const doc = makeDocument();
+  const controller = display.create(node(), storage());
+  const view = settings.create(doc, { theme: null, themes: [], display: controller });
+  assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")), ["Appearance", "Safety", "Tracking", "More settings"]);
+  const group = view.element.querySelector("[role='radiogroup'][aria-label='Tracking']");
+  assert.ok(group, "no Tracking radiogroup");
+  const modes = view.element.querySelectorAll("[data-tracking-mode]");
+  assert.deepEqual(modes.map(one => one.getAttribute("data-tracking-mode")), ["automatic", "assisted", "manual"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("role")), ["radio", "radio", "radio"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "true", "false"]);
+  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Automatic", "Assisted", "Manual"]);
+  click(view.trackingMode("manual"));
+  assert.equal(controller.getTrackingMode(), "manual");
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "false", "true"]);
+  assert.ok(view.trackingMode("manual").classList.contains("is-selected"));
+  controller.setTrackingMode("automatic");
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
+  // The read-only radios are untouched by a tracking click.
+  assert.deepEqual(view.element.querySelectorAll("[data-readonly-mode]").map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
+  const leads = view.element.querySelectorAll(".slate-settings__lead").map(one => one.textContent);
+  assert.match(leads[1], /Read-only Off/);
+  assert.match(leads[1], /only ever turns tracking on/);
+  assert.match(view.trackingMode("automatic").querySelector(".slate-settings__mode-note").textContent, /Reset tracking/);
+  const inert = settings.create(doc, { theme: null, themes: [], display: null });
+  assert.match(inert.element.querySelectorAll(".slate-settings__note").map(one => one.textContent).join(" "), /Tracking cannot be changed/);
+  click(inert.trackingMode("manual"));
+});
+
 /* ----------------------------------------------------------------------
  *   The boot: automatic against a linked line
  * -------------------------------------------------------------------- */
@@ -186,7 +246,16 @@ function bootHosted(options) {
   hostEl.setAttribute("data-slate-app", "");
   hostEl.setAttribute("class", "slate-root");
   doc.body.appendChild(hostEl);
-  const root = { document: doc, location: doc.location, setTimeout: () => 1, clearTimeout: () => {}, Date, console };
+  // Zero-delay timers are kept so a test can run Automatic tracking's
+  // batch; the Timeline's tick and the notice's timer stay unfired.
+  const queued = [];
+  let handle = 0;
+  const root = {
+    document: doc, location: doc.location, Date, console,
+    setTimeout: (fn, ms) => { handle += 1; queued.push({ handle, fn, ms: Number(ms) || 0 }); return handle; },
+    clearTimeout: id => { const at = queued.findIndex(one => one.handle === id); if (at > -1) queued.splice(at, 1); }
+  };
+  const flush = () => { const due = queued.filter(one => one.ms === 0); for (const one of due) { queued.splice(queued.indexOf(one), 1); one.fn(); } return due.length; };
   root.globalThis = root;
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
@@ -196,6 +265,7 @@ function bootHosted(options) {
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, saved);
   const snap = demo.snapshot(Date.now());
   snap.line.linked = settings2.linked !== false;
+  if (typeof settings2.mutate === "function") settings2.mutate(snap);
   root.PolynStationStateBridge.connect({ read: () => snap }).publish();
   const executed = [];
   root.PolynStationCommandBridge.connect({
@@ -204,7 +274,15 @@ function bootHosted(options) {
   });
   const scripts = [...host.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").matchAll(/"((?:slate|station)\/[^"]+\.js)"/g)].map(match => match[1]);
   for (const file of scripts) load(file);
-  return { hostEl, executed, controller: hostEl.slateDisplay };
+  return { hostEl, executed, controller: hostEl.slateDisplay, flush };
+}
+
+/* A plan that swaps A1's resin (A1 untracked) and empties B3. */
+function planForAutomatic(snap) {
+  snap.layers[0].hoppers[0].track = false;
+  snap.nextRecipe = { layers: snap.layers.map(layer => ({ name: layer.name, layerPct: layer.layerPct, hoppers: layer.hoppers.map(h => ({ index: h.index, pct: h.pct, resinName: h.resinName })) })) };
+  snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1";
+  snap.nextRecipe.layers[1].hoppers[2] = { index: 2, pct: 0, resinName: "" };
 }
 
 test("hosted on a linked line, Slate is read-only by default: badge shown, toggles unable, no command reaches the executor", () => {
@@ -246,4 +324,22 @@ test("hosted on the device's own session, automatic is writable; an explicit On 
   const forced = bootHosted({ linked: false, stored: { readOnly: true } });
   assert.equal(forced.hostEl.getAttribute("data-readonly"), "on");
   assert.equal(forced.hostEl.querySelector(".slate-hopper[data-hopper='A3'] [data-slate-control='tracking']").getAttribute("data-able"), "false");
+});
+
+test("hosted under Automatic tracking on the device's own session, no Track is offered and the batch reaches the executor on the next tick; on a linked line read-only holds it back", () => {
+  const own = bootHosted({ linked: false, stored: { tracking: "automatic" }, mutate: planForAutomatic });
+  const toggles = own.hostEl.querySelectorAll(".slate-recipe__body[data-recipe='current'] [data-slate-control='tracking']");
+  assert.ok(toggles.length > 0);
+  assert.ok(toggles.every(one => one.hasAttribute("hidden")), "a Track toggle shows under Automatic");
+  assert.equal(own.executed.length, 0, "a command ran inside the boot's publish");
+  own.flush();
+  assert.deepEqual(own.executed.map(one => `${one.command} ${one.args.layer}:${one.args.index}:${one.args.track}`), ["setHopperTracking A:0:true", "setHopperTracking B:2:true"]);
+
+  const linked = bootHosted({ linked: true, stored: { tracking: "automatic" }, mutate: planForAutomatic });
+  linked.flush();
+  assert.equal(linked.executed.length, 0, "Automatic tracked under read-only");
+  // Read-only Off in Settings: the batch follows at once.
+  linked.controller.setReadOnly("off");
+  linked.flush();
+  assert.equal(linked.executed.length, 2);
 });
