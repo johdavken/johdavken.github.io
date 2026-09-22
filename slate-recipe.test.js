@@ -112,12 +112,9 @@ test("a structural update lists every layer in recipe order with its role, share
   assert.equal(a1.querySelector(".slate-hopper__weight").textContent, "400 lb");
   assert.equal(a1.querySelector("[data-slate-control='tracking']").getAttribute("aria-pressed"), "true");
   assert.ok(a1.classList.contains("is-tracked"));
-  // Pump-off shows only on tracked rows, but keeps its place so the
-  // blend and weight columns line up across rows.
-  assert.ok(!a1.querySelector("[data-slate-control='pump']").classList.contains("is-idle"));
-  assert.ok(row(view, "A3").querySelector("[data-slate-control='pump']").classList.contains("is-idle"));
-  assert.ok(!row(view, "A3").querySelector("[data-slate-control='pump']").hasAttribute("hidden"), "an idle pump toggle left the grid");
-  assert.ok(!row(view, "B2").querySelector("[data-slate-control='pump']").classList.contains("is-idle"), "a stale pump-off mark was hidden");
+  // Pump-off is the timeline's: the row shows the state, carries no toggle.
+  assert.equal(a1.querySelector("[data-slate-control='pump']"), null, "the recipe row still carries a pump toggle");
+  assert.equal(view.element.querySelectorAll("[data-slate-control]").length, view.element.querySelectorAll("[data-slate-control='tracking']").length);
   assert.ok(a1.querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), "the badge is not the drag handle");
   assert.equal(a1.style.getPropertyValue("--slate-row-i"), "0");
 
@@ -219,7 +216,7 @@ test("Compare is unable without a plan; with one it writes the other recipe unde
   assert.equal(view.getCompare(), false);
   assert.match(said[0], /Nothing is planned/);
 
-  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[1].layerPct = 40; }), { kind: "structural" });
+  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[0].hoppers[2].pct = 15; snap.nextRecipe.layers[1].layerPct = 40; }), { kind: "structural" });
   assert.equal(compare.getAttribute("data-able"), "true");
   click(compare);
   assert.equal(view.getCompare(), true);
@@ -234,6 +231,11 @@ test("Compare is unable without a plan; with one it writes the other recipe unde
   assert.ok(a2.classList.contains("is-same"), "an agreeing row is not green");
   assert.ok(!a2.classList.contains("is-differs"));
   assert.equal(a2.querySelector(".slate-hopper__other").textContent, "Next: LD105 · 30%");
+  // The same resin at another blend: the line says so, the row stays plain.
+  const a3 = row(view, "A3");
+  assert.equal(a3.querySelector(".slate-hopper__other").textContent, "Next: AB120 · 15%");
+  assert.ok(!a3.classList.contains("is-differs"), "a blend-only change is red");
+  assert.ok(!a3.classList.contains("is-same"), "a blend-only change is green");
   const a4 = row(view, "A4");
   assert.ok(a4.querySelector(".slate-hopper__other").hasAttribute("hidden"), "an empty pair got a compare line");
   assert.ok(!a4.classList.contains("is-same") && !a4.classList.contains("is-differs"), "an empty pair was coloured");
@@ -242,7 +244,7 @@ test("Compare is unable without a plan; with one it writes the other recipe unde
   assert.ok(headB.classList.contains("is-differs"));
   assert.ok(head(view, "A").classList.contains("is-same"));
 
-  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[1].layerPct = 40; snap.job.lineRate = 900; }), { kind: "values" });
+  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[0].hoppers[2].pct = 15; snap.nextRecipe.layers[1].layerPct = 40; snap.job.lineRate = 900; }), { kind: "values" });
   assert.equal(view.getCompare(), true);
   assert.ok(row(view, "A1").classList.contains("is-differs"));
 
@@ -639,11 +641,9 @@ test("a toggle click dispatches one command with the state wanted; the reset arm
   const a1 = row(view, "A1");
   click(a1.querySelector("[data-slate-control='tracking']"));
   assert.deepEqual(commands.calls, [{ command: "setHopperTracking", args: { recipe: "current", layer: "A", index: 0, track: false } }]);
-  click(a1.querySelector("[data-slate-control='pump']"));
-  assert.deepEqual(commands.calls[1], { command: "setPumpOff", args: { recipe: "current", layer: "A", index: 0, pumpOff: true } });
-  assert.equal(committed.length, 2);
+  assert.equal(committed.length, 1);
   click(row(view, "A4").querySelector("[data-slate-control='tracking']"));
-  assert.equal(commands.calls.length, 2);
+  assert.equal(commands.calls.length, 1);
 
   const reset = view.body("current").querySelector(".slate-recipe__reset");
   click(reset);
@@ -655,7 +655,7 @@ test("a toggle click dispatches one command with the state wanted; the reset arm
   assert.ok(!reset.hasAttribute("data-armed"));
   click(reset);
   click(reset);
-  assert.deepEqual(commands.calls[2], { command: "resetTracking", args: { recipe: "current" } });
+  assert.deepEqual(commands.calls[1], { command: "resetTracking", args: { recipe: "current" } });
 
   view.applyMarks({ "A:0": { tracked: true, pumpOff: false, late: true, overdue: true }, "A:1": { tracked: true, pumpOff: false, late: true, overdue: false } });
   assert.ok(a1.classList.contains("is-overdue"));

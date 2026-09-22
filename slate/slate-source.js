@@ -184,10 +184,14 @@
         const key = `${layer.id}:${hopper.index}`;
         const a = shown.hoppers[key] || { resinName: "", pct: 0 };
         const b = other.hoppers[key] || { resinName: "", pct: 0 };
+        const resinDiffers = !sameResin(a.resinName, b.resinName);
+        const pctDiffers = finite(a.pct) !== finite(b.pct);
         hoppers[key] = {
           resin: b.resinName || "",
           pct: finite(b.pct),
-          differs: !sameResin(a.resinName, b.resinName) || finite(a.pct) !== finite(b.pct)
+          resinDiffers,
+          pctDiffers,
+          differs: resinDiffers || pctDiffers
         };
       }
     }

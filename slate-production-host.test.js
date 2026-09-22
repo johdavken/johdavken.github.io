@@ -127,7 +127,7 @@ test("inside the host, an unconnected state bridge is reported as a stale applic
  *   5. The chain, executed
  * -------------------------------------------------------------------- */
 
-test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger and the summary from live state", () => {
+test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger and the timeline from live state", () => {
   const { makeDocument } = require("./tools/slate-test/fake-dom.js");
   const doc = makeDocument({ href: "https://resin.tools/?view=slate" });
   doc.body.setAttribute("data-slate-view", "slate");
@@ -184,7 +184,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.match(hostEl.querySelector(".slate-section__subtitle").textContent, /Live$/);
   assert.equal(hostEl.querySelector(".slate-card--rate .slate-card__value").textContent, "850 lb/hr");
   assert.ok(!hostEl.querySelector(".slate-sync").hasAttribute("hidden"), "the sync trigger is hidden with a connected connection bridge");
-  assert.ok(hostEl.querySelector(".slate-summary__next").textContent.length > 0);
+  assert.ok(hostEl.querySelectorAll(".slate-timeline__member").length > 0, "the timeline drew no tracked hopper");
   assert.ok(hostEl.querySelector("[data-slate-mount='notice']").hasAttribute("hidden"), "a connected host shows a notice");
 
   // A toggle goes through the application's executor, addressed to Current.
@@ -193,6 +193,12 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   toggle.dispatchEvent({ type: "click", target: toggle, stopPropagation() {} });
   // Objects from the vm realm have another Object prototype: compare as JSON.
   assert.equal(JSON.stringify(executed), JSON.stringify([{ command: "setHopperTracking", args: { recipe: "current", layer: "A", index: 2, track: true } }]));
+
+  // The timeline's Pump off goes through the same executor, addressed to Current.
+  const pump = hostEl.querySelector(".slate-timeline__member[data-key='A:0'] [data-slate-control='pump']");
+  assert.equal(pump.getAttribute("data-able"), "true");
+  pump.dispatchEvent({ type: "click", target: pump, stopPropagation() {} });
+  assert.equal(JSON.stringify(executed[1]), JSON.stringify({ command: "setPumpOff", args: { recipe: "current", layer: "A", index: 0, pumpOff: true } }));
 
   // The Recipe Book reads the recipes bridge the application connected.
   const bookRow = hostEl.querySelector(".slate-book__row[data-recipe='r1']");

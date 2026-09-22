@@ -243,8 +243,9 @@ test("Slate's own scripts are loaded in dependency order and cannot race", () =>
     assert.ok(scripts.indexOf(dependency) > -1, `${dependency} is not loaded`);
     assert.ok(scripts.indexOf(dependency) < scripts.indexOf("slate/slate.js"));
   }
-  // The summary reads the run-down module's global when it executes.
-  assert.ok(scripts.indexOf("station/station-rundown.js") < scripts.indexOf("slate/slate-rundown-summary.js"));
+  // The timeline reads the run-down module's and its layout's globals when it executes.
+  assert.ok(scripts.indexOf("station/station-rundown.js") < scripts.indexOf("slate/slate-timeline-layout.js"));
+  assert.ok(scripts.indexOf("slate/slate-timeline-layout.js") < scripts.indexOf("slate/slate-timeline.js"));
   assert.ok(scripts.indexOf("station/station-print-sheet.js") < scripts.indexOf("slate/slate-print.js"));
   for (const dependency of ["slate/slate-recipe-actions.js", "slate/slate-plan-actions.js", "slate/slate-resin-search.js", "slate/slate-recipe-drag.js", "slate/slate-layer-menu.js", "slate/slate-print.js"]) {
     assert.ok(scripts.indexOf(dependency) > -1 && scripts.indexOf(dependency) < scripts.indexOf("slate/slate-recipe.js"), `${dependency} must load before the recipe section`);

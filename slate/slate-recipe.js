@@ -2,7 +2,8 @@
  * layer, down the page.
  *
  * Two tabs, one per recipe. Current carries the job's runtime state - the
- * tracking and pump-off toggles, the receiver weight, the reset - and
+ * tracking toggle, the receiver weight, the reset (pump-off is the
+ * timeline's, where the run-down is read) - and
  * Next carries none of it: a plan is resin and blend only. Everything
  * else is the same on both: a layer's name, role and share in a column
  * at the left, its hoppers as rows beside it, and every value editable in
@@ -272,7 +273,7 @@
         type: "button", "data-slate-control": control, "data-layer": hopper.layer, "data-index": String(hopper.index), "aria-pressed": "false", "data-able": "false"
       });
       button.appendChild(element(doc, "span", "slate-toggle__dot", { "aria-hidden": "true" }));
-      button.appendChild(text(doc, "span", "slate-toggle__label", control === "tracking" ? "Track" : "Pump off"));
+      button.appendChild(text(doc, "span", "slate-toggle__label", "Track"));
       return button;
     }
 
@@ -292,9 +293,8 @@
       if (body.recipe === "current") {
         const weight = text(doc, "span", "slate-hopper__weight", cells.weight);
         const controls = element(doc, "div", "slate-hopper__controls");
-        entry.toggles = { tracking: toggleButton("tracking", hopper), pump: toggleButton("pump", hopper) };
+        entry.toggles = { tracking: toggleButton("tracking", hopper) };
         controls.appendChild(entry.toggles.tracking);
-        controls.appendChild(entry.toggles.pump);
         entry.cells.weight = weight;
         row.appendChild(weight);
         row.appendChild(controls);
@@ -317,28 +317,19 @@
       if (last.assigned !== cells.assigned) {
         entry.row.classList.toggle("is-empty", !cells.assigned);
         if (entry.toggles) {
-          for (const control of trackingModule.CONTROLS) {
-            if (cells.assigned) entry.toggles[control].removeAttribute("disabled");
-            else entry.toggles[control].setAttribute("disabled", "");
+          for (const button of Object.values(entry.toggles)) {
+            if (cells.assigned) button.removeAttribute("disabled");
+            else button.setAttribute("disabled", "");
           }
         }
       }
       if (entry.toggles) {
-        // Pump-off is a tracking mark, so keep it out of rows that are not
-        // being tracked. If a stale pump-off mark exists, leave the control
-        // visible until the operator clears it. It keeps its space either
-        // way: each row is its own grid, and a controls cell that shrank
-        // would pull the blend and weight columns out of line with the
-        // rows above and below.
-        entry.toggles.pump.classList.toggle("is-idle", !(cells.track || cells.pumpOff));
         if (last.track !== cells.track) {
           entry.toggles.tracking.setAttribute("aria-pressed", cells.track ? "true" : "false");
           entry.row.classList.toggle("is-tracked", cells.track);
         }
-        if (last.pumpOff !== cells.pumpOff) {
-          entry.toggles.pump.setAttribute("aria-pressed", cells.pumpOff ? "true" : "false");
-          entry.row.classList.toggle("is-pump-off", cells.pumpOff);
-        }
+        // Pump-off is read and set in the timeline; the row only shows it.
+        if (last.pumpOff !== cells.pumpOff) entry.row.classList.toggle("is-pump-off", cells.pumpOff);
       }
       const changed = !!entry.last && ["resin", "pct", "weight", "track", "pumpOff", "assigned"].some(key => last[key] !== cells[key]);
       entry.last = cells;
@@ -463,10 +454,13 @@
           const other = here ? here.hoppers[key] : null;
           // A line under the row only where the other recipe has something
           // to say: an assignment, or a difference (the other side emptied).
+          // The colour is about the resin: red where it changes, green
+          // where the row agrees entirely, and nothing where only the
+          // blend moves (the line says the new percentage).
           if (other && (other.resin || other.differs)) {
             entry.other.textContent = `${tag}: ${other.resin || EMPTY} · ${other.resin ? formatPct(other.pct) : EMPTY}`;
             show(entry.other, true);
-            entry.row.classList.toggle("is-differs", !!other.differs);
+            entry.row.classList.toggle("is-differs", !!other.resinDiffers);
             entry.row.classList.toggle("is-same", !other.differs);
           } else {
             show(entry.other, false);
@@ -518,8 +512,7 @@
           entry.row.classList.toggle("is-movable", able.move && !entry.row.classList.contains("is-empty"));
           if (entry.toggles) {
             entry.toggles.tracking.setAttribute("data-able", track.tracking ? "true" : "false");
-            entry.toggles.pump.setAttribute("data-able", track.pump ? "true" : "false");
-            for (const control of trackingModule.CONTROLS) {
+            for (const control of Object.keys(entry.toggles)) {
               const button = entry.toggles[control];
               const on = button.getAttribute("aria-pressed") === "true";
               const label = trackingModule.stateLabel(control, on);

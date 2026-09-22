@@ -46,7 +46,7 @@
   const statCards = root.PolynSlateStatCards;
   const syncModule = root.PolynSlateSync;
   const settingsModule = root.PolynSlateSettings;
-  const summaryModule = root.PolynSlateRundownSummary;
+  const timelineModule = root.PolynSlateTimeline;
 
   /* Inside the application host (?view=slate, marked on the body by
    * slate-host.js) the application connects the bridges before any of
@@ -131,6 +131,7 @@
       }
     }
     if (stats) stats.refresh();
+    if (summary && typeof summary.refresh === "function") summary.refresh();
   }
 
   function currentSource() {
@@ -273,7 +274,9 @@
     stats = statCards.create(doc, ctx);
     if (mounts.stats) mounts.stats.appendChild(stats.element);
 
-    summary = summaryModule.create(doc, { now: ctx.now, timers: ctx.timers, onTick, visibility: doc });
+    // The timeline keeps the clock every readout follows; it is handed the
+    // same context as a section so Pump off goes through the tracking seam.
+    summary = timelineModule.create(doc, Object.assign({}, ctx, { onTick, visibility: doc, view: root }));
     if (mounts.aside) mounts.aside.appendChild(summary.element);
 
     sync = syncModule.create(doc, { connection, admin });

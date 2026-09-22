@@ -274,8 +274,8 @@
   color: var(--slate-text-muted);
 }
 
-/* Track at the left of its column, Pump-off to its right; the column is
-   fixed (tokens.css) so the pills never push the blend and weight. */
+/* Track at the left of its column; the column is fixed (tokens.css) so
+   the pill never pushes the blend and weight. */
 .slate-hopper__controls {
   display: flex;
   justify-content: flex-start;
@@ -305,7 +305,8 @@
   font-size: var(--slate-text-sm);
 }
 
-/* Green where the two recipes agree, red where they differ. */
+/* Green where the two recipes agree, red where the resin changes; a row
+   whose blend alone moves is left plain. */
 .slate-hopper.is-same {
   background: var(--slate-success-soft);
 }
@@ -334,10 +335,6 @@
   box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-info);
 }
 
-.slate-hopper.is-overdue {
-  background: var(--slate-danger-soft);
-}
-
 /* ---- Toggles ---- */
 
 .slate-root .slate-toggle {
@@ -362,12 +359,6 @@
 .slate-root .slate-toggle:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-/* A control that does not apply yet, holding its place in the row. */
-.slate-root .slate-toggle.is-idle {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .slate-root .slate-toggle[data-able="false"] {

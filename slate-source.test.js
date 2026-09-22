@@ -131,7 +131,7 @@ test("the plan is keyed like Current and carries no runtime keys; no plan is no 
 test("compareFor: nothing to compare without a plan; with one, each slot names the other recipe and whether it differs", () => {
   assert.equal(source.compareFor(source.resolveSource({ snapshot: live() }), "current"), null);
   const same = source.compareFor(source.resolveSource({ snapshot: withPlan() }), "current");
-  assert.deepEqual(same.hoppers["A:0"], { resin: "HX204", pct: 60, differs: false });
+  assert.deepEqual(same.hoppers["A:0"], { resin: "HX204", pct: 60, resinDiffers: false, pctDiffers: false, differs: false });
   assert.deepEqual(same.layers.A, { share: 25, differs: false });
   assert.ok(Object.values(same.hoppers).every(one => !one.differs));
 
@@ -143,12 +143,12 @@ test("compareFor: nothing to compare without a plan; with one, each slot names t
   }) });
   const fromCurrent = source.compareFor(changed, "current");
   assert.equal(fromCurrent.hoppers["A:0"].differs, false, "case and whitespace made a resin differ");
-  assert.deepEqual(fromCurrent.hoppers["A:1"], { resin: "LL318", pct: 30, differs: true });
-  assert.deepEqual(fromCurrent.hoppers["A:2"], { resin: "AB120", pct: 15, differs: true });
+  assert.deepEqual(fromCurrent.hoppers["A:1"], { resin: "LL318", pct: 30, resinDiffers: true, pctDiffers: false, differs: true });
+  assert.deepEqual(fromCurrent.hoppers["A:2"], { resin: "AB120", pct: 15, resinDiffers: false, pctDiffers: true, differs: true });
   assert.deepEqual(fromCurrent.layers.B, { share: 40, differs: true });
   // From the Next tab the "other" is Current.
   const fromNext = source.compareFor(changed, "next");
-  assert.deepEqual(fromNext.hoppers["A:1"], { resin: "LD105", pct: 30, differs: true });
+  assert.deepEqual(fromNext.hoppers["A:1"], { resin: "LD105", pct: 30, resinDiffers: true, pctDiffers: false, differs: true });
   assert.deepEqual(fromNext.layers.B, { share: 50, differs: true });
   assert.equal(source.sameResin("a b", "A  B "), true);
 });
