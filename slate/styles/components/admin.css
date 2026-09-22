@@ -247,3 +247,147 @@
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
 }
+
+/* ---- Line Configuration ----
+   The editor is short aligned rows: the field's name in a fixed left
+   track, its control in the right. The layer rows sit inside one of
+   them, each layer its own line: the letter, its hopper count, and
+   either the side it takes (the two ends) or the role that follows. */
+
+.slate-lines__name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+}
+
+.slate-lines__tag {
+  padding: 0 var(--slate-space-2);
+  border-radius: 999px;
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-lines__tag[data-tag="current"] {
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-lines__tag[data-tag="dirty"] {
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+}
+
+.slate-lines__tag[data-tag="inactive"] {
+  color: var(--slate-text-faint);
+}
+
+/* A line no longer in use reads back in the list. */
+.slate-root .slate-book__row.is-inactive {
+  color: var(--slate-text-faint);
+}
+
+.slate-lines__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-3);
+}
+
+.slate-lines__field {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--slate-space-3);
+}
+
+.slate-lines__label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-lines__value {
+  display: block;
+  min-width: 0;
+}
+
+.slate-lines__input {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+}
+
+.slate-root .slate-lines__input:focus {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+}
+
+.slate-root .slate-lines__input[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+/* A number small enough to read at a glance: the line number, a count. */
+.slate-lines__input[data-width="short"] {
+  --slate-field-width: 5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-lines__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-1);
+}
+
+/* ---- The layers ---- */
+
+.slate-lines__layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+}
+
+.slate-lines__layer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-lines__layer-key {
+  min-width: 2ch;
+  font-weight: 600;
+}
+
+.slate-lines__layer-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-1);
+}
+
+.slate-lines__layer-unit,
+.slate-lines__layer-role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-lines__hoppers {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* What a save reaches, and when. */
+.slate-lines__reach {
+  max-width: 60ch;
+  margin-top: var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}

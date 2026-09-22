@@ -258,6 +258,12 @@
       mounts[name] = container.querySelector(`[data-slate-mount='${name}']`);
     }
 
+    // The application's line rules. index.html loads line-identity.js after
+    // this host's own tag, so it is read at boot - start() runs at or after
+    // DOMContentLoaded, by which time every deferred script has run - and
+    // not when this module was parsed.
+    const lineIdentity = root.PolynLineIdentity || null;
+
     const ctx = Object.freeze({
       commands: () => commandsFor(current),
       connection,
@@ -299,7 +305,7 @@
       // is signed in; they are built with the rest and read nothing until
       // they are both shown and open.
       { id: "workspaces", label: workspacesModule.TITLE, group: "sections", admin: true, icon: "workspaces", create: (d, c) => workspacesModule.create(d, c) },
-      { id: "line-config", label: lineConfigModule.TITLE, group: "sections", admin: true, icon: "lines", create: (d, c) => lineConfigModule.create(d, c) },
+      { id: "line-config", label: lineConfigModule.TITLE, group: "sections", admin: true, icon: "lines", create: (d, c) => lineConfigModule.create(d, Object.assign({}, c, { lineIdentity })) },
       { id: "resins", label: resinDbModule.TITLE, group: "sections", admin: true, icon: "resins", create: (d, c) => resinDbModule.create(d, c) },
       { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
