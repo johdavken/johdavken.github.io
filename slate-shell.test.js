@@ -47,14 +47,16 @@ test("the shell keeps one 1440px composition and never hides behind a width gate
   assert.doesNotMatch(css, /\.slate-shell\s*\{[^}]*display:\s*none/s);
 });
 
-test("the way back is the same URL without the flag, and the harness's is the application beside it", () => {
-  assert.equal(shell.legacyHref("https://resin.tools/?view=slate"), "/");
-  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=slate&other=1#x"), "/index.html?other=1#x");
+test("the way back names the floor UI, and the harness's is the application beside it", () => {
+  // The floor UI is named, since a desktop's bare URL is Slate's now.
+  assert.equal(shell.legacyHref("https://resin.tools/?view=slate"), "/?view=legacy");
+  assert.equal(shell.legacyHref("https://resin.tools/"), "/?view=legacy");
+  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=slate&other=1#x"), "/index.html?other=1&view=legacy#x");
   assert.equal(shell.legacyHref("https://resin.tools/slate/slate.html"), "../index.html");
   assert.equal(shell.legacyHref("https://resin.tools/?view=station"), "../index.html");
   assert.equal(shell.legacyHref(undefined), "../index.html");
   const doc = makeDocument({ href: "https://resin.tools/?view=slate" });
-  assert.equal(shell.createShell(doc).querySelector(".slate-header__legacy").getAttribute("href"), "/");
+  assert.equal(shell.createShell(doc).querySelector(".slate-header__legacy").getAttribute("href"), "/?view=legacy");
   assert.equal(shell.createShell(doc, { legacy: "x.html" }).querySelector(".slate-header__legacy").getAttribute("href"), "x.html");
 });
 

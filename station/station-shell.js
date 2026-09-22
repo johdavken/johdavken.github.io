@@ -68,13 +68,13 @@
   /* THE WAY BACK
    *
    * Station and the legacy interface coexist on one page: the application
-   * host is index.html, and ?view=station is the one flag that makes it
-   * show Station instead (station-host.js does nothing without it). So the
-   * route back is that same URL without the flag - nothing is redirected,
-   * nothing else about the address is touched, and the application starts
-   * exactly as it does for anyone who never asked for Station. On the
-   * standalone harness (station/station.html), which has no application,
-   * the route is the application's page beside it.
+   * host is index.html, and ?view=station is the flag that makes it show
+   * Station (station-host.js does nothing without it). The route back
+   * names the legacy interface the same way, ?view=legacy - a URL that
+   * names no view is the host's to decide, and on a desktop it is no
+   * longer the legacy interface. Nothing else about the address is
+   * touched. On the standalone harness (station/station.html), which has
+   * no application, the route is the application's page beside it.
    *
    * @param {string} [href]  the page's own URL
    * @returns {string} a relative href for the legacy interface
@@ -89,6 +89,7 @@
     }
     if (url.searchParams.get("view") !== "station") return HARNESS_LEGACY;
     url.searchParams.delete("view");
+    url.searchParams.set("view", "legacy");
     return url.pathname + url.search + url.hash;
   }
 

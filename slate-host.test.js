@@ -55,6 +55,10 @@ function run(href, options) {
 
   // A vm context starts with no web globals, so URL has to be handed in.
   const root = { document: doc, location: { href }, URL };
+  // A desktop's window, when the test says so: the media query or the width, and no native shell.
+  if (settings.wide !== undefined) root.matchMedia = query => ({ matches: settings.wide && query === "(min-width: 1100px)" });
+  if (settings.innerWidth !== undefined) root.innerWidth = settings.innerWidth;
+  if (settings.native) root.Capacitor = { isNativePlatform: () => true };
   if (settings.theme) root.PolynSlateTheme = settings.theme;
   if (settings.display) root.PolynSlateDisplay = settings.display;
   root.globalThis = root;
@@ -75,8 +79,8 @@ const ACTIVE = "https://resin.tools/?view=slate";
  *   Normal startup does not activate Slate
  * -------------------------------------------------------------------- */
 
-test("a normal load creates nothing, sets nothing, and requests nothing", () => {
-  const run1 = run("https://resin.tools/");
+test("a load that is not Slate's - here a phone-width window on the bare URL - creates nothing, sets nothing, and requests nothing", () => {
+  const run1 = run("https://resin.tools/", { wide: false });
   assert.equal(run1.created.length, 0, "the host created a DOM element on a normal load");
   assert.deepEqual(run1.body.attributes, {}, "the host set an attribute on a normal load");
   assert.equal(run1.body.children.length, 0);
@@ -84,22 +88,40 @@ test("a normal load creates nothing, sets nothing, and requests nothing", () => 
   assert.deepEqual(Object.keys(run1.listeners), [], "the host registered a listener on a normal load");
 });
 
-test("neither a different view, a partial match, nor a missing query activates Slate", () => {
+test("a URL naming another view - legacy, station, a partial match, an empty view - never activates Slate, however wide the window", () => {
   for (const href of [
-    "https://resin.tools/",
+    "https://resin.tools/?view=legacy",
     "https://resin.tools/?view=",
     "https://resin.tools/?view=slates",
     "https://resin.tools/?view=Slate",
     "https://resin.tools/?view=station",
-    "https://resin.tools/?slate",
-    "https://resin.tools/?viewer=slate",
-    "https://resin.tools/#view=slate",
-    "https://resin.tools/?other=1"
+    "https://resin.tools/?view=legacy&other=1"
   ]) {
-    const result = run(href);
+    const result = run(href, { wide: true });
     assert.equal(result.created.length, 0, `${href} activated Slate`);
     assert.equal(result.body.getAttribute("data-slate-view"), null, `${href} activated Slate`);
   }
+});
+
+test("a URL naming no view boots Slate on a desktop window and the floor UI on a phone or in the native app; with nothing to measure, never assume a desktop", () => {
+  for (const href of ["https://resin.tools/", "https://resin.tools/?other=1", "https://resin.tools/?slate", "https://resin.tools/?viewer=slate", "https://resin.tools/#view=slate", "https://resin.tools/index.html"]) {
+    const desktop = run(href, { wide: true });
+    assert.equal(desktop.body.getAttribute("data-slate-view"), "slate", `${href} did not boot Slate on a desktop`);
+    assert.equal(desktop.body.children.filter(node => node.hasAttribute("data-slate-host")).length, 1);
+    const phone = run(href, { wide: false });
+    assert.equal(phone.body.getAttribute("data-slate-view"), null, `${href} booted Slate on a phone`);
+    assert.equal(phone.created.length, 0);
+    const native = run(href, { wide: true, native: true });
+    assert.equal(native.body.getAttribute("data-slate-view"), null, `${href} booted Slate in the native app`);
+    const unknown = run(href);
+    assert.equal(unknown.body.getAttribute("data-slate-view"), null, `${href} assumed a desktop with nothing to measure`);
+  }
+  // Without matchMedia the width decides.
+  assert.equal(run("https://resin.tools/", { innerWidth: 1100 }).body.getAttribute("data-slate-view"), "slate");
+  assert.equal(run("https://resin.tools/", { innerWidth: 1099 }).body.getAttribute("data-slate-view"), null);
+  // ?view=slate boots Slate on any window, as it always has.
+  assert.equal(run("https://resin.tools/?view=slate", { wide: false }).body.getAttribute("data-slate-view"), "slate");
+  assert.equal(run("https://resin.tools/?view=slate", { native: true }).body.getAttribute("data-slate-view"), "slate");
 });
 
 test("an unreadable URL means not requested, never assume yes", () => {

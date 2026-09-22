@@ -98,11 +98,16 @@ test("the host is the only thing that sets the view attribute", () => {
   assert.doesNotMatch(stationHost, /slate/i, "station-host.js knows Slate exists");
 });
 
-test("the flag is read from the URL and matched exactly", () => {
+test("the flag is read from the URL and matched exactly; a URL naming no view falls to the desktop test, never to yes", () => {
   assert.match(host, /const FLAG = "view";/);
   assert.match(host, /const VALUE = "slate";/);
-  assert.match(host, /searchParams\.get\(FLAG\) === VALUE/);
+  assert.match(host, /const view = new URL\(root\.location\.href\)\.searchParams\.get\(FLAG\);\s*if \(view === VALUE\) return true;\s*if \(view !== null\) return false;\s*return desktop\(\);/);
   assert.match(host, /catch \(error\) \{\s*return false;\s*\}/);
+  // The desktop test: the native shell says no; the media query decides; the width is the fallback; nothing to measure says no.
+  assert.match(host, /const MIN_WIDTH = 1100;/);
+  assert.match(host, /capacitor\.isNativePlatform\(\)\) return false;/);
+  assert.match(host, /root\.matchMedia\(`\(min-width: \$\{MIN_WIDTH\}px\)`\)\.matches/);
+  assert.match(host, /return Number\(root\.innerWidth\) >= MIN_WIDTH;/);
 });
 
 /* ----------------------------------------------------------------------

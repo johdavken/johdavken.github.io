@@ -62,11 +62,11 @@ test("the link is the existing Station route - the same flag and value station-h
   assert.doesNotMatch(app, /view=station/, "app.js does not build a Station URL of its own");
 });
 
-test("Station -> Legacy is the unchanged existing link, and the two routes round-trip", () => {
+test("Station -> Legacy is the existing link naming the legacy view, and the two routes round-trip under the same path", () => {
   for (const origin of ["https://resin.tools/", "https://johdavken.github.io/repo/index.html", "http://127.0.0.1:8791/"]) {
     const station = new URL("?view=station", origin);
     const back = new URL(shell.legacyHref(station.href), station.href);
-    assert.equal(back.href, new URL(origin).href, `${origin} -> Station -> Legacy lands back where it started`);
+    assert.equal(back.href, new URL("?view=legacy", origin).href, `${origin} -> Station -> Legacy lands on the legacy view where it started`);
   }
   assert.match(read("station/station-shell.js"), /"station-header__legacy", "Legacy"/, "Station still shows the plain Legacy link");
   assert.doesNotMatch(read("station/station-shell.js"), /Station \(Beta\)/, "Station is not renamed inside Station");
