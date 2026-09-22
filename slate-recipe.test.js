@@ -1103,3 +1103,378 @@ test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; wi
   assert.match(none.said[none.said.length - 1], /no application is connected/);
   assert.ok(saveEntry(none.view, "current").hasAttribute("hidden"));
 });
+
+/* ----------------------------------------------------------------------
+ *   Bulk edit
+ * -------------------------------------------------------------------- */
+
+const bulkButton = view => view.element.querySelector(".slate-recipe__bulk");
+const bulkFoot = (view, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which || "current"}'] .slate-recipe__bulk-foot`);
+const field = (view, id, kind, which) => row(view, id, which).querySelector(`.slate-hopper__draft-${kind}`);
+const typedInto = (input, value) => { input.value = value; input.dispatchEvent({ type: "input" }); };
+
+test("Bulk edit opens the shown tab as a form: it closes the inline editor and the save entry, swaps the foot, presses the bar button, and withholds every other recipe edit - Track stays", () => {
+  const { view, commands, said } = boot({ recipes: makeRecipes() });
+  view.update(withPlan(), { kind: "structural" });
+  const button = bulkButton(view);
+  assert.equal(button.getAttribute("data-able"), "true");
+  assert.equal(button.getAttribute("aria-pressed"), "false");
+  click(row(view, "A2").querySelector(".slate-hopper__pct"));
+  assert.ok(view.editing());
+  click(saveButton(view, "current"));
+  assert.ok(view.saving());
+  click(button);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [] });
+  assert.equal(view.editing(), null, "the inline editor stayed open under the form");
+  assert.equal(view.saving(), null, "the save entry stayed open under the form");
+  assert.equal(button.getAttribute("aria-pressed"), "true");
+  assert.ok(!bulkFoot(view).hasAttribute("hidden"));
+  assert.ok(view.element.querySelector(".slate-recipe__body[data-recipe='current'] .slate-recipe__foot:not(.slate-recipe__bulk-foot)").hasAttribute("hidden"), "the normal foot stayed");
+  assert.equal(bulkFoot(view).querySelector(".slate-recipe__bulk-summary").textContent, "Nothing changes");
+  assert.equal(bulkFoot(view).querySelector("[data-slate-bulk-do='apply']").getAttribute("data-able"), "false");
+  assert.equal(field(view, "A2", "resin").value, "LD105");
+  assert.equal(field(view, "A2", "pct").value, "30");
+  assert.equal(field(view, "A1", "h1").textContent, "60%");
+  // Withheld, each with the reason.
+  const a2 = row(view, "A2");
+  assert.ok(a2.querySelector(".slate-hopper__resin").hasAttribute("hidden"));
+  assert.equal(a2.querySelector(".slate-hopper__resin").getAttribute("data-able"), "false");
+  assert.ok(!a2.classList.contains("is-movable"));
+  const share = head(view, "A").querySelector(".slate-layer__share");
+  assert.equal(share.getAttribute("data-able"), "false");
+  assert.match(share.getAttribute("title"), /Apply or cancel the bulk edit first/);
+  click(share);
+  assert.equal(view.editing(), null);
+  assert.match(said[said.length - 1], /Apply or cancel the bulk edit first/);
+  const menu = head(view, "A").querySelector(".slate-layer-menu");
+  click(menu.querySelector(".slate-layer-menu__button"));
+  assert.ok(menu.querySelectorAll(".slate-layer-menu__item").every(item => item.getAttribute("aria-disabled") === "true"), "a layer menu item stayed able");
+  for (const selector of [".slate-recipe__reset", ".slate-recipe__save[data-slate-save='current']"]) {
+    const control = view.element.querySelector(selector);
+    assert.equal(control.getAttribute("data-able"), "false", selector);
+    assert.match(control.getAttribute("title"), /bulk edit/, selector);
+  }
+  assert.equal(commands.calls.length, 0, "opening the form dispatched");
+  // The job's tracking is not the recipe's: the toggle still works.
+  click(row(view, "A2").querySelector(".slate-toggle--tracking"));
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperTracking");
+  assert.deepEqual([commands.calls[0].args.recipe, commands.calls[0].args.layer, commands.calls[0].args.index], ["current", "A", 1]);
+  assert.ok(view.bulk(), "a toggle closed the form");
+});
+
+test("Apply sends exactly one setHopperAssignments naming only what changed, for the shown recipe; the form closes, the cells show the line again, and the section says how many", () => {
+  const { view, commands, committed, said } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "resin"), "LL318");
+  typedInto(field(view, "A3", "pct"), "15");
+  typedInto(field(view, "B2", "resin"), "");
+  typedInto(field(view, "C3", "resin"), "brand-new");
+  typedInto(field(view, "C3", "pct"), "5");
+  typedInto(field(view, "C1", "resin"), "eva340");     // the same code, as the application compares it
+  const foot = bulkFoot(view);
+  assert.equal(foot.querySelector(".slate-recipe__bulk-summary").textContent, "4 hoppers change on Apply");
+  assert.equal(view.bulk().changes, 4);
+  assert.equal(field(view, "A1", "h1").textContent, "55%");
+  assert.equal(field(view, "B2", "pct").value, "", "blanking the resin left the blend");
+  const apply = foot.querySelector("[data-slate-bulk-do='apply']");
+  assert.equal(apply.getAttribute("data-able"), "true");
+  click(apply);
+  assert.deepEqual(commands.calls, [{ command: "setHopperAssignments", args: { recipe: "current", hoppers: [
+    { layer: "A", index: 1, resin: "LL318" },
+    { layer: "A", index: 2, pct: 15 },
+    { layer: "B", index: 1, resin: "", pct: 0 },
+    { layer: "C", index: 2, resin: "brand-new", pct: 5 }
+  ] } }]);
+  assert.equal(committed.length, 1);
+  assert.equal(said[said.length - 1], "4 hoppers changed.");
+  assert.equal(view.bulk(), null);
+  assert.equal(bulkButton(view).getAttribute("aria-pressed"), "false");
+  assert.ok(foot.hasAttribute("hidden"));
+  assert.ok(!view.element.querySelector(".slate-recipe__body[data-recipe='current'] .slate-recipe__foot:not(.slate-recipe__bulk-foot)").hasAttribute("hidden"));
+  const a2 = row(view, "A2");
+  assert.equal(a2.querySelector(".slate-hopper__draft-resin"), null);
+  assert.ok(!a2.querySelector(".slate-hopper__resin").hasAttribute("hidden"));
+  assert.equal(a2.querySelector(".slate-hopper__resin").textContent, "LD105", "the cell shows the draft, not the line, before the echo");
+  assert.equal(a2.querySelector(".slate-hopper__resin").getAttribute("data-able"), "true");
+});
+
+test("with nothing changed Apply is withheld and says so, and Cancel closes at once; a refusal keeps every field as typed with the application's words in the foot", () => {
+  const answers = [{ ok: false, code: "busy", message: "Another device is applying a change." }];
+  const commands = makeCommands({ capabilities: ALL, answer: () => answers.shift() });
+  const { view, said, committed } = boot({ commands });
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  const foot = bulkFoot(view);
+  click(foot.querySelector("[data-slate-bulk-do='apply']"));
+  assert.equal(commands.calls.length, 0);
+  assert.equal(said[said.length - 1], "Nothing changes yet");
+  click(foot.querySelector("[data-slate-bulk-do='cancel']"));
+  assert.equal(view.bulk(), null);
+  assert.equal(said.length, 1, "closing an unchanged form said something");
+
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "pct"), "35");
+  typedInto(field(view, "A3", "resin"), "HX204");
+  click(foot.querySelector("[data-slate-bulk-do='apply']"));
+  assert.equal(commands.calls.length, 1);
+  assert.ok(view.bulk(), "a refusal closed the form");
+  assert.equal(field(view, "A2", "pct").value, "35");
+  assert.equal(field(view, "A3", "resin").value, "HX204");
+  assert.equal(foot.querySelector(".slate-recipe__bulk-note").textContent, "Another device is applying a change.");
+  assert.ok(!foot.querySelector(".slate-recipe__bulk-note").hasAttribute("hidden"));
+  assert.equal(committed.length, 0);
+  click(foot.querySelector("[data-slate-bulk-do='apply']"));
+  assert.equal(commands.calls.length, 2);
+  assert.equal(view.bulk(), null);
+  assert.equal(committed.length, 1);
+});
+
+test("Cancel arms while there are changes and disarms after a moment; a second press or a second Escape discards and says what was lost; Escape closes an open list first", () => {
+  const { view, commands, timers, said } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "pct"), "35");
+  typedInto(field(view, "A3", "pct"), "20");
+  const cancel = bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']");
+  click(cancel);
+  assert.ok(view.bulk().armed);
+  assert.equal(cancel.textContent, "Discard 2 changes");
+  timers.advance(recipe.RESET_ARM_MS);
+  assert.ok(!view.bulk().armed);
+  assert.equal(cancel.textContent, "Cancel");
+  assert.ok(view.bulk());
+  // Escape arms it too, and the bar button does the same as Cancel.
+  key(field(view, "A2", "pct"), "Escape");
+  assert.ok(view.bulk().armed);
+  click(bulkButton(view));
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], "The bulk edit was closed; 2 changes were not applied.");
+  assert.equal(commands.calls.length, 0);
+  assert.equal(timers.pending(), 0);
+  // With a list open, Escape closes the list and nothing arms.
+  click(bulkButton(view));
+  const resin = field(view, "A4", "resin");
+  typedInto(resin, "ll");
+  key(resin, "Escape");
+  assert.ok(!view.bulk().armed, "Escape on an open list armed Cancel");
+  key(resin, "Escape");
+  assert.ok(view.bulk().armed);
+  key(resin, "Escape");
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], "The bulk edit was closed; 1 change was not applied.");
+});
+
+test("a layer whose hoppers 2-6 would exceed 100 is said on its head and withholds Apply until it is put right", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "B3", "pct"), "90");
+  const note = head(view, "B").querySelector(".slate-layer__note");
+  assert.equal(note.textContent, "Hopper percentages 2–6 cannot total more than 100%.");
+  assert.ok(!note.hasAttribute("hidden"));
+  assert.ok(head(view, "B").classList.contains("is-over"));
+  assert.equal(field(view, "B1", "h1").textContent, "—");
+  const apply = bulkFoot(view).querySelector("[data-slate-bulk-do='apply']");
+  assert.equal(apply.getAttribute("data-able"), "false");
+  assert.match(apply.getAttribute("title"), /cannot total more than 100/);
+  click(apply);
+  assert.equal(commands.calls.length, 0);
+  typedInto(field(view, "B3", "pct"), "70");
+  assert.ok(note.hasAttribute("hidden"));
+  assert.ok(!head(view, "B").classList.contains("is-over"));
+  assert.equal(field(view, "B1", "h1").textContent, "10%");
+  assert.equal(apply.getAttribute("data-able"), "true");
+});
+
+test("a values publish under the form: our own echo is silent; another device's change marks the row, keeps the field, and rebases its diff; a structural publish abandons the form", () => {
+  const { view, said } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "resin"), "LL318");
+  typedInto(field(view, "B2", "pct"), "25");
+  // Our own: nothing marked.
+  view.update(resolvedFrom(snap => { snap.layers[2].hoppers[1].pct = 25; }), { kind: "values", own: true });
+  assert.ok(!row(view, "A2").classList.contains("is-changed-underneath"));
+  assert.ok(!row(view, "C2").classList.contains("is-changed-underneath"));
+  assert.equal(said.length, 0);
+  // Another device set A2 to what was typed: marked, and no longer a change.
+  view.update(resolvedFrom(snap => { snap.layers[2].hoppers[1].pct = 25; snap.layers[0].hoppers[1].resinName = "LL318"; }), { kind: "values" });
+  assert.ok(row(view, "A2").classList.contains("is-changed-underneath"));
+  assert.match(row(view, "A2").querySelector(".slate-hopper__note").textContent, /^A2 changed in the application/);
+  assert.equal(field(view, "A2", "resin").value, "LL318");
+  assert.equal(view.bulk().changes, 1);
+  assert.ok(!row(view, "A2").classList.contains("is-updated"), "a drafted row flashed");
+  assert.equal(row(view, "A2").querySelector(".slate-hopper__resin").textContent, "LD105", "a hidden cell was rewritten under the form");
+  // Structural: gone, and said.
+  view.update(resolvedFrom(snap => { snap.layers.pop(); }), { kind: "structural" });
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], recipe.BULK_ABANDONED);
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "pct"), "35");
+  const heard = said.length;
+  view.update(resolvedFrom(), { kind: "structural", own: true });
+  assert.equal(view.bulk(), null);
+  assert.equal(said.length, heard, "our own structural publish was said");
+});
+
+test("read-only turning on, or the bridge going away, closes the form and says so; without the command Bulk edit is unable with the reason", () => {
+  const { view, said, setReadOnly } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "pct"), "35");
+  setReadOnly(true);
+  view.refresh();
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], recipe.BULK_READ_ONLY);
+  assert.equal(bulkButton(view).getAttribute("data-able"), "false");
+  assert.match(bulkButton(view).getAttribute("title"), /read-only/);
+  setReadOnly(false);
+  view.refresh();
+  assert.equal(bulkButton(view).getAttribute("data-able"), "true");
+
+  const settings = { capabilities: ALL, available: true };
+  const commands = makeCommands(settings);
+  const lost = boot({ commands });
+  lost.view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(lost.view));
+  settings.available = false;
+  lost.view.refresh();
+  assert.equal(lost.view.bulk(), null);
+  assert.equal(lost.said[lost.said.length - 1], recipe.BULK_NO_BRIDGE);
+
+  const partial = boot({ commands: makeCommands({ capabilities: ALL.filter(name => name !== "setHopperAssignments") }) });
+  partial.view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(bulkButton(partial.view).getAttribute("data-able"), "false");
+  click(bulkButton(partial.view));
+  assert.equal(partial.view.bulk(), null);
+  assert.match(partial.said[partial.said.length - 1], /does not offer setHopperAssignments/);
+});
+
+test("a tab switch is refused while the form holds changes and closes it otherwise; hiding the section discards and says; the Next tab's form names the plan and needs one", () => {
+  const { view, commands, said } = boot();
+  view.update(withPlan(), { kind: "structural" });
+  click(bulkButton(view));
+  typedInto(field(view, "A2", "pct"), "35");
+  assert.equal(view.setRecipe("next"), "current");
+  assert.equal(said[said.length - 1], recipe.BULK_SWITCH);
+  assert.ok(view.bulk());
+  typedInto(field(view, "A2", "pct"), "30");
+  assert.equal(view.bulk().changes, 0);
+  assert.equal(view.setRecipe("next"), "next");
+  assert.equal(view.bulk(), null);
+  // Next: the plan's rows, the plan named.
+  click(bulkButton(view));
+  assert.deepEqual(view.bulk(), { recipe: "next", changes: 0, armed: false, picked: [] });
+  assert.equal(row(view, "A2", "next").querySelector(".slate-hopper__draft-pct").value, "30");
+  typedInto(row(view, "A3", "next").querySelector(".slate-hopper__draft-resin"), "HX204");
+  assert.ok(view.element.querySelector(".slate-recipe__plan").hasAttribute("hidden"), "the plan strip stayed under the form");
+  click(bulkFoot(view, "next").querySelector("[data-slate-bulk-do='apply']"));
+  assert.deepEqual(commands.calls, [{ command: "setHopperAssignments", args: { recipe: "next", hoppers: [{ layer: "A", index: 2, resin: "HX204" }] } }]);
+  assert.ok(!view.element.querySelector(".slate-recipe__plan").hasAttribute("hidden"));
+  // Hide: discarded, said.
+  click(bulkButton(view));
+  typedInto(row(view, "A2", "next").querySelector(".slate-hopper__draft-pct"), "35");
+  view.onHide();
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], "The bulk edit was closed; 1 change was not applied.");
+  // Without a plan there is nothing to edit on Next.
+  view.update(resolvedFrom(), { kind: "structural" });
+  view.setRecipe("next");
+  assert.equal(bulkButton(view).getAttribute("data-able"), "false");
+  assert.match(bulkButton(view).getAttribute("title"), /Nothing is planned/);
+  click(bulkButton(view));
+  assert.equal(view.bulk(), null);
+});
+
+test("under the form a hopper id picks its row, Shift picks a run within the layer, the layer's name picks the layer; the fill strip shows for a selection and Clear selection empties it", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  const foot = bulkFoot(view);
+  const strip = foot.querySelector(".slate-recipe__fill");
+  assert.ok(strip.hasAttribute("hidden"));
+  assert.ok(!foot.querySelector(".slate-recipe__bulk-hint").hasAttribute("hidden"));
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.deepEqual(view.bulk().picked, ["A:1"]);
+  assert.ok(row(view, "A2").classList.contains("is-picked"));
+  assert.ok(!strip.hasAttribute("hidden"));
+  assert.ok(foot.querySelector(".slate-recipe__bulk-hint").hasAttribute("hidden"));
+  assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, "1 selected");
+  click(row(view, "A5").querySelector(".slate-hopper__id"), { shiftKey: true });
+  assert.deepEqual(view.bulk().picked.sort(), ["A:1", "A:2", "A:3", "A:4"]);
+  assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, "4 selected");
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.deepEqual(view.bulk().picked.sort(), ["A:2", "A:3", "A:4"]);
+  // A Shift run into another layer is a plain pick there.
+  click(row(view, "B3").querySelector(".slate-hopper__id"), { shiftKey: true });
+  assert.ok(view.bulk().picked.includes("B:2"));
+  assert.equal(view.bulk().picked.length, 4);
+  click(head(view, "C").querySelector(".slate-layer__name"));
+  assert.deepEqual(view.bulk().picked.filter(key => key.startsWith("C")).sort(), ["C:0", "C:1", "C:2", "C:3", "C:4", "C:5"]);
+  click(head(view, "C").querySelector(".slate-layer__name"));
+  assert.equal(view.bulk().picked.filter(key => key.startsWith("C")).length, 0);
+  click(strip.querySelector("[data-slate-fill='clear']"));
+  assert.deepEqual(view.bulk().picked, []);
+  assert.ok(strip.hasAttribute("hidden"));
+  assert.equal(commands.calls.length, 0, "picking dispatched");
+  // Ids do nothing outside the form.
+  click(bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']"));
+  assert.equal(view.bulk(), null);
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.ok(!row(view, "A2").classList.contains("is-picked"));
+});
+
+test("Fill writes one resin and/or one blend into every picked row's fields - blank means no change there, H1 takes the resin only - and it is still the draft: one Apply, one command", () => {
+  const { view, commands, said } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  const strip = bulkFoot(view).querySelector(".slate-recipe__fill");
+  for (const id of ["A1", "A3", "A4", "A5"]) click(row(view, id).querySelector(".slate-hopper__id"));
+  // Nothing entered: said, nothing moved.
+  click(strip.querySelector("[data-slate-fill='fill']"));
+  assert.equal(said[said.length - 1], recipe.FILL_NOTHING);
+  assert.equal(view.bulk().changes, 0);
+  // A resin alone: the blends stay as they were.
+  typedInto(strip.querySelector(".slate-recipe__fill-resin"), "ll");
+  key(strip.querySelector(".slate-recipe__fill-resin"), "Enter");     // takes the suggestion
+  assert.equal(strip.querySelector(".slate-recipe__fill-resin").value, "LL318");
+  assert.equal(view.bulk().changes, 0, "taking a suggestion filled");
+  key(strip.querySelector(".slate-recipe__fill-resin"), "Enter");     // fills
+  assert.equal(field(view, "A1", "resin").value, "LL318");
+  assert.equal(field(view, "A3", "resin").value, "LL318");
+  assert.equal(field(view, "A3", "pct").value, "10", "a resin fill moved a blend");
+  assert.equal(field(view, "A2", "resin").value, "LD105", "an unpicked row was filled");
+  assert.equal(view.bulk().changes, 4);
+  assert.deepEqual(view.bulk().picked.length, 4, "the fill emptied the selection");
+  // A blend alone, with a bad number first.
+  typedInto(strip.querySelector(".slate-recipe__fill-resin"), "");
+  typedInto(strip.querySelector(".slate-recipe__fill-pct"), "ten");
+  click(strip.querySelector("[data-slate-fill='fill']"));
+  assert.equal(strip.querySelector(".slate-recipe__fill-pct").getAttribute("aria-invalid"), "true");
+  assert.equal(field(view, "A3", "pct").value, "10");
+  typedInto(strip.querySelector(".slate-recipe__fill-pct"), "20");
+  click(strip.querySelector("[data-slate-fill='fill']"));
+  assert.equal(strip.querySelector(".slate-recipe__fill-pct").getAttribute("aria-invalid"), null);
+  assert.equal(field(view, "A3", "pct").value, "20");
+  assert.equal(field(view, "A4", "pct").value, "20");
+  assert.equal(field(view, "A5", "pct").value, "20");
+  assert.equal(field(view, "A1", "h1").textContent, "10%", "H1's preview did not follow the fill");
+  // Only H1 picked for a blend: nothing to fill, said.
+  click(strip.querySelector("[data-slate-fill='clear']"));
+  click(row(view, "B1").querySelector(".slate-hopper__id"));
+  click(strip.querySelector("[data-slate-fill='fill']"));
+  assert.equal(said[said.length - 1], recipe.FILL_NONE);
+  // Apply: one command carrying the filled rows.
+  click(bulkFoot(view).querySelector("[data-slate-bulk-do='apply']"));
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperAssignments");
+  assert.deepEqual(commands.calls[0].args.hoppers, [
+    { layer: "A", index: 0, resin: "LL318" },
+    { layer: "A", index: 2, resin: "LL318", pct: 20 },
+    { layer: "A", index: 3, resin: "LL318", pct: 20 },
+    { layer: "A", index: 4, resin: "LL318", pct: 20 }
+  ]);
+  assert.equal(view.bulk(), null);
+});

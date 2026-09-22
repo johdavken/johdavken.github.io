@@ -24,6 +24,7 @@
     blend: "setHopperBlend",
     share: "setLayerShare",
     move: "moveHopper",
+    assign: "setHopperAssignments",
     copyLayer: "copyLayer",
     clearLayer: "clearLayer",
     undo: "undo",
@@ -91,6 +92,13 @@
     return send(commands, COMMAND.move, { recipe, layer: from.layer, index: from.index, toLayer: to.layer, toIndex: to.index });
   }
 
+  /** The bulk edit's Apply: every changed hopper's resin and/or blend as
+   * ONE command - the contract shapes each entry, the executor checks
+   * every position and layer total before writing any of it. */
+  function applyAssignments(commands, recipe, hoppers) {
+    return send(commands, COMMAND.assign, { recipe, hoppers });
+  }
+
   function copyLayer(commands, recipe, layer, toLayer) {
     return send(commands, COMMAND.copyLayer, { recipe, layer, toLayer });
   }
@@ -109,6 +117,6 @@
 
   return Object.freeze({
     RECIPES, COMMAND, READ_ONLY_REASON, NO_BRIDGE,
-    abilities, reason, setResin, setBlend, setShare, move, copyLayer, clearLayer, undo, redo
+    abilities, reason, setResin, setBlend, setShare, move, applyAssignments, copyLayer, clearLayer, undo, redo
   });
 });

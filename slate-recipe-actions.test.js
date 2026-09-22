@@ -23,6 +23,7 @@ test("every command the seams name is in the contract, and every recipe command 
   actions.setBlend(commands, "next", "A", 1, "45");
   actions.setShare(commands, "current", "B", "40");
   actions.move(commands, "current", { layer: "A", index: 2 }, { layer: "B", index: 0 });
+  actions.applyAssignments(commands, "next", [{ layer: "A", index: 0, resin: "HX204" }, { layer: "A", index: 2, resin: "", pct: 0 }, { layer: "B", index: 1, pct: 35 }]);
   actions.copyLayer(commands, "next", "A", "C");
   actions.clearLayer(commands, "current", "B");
   actions.undo(commands, "current");
@@ -33,6 +34,7 @@ test("every command the seams name is in the contract, and every recipe command 
     { command: "setHopperBlend", args: { recipe: "next", layer: "A", index: 1, pct: "45" } },
     { command: "setLayerShare", args: { recipe: "current", layer: "B", pct: "40" } },
     { command: "moveHopper", args: { recipe: "current", layer: "A", index: 2, toLayer: "B", toIndex: 0 } },
+    { command: "setHopperAssignments", args: { recipe: "next", hoppers: [{ layer: "A", index: 0, resin: "HX204" }, { layer: "A", index: 2, resin: "", pct: 0 }, { layer: "B", index: 1, pct: 35 }] } },
     { command: "copyLayer", args: { recipe: "next", layer: "A", toLayer: "C" } },
     { command: "clearLayer", args: { recipe: "current", layer: "B" } },
     { command: "undo", args: { recipe: "current" } },
@@ -58,13 +60,15 @@ test("a null bridge or a nonsense recipe answers unavailable and sends nothing",
 test("abilities follow the bridge's capabilities; resin needs both set and clear; read-only withholds all", () => {
   const full = makeCommands({ capabilities: ALL });
   const able = actions.abilities(full);
-  assert.deepEqual(able, { resin: true, clear: true, blend: true, share: true, move: true, copyLayer: true, clearLayer: true, undo: true, redo: true });
+  assert.deepEqual(able, { resin: true, clear: true, blend: true, share: true, move: true, assign: true, copyLayer: true, clearLayer: true, undo: true, redo: true });
   const partial = makeCommands({ capabilities: ["setHopperResin", "setHopperBlend", "undo"] });
   const some = actions.abilities(partial);
   assert.equal(some.resin, false, "a resin edit without clearHopper was offered");
   assert.equal(some.blend, true);
   assert.equal(some.undo, true);
   assert.equal(some.redo, false);
+  assert.equal(some.assign, false, "the bulk edit was offered without setHopperAssignments");
+  assert.equal(actions.applyAssignments(null, "current", [{ layer: "A", index: 1, pct: 5 }]).code, "unavailable");
   assert.ok(Object.values(actions.abilities(full, { readOnly: true })).every(value => value === false));
   assert.ok(Object.values(actions.abilities(null)).every(value => value === false));
   assert.equal(actions.reason(full, "blend", { readOnly: true }), actions.READ_ONLY_REASON);

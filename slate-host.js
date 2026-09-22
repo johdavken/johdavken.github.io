@@ -88,6 +88,8 @@
     "slate/slate-weight-actions.js",
     "slate/slate-profile-actions.js",
     "slate/slate-resin-search.js",
+    "slate/slate-recipe-draft.js",
+    "slate/slate-recipe-form.js",
     "slate/slate-recipe-drag.js",
     "slate/slate-layer-menu.js",
     "slate/slate-print.js",
@@ -111,7 +113,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.9.0";
+  const VERSION = "0.10.0";
 
   function requested() {
     try {

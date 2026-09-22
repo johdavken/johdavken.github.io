@@ -331,3 +331,159 @@
     animation: none;
   }
 }
+
+/* ---- Bulk edit ----
+   The tab as a form: a field in every resin and blend cell, H1's blend a
+   preview, the foot the draft's. The fields share the inline editors'
+   tokens; the pressed bar button reads as the Compare switch does. */
+
+.slate-root .slate-recipe__bulk[aria-pressed="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-hopper__draft {
+  min-width: 0;
+}
+
+.slate-hopper__draft-resin,
+.slate-hopper__draft-pct {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-root .slate-hopper__draft-resin:focus,
+.slate-root .slate-hopper__draft-pct:focus {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+}
+
+.slate-hopper__draft-pct {
+  text-align: right;
+}
+
+.slate-root .slate-hopper__draft-pct[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+/* H1's blend, as the layer's others leave it while they are typed. */
+.slate-hopper__draft-h1 {
+  color: var(--slate-text-faint);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-hopper__draft-h1.is-over {
+  color: var(--slate-danger);
+}
+
+/* A layer whose hoppers 2-6 would be refused. */
+.slate-layer__head.is-over .slate-layer__share {
+  color: var(--slate-danger);
+}
+
+/* The foot: the summary leads and pushes Cancel and Apply right; the
+   application's answer, when there is one, on its own line. */
+.slate-recipe__bulk-foot {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.slate-recipe__bulk-summary {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-recipe__bulk-note {
+  flex: 1 0 100%;
+  order: 1;
+  margin: 0;
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- The selection and the fill ----
+   Under the form a hopper id and a layer's name are pick targets; a
+   picked row wears the accent. The strip leads the foot on its own line. */
+
+.slate-recipe__body.is-drafting .slate-hopper__id,
+.slate-recipe__body.is-drafting .slate-layer__name {
+  cursor: pointer;
+  user-select: none;
+}
+
+.slate-hopper.is-picked {
+  background: var(--slate-accent-soft);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+.slate-hopper.is-picked .slate-hopper__id {
+  color: var(--slate-accent-text);
+}
+
+.slate-recipe__fill {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  background: var(--slate-accent-soft);
+}
+
+.slate-recipe__fill-count {
+  min-width: 7ch;
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+/* The list under the resin field stands off this box, as it does off
+   .slate-combobox in a row. */
+.slate-recipe__fill-field {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slate-recipe__fill-resin,
+.slate-recipe__fill-pct {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-recipe__fill-pct {
+  flex: 0 1 140px;
+  text-align: right;
+}
+
+.slate-root .slate-recipe__fill-resin:focus,
+.slate-root .slate-recipe__fill-pct:focus {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+}
+
+.slate-root .slate-recipe__fill-pct[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+.slate-recipe__bulk-hint {
+  flex: 1 1 auto;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}

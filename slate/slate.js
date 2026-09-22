@@ -39,6 +39,9 @@
   const resinTotals = root.PolynResinTotals || null;
   const pressureConversion = root.PolynPressureConversion || null;
   const windingTension = root.PolynWindingTension || null;
+  // The application's own percentage rule, for the bulk edit's totals.
+  const validation = root.PolynValidation || null;
+  const validate = validation && typeof validation.validateHopperPercentages === "function" ? validation.validateHopperPercentages : null;
   // The shared resin catalog, for the recipe's resin search. Optional: with
   // none, the search offers only what is typed.
   const catalog = root.PolynResinCatalog || null;
@@ -283,7 +286,7 @@
     // Resin Balance is listed with the sections, under the Recipe Book,
     // though it shows in the aside; the two calculators list under Tools.
     const definitions = [
-      { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, c) },
+      { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => home("aside") })) },

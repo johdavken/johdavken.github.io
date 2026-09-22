@@ -8,6 +8,12 @@
  * back as its own last option - "Use 'XYZ' as typed". An emptied field
  * chooses "" and the caller clears the hopper.
  *
+ * Two ways in. `open` is the inline editor's: a combobox that stands in
+ * for a cell, chooses once and leaves (a blur cancels). `attach` is the
+ * bulk edit's: a list under a field that stays - it shows while typing,
+ * a blur only hides it and the text stands, so a form of many fields
+ * can be tabbed through without losing what was typed.
+ *
  * Dispatches nothing: the caller is told what was chosen.
  */
 (function (root, factory) {
@@ -75,6 +81,35 @@
     return options;
   }
 
+  /* The list's items for a query's options, the active one marked and
+   * named on the input; the empty line when there are none. Shared by
+   * the inline combobox and the attached list. Returns the active index
+   * as painted (-1 when nothing is listed). */
+  function paint(doc, list, input, base, options2, active, noCatalog, choose) {
+    while (list.firstChild) list.removeChild(list.firstChild);
+    if (options2.length === 0) {
+      list.appendChild(text(doc, "li", "slate-combobox__empty", noCatalog ? NO_CATALOG : "No matching resin", { role: "presentation" }));
+      input.removeAttribute("aria-activedescendant");
+      return -1;
+    }
+    const at = active < 0 || active >= options2.length ? 0 : active;
+    options2.forEach((option, index) => {
+      const item = element(doc, "li", `slate-combobox__option${option.custom ? " is-custom" : ""}`, {
+        role: "option", id: `${base}-option-${index}`, "data-resin": option.code, "aria-selected": index === at ? "true" : "false"
+      });
+      if (index === at) item.classList.add("is-active");
+      item.appendChild(text(doc, "span", "slate-combobox__code", option.custom ? `Use ‘${option.code}’ as typed` : option.code));
+      if (option.note && !option.custom) item.appendChild(text(doc, "span", "slate-combobox__note", option.note));
+      // Keep the input's focus through the press, so blur cannot close
+      // the list before the click chooses.
+      item.addEventListener("mousedown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
+      item.addEventListener("click", () => choose(option.code));
+      list.appendChild(item);
+    });
+    input.setAttribute("aria-activedescendant", `${base}-option-${at}`);
+    return at;
+  }
+
   /**
    * Open the combobox inside `host`.
    *
@@ -132,29 +167,8 @@
     }
 
     function render() {
-      while (list.firstChild) list.removeChild(list.firstChild);
       options2 = optionsFor(catalogNow(), input.value);
-      if (options2.length === 0) {
-        list.appendChild(text(doc, "li", "slate-combobox__empty", catalogNow().length === 0 ? NO_CATALOG : "No matching resin", { role: "presentation" }));
-        active = -1;
-        input.removeAttribute("aria-activedescendant");
-        return;
-      }
-      if (active < 0 || active >= options2.length) active = 0;
-      options2.forEach((option, index) => {
-        const item = element(doc, "li", `slate-combobox__option${option.custom ? " is-custom" : ""}`, {
-          role: "option", id: `${base}-option-${index}`, "data-resin": option.code, "aria-selected": index === active ? "true" : "false"
-        });
-        if (index === active) item.classList.add("is-active");
-        item.appendChild(text(doc, "span", "slate-combobox__code", option.custom ? `Use ‘${option.code}’ as typed` : option.code));
-        if (option.note && !option.custom) item.appendChild(text(doc, "span", "slate-combobox__note", option.note));
-        // Keep the input's focus through the press, so blur cannot close
-        // the list before the click chooses.
-        item.addEventListener("mousedown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
-        item.addEventListener("click", () => choose(option.code));
-        list.appendChild(item);
-      });
-      input.setAttribute("aria-activedescendant", `${base}-option-${active}`);
+      active = paint(doc, list, input, base, options2, active, catalogNow().length === 0, choose);
     }
 
     function close() {
@@ -213,5 +227,133 @@
     });
   }
 
-  return Object.freeze({ RESULT_LIMIT, CODE_MAX, NO_CATALOG, normalize, filterResins, optionsFor, densityNote, open });
+  /**
+   * A suggestion list under a field that stays: the bulk edit's.
+   *
+   * The list shows on typing (and on ArrowDown), never on focus alone, so
+   * a form can be tabbed through quietly. ↑/↓ move; Enter with the list
+   * open takes the active option into the field, hides the list, tells
+   * the caller, and is spent (the key never reaches the form's own
+   * handler); Escape hides the list and is spent; a blur hides it and
+   * the text stands. Tab is never taken - what was typed is the code.
+   * An emptied field with the list open chooses "" as `open` does.
+   *
+   * @param {Document} doc
+   * @param {Element} input             the field, already in the page
+   * @param {object} options
+   * @param {function} options.resins   () => the catalog
+   * @param {function} [options.onChoose]  (code) after the field took it
+   * @param {Element} [options.host]    where the list stands (the field's parent by default)
+   * @param {string} [options.id]       the listbox id base
+   */
+  function attach(doc, input, options) {
+    const settings = options || {};
+    const resins = typeof settings.resins === "function" ? settings.resins : () => [];
+    const onChoose = typeof settings.onChoose === "function" ? settings.onChoose : () => {};
+    const base = settings.id || "slate-resin";
+    const host = settings.host || input.parentNode;
+    const list = element(doc, "ul", "slate-combobox__list", { role: "listbox", id: `${base}-list`, hidden: "" });
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", `${base}-list`);
+    if (host) host.appendChild(list);
+
+    let options2 = [];
+    let active = -1;
+    let shown = false;
+    let catalog = null;
+    let detached = false;
+
+    function catalogNow() {
+      if (catalog === null) {
+        let list2;
+        try { list2 = resins(); } catch (error) { list2 = []; }
+        catalog = Array.isArray(list2) ? list2 : [];
+      }
+      return catalog;
+    }
+
+    function render() {
+      options2 = optionsFor(catalogNow(), input.value);
+      active = paint(doc, list, input, base, options2, active, catalogNow().length === 0, choose);
+    }
+
+    function show() {
+      if (detached) return;
+      render();
+      if (shown) return;
+      shown = true;
+      list.removeAttribute("hidden");
+      input.setAttribute("aria-expanded", "true");
+    }
+
+    function hide() {
+      if (!shown) return;
+      shown = false;
+      list.setAttribute("hidden", "");
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+
+    function choose(code) {
+      if (detached) return;
+      input.value = normalize(code);
+      hide();
+      onChoose(input.value);
+    }
+
+    const onInput = () => { active = 0; show(); };
+    const onKeydown = event => {
+      if (!event || detached) return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (typeof event.preventDefault === "function") event.preventDefault();
+        if (!shown) { active = 0; show(); return; }
+        if (options2.length === 0) return;
+        active = event.key === "ArrowDown" ? (active + 1) % options2.length : (active - 1 + options2.length) % options2.length;
+        render();
+      } else if (event.key === "Enter") {
+        if (!shown) return;
+        if (typeof event.preventDefault === "function") event.preventDefault();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        if (normalize(input.value) === "") choose("");
+        else if (active >= 0 && options2[active]) choose(options2[active].code);
+        else hide();
+      } else if (event.key === "Escape") {
+        if (!shown) return;
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        hide();
+      }
+    };
+    const onBlur = event => {
+      const related = event && event.relatedTarget;
+      if (related && typeof list.contains === "function" && list.contains(related)) return;
+      hide();
+    };
+    input.addEventListener("input", onInput);
+    input.addEventListener("keydown", onKeydown);
+    input.addEventListener("blur", onBlur);
+
+    function destroy() {
+      if (detached) return;
+      detached = true;
+      hide();
+      input.removeEventListener("input", onInput);
+      input.removeEventListener("keydown", onKeydown);
+      input.removeEventListener("blur", onBlur);
+      if (list.parentNode) list.parentNode.removeChild(list);
+    }
+
+    return Object.freeze({
+      list,
+      show,
+      hide,
+      destroy,
+      isOpen: () => shown && !detached,
+      options: () => options2.slice(),
+      active: () => active
+    });
+  }
+
+  return Object.freeze({ RESULT_LIMIT, CODE_MAX, NO_CATALOG, normalize, filterResins, optionsFor, densityNote, open, attach });
 });
