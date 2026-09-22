@@ -175,7 +175,7 @@ test("raw colours live only in the theme mappings, and no sheet spends a Station
   }
 });
 
-test("Slate has exactly one breakpoint, and it is the documented one", () => {
+test("Slate has no width breakpoint, so narrowing the browser cannot replace or reflow it", () => {
   const conditions = new Set();
   for (const sheet of componentSheets()) {
     for (const match of sheet.css.matchAll(/@media([^{]+)\{/g)) {
@@ -184,7 +184,7 @@ test("Slate has exactly one breakpoint, and it is the documented one", () => {
       conditions.add(condition);
     }
   }
-  assert.deepEqual([...conditions].sort(), ["(max-width: 1099px)"], "Slate gained an undocumented breakpoint");
+  assert.deepEqual([...conditions].sort(), [], "Slate gained an undocumented width breakpoint");
 });
 
 test("every keyframe is named slate-<thing> and has a reduced-motion switch in the same file", () => {

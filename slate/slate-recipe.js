@@ -300,6 +300,10 @@
         }
       }
       if (entry.toggles) {
+        // Pump-off is a tracking mark, so keep it out of rows that are not
+        // being tracked. If a stale pump-off mark exists, leave the control
+        // visible until the operator clears it.
+        show(entry.toggles.pump, cells.track || cells.pumpOff);
         if (last.track !== cells.track) {
           entry.toggles.tracking.setAttribute("aria-pressed", cells.track ? "true" : "false");
           entry.row.classList.toggle("is-tracked", cells.track);

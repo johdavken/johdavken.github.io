@@ -87,6 +87,8 @@ test("a structural update lists every layer in recipe order with its role, share
   assert.equal(a1.querySelector(".slate-hopper__weight").textContent, "400 lb");
   assert.equal(a1.querySelector("[data-slate-control='tracking']").getAttribute("aria-pressed"), "true");
   assert.ok(a1.classList.contains("is-tracked"));
+  assert.ok(!a1.querySelector("[data-slate-control='pump']").hasAttribute("hidden"));
+  assert.ok(row(view, "A3").querySelector("[data-slate-control='pump']").hasAttribute("hidden"));
   assert.ok(a1.querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), "the badge is not the drag handle");
   assert.equal(a1.style.getPropertyValue("--slate-row-i"), "0");
 

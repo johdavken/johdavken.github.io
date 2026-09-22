@@ -5,8 +5,9 @@
  *   rail | centre          aside
  *
  * The frame is the surface colour on the page's background, so on a wide
- * screen it reads as a sheet laid on the desk; up to its maximum width it
- * is the window. Below 1100px the shell steps aside for the notice.
+ * screen it reads as a sheet laid on the desk. The sheet keeps this width
+ * when the browser narrows, so its columns never compress or disappear;
+ * the browser supplies horizontal scrolling around the unchanged frame.
  */
 
 .slate-shell {
@@ -17,8 +18,8 @@
     "rail header header"
     "rail stats aside"
     "rail centre aside";
-  width: 100%;
-  max-width: var(--slate-frame-max);
+  width: var(--slate-frame-width);
+  min-width: var(--slate-frame-width);
   min-height: 100vh;
   margin: 0 auto;
   background: var(--slate-surface);
@@ -57,8 +58,8 @@
   padding: var(--slate-space-5) var(--slate-space-5) var(--slate-space-5) 0;
 }
 
-/* The notice for a window below Slate's range: hidden until the
-   breakpoint swaps it for the shell. */
+/* Retained as an inert compatibility node for hosts built against Slate's
+   first shell. The page is never replaced by a size warning. */
 .slate-too-small {
   display: none;
   max-width: 32em;
@@ -69,15 +70,4 @@
   background: var(--slate-surface);
   color: var(--slate-text-muted);
   text-align: center;
-}
-
-/* Slate's one breakpoint (tokens.css explains the range). */
-@media (max-width: 1099px) {
-  .slate-shell {
-    display: none;
-  }
-
-  .slate-too-small {
-    display: block;
-  }
 }

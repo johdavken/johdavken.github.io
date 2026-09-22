@@ -38,8 +38,9 @@
   /* ---- Shell layout ----
    * A centred frame: the rail down the left, the header across the top,
    * the job's cards over the working pane, and the timeline's pane at
-   * the right. The frame stops growing at 1440px and centres past that. */
-  --slate-frame-max: 1440px;
+   * the right. It is one stable 1440px working surface: larger windows
+   * centre it and smaller windows scroll it without changing proportions. */
+  --slate-frame-width: 1440px;
   --slate-rail-width: 232px;
   --slate-aside-width: 300px;
   --slate-header-height: 64px;
@@ -90,11 +91,7 @@
 /* ---------------------------------------------------------------------
  *   Breakpoints
  * -------------------------------------------------------------------
- * Slate has exactly one, in shell.css:
- *
- *   >= 1100px   the supported range. The frame takes the window up to its
- *               maximum width and centres past that.
- *   <  1100px   below Slate's supported range. The shell says so rather
- *               than degrading into a phone layout - Slate is desktop-only
- *               by design.
+ * Slate has no width breakpoint. It is a fixed desktop work surface. Below
+ * its 1440px design width the browser scrolls horizontally; components do
+ * not reflow, abbreviate, or disappear.
  */

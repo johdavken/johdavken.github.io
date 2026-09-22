@@ -34,8 +34,17 @@ test("the shell is one detached slate-root carrying every mount exactly once, an
   const notice = root.querySelector("[data-slate-mount='notice']");
   assert.ok(notice.hasAttribute("hidden"));
   assert.equal(notice.getAttribute("role"), "status");
-  // The too-small notice is present for the breakpoint to reveal.
+  // Kept for compatibility, but CSS never reveals it in place of Slate.
   assert.equal(root.querySelector(".slate-too-small").textContent, shell.TOO_SMALL);
+});
+
+test("the shell keeps one 1440px composition and never hides behind a width gate", () => {
+  const css = fs.readFileSync(path.join(__dirname, "slate/styles/shell.css"), "utf8");
+  const tokens = fs.readFileSync(path.join(__dirname, "slate/styles/tokens.css"), "utf8");
+  assert.match(tokens, /--slate-frame-width: 1440px;/);
+  assert.match(css, /width: var\(--slate-frame-width\);\s*\n\s*min-width: var\(--slate-frame-width\);/);
+  assert.doesNotMatch(css, /@media \(max-width:/);
+  assert.doesNotMatch(css, /\.slate-shell\s*\{[^}]*display:\s*none/s);
 });
 
 test("the way back is the same URL without the flag, and the harness's is the application beside it", () => {
