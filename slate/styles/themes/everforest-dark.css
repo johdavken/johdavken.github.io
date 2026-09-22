@@ -1,0 +1,61 @@
+/* Slate theme: Everforest Dark.
+ *
+ * Everforest's dark palette on Slate's semantic contract: green-grey
+ * surfaces, parchment text, the palette's blue for the accent, its
+ * green, yellow, red and aqua for the statuses, purple for a pumped-off
+ * hopper. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="everforest-dark"],
+.slate-theme-scope[data-theme="everforest-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #232a2e;
+  --slate-surface: #2d353b;
+  --slate-surface-raised: #343f44;
+  --slate-surface-sunken: #272e33;
+  --slate-surface-hover: #3d484d;
+  --slate-surface-selected: #434e54;
+
+  --slate-text: #d3c6aa;
+  --slate-text-muted: #cdc3a7;
+  --slate-text-faint: #c9bfa3;
+  --slate-text-disabled: #7a8478;
+  --slate-text-on-accent: #232a2e;
+
+  --slate-border-subtle: #3d484d;
+  --slate-border: #7f8a83;
+  --slate-border-strong: #9da9a0;
+  --slate-focus-ring: #7fbbb3;
+
+  --slate-accent: #7fbbb3;
+  --slate-accent-text: #9cd5cd;
+  --slate-accent-hover: #91cbc4;
+  --slate-accent-active: #6eaaa2;
+  --slate-accent-soft: rgba(127, 187, 179, 0.14);
+  --slate-pump-off-soft: rgba(214, 153, 182, 0.12);
+
+  --slate-success: #b3ca8e;
+  --slate-warning: #e2c68e;
+  --slate-danger: #f49e9f;
+  --slate-info: #7fbbb3;
+  --slate-success-soft: rgba(167, 192, 128, 0.12);
+  --slate-warning-soft: rgba(219, 188, 127, 0.12);
+  --slate-danger-soft: rgba(230, 126, 128, 0.1);
+
+  --slate-tracking: #b3ca8e;
+  --slate-pump-off: #e0aac4;
+  --slate-overdue: #f49e9f;
+  --slate-smart: #83c092;
+
+  --slate-layer-outside: #7fbbb3;
+  --slate-layer-subskin: #a7c080;
+  --slate-layer-core: #e69875;
+  --slate-layer-inside: #d699b6;
+  --slate-layer-single: #859289;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
+  --slate-qr-surface: #d3c6aa;
+}

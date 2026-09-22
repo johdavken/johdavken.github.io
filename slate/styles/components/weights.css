@@ -1,0 +1,344 @@
+/* The Weights section: the line's layers as cards, one row per hopper
+   with its weight field and, with Smart Hoppers on, its geometry field
+   and the computed weight. The bar carries the switch and the shared
+   circumference. The profiles under the layers wear the Recipe Book's
+   classes (recipe-book.css); this sheet lays out only what is its own. */
+
+/* ---- The bar ---- */
+
+.slate-weights__circumference {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--slate-space-2);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-weights__circumference-label {
+  font-weight: 500;
+}
+
+.slate-weights__shared {
+  color: var(--slate-text-faint);
+}
+
+.slate-weights__smart-text {
+  margin-top: calc(-1 * var(--slate-space-2));
+  margin-bottom: var(--slate-space-3);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+/* The section's line: the switch's or the circumference's answer. */
+.slate-weights__note {
+  margin-bottom: var(--slate-space-3);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-weights__note.is-error {
+  color: var(--slate-danger);
+}
+
+.slate-weights__note.is-ok {
+  color: var(--slate-success);
+}
+
+.slate-weights__empty {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Columns and rows: one grid for both ---- */
+
+.slate-weights__columns,
+.slate-weights__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 128px;
+  align-items: center;
+  gap: var(--slate-space-3);
+}
+
+/* With Smart Hoppers on: the geometry field and the computed weight. */
+.slate-weights[data-shape^="smart"] .slate-weights__columns,
+.slate-weights[data-shape^="smart"] .slate-weights__row {
+  grid-template-columns: 56px minmax(0, 1fr) 128px 128px 160px;
+}
+
+.slate-weights__columns {
+  margin-left: calc(var(--slate-layer-head-width) + var(--slate-space-4));
+  padding: 0 var(--slate-space-3) var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-weights__column--field {
+  text-align: right;
+}
+
+/* ---- Layers ---- */
+
+.slate-weights__layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  margin-bottom: var(--slate-space-5);
+}
+
+.slate-weights__layer {
+  display: grid;
+  grid-template-columns: var(--slate-layer-head-width) minmax(0, 1fr);
+  gap: var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  overflow: hidden;
+}
+
+.slate-weights__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border-left: 4px solid var(--slate-layer-single);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-weights__layer[data-tone="outside"] .slate-weights__head {
+  border-left-color: var(--slate-layer-outside);
+}
+
+.slate-weights__layer[data-tone="subskin"] .slate-weights__head {
+  border-left-color: var(--slate-layer-subskin);
+}
+
+.slate-weights__layer[data-tone="core"] .slate-weights__head {
+  border-left-color: var(--slate-layer-core);
+}
+
+.slate-weights__layer[data-tone="inside"] .slate-weights__head {
+  border-left-color: var(--slate-layer-inside);
+}
+
+.slate-weights__layer-name {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-weights__layer-role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-weights__rows {
+  display: flex;
+  flex-direction: column;
+  padding: var(--slate-space-2) var(--slate-space-3) var(--slate-space-2) 0;
+}
+
+/* ---- Hopper rows ---- */
+
+.slate-weights__row {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-weights__row.is-empty {
+  color: var(--slate-text-faint);
+}
+
+.slate-weights__row.is-editing {
+  background: var(--slate-surface-sunken);
+}
+
+.slate-weights__id {
+  font-weight: 600;
+}
+
+.slate-weights__resin {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-weights__resin.is-placeholder {
+  color: var(--slate-text-faint);
+}
+
+/* A field and its unit. */
+.slate-weights__wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--slate-space-1);
+}
+
+.slate-weights__field {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-weights__field[readonly] {
+  --slate-field-border: var(--slate-stroke) solid transparent;
+  --slate-field-bg: none;
+  cursor: default;
+}
+
+.slate-weights__field[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+/* The line's value moved under an open draft. */
+.slate-weights__field.is-changed-underneath {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-info);
+}
+
+.slate-weights__unit {
+  flex: none;
+  min-width: 1.6em;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-weights__circumference .slate-weights__field {
+  --slate-field-width: 6em;
+}
+
+/* What Smart Hoppers computed, or why it computed nothing. */
+.slate-weights__computed {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-weights__computed[data-kind="computed"] {
+  color: var(--slate-smart);
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+}
+
+.slate-weights__row-note {
+  grid-column: 1 / -1;
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- The profiles ---- */
+
+/* The Book's rows and layers, without what a profile does not have: no
+   favourite star before the name, no share before the hoppers. */
+.slate-weights__profiles .slate-book__row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.slate-weights__profiles .slate-book__layer {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+
+.slate-weights__profiles-title {
+  flex: none;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-weights__detail-meta {
+  margin-top: calc(-1 * var(--slate-space-2));
+  margin-bottom: var(--slate-space-3);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Layers with the head on top ----
+   The same Layout preference the Recipe follows (recipe.css): cards side
+   by side, the head across the top, and each row its id and resin with
+   the field - and, with Smart Hoppers, the geometry and the computed
+   weight - stacked under the resin. The heading row goes with it; the
+   unit stands beside every field. */
+
+.slate-root[data-layers="top"] .slate-weights__columns {
+  display: none;
+}
+
+.slate-root[data-layers="top"] .slate-weights__layers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.slate-root[data-layers="top"] .slate-weights__layer {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  overflow: visible;
+}
+
+.slate-root[data-layers="top"] .slate-weights__head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-top-left-radius: var(--slate-radius-lg);
+  border-top-right-radius: var(--slate-radius-lg);
+}
+
+.slate-root[data-layers="top"] .slate-weights__rows {
+  padding: var(--slate-space-1) var(--slate-space-2) var(--slate-space-2);
+}
+
+/* Every row, Smart Hoppers or not: the attribute out-specifies the
+   five-column smart rule rather than relying on source order. */
+.slate-root[data-layers="top"] .slate-weights__row[data-key] {
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: var(--slate-space-2);
+  row-gap: var(--slate-space-1);
+  padding: var(--slate-space-1) var(--slate-space-2);
+}
+
+.slate-root[data-layers="top"] .slate-weights__wrap {
+  grid-column: 2;
+  justify-content: flex-start;
+}
+
+/* A row's field, which its line would otherwise size to the input's own
+   width; the bar's circumference keeps its width. */
+.slate-root[data-layers="top"] .slate-weights__field[data-kind="weight"],
+.slate-root[data-layers="top"] .slate-weights__field[data-kind="geometry"] {
+  --slate-field-width: 7em;
+}
+
+.slate-root[data-layers="top"] .slate-weights__computed {
+  grid-column: 2;
+  white-space: normal;
+}
+
+.slate-root[data-layers="top"] .slate-weights__row-note {
+  padding-left: calc(40px + var(--slate-space-2));
+}
+
+/* ---- Layers the other way round (recipe.css) ---- */
+
+.slate-root[data-layer-order="reversed"] .slate-weights__layer {
+  order: calc(-1 * var(--slate-layer-i, 0));
+}

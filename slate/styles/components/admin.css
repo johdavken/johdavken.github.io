@@ -1,0 +1,424 @@
+/* The administrator's sections: Workspace Management, Line Configuration
+   and Resin Database. They stand in the centre pane, so they take the
+   section bar and the Recipe Book's list-and-detail chrome rather than
+   the aside's sticky panel; what is here is only what those do not
+   already give. */
+
+.slate-admin__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+}
+
+/* Signed out, or with no application behind the tools: the one line that
+   says so, in the body's place. */
+.slate-admin__gate {
+  max-width: 60ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Workspaces ----
+   The list and the detail are the Recipe Book's (recipe-book.css); what
+   is here is the line's own parts: the device on this browser, the
+   linked devices, and the maintenance kept folded away. */
+
+/* This device's RT Sync identity, under the bar when it is asked for. */
+.slate-admin__diagnostics {
+  margin-bottom: var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A row in the list whose line this device is already on. */
+.slate-root .slate-book__row.is-connected {
+  color: var(--slate-accent-text);
+}
+
+.slate-admin__detail-head {
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-admin__detail-meta {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-admin__connected {
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+/* ---- Linked devices ---- */
+
+.slate-admin__devices {
+  margin-top: var(--slate-space-4);
+}
+
+.slate-admin__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-admin__section-title {
+  flex: 1 1 auto;
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__section-note {
+  margin-bottom: var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__device-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-admin__device-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+}
+
+.slate-admin__device-row.is-this-device {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+}
+
+.slate-admin__device-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-admin__device-role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__device-seen {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-admin__device-self {
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__device-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+}
+
+/* ---- Maintenance, folded ---- */
+
+.slate-admin__maintenance {
+  margin-top: var(--slate-space-4);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-admin__fold {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  width: 100%;
+  padding: var(--slate-space-1);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+}
+
+.slate-root .slate-admin__fold:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-admin__fold-title {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__fold-note {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__maintenance-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  padding-top: var(--slate-space-3);
+}
+
+.slate-admin__maintenance-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+}
+
+.slate-admin__maintenance-item.is-danger {
+  border-color: var(--slate-danger);
+}
+
+.slate-admin__maintenance-title {
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+}
+
+.slate-admin__maintenance-copy {
+  max-width: 60ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* The line a merge would write into. */
+.slate-admin__targets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-admin__targets-label,
+.slate-admin__targets-none {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root .slate-admin__chip {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root .slate-admin__chip:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-admin__chip[aria-checked="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+/* ---- A confirmation, in the detail's place ---- */
+
+.slate-admin__confirm-title {
+  margin-bottom: var(--slate-space-2);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-admin__confirm-line {
+  min-height: var(--slate-space-3);
+  max-width: 68ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Line Configuration ----
+   The editor is short aligned rows: the field's name in a fixed left
+   track, its control in the right. The layer rows sit inside one of
+   them, each layer its own line: the letter, its hopper count, and
+   either the side it takes (the two ends) or the role that follows. */
+
+.slate-lines__name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+}
+
+.slate-lines__tag {
+  padding: 0 var(--slate-space-2);
+  border-radius: 999px;
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-lines__tag[data-tag="current"] {
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-lines__tag[data-tag="dirty"] {
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+}
+
+.slate-lines__tag[data-tag="inactive"] {
+  color: var(--slate-text-faint);
+}
+
+/* A line no longer in use reads back in the list. */
+.slate-root .slate-book__row.is-inactive {
+  color: var(--slate-text-faint);
+}
+
+.slate-lines__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-3);
+}
+
+.slate-lines__field {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--slate-space-3);
+}
+
+.slate-lines__label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-lines__value {
+  display: block;
+  min-width: 0;
+}
+
+.slate-lines__input {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+}
+
+.slate-root .slate-lines__input[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+/* A number small enough to read at a glance: the line number, a count. */
+.slate-lines__input[data-width="short"] {
+  --slate-field-width: 5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A measured value, which wants room for its decimals. */
+.slate-lines__input[data-width="value"] {
+  --slate-field-width: 12ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-lines__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-1);
+}
+
+/* ---- The layers ---- */
+
+.slate-lines__layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+}
+
+.slate-lines__layer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-lines__layer-key {
+  min-width: 2ch;
+  font-weight: 600;
+}
+
+.slate-lines__layer-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-1);
+}
+
+.slate-lines__layer-unit,
+.slate-lines__layer-role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-lines__hoppers {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* What a save reaches, and when. */
+.slate-lines__reach {
+  max-width: 60ch;
+  margin-top: var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+/* ---- Resin Database ----
+   The list has a search of its own above it, standing outside the rows
+   so a redraw never takes the caret. The record's fields reuse Line
+   Configuration's aligned rows. */
+
+.slate-resins__list-pane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+}
+
+.slate-resins__search {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  --slate-field-width: 100%;
+  min-width: 0;
+}
+
+.slate-resins__count {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}

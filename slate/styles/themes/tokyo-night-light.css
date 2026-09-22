@@ -1,0 +1,62 @@
+/* Slate theme: Tokyo Night Day.
+ *
+ * Tokyo Night Day - the palette's light variant - on Slate's semantic
+ * contract: cool grey surfaces, navy text, the palette's blue for the
+ * accent, its green, yellow, red and cyan for the statuses, purple for a
+ * pumped-off hopper, teal for a computed weight. Day's statuses are drawn
+ * for large type, so each is deepened here until it reads at text size.
+ * Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="tokyo-night-light"],
+.slate-theme-scope[data-theme="tokyo-night-light"] {
+  color-scheme: light;
+  --slate-color-scheme: light;
+  --slate-bg: #d9dbe3;
+  --slate-surface: #e1e2e7;
+  --slate-surface-raised: #eef0f5;
+  --slate-surface-sunken: #d5d8e2;
+  --slate-surface-hover: #d9dce6;
+  --slate-surface-selected: #cdd1df;
+
+  --slate-text: #2f3d6e;
+  --slate-text-muted: #3a4a80;
+  --slate-text-faint: #3f4f85;
+  --slate-text-disabled: #8990b3;
+  --slate-text-on-accent: #ffffff;
+
+  --slate-border-subtle: #c4c8da;
+  --slate-border: #a8aecb;
+  --slate-border-strong: #8990b3;
+  --slate-focus-ring: #2361cd;
+
+  --slate-accent: #2361cd;
+  --slate-accent-text: #1a4fae;
+  --slate-accent-hover: #1f57b9;
+  --slate-accent-active: #1a4ca3;
+  --slate-accent-soft: rgba(46, 125, 233, 0.12);
+  --slate-pump-off-soft: rgba(120, 71, 189, 0.1);
+
+  --slate-success: #3f5522;
+  --slate-warning: #7f4a0c;
+  --slate-danger: #a33030;
+  --slate-info: #00607f;
+  --slate-success-soft: rgba(88, 117, 57, 0.09);
+  --slate-warning-soft: rgba(177, 92, 0, 0.12);
+  --slate-danger-soft: rgba(198, 67, 67, 0.08);
+
+  --slate-tracking: #3f5522;
+  --slate-pump-off: #6a3ea8;
+  --slate-overdue: #a33030;
+  --slate-smart: #0d6b58;
+
+  --slate-layer-outside: #2e7de9;
+  --slate-layer-subskin: #118c74;
+  --slate-layer-core: #b15c00;
+  --slate-layer-inside: #9854f1;
+  --slate-layer-single: #8990b3;
+
+  --slate-shadow-card: 0 1px 2px rgba(47, 61, 110, 0.1);
+  --slate-shadow-pop: 0 10px 28px rgba(47, 61, 110, 0.24);
+  --slate-scrim: rgba(0, 0, 0, 0.4);
+  --slate-qr-surface: #eef0f5;
+}

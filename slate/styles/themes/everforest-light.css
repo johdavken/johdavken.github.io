@@ -1,0 +1,61 @@
+/* Slate theme: Everforest Light.
+ *
+ * Everforest's light palette on Slate's semantic contract: paper
+ * surfaces, slate-green text, the palette's blue for the accent, its
+ * green, yellow, red and aqua for the statuses, purple for a pumped-off
+ * hopper. The light statuses are drawn for large type, so each is
+ * deepened here until it reads at text size. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="everforest-light"],
+.slate-theme-scope[data-theme="everforest-light"] {
+  color-scheme: light;
+  --slate-color-scheme: light;
+  --slate-bg: #f4f0d9;
+  --slate-surface: #fdf6e3;
+  --slate-surface-raised: #fffcf0;
+  --slate-surface-sunken: #efebd4;
+  --slate-surface-hover: #e6e2cc;
+  --slate-surface-selected: #e0dcc7;
+
+  --slate-text: #45525a;
+  --slate-text-muted: #4d5b63;
+  --slate-text-faint: #51606a;
+  --slate-text-disabled: #939f91;
+  --slate-text-on-accent: #fdf6e3;
+
+  --slate-border-subtle: #e0dcc7;
+  --slate-border: #bdc3af;
+  --slate-border-strong: #a6b0a0;
+  --slate-focus-ring: #256b93;
+
+  --slate-accent: #256b93;
+  --slate-accent-text: #1c5a7d;
+  --slate-accent-hover: #215f83;
+  --slate-accent-active: #1c5373;
+  --slate-accent-soft: rgba(58, 148, 197, 0.12);
+  --slate-pump-off-soft: rgba(223, 105, 186, 0.1);
+
+  --slate-success: #536500;
+  --slate-warning: #7d5c00;
+  --slate-danger: #b2302d;
+  --slate-info: #227a58;
+  --slate-success-soft: rgba(141, 161, 1, 0.1);
+  --slate-warning-soft: rgba(223, 160, 0, 0.14);
+  --slate-danger-soft: rgba(248, 85, 82, 0.08);
+
+  --slate-tracking: #536500;
+  --slate-pump-off: #9a3f7f;
+  --slate-overdue: #b2302d;
+  --slate-smart: #23705b;
+
+  --slate-layer-outside: #3a94c5;
+  --slate-layer-subskin: #8da101;
+  --slate-layer-core: #dfa000;
+  --slate-layer-inside: #df69ba;
+  --slate-layer-single: #939f91;
+
+  --slate-shadow-card: 0 1px 2px rgba(69, 82, 90, 0.1);
+  --slate-shadow-pop: 0 10px 28px rgba(69, 82, 90, 0.24);
+  --slate-scrim: rgba(0, 0, 0, 0.4);
+  --slate-qr-surface: #fffcf0;
+}

@@ -1,0 +1,100 @@
+/* Slate's theme-independent design tokens.
+ *
+ * Layout, type, shape and motion live here. Colour lives only in themes/*.css,
+ * where each registered theme maps the same semantic contract onto a palette.
+ * Component styles spend those semantic tokens and never name a theme.
+ *
+ * Slate deliberately does not read the application's theme variables, nor
+ * Station's. The hosted Slate root owns its own data-theme.
+ */
+
+.slate-root {
+  /* ---- Space ---- */
+  --slate-space-1: 4px;
+  --slate-space-2: 8px;
+  --slate-space-3: 12px;
+  --slate-space-4: 16px;
+  --slate-space-5: 24px;
+  --slate-space-6: 32px;
+
+  /* ---- Shape ---- */
+  --slate-radius-sm: 4px;
+  --slate-radius: 8px;
+  --slate-radius-lg: 12px;
+  --slate-stroke: 1px;
+
+  /* ---- Type ---- */
+  --slate-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --slate-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --slate-text-xs: 11px;
+  --slate-text-sm: 12px;
+  --slate-text-md: 14px;
+  --slate-text-lg: 16px;
+  --slate-text-xl: 20px;
+  --slate-text-2xl: 28px;
+  --slate-line-tight: 1.25;
+  --slate-line-normal: 1.5;
+
+  /* ---- Shell layout ----
+   * A centred frame: the rail down the left, the header across the top,
+   * the job's cards over the working pane, and the timeline's pane at
+   * the right. It is one stable 1440px working surface: larger windows
+   * centre it and smaller windows scroll it without changing proportions. */
+  --slate-frame-width: 1440px;
+  --slate-rail-width: 232px;
+  --slate-aside-width: 300px;
+  --slate-header-height: 64px;
+  /* The recipe's layer column: the layer's name, role and share at the
+     left of its hopper rows. */
+  --slate-layer-head-width: 168px;
+  /* The recipe row's tracking column: room for the Track pill, fixed so
+     the blend and weight columns beside it never move. */
+  --slate-controls-width: 84px;
+
+  /* ---- Fields ----
+   * base.css resets every input to these; a component sets the property
+   * on its input's class rather than fighting the reset's specificity. */
+  --slate-field-padding: 0;
+  --slate-field-border: 0;
+  --slate-field-radius: 0;
+  --slate-field-bg: none;
+  --slate-field-shadow: none;
+  --slate-field-min-height: 0;
+  --slate-field-opacity: 1;
+  --slate-field-cursor: text;
+  --slate-field-width: auto;
+
+  /* ---- Motion ----
+   * Subtle and everywhere: a menu drops, a section arrives, a row that
+   * changed under the operator flashes once. `ack` is a hover or press,
+   * `drop` a menu, `move` a section or row arriving, `lead` the stagger
+   * between rows, `flash` the length of an update's highlight. */
+  --slate-motion-ack: 80ms;
+  --slate-motion-drop: 160ms;
+  --slate-motion-move: 220ms;
+  --slate-motion-lead: 30ms;
+  --slate-motion-flash: 600ms;
+  --slate-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The single off-switch: every animation and transition in Slate spends
+   these tokens, so zeroing them here makes all of it instant. The
+   component files carry their own reduced-motion blocks as well, so a
+   keyframe is stopped even if a duration is ever hard-coded. */
+@media (prefers-reduced-motion: reduce) {
+  .slate-root {
+    --slate-motion-ack: 0ms;
+    --slate-motion-drop: 0ms;
+    --slate-motion-move: 0ms;
+    --slate-motion-lead: 0ms;
+    --slate-motion-flash: 0ms;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ *   Breakpoints
+ * -------------------------------------------------------------------
+ * Slate has no width breakpoint. It is a fixed desktop work surface. Below
+ * its 1440px design width the browser scrolls horizontally; components do
+ * not reflow, abbreviate, or disappear.
+ */

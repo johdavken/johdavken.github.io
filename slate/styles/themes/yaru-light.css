@@ -1,0 +1,64 @@
+/* Slate theme: Yaru Light.
+ *
+ * Ubuntu's Yaru palette on Slate's semantic contract: cool white surfaces,
+ * near-black text, Ubuntu orange for the accent, the Yaru status colours
+ * for success/warning/danger/info, aubergine for a pumped-off hopper.
+ * Every theme file declares the same token set (slate-theme.test.js pins
+ * it), and these files are the only place a colour literal is allowed.
+ */
+.slate-root[data-theme="yaru-light"],
+.slate-theme-scope[data-theme="yaru-light"] {
+  color-scheme: light;
+  --slate-color-scheme: light;
+
+  --slate-bg: #f2f2f2;
+  --slate-surface: #fafafa;
+  --slate-surface-raised: #ffffff;
+  --slate-surface-sunken: #e9e9e9;
+  --slate-surface-hover: #ededed;
+  --slate-surface-selected: #e0e0e0;
+
+  --slate-text: #303030;
+  --slate-text-muted: #5e5c64;
+  --slate-text-faint: #606065;
+  --slate-text-disabled: #9a9996;
+  --slate-text-on-accent: #ffffff;
+
+  --slate-border-subtle: #e0e0e0;
+  --slate-border: #c8c8c8;
+  --slate-border-strong: #9a9996;
+  --slate-focus-ring: #c2400f;
+
+  --slate-accent: #c2400f;
+  /* Text and filled controls have different contrast requirements. */
+  --slate-accent-text: #a33509;
+  --slate-accent-hover: #b53a0b;
+  --slate-accent-active: #a33509;
+  --slate-accent-soft: rgba(194, 64, 15, 0.14);
+  --slate-pump-off-soft: rgba(142, 58, 142, 0.12);
+
+  --slate-success: #0b6d1b;
+  --slate-warning: #805000;
+  --slate-danger: #b91428;
+  --slate-info: #0060c0;
+  --slate-success-soft: rgba(11, 109, 27, 0.12);
+  --slate-warning-soft: rgba(149, 93, 0, 0.14);
+  --slate-danger-soft: rgba(199, 22, 43, 0.12);
+
+  --slate-tracking: #0b6d1b;
+  --slate-pump-off: #8e3a8e;
+  --slate-overdue: #b91428;
+  /* A weight Smart Hoppers computed, standing in for the entered one. */
+  --slate-smart: #0f766e;
+
+  --slate-layer-outside: #0073e5;
+  --slate-layer-subskin: #03875b;
+  --slate-layer-core: #c97d00;
+  --slate-layer-inside: #772953;
+  --slate-layer-single: #5e5c64;
+
+  --slate-shadow-card: 0 1px 2px rgba(48, 48, 48, 0.08);
+  --slate-shadow-pop: 0 10px 28px rgba(48, 48, 48, 0.22);
+  --slate-scrim: rgba(0, 0, 0, 0.4);
+  --slate-qr-surface: #ffffff;
+}

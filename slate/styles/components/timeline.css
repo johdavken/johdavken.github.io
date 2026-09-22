@@ -1,0 +1,433 @@
+/* The right pane: the run-down as a vertical timeline. The card itself -
+   sticky, viewport-tall - is the aside's shared panel chrome (panel.css).
+   The card geometry (padding, the when-line, a member row, the facts line)
+   is mirrored by slate-timeline.js's constants: change both. */
+
+/* ---- Head ---- */
+
+.slate-timeline__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+}
+
+.slate-timeline__title {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-timeline__clock {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline__scale {
+  display: flex;
+  margin-left: auto;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  overflow: hidden;
+}
+
+.slate-root .slate-timeline__range {
+  padding: 2px var(--slate-space-2);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+}
+
+.slate-root .slate-timeline__range:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+/* The scale clips its rounded corners, so draw keyboard focus inward. */
+.slate-root .slate-timeline__range:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline-offset: -2px;
+}
+
+.slate-root .slate-timeline__range:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-timeline__range[aria-pressed="true"] {
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-timeline__range[aria-pressed="true"]:active {
+  background: var(--slate-accent-active);
+}
+
+.slate-timeline__changeover-line {
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline.is-unset .slate-timeline__changeover-line {
+  color: var(--slate-text-faint);
+  font-weight: 400;
+}
+
+.slate-timeline.is-stale .slate-timeline__changeover-line {
+  color: var(--slate-warning);
+}
+
+.slate-timeline__counts {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-timeline__notice {
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-timeline.is-stale .slate-timeline__notice {
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+}
+
+/* ---- Axis ---- */
+
+.slate-timeline__axis {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: var(--slate-space-2);
+}
+
+.slate-timeline.is-idle .slate-timeline__axis,
+.slate-timeline.is-idle .slate-timeline__list {
+  opacity: 0.4;
+}
+
+/* ---- List ----
+   The Timeline preference's other view: the rows in time order, in the
+   axis's place, scrolling when they outgrow the panel. */
+
+.slate-timeline__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: var(--slate-space-2);
+  overflow-y: auto;
+}
+
+.slate-timeline__list .slate-timeline__member {
+  height: auto;
+  min-height: 28px;
+  padding: 2px 0;
+  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+/* The rail runs down the left, inside the tick-label gutter; the gutter
+   is wide enough that a label clears the card's edge. */
+.slate-timeline__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 58px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--slate-border);
+}
+
+.slate-timeline__tick {
+  position: absolute;
+  left: 52px;
+  width: 6px;
+  height: 0;
+  border-top: 1px solid var(--slate-border);
+}
+
+.slate-timeline__tick[data-kind="major"] {
+  left: 49px;
+  width: 9px;
+}
+
+.slate-timeline__tick[data-kind="hour"] {
+  left: 46px;
+  width: 12px;
+  border-top-color: var(--slate-border-strong);
+}
+
+.slate-timeline__tick-label {
+  position: absolute;
+  top: -0.6em;
+  right: 12px;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The Now line, across the whole axis. */
+.slate-timeline__now {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 2px solid var(--slate-accent);
+}
+
+.slate-timeline__now-label {
+  position: absolute;
+  top: -1.4em;
+  left: 0;
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.slate-timeline.is-overdue .slate-timeline__now {
+  border-top: 0;
+}
+
+/* Pulse only the line; its label must remain fully legible. */
+.slate-timeline.is-overdue .slate-timeline__now::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 2px solid var(--slate-overdue);
+  animation: slate-now-pulse 2s var(--slate-motion-ease) infinite;
+}
+
+.slate-timeline.is-overdue .slate-timeline__now-label {
+  color: var(--slate-overdue);
+}
+
+/* The changeover: a dashed line with its label riding below it. */
+.slate-timeline__changeover {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 2px dashed var(--slate-warning);
+}
+
+.slate-timeline__changeover-label {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  color: var(--slate-warning);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- Cards ---- */
+
+/* An event: the dot on the rail, a stem to the card when the card was
+   pushed off its instant, and the card to the right of the rail. */
+.slate-timeline__event {
+  position: absolute;
+  right: 0;
+  left: 0;
+}
+
+.slate-timeline__dot {
+  position: absolute;
+  left: 54px;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border: 2px solid var(--slate-surface-raised);
+  border-radius: 50%;
+  background: var(--slate-accent);
+}
+
+.slate-timeline__stem {
+  position: absolute;
+  top: 0;
+  left: 58px;
+  width: 2px;
+  background: var(--slate-accent-soft);
+}
+
+.slate-timeline__card {
+  position: absolute;
+  right: 0;
+  left: 68px;
+  padding: 6px var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
+  animation: slate-card-enter var(--slate-motion-move) var(--slate-motion-ease) both;
+}
+
+.slate-timeline__card.is-late {
+  border-color: var(--slate-overdue);
+}
+
+.slate-timeline__card.is-clipped {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* The pinned block: what is late now, under the Now line. */
+.slate-timeline__pinned {
+  position: absolute;
+  right: 0;
+  left: 68px;
+}
+
+.slate-timeline__card.is-pinned {
+  position: static;
+  border-color: var(--slate-overdue);
+  background: var(--slate-danger-soft);
+}
+
+.slate-timeline__when {
+  height: 18px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-timeline__card.is-pinned .slate-timeline__when {
+  color: var(--slate-overdue);
+  font-weight: 600;
+}
+
+.slate-timeline__facts {
+  height: 16px;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A member row: "A1 HX204", its clock (in a group), the pump toggle. The
+   card is narrow, so the id and resin share one shrinking column. */
+.slate-timeline__member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--slate-space-1);
+  height: 28px;
+}
+
+.slate-timeline__member-name {
+  display: flex;
+  gap: var(--slate-space-1);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.slate-timeline__member-id {
+  flex: 0 0 auto;
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+.slate-timeline__member-resin {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-timeline__member-at {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A single card says the time in its head; the row repeats it only in a group. */
+.slate-timeline__card:not(.is-group):not(.is-pinned) .slate-timeline__member-at {
+  display: none;
+}
+
+.slate-timeline__member.is-overdue .slate-timeline__member-id {
+  color: var(--slate-overdue);
+}
+
+.slate-root .slate-timeline__pump {
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ---- Chips ---- */
+
+.slate-timeline__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-1);
+}
+
+.slate-timeline__chip {
+  padding: 1px var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline__chip.is-unavailable {
+  border-style: dashed;
+  color: var(--slate-text-faint);
+}
+
+/* ---- Foot: pumped off (rows alone, no heading) ---- */
+
+.slate-timeline__done {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding-top: var(--slate-space-2);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  overflow-y: auto;
+}
+
+.slate-timeline__member.is-off {
+  color: var(--slate-text-muted);
+}
+
+/* ---- Motion ---- */
+
+@keyframes slate-now-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes slate-card-enter {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-timeline.is-overdue .slate-timeline__now::before,
+  .slate-timeline__card {
+    animation: none;
+  }
+}

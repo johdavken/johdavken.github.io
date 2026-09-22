@@ -1,0 +1,61 @@
+/* Slate theme: Retro 82 Light.
+ *
+ * Retro 82 turned to the light: its cream as the surfaces, its navy as
+ * the text, its orange - deepened to hold on cream - as the accent, its
+ * teals for the statuses that are not warnings and its embers for the
+ * ones that are. The palette has no purple, so a pumped-off hopper
+ * borrows a muted violet. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="retro-82-light"],
+.slate-theme-scope[data-theme="retro-82-light"] {
+  color-scheme: light;
+  --slate-color-scheme: light;
+  --slate-bg: #f2e2c4;
+  --slate-surface: #fbefd9;
+  --slate-surface-raised: #fff8e8;
+  --slate-surface-sunken: #f0dfbf;
+  --slate-surface-hover: #efe0c3;
+  --slate-surface-selected: #e5d3b0;
+
+  --slate-text: #0b2a4a;
+  --slate-text-muted: #1f3d5c;
+  --slate-text-faint: #2a4a69;
+  --slate-text-disabled: #7d8f9c;
+  --slate-text-on-accent: #fff8e8;
+
+  --slate-border-subtle: #e5d3b0;
+  --slate-border: #c9b58e;
+  --slate-border-strong: #a7998a;
+  --slate-focus-ring: #b8470f;
+
+  --slate-accent: #b8470f;
+  --slate-accent-text: #963508;
+  --slate-accent-hover: #a83f0c;
+  --slate-accent-active: #963809;
+  --slate-accent-soft: rgba(250, 169, 104, 0.18);
+  --slate-pump-off-soft: rgba(92, 74, 134, 0.1);
+
+  --slate-success: #03616c;
+  --slate-warning: #8c4210;
+  --slate-danger: #a62d0a;
+  --slate-info: #2c6e75;
+  --slate-success-soft: rgba(2, 131, 145, 0.12);
+  --slate-warning-soft: rgba(233, 123, 60, 0.1);
+  --slate-danger-soft: rgba(248, 85, 37, 0.08);
+
+  --slate-tracking: #03616c;
+  --slate-pump-off: #5c4a86;
+  --slate-overdue: #a62d0a;
+  --slate-smart: #0a6a74;
+
+  --slate-layer-outside: #028391;
+  --slate-layer-subskin: #3f8f8a;
+  --slate-layer-core: #e97b3c;
+  --slate-layer-inside: #5c4a86;
+  --slate-layer-single: #7d8f9c;
+
+  --slate-shadow-card: 0 1px 2px rgba(11, 42, 74, 0.1);
+  --slate-shadow-pop: 0 10px 28px rgba(11, 42, 74, 0.24);
+  --slate-scrim: rgba(0, 0, 0, 0.4);
+  --slate-qr-surface: #fff8e8;
+}

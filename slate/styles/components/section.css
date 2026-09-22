@@ -1,0 +1,56 @@
+/* A section in the centre pane, and its arrival. */
+
+.slate-section {
+  min-width: 0;
+}
+
+.slate-section.is-entering {
+  animation: slate-section-enter var(--slate-motion-move) var(--slate-motion-ease) both;
+}
+
+/* The bar across a section's top: what the section is about on the left,
+   its switches on the right. */
+.slate-section__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-4);
+  margin-bottom: var(--slate-space-4);
+}
+
+.slate-section__subtitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A line saying a piece of the section is still to come. */
+.slate-stub {
+  margin-bottom: var(--slate-space-4);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) dashed var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+@keyframes slate-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-section.is-entering {
+    animation: none;
+  }
+}

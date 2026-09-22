@@ -1,0 +1,62 @@
+/* Slate theme: Retro 82 Dark.
+ *
+ * Omarchy's Retro 82 on Slate's semantic contract: deep navy surfaces,
+ * cream text, the palette's orange for the accent, its teal and cyan for
+ * the statuses that are not warnings, its ember reds for the ones that
+ * are. The palette has no purple, so a pumped-off hopper borrows a
+ * muted violet. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="retro-82-dark"],
+.slate-theme-scope[data-theme="retro-82-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #031222;
+  --slate-surface: #05182e;
+  --slate-surface-raised: #0a2540;
+  --slate-surface-sunken: #020c17;
+  --slate-surface-hover: #0e2f4c;
+  --slate-surface-selected: #134e5a;
+
+  --slate-text: #f6dcac;
+  --slate-text-muted: #dcc9a2;
+  --slate-text-faint: #b7cbc7;
+  --slate-text-disabled: #5e8f95;
+  --slate-text-on-accent: #031222;
+
+  --slate-border-subtle: #0e2f4c;
+  --slate-border: #2f7986;
+  --slate-border-strong: #3f8f8a;
+  --slate-focus-ring: #faa968;
+
+  --slate-accent: #faa968;
+  --slate-accent-text: #faa968;
+  --slate-accent-hover: #ffba80;
+  --slate-accent-active: #ec9a58;
+  --slate-accent-soft: rgba(250, 169, 104, 0.18);
+  --slate-pump-off-soft: rgba(196, 139, 224, 0.16);
+
+  --slate-success: #4cc3cd;
+  --slate-warning: #f0864a;
+  --slate-danger: #ff6a3f;
+  --slate-info: #8cbfb8;
+  --slate-success-soft: rgba(76, 195, 205, 0.16);
+  --slate-warning-soft: rgba(233, 123, 60, 0.18);
+  --slate-danger-soft: rgba(248, 85, 37, 0.16);
+
+  --slate-tracking: #4cc3cd;
+  --slate-pump-off: #c48be0;
+  --slate-overdue: #ff6a3f;
+  --slate-smart: #8cbfb8;
+
+  --slate-layer-outside: #3f8f8a;
+  --slate-layer-subskin: #8cbfb8;
+  --slate-layer-core: #e97b3c;
+  --slate-layer-inside: #c48be0;
+  --slate-layer-single: #5e8f95;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.56);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
+  --slate-qr-surface: #f6dcac;
+}

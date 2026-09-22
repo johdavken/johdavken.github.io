@@ -1,0 +1,362 @@
+/* The Settings section. */
+
+.slate-settings__group {
+  margin-bottom: var(--slate-space-6);
+}
+
+.slate-settings__heading {
+  margin-bottom: var(--slate-space-3);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-settings__note {
+  margin-top: var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Theme tiles ---- */
+
+.slate-settings__themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--slate-space-4);
+}
+
+.slate-root .slate-theme-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-3);
+  border: 2px solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-theme-tile:hover {
+  border-color: var(--slate-border);
+}
+
+.slate-root .slate-theme-tile:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-theme-tile.is-selected {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+}
+
+/* The swatch draws in the TILE'S theme, not the live one: the theme
+   files declare their tokens on .slate-theme-scope as well. */
+.slate-theme-tile__swatch {
+  position: relative;
+  display: block;
+  height: 64px;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-bg);
+  overflow: hidden;
+}
+
+.slate-theme-tile__swatch-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28%;
+  height: 100%;
+  border-right: var(--slate-stroke) solid var(--slate-border-subtle);
+  background: var(--slate-surface);
+}
+
+.slate-theme-tile__swatch-accent {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--slate-accent);
+}
+
+.slate-theme-tile__preview {
+  position: absolute;
+  inset: 8px 8px 8px calc(28% + 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 7px 5px 1fr;
+  gap: 5px 8px;
+  padding: 7px;
+  background: var(--slate-surface-raised);
+  border: 1px solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-xs);
+  box-shadow: var(--slate-shadow-card);
+}
+
+.slate-theme-tile__preview-title,
+.slate-theme-tile__preview-copy,
+.slate-theme-tile__preview-status-label,
+.slate-theme-tile__preview-action {
+  display: block;
+  border-radius: var(--slate-radius-pill);
+}
+
+.slate-theme-tile__preview-title {
+  width: 58%;
+  background: var(--slate-text);
+  opacity: 0.85;
+}
+
+.slate-theme-tile__preview-copy {
+  grid-column: 1 / -1;
+  width: 84%;
+  background: var(--slate-text-muted);
+  opacity: 0.8;
+}
+
+.slate-theme-tile__preview-status {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  padding: 3px 5px;
+  background: var(--slate-success-soft);
+  border: 1px solid var(--slate-success);
+  border-radius: var(--slate-radius-pill);
+}
+
+.slate-theme-tile__preview-status-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--slate-success);
+  border-radius: 50%;
+}
+
+.slate-theme-tile__preview-status-label {
+  width: 22px;
+  height: 4px;
+  background: var(--slate-success-text);
+  opacity: 0.85;
+}
+
+.slate-theme-tile__preview-action {
+  align-self: end;
+  width: 27px;
+  height: 9px;
+  background: var(--slate-accent);
+}
+
+.slate-theme-tile__selected-mark {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  color: var(--slate-text-on-accent);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--slate-accent);
+  border: 1px solid var(--slate-surface-raised);
+  border-radius: 50%;
+  box-shadow: var(--slate-shadow-control);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--slate-transition-fast), transform var(--slate-transition-fast);
+}
+
+.slate-theme-tile.is-selected .slate-theme-tile__selected-mark {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.slate-theme-tile__name {
+  font-weight: 600;
+}
+
+.slate-theme-tile__description {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Safety: the read-only mode ---- */
+
+.slate-settings__lead {
+  max-width: 60ch;
+  margin-bottom: var(--slate-space-3);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-settings__modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--slate-space-3);
+}
+
+.slate-root .slate-settings__mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3);
+  border: 2px solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-settings__mode:hover {
+  border-color: var(--slate-border);
+}
+
+.slate-root .slate-settings__mode:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-settings__mode.is-selected {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+}
+
+.slate-settings__mode-label {
+  font-weight: 600;
+}
+
+.slate-settings__mode-note {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- Administrator access ----
+   The last group: a row an operator passes over, which opens into the
+   sign-in the application's own admin session takes. Signed in, the row
+   carries the email and the body offers the way out. */
+
+.slate-settings__admin {
+  padding-top: var(--slate-space-4);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-settings__admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  width: 100%;
+  padding: var(--slate-space-2);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  text-align: left;
+}
+
+.slate-root .slate-settings__admin-toggle:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-settings__admin-mark {
+  display: inline-block;
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-settings__admin.is-open .slate-settings__admin-mark {
+  transform: rotate(90deg);
+}
+
+.slate-settings__admin-title {
+  flex: 1 1 auto;
+}
+
+/* Who is signed in, on the closed row. */
+.slate-settings__admin-who {
+  color: var(--slate-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-settings__admin-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-3) var(--slate-space-2) 0;
+}
+
+.slate-settings__admin-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-settings__admin-field {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  --slate-field-width: 100%;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slate-root .slate-settings__admin-action {
+  flex: none;
+  padding: var(--slate-space-1) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-root .slate-settings__admin-action:not(:disabled):not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-settings__admin-action[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slate-root .slate-settings__admin-action:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.slate-root .slate-settings__admin-action--primary {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-settings__admin-action--primary:not(:disabled):not([data-able="false"]):hover {
+  background: var(--slate-accent-hover);
+}
+
+.slate-settings__admin-email {
+  flex: 1 1 auto;
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-settings__admin-opens {
+  max-width: 60ch;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-settings__admin-note {
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-settings__admin-note.is-error {
+  color: var(--slate-danger);
+}

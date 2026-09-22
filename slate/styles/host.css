@@ -1,0 +1,46 @@
+/* Slate host integration - the ONE Slate stylesheet allowed to know the
+ * application exists.
+ *
+ * Every other Slate rule is anchored to a `.slate-*` class and could not
+ * match an application element if it tried. This file does the opposite on
+ * purpose: putting Slate on screen inside the application means hiding the
+ * application's own shell, and that is inherently a cross-boundary act.
+ *
+ * It hides by exclusion rather than by name. The application has no single
+ * root element: <main>, the footer, the overlay root and two dozen <dialog>s
+ * are all direct children of <body>. Hiding everything that is NOT the Slate
+ * host says the rule once - "in Slate mode, only Slate is visible" - and
+ * stays correct as the application's DOM changes.
+ *
+ * !important is used here and nowhere else: this rule has to win against a
+ * cascade it does not own and cannot see the future of. It is confined to
+ * this file, and slate-host-isolation.test.js asserts it stays confined.
+ *
+ * Every rule is gated on the attribute only slate-host.js sets, and only when
+ * ?view=slate is present - and the file is only loaded in Slate mode, so it
+ * is inert twice over.
+ *
+ * A modal is the one exception. The application asks questions with
+ * <dialog>.showModal(); a modal makes the rest of the document inert and
+ * stays that way when a stylesheet hides it. So a modal is let through - by
+ * what it IS (:modal), not by naming any dialog.
+ *
+ * The third rule is the scrollbar's gutter. Slate's frame is centred, so a
+ * scrollbar arriving with a tall section would narrow the viewport and slide
+ * the sheet sideways; reserving the gutter keeps it still. It has to be said
+ * on the root element, which is the only place it reaches the viewport - and
+ * only while Slate is the view, which is what the :has() asks.
+ */
+body[data-slate-view="slate"] > :not([data-slate-host]):not(:modal) {
+  display: none !important;
+}
+
+body[data-slate-view="slate"] {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+
+html:has(> body[data-slate-view="slate"]) {
+  scrollbar-gutter: stable;
+}

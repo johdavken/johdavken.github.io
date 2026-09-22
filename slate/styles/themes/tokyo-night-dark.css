@@ -1,0 +1,61 @@
+/* Slate theme: Tokyo Night.
+ *
+ * The Tokyo Night palette on Slate's semantic contract: deep blue-black
+ * surfaces, lavender text, the palette's blue for the accent, its green,
+ * yellow, red and cyan for the statuses, purple for a pumped-off hopper,
+ * teal for a computed weight. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="tokyo-night-dark"],
+.slate-theme-scope[data-theme="tokyo-night-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #16161e;
+  --slate-surface: #1a1b26;
+  --slate-surface-raised: #1f2335;
+  --slate-surface-sunken: #13141c;
+  --slate-surface-hover: #24283b;
+  --slate-surface-selected: #292e42;
+
+  --slate-text: #c0caf5;
+  --slate-text-muted: #a9b1d6;
+  --slate-text-faint: #9aa5ce;
+  --slate-text-disabled: #565f89;
+  --slate-text-on-accent: #16161e;
+
+  --slate-border-subtle: #292e42;
+  --slate-border: #626b98;
+  --slate-border-strong: #737aa2;
+  --slate-focus-ring: #7aa2f7;
+
+  --slate-accent: #7aa2f7;
+  --slate-accent-text: #8ab0ff;
+  --slate-accent-hover: #8db3ff;
+  --slate-accent-active: #6a92e6;
+  --slate-accent-soft: rgba(122, 162, 247, 0.18);
+  --slate-pump-off-soft: rgba(187, 154, 247, 0.16);
+
+  --slate-success: #9ece6a;
+  --slate-warning: #e0af68;
+  --slate-danger: #f7768e;
+  --slate-info: #7dcfff;
+  --slate-success-soft: rgba(158, 206, 106, 0.16);
+  --slate-warning-soft: rgba(224, 175, 104, 0.18);
+  --slate-danger-soft: rgba(247, 118, 142, 0.16);
+
+  --slate-tracking: #9ece6a;
+  --slate-pump-off: #bb9af7;
+  --slate-overdue: #f7768e;
+  --slate-smart: #73daca;
+
+  --slate-layer-outside: #7aa2f7;
+  --slate-layer-subskin: #9ece6a;
+  --slate-layer-core: #e0af68;
+  --slate-layer-inside: #bb9af7;
+  --slate-layer-single: #737aa2;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.52);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
+  --slate-qr-surface: #c0caf5;
+}

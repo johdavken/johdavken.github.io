@@ -1,0 +1,60 @@
+/* Slate theme: Rosé Pine Moon.
+ *
+ * Rosé Pine Moon - the dark variant - on Slate's semantic contract: dusk
+ * surfaces, lilac-white text, pine for the accent and foam for its text,
+ * foam for a computed weight and a tracked hopper, gold for a warning, love
+ * for danger, iris for a pumped-off hopper. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="rose-pine-dark"],
+.slate-theme-scope[data-theme="rose-pine-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+  --slate-bg: #1f1d2e;
+  --slate-surface: #232136;
+  --slate-surface-raised: #2a273f;
+  --slate-surface-sunken: #1f1d2e;
+  --slate-surface-hover: #332f4a;
+  --slate-surface-selected: #3b3754;
+
+  --slate-text: #e0def4;
+  --slate-text-muted: #cfcce6;
+  --slate-text-faint: #bfbcd9;
+  --slate-text-disabled: #6e6a86;
+  --slate-text-on-accent: #1f1d2e;
+
+  --slate-border-subtle: #393552;
+  --slate-border: #767290;
+  --slate-border-strong: #908caa;
+  --slate-focus-ring: #9ccfd8;
+
+  --slate-accent: #4a9bbd;
+  --slate-accent-text: #9ccfd8;
+  --slate-accent-hover: #5aa9ca;
+  --slate-accent-active: #3e8fb0;
+  --slate-accent-soft: rgba(74, 155, 189, 0.2);
+  --slate-pump-off-soft: rgba(196, 167, 231, 0.16);
+
+  --slate-success: #9ccfd8;
+  --slate-warning: #f6c177;
+  --slate-danger: #f082a2;
+  --slate-info: #7fb8d6;
+  --slate-success-soft: rgba(156, 207, 216, 0.16);
+  --slate-warning-soft: rgba(246, 193, 119, 0.16);
+  --slate-danger-soft: rgba(235, 111, 146, 0.12);
+
+  --slate-tracking: #9ccfd8;
+  --slate-pump-off: #c4a7e7;
+  --slate-overdue: #f082a2;
+  --slate-smart: #8fd1cb;
+
+  --slate-layer-outside: #3e8fb0;
+  --slate-layer-subskin: #9ccfd8;
+  --slate-layer-core: #f6c177;
+  --slate-layer-inside: #c4a7e7;
+  --slate-layer-single: #908caa;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.52);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
+  --slate-qr-surface: #e0def4;
+}

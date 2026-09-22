@@ -1,0 +1,676 @@
+/* The Recipe section: the bar (tabs, Compare, the plan's moves, Print), the column headings, and one block per layer - its head down the
+   left, its hoppers as rows. The editors, the drag and the menus are in
+   recipe-edit.css. */
+
+/* The section anchors the print frame. */
+.slate-recipe {
+  position: relative;
+}
+
+/* ---- Tabs: which recipe is shown ---- */
+
+.slate-tabs {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-root .slate-tabs__tab {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  line-height: var(--slate-line-normal);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-tabs__tab:hover {
+  color: var(--slate-text);
+}
+
+.slate-root .slate-tabs__tab:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-tabs__tab[aria-selected="true"] {
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-tabs__tab[aria-selected="true"]:active {
+  background: var(--slate-accent-active);
+}
+
+/* ---- The Compare switch ---- */
+
+.slate-root .slate-switch {
+  flex: none;
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-switch:not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-switch:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-switch[aria-checked="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-root .slate-switch[aria-checked="true"]:not([data-able="false"]):active {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-root .slate-switch[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- The plan's moves: the foot of the Next table ----
+   Promote is the one prominent button - it is the changeover - and Copy
+   the quiet one beside it. The foot shares .slate-recipe__foot's layout. */
+
+.slate-recipe__plan {
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-recipe__plan-action {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-recipe__plan-action:not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-recipe__plan-action:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-recipe__plan-action[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slate-root .slate-recipe__plan-action--promote {
+  padding: var(--slate-space-2) var(--slate-space-4);
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):hover {
+  background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):active {
+  background: var(--slate-accent-active);
+}
+
+.slate-root .slate-recipe__plan-action--quiet {
+  border-color: transparent;
+  color: var(--slate-text-muted);
+}
+
+.slate-root .slate-recipe__plan-action[data-armed] {
+  border-color: var(--slate-danger);
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-recipe__plan-action[data-armed]:not([data-able="false"]):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+/* The Next body with nothing planned. */
+.slate-recipe__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-5);
+  border: var(--slate-stroke) dashed var(--slate-border);
+  border-radius: var(--slate-radius-lg);
+  color: var(--slate-text-muted);
+}
+
+.slate-recipe__empty-text {
+  max-width: 48ch;
+}
+
+/* ---- Columns ---- */
+
+.slate-recipe__columns,
+.slate-hopper {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 72px 96px var(--slate-controls-width) 80px;
+  align-items: center;
+  gap: var(--slate-space-3);
+}
+
+/* The plan's rows: no weight, no toggles. */
+.slate-recipe__body[data-recipe="next"] .slate-recipe__columns,
+.slate-recipe__body[data-recipe="next"] .slate-hopper {
+  grid-template-columns: 56px minmax(0, 1fr) 72px 80px;
+}
+
+.slate-recipe__columns {
+  margin-left: calc(var(--slate-layer-head-width) + var(--slate-space-4));
+  padding: 0 var(--slate-space-3) var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-recipe__column--pct,
+.slate-recipe__column--weight {
+  text-align: right;
+}
+
+/* ---- Layers ---- */
+
+.slate-recipe__layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+}
+
+.slate-layer {
+  display: grid;
+  grid-template-columns: var(--slate-layer-head-width) minmax(0, 1fr);
+  gap: var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  overflow: hidden;
+}
+
+.slate-layer__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border-left: 4px solid var(--slate-layer-single);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-layer[data-tone="outside"] .slate-layer__head {
+  border-left-color: var(--slate-layer-outside);
+}
+
+.slate-layer[data-tone="subskin"] .slate-layer__head {
+  border-left-color: var(--slate-layer-subskin);
+}
+
+.slate-layer[data-tone="core"] .slate-layer__head {
+  border-left-color: var(--slate-layer-core);
+}
+
+.slate-layer[data-tone="inside"] .slate-layer__head {
+  border-left-color: var(--slate-layer-inside);
+}
+
+.slate-layer__name {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-layer__role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root .slate-layer__share {
+  margin-top: auto;
+  color: var(--slate-text);
+  font-size: var(--slate-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-layer__rows {
+  display: flex;
+  flex-direction: column;
+  padding: var(--slate-space-2) var(--slate-space-3) var(--slate-space-2) 0;
+}
+
+/* ---- Hopper rows ---- */
+
+.slate-hopper {
+  position: relative;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-hopper.is-empty {
+  color: var(--slate-text-faint);
+}
+
+.slate-hopper.slate-row-enter {
+  animation: slate-row-enter var(--slate-motion-move) var(--slate-motion-ease) both;
+  animation-delay: calc(var(--slate-row-i, 0) * var(--slate-motion-lead));
+}
+
+.slate-hopper.is-updated {
+  animation: slate-row-update var(--slate-motion-flash) var(--slate-motion-ease);
+}
+
+.slate-hopper__id {
+  font-weight: 600;
+}
+
+.slate-hopper__resin {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The blend is a button (recipe-edit.css); the base reset's text-align
+   is out-specified here. */
+.slate-root .slate-hopper__pct,
+.slate-hopper__weight {
+  text-align: right;
+}
+
+.slate-hopper__weight {
+  color: var(--slate-text-muted);
+}
+
+/* Smart Hoppers computed the weight shown; the entered one is in the title. */
+.slate-hopper__weight.is-smart {
+  color: var(--slate-smart);
+  font-weight: 600;
+}
+
+/* Track at the left of its column; the column is fixed (tokens.css) so
+   the pill never pushes the blend and weight. */
+.slate-hopper__controls {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--slate-space-2);
+  min-width: 0;
+}
+
+.slate-hopper__mark {
+  color: var(--slate-overdue);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+.slate-hopper.is-late .slate-hopper__mark {
+  color: var(--slate-warning);
+}
+
+/* ---- Compare: the next order against this one ---- */
+
+/* A hopper whose resin changes at the changeover: its id alone is
+   coloured, in the accent so it never reads as trouble (red is overdue's).
+   The row itself, a row whose blend alone moves, and one that agrees are
+   left plain. */
+.slate-hopper.is-differs .slate-hopper__id {
+  color: var(--slate-accent-text);
+}
+
+/* The other recipe's value under a row that moves (Compare on). */
+.slate-hopper__other {
+  grid-column: 1 / -1;
+  padding-left: calc(56px + var(--slate-space-3));
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-hopper.is-differs .slate-hopper__other {
+  color: var(--slate-accent-text);
+  font-weight: 500;
+}
+
+.slate-layer__share-other {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Track is withdrawn from a row with nothing to run down; the toggle's
+   own display rule would otherwise out-specify [hidden]. */
+.slate-root .slate-toggle[hidden] {
+  display: none;
+}
+
+/* Another device moved the value under an open editor. */
+.slate-hopper.is-changed-underneath,
+.slate-layer__head.is-changed-underneath {
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-info);
+}
+
+/* ---- Toggles ---- */
+
+.slate-root .slate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  line-height: var(--slate-line-tight);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-toggle:not(:disabled):not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-toggle:not(:disabled):not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.slate-root .slate-toggle[data-able="false"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.slate-toggle__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--slate-border-strong);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-toggle--tracking[aria-pressed="true"] {
+  border-color: var(--slate-tracking);
+  background: var(--slate-success-soft);
+  color: var(--slate-tracking);
+}
+
+.slate-toggle--tracking[aria-pressed="true"] .slate-toggle__dot {
+  background: var(--slate-tracking);
+}
+
+.slate-root .slate-toggle--tracking[aria-pressed="true"]:not(:disabled):not([data-able="false"]):active {
+  border-color: var(--slate-tracking);
+  background: var(--slate-success-soft);
+  color: var(--slate-tracking);
+}
+
+.slate-root .slate-toggle--pump[aria-pressed="true"] {
+  border-color: var(--slate-pump-off);
+  background: var(--slate-pump-off-soft);
+  color: var(--slate-pump-off);
+}
+
+.slate-toggle--pump[aria-pressed="true"] .slate-toggle__dot {
+  background: var(--slate-pump-off);
+}
+
+.slate-root .slate-toggle--pump[aria-pressed="true"]:not(:disabled):not([data-able="false"]):active {
+  border-color: var(--slate-pump-off);
+  background: var(--slate-pump-off-soft);
+  color: var(--slate-pump-off);
+}
+
+/* ---- Foot ---- */
+
+.slate-recipe__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-4);
+}
+
+/* "Save as recipe" leads each foot, quiet, and pushes the rest right
+   (the base layer zeroes every button's margin, hence the scope). */
+.slate-root .slate-recipe__save {
+  margin-right: auto;
+}
+
+/* The name entry under the foot: a full-width row with the field and
+   its Save / Replace / Cancel, the application's answer on a line below. */
+.slate-recipe__save-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-3);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+}
+
+.slate-recipe__save-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  white-space: nowrap;
+}
+
+.slate-recipe__save-name {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: auto;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slate-root .slate-recipe__save-name[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+.slate-recipe__save-note {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-recipe__save-note.is-error {
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-recipe__reset {
+  padding: var(--slate-space-2) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-recipe__reset:not([data-able="false"]):hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-recipe__reset:not([data-able="false"]):active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-recipe__reset[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slate-root .slate-recipe__reset[data-armed] {
+  border-color: var(--slate-danger);
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-recipe__reset[data-armed]:not([data-able="false"]):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+/* ---- Motion ---- */
+
+@keyframes slate-row-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slate-row-update {
+  from {
+    background-color: var(--slate-accent-soft);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-hopper.slate-row-enter,
+  .slate-hopper.is-updated {
+    animation: none;
+  }
+}
+
+/* ---- Layers with the head on top ----
+   The Layout preference (slate-display.js, written onto the root as
+   data-layers by the boot). Every rule here is scoped to "top"; "left"
+   is the sheet above, untouched. The layers stand side by side, three
+   across the centre, a fourth and fifth wrapping below; each card puts
+   its head across the top and its hoppers under it as two-line rows -
+   id, resin and blend, then the weight under the resin with Track at
+   the right. The one heading row above the cards cannot span three of
+   them, so it goes; the values carry their units. */
+
+.slate-root[data-layers="top"] .slate-recipe__columns {
+  display: none;
+}
+
+.slate-root[data-layers="top"] .slate-recipe__layers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.slate-root[data-layers="top"] .slate-layer {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  /* The menus and the resin search drop past a short card's edge; the
+     head rounds its own top corners instead. */
+  overflow: visible;
+}
+
+.slate-root[data-layers="top"] .slate-layer__head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-top-left-radius: var(--slate-radius-lg);
+  border-top-right-radius: var(--slate-radius-lg);
+}
+
+.slate-root[data-layers="top"] .slate-layer__share {
+  margin-top: 0;
+  margin-left: auto;
+  font-size: var(--slate-text-lg);
+}
+
+/* The other recipe's share and a refusal take a second line, after the
+   menu, which stays at the end of the first. */
+.slate-root[data-layers="top"] .slate-layer__share-other,
+.slate-root[data-layers="top"] .slate-layer__note {
+  order: 1;
+  flex-basis: 100%;
+}
+
+.slate-root[data-layers="top"] .slate-layer__rows {
+  padding: var(--slate-space-1) var(--slate-space-2) var(--slate-space-2);
+}
+
+/* Every row, the plan's included: the attribute out-specifies the Next
+   body's four-column rule rather than relying on source order. */
+.slate-root[data-layers="top"] .slate-hopper[data-recipe] {
+  grid-template-columns: 40px minmax(0, 1fr) 72px;
+  column-gap: var(--slate-space-2);
+  row-gap: var(--slate-space-1);
+  padding: var(--slate-space-1) var(--slate-space-2);
+}
+
+.slate-root[data-layers="top"] .slate-hopper__weight {
+  grid-column: 2;
+  text-align: left;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__controls {
+  grid-column: 3;
+  justify-content: flex-end;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__mark {
+  grid-column: 2 / -1;
+  text-align: left;
+}
+
+/* No mark, no third line. */
+.slate-root[data-layers="top"] .slate-hopper__mark:empty {
+  display: none;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__other {
+  padding-left: calc(40px + var(--slate-space-2));
+}
+
+/* ---- Layers the other way round ----
+   The Layer order preference (data-layer-order on the root): every card
+   carries its index from the section, and reversed runs them backwards -
+   in either orientation, since order is honoured by the column and by
+   the grid alike. */
+
+.slate-root[data-layer-order="reversed"] .slate-layer {
+  order: calc(-1 * var(--slate-layer-i, 0));
+}

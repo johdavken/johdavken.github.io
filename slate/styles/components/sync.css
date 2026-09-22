@@ -1,0 +1,300 @@
+/* RT Sync: the trigger in the header and the panel it drops. */
+
+.slate-sync {
+  position: relative;
+}
+
+.slate-root .slate-sync__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  max-width: 360px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: 999px;
+  background: var(--slate-surface-raised);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-sync__trigger:hover {
+  border-color: var(--slate-border);
+  background: var(--slate-surface-hover);
+}
+
+.slate-sync.is-open .slate-sync__trigger {
+  border-color: var(--slate-accent);
+}
+
+.slate-sync__summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The status dot takes the status colour by its key. */
+.slate-sync__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--slate-border-strong);
+}
+
+.slate-sync__dot[data-state="synced"] {
+  background: var(--slate-success);
+}
+
+.slate-sync__dot[data-state="syncing"],
+.slate-sync__dot[data-state="connecting"],
+.slate-sync__dot[data-state="pending"] {
+  background: var(--slate-info);
+}
+
+.slate-sync__dot[data-state="offline"],
+.slate-sync__dot[data-state="conflict"] {
+  background: var(--slate-warning);
+}
+
+.slate-sync__dot[data-state="error"] {
+  background: var(--slate-danger);
+}
+
+/* ---- Panel ---- */
+
+.slate-sync__panel {
+  position: absolute;
+  top: calc(100% + var(--slate-space-2));
+  right: 0;
+  z-index: 10;
+  width: 380px;
+  max-height: calc(100vh - var(--slate-header-height) - var(--slate-space-5));
+  overflow: auto;
+  padding: var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-sync__identity,
+.slate-sync__status,
+.slate-sync__devices,
+.slate-sync__join-code,
+.slate-sync__lines,
+.slate-sync__join {
+  padding-bottom: var(--slate-space-3);
+  margin-bottom: var(--slate-space-3);
+  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-sync__line {
+  font-size: var(--slate-text-xl);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-sync__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-1);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__role {
+  padding: 0 var(--slate-space-2);
+  border-radius: 999px;
+  background: var(--slate-surface-sunken);
+  font-size: var(--slate-text-xs);
+  text-transform: capitalize;
+}
+
+.slate-sync__device {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-2);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__inline {
+  display: inline-flex;
+  gap: var(--slate-space-1);
+}
+
+.slate-sync__heading {
+  margin-bottom: var(--slate-space-1);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-sync__state {
+  font-weight: 600;
+}
+
+.slate-sync__status[data-state="error"] .slate-sync__state {
+  color: var(--slate-danger);
+}
+
+.slate-sync__status[data-state="synced"] .slate-sync__state {
+  color: var(--slate-success);
+}
+
+.slate-sync__message,
+.slate-sync__pending,
+.slate-sync__last,
+.slate-sync__guidance,
+.slate-sync__expires {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+}
+
+.slate-sync__item {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__item.is-this-device .slate-sync__item-label,
+.slate-sync__item.is-current .slate-sync__item-label {
+  font-weight: 600;
+}
+
+.slate-sync__item-meta {
+  margin-left: auto;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  white-space: nowrap;
+}
+
+.slate-sync__code {
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-2xl);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.slate-sync__qr-image {
+  width: 160px;
+  margin-top: var(--slate-space-2);
+  padding: var(--slate-space-2);
+  border-radius: var(--slate-radius);
+  background: var(--slate-qr-surface);
+}
+
+.slate-sync__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+}
+
+.slate-sync__input {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  flex: 1 1 120px;
+  min-width: 0;
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__input--code {
+  flex: 0 0 5em;
+  font-family: var(--slate-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.slate-sync__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-sync__button {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-sync__button:not(:disabled):hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-sync__button:not(:disabled):active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-sync__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.slate-root .slate-sync__button--primary {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-sync__button--primary:not(:disabled):hover {
+  background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-sync__button--primary:not(:disabled):active {
+  background: var(--slate-accent-active);
+}
+
+.slate-root .slate-sync__button--danger {
+  border-color: var(--slate-danger);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-sync__button--danger[data-armed] {
+  background: var(--slate-danger-soft);
+}
+
+.slate-root .slate-sync__button--danger:not(:disabled):active {
+  background: var(--slate-danger-soft);
+  color: var(--slate-danger);
+}
+
+.slate-root .slate-sync__button--quiet {
+  border-color: transparent;
+  color: var(--slate-text-muted);
+}
+
+.slate-sync__note {
+  margin-top: var(--slate-space-3);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-sync__note.is-error {
+  color: var(--slate-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-sync__panel {
+    animation: none;
+  }
+}

@@ -1,0 +1,179 @@
+/* Winding Tension: three entries, then the answer - the target figure,
+   the band's range at this width, and the wind type and taper it
+   recommends. The panel's chrome is the aside's (panel.css). */
+
+.slate-winding__caption {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+/* ---- The entries ---- */
+
+.slate-winding__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-2);
+}
+
+.slate-winding__field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6em auto;
+  align-items: center;
+  column-gap: var(--slate-space-2);
+}
+
+.slate-winding__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-winding__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-winding__unit {
+  min-width: 2em;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- The answer ---- */
+
+.slate-winding__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  margin-top: var(--slate-space-3);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-winding__figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+}
+
+.slate-winding__target {
+  font-size: var(--slate-text-2xl);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-winding__target-unit {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-winding__pli {
+  margin-top: calc(-1 * var(--slate-space-2));
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The range: the band's minimum and maximum at this width, the target
+   between them. */
+.slate-winding__range {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-winding__end {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-2);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+  text-align: center;
+}
+
+.slate-winding__end[data-end="target"] {
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+.slate-winding__end-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-winding__end-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-winding__advice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--slate-space-1) var(--slate-space-3);
+  margin: 0;
+}
+
+.slate-winding__advice-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-winding__advice-value {
+  margin: 0;
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-winding__notice {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+/* The line under the entries: the prompt, or the application's refusal. */
+.slate-winding__note {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-winding__note.is-invalid {
+  color: var(--slate-danger);
+}
+
+.slate-winding__foot {
+  display: flex;
+  margin-top: auto;
+  padding-top: var(--slate-space-2);
+}
+
+.slate-root .slate-winding__clear {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-winding__clear:hover {
+  background: var(--slate-surface-hover);
+}

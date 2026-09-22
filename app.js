@@ -9770,6 +9770,11 @@
   }
 
   function resolveLineSyncConflict(conflict){
+    // A console on screen (Station, Slate) answers the question in its
+    // own dialog when it has registered to; the floor UI's <dialog> is
+    // the fallback, hidden behind that console.
+    const asked = stationConnection?.ask?.("conflict", { localRevision: conflict?.localRevision, remoteRevision: conflict?.remoteRevision });
+    if (asked) return asked;
     const dialog = $("lineSyncConflictDialog");
     // Nothing to ask with. "cancel" pauses synchronization and leaves the
     // queued change on the device; answering "remote" here instead would
