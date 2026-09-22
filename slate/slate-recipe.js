@@ -171,7 +171,7 @@
    * @param {function} [ctx.onCommitted] told of every ok+changed result
    * @param {function} [ctx.say]         a line for the operator
    * @param {function} [ctx.readOnly]    () -> whether Slate is read-only now
-   * @param {function} [ctx.trackingMode] () -> "automatic"|"assisted"|"manual" (assisted by default)
+   * @param {function} [ctx.trackingMode] () -> "automatic"|"assisted"|"manual" (automatic by default)
    * @param {function} [ctx.resins]      () -> the resin catalog
    * @param {object} [ctx.timers]        { setTimeout, clearTimeout }
    * @param {object} [ctx.print]         a printer (slate-print.js's create) - built here by default
@@ -478,8 +478,11 @@
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);
       let position = 0;
-      for (const layer of model.layers) {
+      model.layers.forEach((layer, i) => {
         const block = element(doc, "div", "slate-layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone, "data-recipe": body.recipe });
+        // Its place in the line's order, for the sheet to run the layers
+        // the other way (the Layer order preference).
+        block.style.setProperty("--slate-layer-i", String(i));
         const share = state.layers[layer.id] ? state.layers[layer.id].layerPct : 0;
         const head = buildHead(body, layer, resolved, share);
         block.appendChild(head.head);
@@ -497,7 +500,7 @@
         }
         block.appendChild(list);
         body.layersEl.appendChild(block);
-      }
+      });
     }
 
     function flash(row) {

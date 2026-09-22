@@ -17,7 +17,7 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.theme.v1";
-  const DEFAULT_THEME = "yaru-light";
+  const DEFAULT_THEME = "yaru-dark";
   /* The registry, in gallery order: Yaru's light and dark first, then
    * the light Rosé Pine, then the dark palettes. Each is a well-known
    * palette mapped onto Slate's contract; these are Slate's own files,

@@ -138,7 +138,7 @@ test("the theme is restored onto the host before it is appended, and falls back 
   assert.ok(host.slateTheme, "the controller is not kept on the host for slate.js to find");
 
   const bare = run(ACTIVE);
-  assert.equal(bare.body.children[0].getAttribute("data-theme"), "yaru-light");
+  assert.equal(bare.body.children[0].getAttribute("data-theme"), "yaru-dark");
 });
 
 test("the display preferences are restored onto the host the same way, and their absence is survived", () => {

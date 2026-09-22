@@ -575,3 +575,102 @@
     animation: none;
   }
 }
+
+/* ---- Layers with the head on top ----
+   The Layout preference (slate-display.js, written onto the root as
+   data-layers by the boot). Every rule here is scoped to "top"; "left"
+   is the sheet above, untouched. The layers stand side by side, three
+   across the centre, a fourth and fifth wrapping below; each card puts
+   its head across the top and its hoppers under it as two-line rows -
+   id, resin and blend, then the weight under the resin with Track at
+   the right. The one heading row above the cards cannot span three of
+   them, so it goes; the values carry their units. */
+
+.slate-root[data-layers="top"] .slate-recipe__columns {
+  display: none;
+}
+
+.slate-root[data-layers="top"] .slate-recipe__layers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.slate-root[data-layers="top"] .slate-layer {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  /* The menus and the resin search drop past a short card's edge; the
+     head rounds its own top corners instead. */
+  overflow: visible;
+}
+
+.slate-root[data-layers="top"] .slate-layer__head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-top-left-radius: var(--slate-radius-lg);
+  border-top-right-radius: var(--slate-radius-lg);
+}
+
+.slate-root[data-layers="top"] .slate-layer__share {
+  margin-top: 0;
+  margin-left: auto;
+  font-size: var(--slate-text-lg);
+}
+
+/* The other recipe's share and a refusal take a second line, after the
+   menu, which stays at the end of the first. */
+.slate-root[data-layers="top"] .slate-layer__share-other,
+.slate-root[data-layers="top"] .slate-layer__note {
+  order: 1;
+  flex-basis: 100%;
+}
+
+.slate-root[data-layers="top"] .slate-layer__rows {
+  padding: var(--slate-space-1) var(--slate-space-2) var(--slate-space-2);
+}
+
+/* Every row, the plan's included: the attribute out-specifies the Next
+   body's four-column rule rather than relying on source order. */
+.slate-root[data-layers="top"] .slate-hopper[data-recipe] {
+  grid-template-columns: 40px minmax(0, 1fr) 72px;
+  column-gap: var(--slate-space-2);
+  row-gap: var(--slate-space-1);
+  padding: var(--slate-space-1) var(--slate-space-2);
+}
+
+.slate-root[data-layers="top"] .slate-hopper__weight {
+  grid-column: 2;
+  text-align: left;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__controls {
+  grid-column: 3;
+  justify-content: flex-end;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__mark {
+  grid-column: 2 / -1;
+  text-align: left;
+}
+
+/* No mark, no third line. */
+.slate-root[data-layers="top"] .slate-hopper__mark:empty {
+  display: none;
+}
+
+.slate-root[data-layers="top"] .slate-hopper__other {
+  padding-left: calc(40px + var(--slate-space-2));
+}
+
+/* ---- Layers the other way round ----
+   The Layer order preference (data-layer-order on the root): every card
+   carries its index from the section, and reversed runs them backwards -
+   in either orientation, since order is honoured by the column and by
+   the grid alike. */
+
+.slate-root[data-layer-order="reversed"] .slate-layer {
+  order: calc(-1 * var(--slate-layer-i, 0));
+}

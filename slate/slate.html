@@ -8,14 +8,14 @@
 
   <!-- Theme state restores before the first stylesheet can paint, so the
        standalone harness never flashes the default before a saved choice. -->
-  <script src="../slate-theme.js?v=0.2.0"></script>
+  <script src="../slate-theme.js?v=0.3.0"></script>
   <!-- The display preferences (read-only mode) restore with it. -->
-  <script src="../slate-display.js?v=0.2.0"></script>
+  <script src="../slate-display.js?v=0.3.0"></script>
   <script>
     if (globalThis.PolynSlateTheme && typeof globalThis.PolynSlateTheme.initialize === "function") {
       document.documentElement.slateTheme = globalThis.PolynSlateTheme.initialize(document.documentElement, globalThis);
     } else {
-      document.documentElement.setAttribute("data-theme", "yaru-light");
+      document.documentElement.setAttribute("data-theme", "yaru-dark");
     }
     if (globalThis.PolynSlateDisplay && typeof globalThis.PolynSlateDisplay.initialize === "function") {
       document.documentElement.slateDisplay = globalThis.PolynSlateDisplay.initialize(document.documentElement, globalThis);
@@ -46,14 +46,14 @@
   <link rel="stylesheet" href="styles/components/header.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/section.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/stat-cards.css?v=0.1.2">
-  <link rel="stylesheet" href="styles/components/recipe.css?v=0.1.5">
-  <link rel="stylesheet" href="styles/components/recipe-edit.css?v=0.1.2">
+  <link rel="stylesheet" href="styles/components/recipe.css?v=0.1.6">
+  <link rel="stylesheet" href="styles/components/recipe-edit.css?v=0.1.3">
   <link rel="stylesheet" href="styles/components/recipe-book.css?v=0.1.2">
-  <link rel="stylesheet" href="styles/components/weights.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/weights.css?v=0.1.1">
   <link rel="stylesheet" href="styles/components/sync.css?v=0.1.2">
   <link rel="stylesheet" href="styles/components/settings.css?v=0.2.0">
   <link rel="stylesheet" href="styles/components/panel.css?v=0.1.0">
-  <link rel="stylesheet" href="styles/components/timeline.css?v=0.1.4">
+  <link rel="stylesheet" href="styles/components/timeline.css?v=0.1.5">
   <link rel="stylesheet" href="styles/components/resin-balance.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/admin.css?v=0.4.1">
   <link rel="stylesheet" href="styles/components/pressure.css?v=0.1.0">

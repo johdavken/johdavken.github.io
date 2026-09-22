@@ -26,7 +26,7 @@ test("the picker offers every registered theme as a radio, marks the current one
   const tiles = view.element.querySelectorAll("[data-theme-choice]");
   assert.deepEqual(tiles.map(tile => tile.getAttribute("data-theme-choice")), [...theme.THEME_IDS]);
   assert.deepEqual(tiles.map(tile => tile.getAttribute("role")), theme.THEME_IDS.map(() => "radio"));
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-light"));
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-dark"));
   assert.equal(view.element.querySelector("[role='radiogroup']").getAttribute("aria-label"), "Theme");
   // The swatch draws in the tile's own theme, not the live one.
   assert.equal(tiles[1].querySelector(".slate-theme-scope").getAttribute("data-theme"), "yaru-dark");
@@ -35,16 +35,16 @@ test("the picker offers every registered theme as a radio, marks the current one
   assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-status"));
   assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-action"));
 
-  click(tiles[1]);
-  assert.equal(controller.getTheme(), "yaru-dark");
-  assert.equal(root.getAttribute("data-theme"), "yaru-dark");
-  assert.equal(saved.store[theme.STORAGE_KEY], "yaru-dark");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-dark"));
-  assert.ok(tiles[1].classList.contains("is-selected"));
+  click(tiles[0]);
+  assert.equal(controller.getTheme(), "yaru-light");
+  assert.equal(root.getAttribute("data-theme"), "yaru-light");
+  assert.equal(saved.store[theme.STORAGE_KEY], "yaru-light");
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-light"));
+  assert.ok(tiles[0].classList.contains("is-selected"));
 
   // A change from elsewhere (another Settings, the harness) is followed.
-  controller.setTheme("yaru-light");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-light"));
+  controller.setTheme("yaru-dark");
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-dark"));
 });
 
 test("with no controller the tiles are inert and the section says so; the later-preferences stub is present", () => {

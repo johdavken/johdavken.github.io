@@ -20,6 +20,12 @@
  * Member rows are built once per hopper and MOVED between cards, the
  * pinned block and the foot as the projection changes, so a tick never
  * takes the operator's focus off a button.
+ *
+ * The LIST view (the Timeline preference, slate-display.js) is the same
+ * rows without the clock: late first, then by mark, then those without
+ * an estimate, each row saying its clock and countdown; the pumped-off
+ * foot stays. The axis, its cards and the horizon switch are withheld.
+ * The rows are the same elements in either view.
  */
 (function (root, factory) {
   const pick = (name, file) => (typeof require === "function" ? require(file) : (root && root[name]));
@@ -128,6 +134,7 @@
    * @param {function} [options.commands]  () -> the command bridge, or null
    * @param {function} [options.readOnly]
    * @param {function} [options.trackingMode] () -> "automatic"|"assisted"|"manual"; only the idle notice reads it
+   * @param {function} [options.timelineView] () -> "realtime"|"list" (realtime by default)
    * @param {function} [options.onCommitted]
    * @param {function} [options.say]
    */
@@ -139,14 +146,16 @@
     const onTick = typeof settings.onTick === "function" ? settings.onTick : () => {};
     const commands = typeof settings.commands === "function" ? settings.commands : () => null;
     const readOnly = typeof settings.readOnly === "function" ? settings.readOnly : () => false;
-    const trackingMode = typeof settings.trackingMode === "function" ? settings.trackingMode : () => "assisted";
+    const trackingMode = typeof settings.trackingMode === "function" ? settings.trackingMode : () => trackingModule.DEFAULT_MODE;
+    const timelineView = typeof settings.timelineView === "function" ? settings.timelineView : () => "realtime";
+    const viewNow = () => (timelineView() === "list" ? "list" : "realtime");
     const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
     const say = typeof settings.say === "function" ? settings.say : () => {};
     const guard = () => ({ readOnly: !!readOnly() });
 
     /* ---- The frame ---- */
 
-    const rootEl = element(doc, "div", "slate-panel slate-timeline", { "data-mode": "fixed" });
+    const rootEl = element(doc, "div", "slate-panel slate-timeline", { "data-mode": "fixed", "data-view": "realtime" });
     const head = element(doc, "div", "slate-timeline__head");
     head.appendChild(text(doc, "h2", "slate-timeline__title", "Timeline"));
     const clock = text(doc, "span", "slate-timeline__clock", "");
@@ -190,11 +199,14 @@
     const eventsEl = element(doc, "div", "slate-timeline__events");
     axis.appendChild(eventsEl);
     rootEl.appendChild(axis);
+    // The list view's rows, in the axis's place.
+    const listEl = element(doc, "div", "slate-timeline__list", { hidden: "" });
+    rootEl.appendChild(listEl);
 
     const chips = element(doc, "div", "slate-timeline__chips", { hidden: "" });
     rootEl.appendChild(chips);
+    // The pumped-off foot: its rows alone, no heading.
     const done = element(doc, "div", "slate-timeline__done", { hidden: "" });
-    done.appendChild(text(doc, "p", "slate-timeline__done-title", "Pumped off"));
     const doneList = element(doc, "div", "slate-timeline__done-list");
     done.appendChild(doneList);
     rootEl.appendChild(done);
@@ -208,6 +220,7 @@
       grouped: null,
       placed: null,
       horizon: rundownModule.DEFAULT_WINDOW,
+      view: "realtime",
       timer: null,
       height: 0,
       rows: new Map(),
@@ -387,9 +400,10 @@
       show(notice, !!noticeText);
     }
 
-    // A preference moved: the pump toggles re-read their ability, and the
-    // idle line follows the tracking mode.
+    // A preference moved: the pump toggles re-read their ability, the
+    // idle line follows the tracking mode, and a changed view redraws.
     function refresh() {
+      if (viewNow() !== state.view) { render(); return; }
       applyAbilities();
       paintNotice(state.inputs && state.inputs.model, state.entries.length);
     }
@@ -442,6 +456,80 @@
       setText(counts, idle ? "" : countsFor(entries));
       paintNotice(model, tracked);
 
+      state.view = viewNow();
+      const listing = state.view === "list";
+      rootEl.setAttribute("data-view", state.view);
+      show(axis, !listing);
+      show(listEl, listing);
+      if (listing) show(scale, false);
+      if (listing) {
+        renderList(entries, at, keep);
+      } else {
+        renderAxis(entries, at, keep, fit);
+      }
+
+      // The foot: pumped off, in the grouping's order.
+      const off = state.grouped ? state.grouped.done : [];
+      show(done, off.length > 0);
+      for (const entry of off) {
+        keep.add(entry.key);
+        const built = paintRow(entry, "Off", at);
+        // A row that stood in the list carried its mark as a title; off, it has none.
+        built.el.removeAttribute("title");
+        place(doneList, built);
+      }
+      pruneRows(keep);
+      applyAbilities();
+
+      // A row moved to another card blurs in a real browser: give the
+      // operator's focus back.
+      if (focused && state.rows.has(focused)) {
+        const button = state.rows.get(focused).button;
+        if (doc.activeElement !== button && typeof button.focus === "function") button.focus();
+      }
+      return state.placed;
+    }
+
+    /* The list: every tracked hopper that is not pumped off, as a row -
+     * late first, then by mark, then those with no estimate - each saying
+     * its clock and countdown. No axis, no horizon, no cards. */
+    function listAt(entry, at) {
+      if (entry.reason || !Number.isFinite(entry.markAt)) return rundownModule.reasonLabel(entry.reason);
+      const clock = rundownModule.formatClock(entry.markAt);
+      if (entry.markAt < at) return `${clock} · late`;
+      return `${clock} · in ${rundownModule.formatRemaining(entry.markAt - at)}`;
+    }
+
+    function renderList(entries, at, keep) {
+      state.grouped = layoutModule.groupEvents(entries, { now: at, windowMs: state.window.windowMs });
+      state.placed = null;
+      pruneEvents(new Set());
+      clear(ticksEl);
+      clear(chips);
+      show(chips, false);
+      show(pinned, false);
+      rootEl.classList.toggle("is-overdue", entries.some(entry => entry.overdue && !entry.pumpOff));
+      const timed = entries.filter(entry => !entry.pumpOff && !entry.reason && Number.isFinite(entry.markAt)).sort((a, b) => a.markAt - b.markAt);
+      const untimed = entries.filter(entry => !entry.pumpOff && (entry.reason || !Number.isFinite(entry.markAt)));
+      const ordered = [];
+      for (const entry of timed.concat(untimed)) {
+        keep.add(entry.key);
+        const built = paintRow(entry, listAt(entry, at), at);
+        built.el.setAttribute("title", Number.isFinite(entry.markAt)
+          ? `${entry.id} ${entry.markKind === "empty" ? "empty at" : "pump off by"} ${rundownModule.formatClock(entry.markAt)}`
+          : `${entry.id}: ${rundownModule.reasonLabel(entry.reason)}`);
+        ordered.push(built.el);
+      }
+      // Rows stand in time order; they are re-appended only when the
+      // document disagrees, so a tick never moves a focused row.
+      if (ordered.some((el, index) => listEl.children[index] !== el) || listEl.children.length !== ordered.length) {
+        for (const el of ordered) listEl.appendChild(el);
+      }
+    }
+
+    /* The axis: the clock, the cards at their marks, the pinned block,
+     * the chips beyond the horizon. */
+    function renderAxis(entries, at, keep, fit) {
       const height = measuredHeight();
       state.height = height;
       const windowMs = state.window.windowMs;
@@ -523,24 +611,8 @@
         chips.appendChild(text(doc, "span", "slate-timeline__chip is-unavailable", `${entry.id} · ${rundownModule.reasonLabel(entry.reason)}`, { "data-key": entry.key }));
       }
       show(chips, grouped.later.length + grouped.unavailable.length > 0);
-
-      // The foot: pumped off.
-      show(done, grouped.done.length > 0);
-      for (const entry of grouped.done) {
-        keep.add(entry.key);
-        const built = paintRow(entry, "Off", at);
-        place(doneList, built);
-      }
-      pruneRows(keep);
-      applyAbilities();
-
-      // A row moved to another card blurs in a real browser: give the
-      // operator's focus back.
-      if (focused && state.rows.has(focused)) {
-        const button = state.rows.get(focused).button;
-        if (doc.activeElement !== button && typeof button.focus === "function") button.focus();
-      }
-      return state.placed;
+      // A row that stood in the list carries a title the card's head says instead.
+      for (const built of state.rows.values()) built.el.removeAttribute("title");
     }
 
     /* ---- Results ---- */
@@ -596,7 +668,8 @@
 
     const view = settings.view || null;
     if (view && typeof view.ResizeObserver === "function") {
-      state.resize = new view.ResizeObserver(() => { if (state.inputs && measuredHeight() !== state.height) render(); });
+      // The axis is hidden in the list view; its collapse is not a resize to draw for.
+      state.resize = new view.ResizeObserver(() => { if (state.inputs && state.view !== "list" && measuredHeight() !== state.height) render(); });
       state.resize.observe(axis);
     }
 

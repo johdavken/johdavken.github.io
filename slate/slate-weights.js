@@ -544,8 +544,9 @@
       show(emptyLine, !model);
       show(columns, !!model);
       if (!model) return;
-      for (const layer of model.layers) {
+      model.layers.forEach((layer, i) => {
         const card = element(doc, "div", "slate-weights__layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });
+        card.style.setProperty("--slate-layer-i", String(i));
         const head = element(doc, "div", "slate-weights__head");
         head.appendChild(text(doc, "span", "slate-weights__layer-name", `Layer ${layer.id}`));
         head.appendChild(text(doc, "span", "slate-weights__layer-role", layer.roleLabel));
@@ -554,7 +555,7 @@
         for (const hopper of layer.hoppers) rows.appendChild(buildRow(layer, hopper));
         card.appendChild(rows);
         layersEl.appendChild(card);
-      }
+      });
       state.built = true;
     }
 

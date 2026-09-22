@@ -106,8 +106,27 @@
   margin-top: var(--slate-space-2);
 }
 
-.slate-timeline.is-idle .slate-timeline__axis {
+.slate-timeline.is-idle .slate-timeline__axis,
+.slate-timeline.is-idle .slate-timeline__list {
   opacity: 0.4;
+}
+
+/* ---- List ----
+   The Timeline preference's other view: the rows in time order, in the
+   axis's place, scrolling when they outgrow the panel. */
+
+.slate-timeline__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: var(--slate-space-2);
+  overflow-y: auto;
+}
+
+.slate-timeline__list .slate-timeline__member {
+  height: auto;
+  min-height: 28px;
+  padding: 2px 0;
+  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
 }
 
 /* The rail runs down the left, inside the tick-label gutter; the gutter
@@ -367,7 +386,7 @@
   color: var(--slate-text-faint);
 }
 
-/* ---- Foot: pumped off ---- */
+/* ---- Foot: pumped off (rows alone, no heading) ---- */
 
 .slate-timeline__done {
   flex: 0 1 auto;
@@ -375,14 +394,6 @@
   padding-top: var(--slate-space-2);
   border-top: var(--slate-stroke) solid var(--slate-border-subtle);
   overflow-y: auto;
-}
-
-.slate-timeline__done-title {
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .slate-timeline__member.is-off {

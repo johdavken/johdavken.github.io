@@ -74,7 +74,7 @@
   /* ---- The tracking mode ---- */
 
   const MODES = Object.freeze(["automatic", "assisted", "manual"]);
-  const DEFAULT_MODE = "assisted";
+  const DEFAULT_MODE = "automatic";
 
   function modeOf(value) {
     return MODES.includes(value) ? value : DEFAULT_MODE;

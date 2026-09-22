@@ -50,6 +50,7 @@ function boot(options) {
   let now = settings.now || NOW;
   let readOnly = !!settings.readOnly;
   let trackingMode = settings.trackingMode || "assisted";
+  let timelineView = settings.timelineView || "realtime";
   const commands = settings.commands === null ? null : (settings.commands || makeCommands({ capabilities: ["setPumpOff", "setHopperTracking", "resetTracking"] }));
   const view = timelineModule.create(doc, {
     now: () => now,
@@ -61,13 +62,14 @@ function boot(options) {
     commands: () => commands,
     readOnly: () => readOnly,
     trackingMode: () => trackingMode,
+    timelineView: () => timelineView,
     onCommitted: result => committed.push(result),
     say: message => said.push(message)
   });
   doc.body.appendChild(view.element);
   const axis = view.element.querySelector(".slate-timeline__axis");
   if (settings.height) axis._rect = { left: 0, top: 0, width: 276, height: settings.height };
-  return { doc, timers, ticks, said, committed, commands, view, axis, setNow: value => { now = value; }, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
+  return { doc, timers, ticks, said, committed, commands, view, axis, setNow: value => { now = value; }, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; }, setTimelineView: value => { timelineView = value; } };
 }
 
 const q = (view, selector) => view.element.querySelector(selector);
@@ -198,6 +200,9 @@ test("a usable changeover fits the axis: the mark stands at its instant, the sca
   assert.ok(off, "the pumped-off hopper is not in the foot");
   assert.equal(off.getAttribute("data-key"), "B:1");
   assert.equal(off.querySelector(".slate-timeline__member-at").textContent, "Off");
+  // The foot is its rows alone: no heading over them.
+  assert.equal(q(view, ".slate-timeline__done-title"), null);
+  assert.equal(q(view, ".slate-timeline__done").firstChild.getAttribute("class"), "slate-timeline__done-list");
   assert.equal(off.querySelector(".slate-toggle__label").textContent, "Back on");
   assert.equal(off.querySelector("[data-slate-control]").getAttribute("aria-pressed"), "true");
   // Cards: each event's dot at the instant, the card at its placed y.
@@ -433,4 +438,101 @@ test("event boxes stand in time order in the document, whatever order they were 
   for (const label of qa(view, ".slate-timeline__tick-label")) {
     assert.ok(Math.abs(topOf(label.parentNode) - changeoverTop) >= layout.LABEL_EDGE_PX, "a tick label runs into the changeover line");
   }
+});
+
+/* ----------------------------------------------------------------------
+ *   The list view
+ * -------------------------------------------------------------------- */
+
+test("the list view lists every tracked hopper as a row in time order - late first, no estimate last - with its clock and countdown; no axis, cards, chips or horizon; pumped off stays in the foot", () => {
+  const { view, setTimelineView } = boot({ height: 700, timelineView: "list" });
+  view.update(withChangeover(NOW, 4, snap => {
+    // A1 tracked with no weight: no estimate. C2 tracked normally.
+    snap.layers[0].hoppers[0].weight = 0;
+    snap.layers[0].hoppers[0].effectiveWeight = 0;
+  }));
+  assert.equal(view.element.getAttribute("data-view"), "list");
+  assert.ok(q(view, ".slate-timeline__axis").hasAttribute("hidden"));
+  assert.ok(q(view, ".slate-timeline__scale").hasAttribute("hidden"));
+  assert.ok(q(view, ".slate-timeline__chips").hasAttribute("hidden"));
+  assert.ok(!q(view, ".slate-timeline__list").hasAttribute("hidden"));
+  assert.equal(qa(view, ".slate-timeline__event").length, 0);
+  assert.equal(view.placed(), null);
+  // The head still speaks.
+  assert.match(q(view, ".slate-timeline__changeover-line").textContent, /^Changeover /);
+  assert.match(q(view, ".slate-timeline__counts").textContent, /5 tracked/);
+
+  const rows = qa(view, ".slate-timeline__list .slate-timeline__member");
+  const keys = rows.map(row => row.getAttribute("data-key"));
+  // Every tracked, not-off hopper is a row; the pumped-off one is in the foot.
+  assert.deepEqual([...keys].sort(), ["A:0", "A:1", "B:0", "C:1"]);
+  assert.equal(q(view, ".slate-timeline__done .slate-timeline__member").getAttribute("data-key"), "B:1");
+  // Time order: the timed rows by their mark, the one without an estimate last.
+  const entries = view.entries();
+  const markOf = key => entries.find(entry => entry.key === key).markAt;
+  const timed = keys.filter(key => Number.isFinite(markOf(key)));
+  assert.deepEqual(timed, [...timed].sort((a, b) => markOf(a) - markOf(b)));
+  assert.equal(keys[keys.length - 1], "A:0");
+  const at = key => q(view, `.slate-timeline__list .slate-timeline__member[data-key='${key}'] .slate-timeline__member-at`).textContent;
+  assert.equal(at("A:0"), rundown.reasonLabel(entries.find(entry => entry.key === "A:0").reason));
+  for (const key of timed) {
+    const late = markOf(key) < NOW;
+    assert.match(at(key), late ? /^\d+:\d\d [AP]M · late$/ : /^\d+:\d\d [AP]M · in \d+/, `${key}: ${at(key)}`);
+    assert.equal(q(view, `.slate-timeline__list .slate-timeline__member[data-key='${key}']`).classList.contains("is-overdue"), late);
+  }
+  assert.match(q(view, ".slate-timeline__list .slate-timeline__member[data-key='B:0']").getAttribute("title"), /^B1 pump off by /);
+  assert.match(q(view, ".slate-timeline__list .slate-timeline__member[data-key='A:0']").getAttribute("title"), /^A1: /);
+  assert.equal(qa(view, "[data-slate-control='pump']").length, 5);
+
+  // Back to realtime on refresh: the cards return, the rows are the same
+  // elements, the titles go. The hopper without an estimate is a chip on
+  // the axis, not a row, so it alone is built afresh on the way back.
+  const before = new Map(qa(view, ".slate-timeline__member").map(row => [row.getAttribute("data-key"), row]));
+  setTimelineView("realtime");
+  view.refresh();
+  assert.equal(view.element.getAttribute("data-view"), "realtime");
+  assert.ok(!q(view, ".slate-timeline__axis").hasAttribute("hidden"));
+  assert.ok(q(view, ".slate-timeline__list").hasAttribute("hidden"));
+  assert.ok(qa(view, ".slate-timeline__event").length > 0);
+  assert.ok(view.placed());
+  assert.equal(q(view, ".slate-timeline__member[data-key='A:0']"), null);
+  assert.equal(q(view, ".slate-timeline__chip.is-unavailable").getAttribute("data-key"), "A:0");
+  for (const row of qa(view, ".slate-timeline__member")) {
+    assert.ok(before.get(row.getAttribute("data-key")) === row, `${row.getAttribute("data-key")} was rebuilt`);
+    assert.equal(row.getAttribute("title"), null);
+  }
+  // And back again: the same rows, in the list.
+  setTimelineView("list");
+  view.refresh();
+  assert.equal(qa(view, ".slate-timeline__list .slate-timeline__member").length, 4);
+  for (const row of qa(view, ".slate-timeline__member")) if (row.getAttribute("data-key") !== "A:0") assert.ok(before.get(row.getAttribute("data-key")) === row);
+  // A refresh with the view unchanged redraws nothing.
+  const order = qa(view, ".slate-timeline__list .slate-timeline__member").map(row => row.getAttribute("data-key"));
+  view.refresh();
+  assert.deepEqual(qa(view, ".slate-timeline__list .slate-timeline__member").map(row => row.getAttribute("data-key")), order);
+});
+
+test("in the list view Pump off dispatches from a row as it does from a card, the row moves to the foot, and a tick walks the countdowns without moving a focused row", () => {
+  const { view, commands, committed, timers, setNow, doc } = boot({ height: 700, timelineView: "list", tickMs: 1000 });
+  view.update(withChangeover(NOW, 4));
+  const button = q(view, ".slate-timeline__list .slate-timeline__member[data-key='A:0'] [data-slate-control='pump']");
+  assert.equal(button.getAttribute("data-able"), "true");
+  click(button);
+  assert.deepEqual(commands.calls, [{ command: "setPumpOff", args: { recipe: "current", layer: "A", index: 0, pumpOff: true } }]);
+  assert.equal(committed.length, 1);
+  view.update(withChangeover(NOW, 4, snap => { snap.layers[0].hoppers[0].pumpOff = true; }));
+  assert.equal(qa(view, ".slate-timeline__done .slate-timeline__member").map(row => row.getAttribute("data-key")).includes("A:0"), true);
+  assert.equal(q(view, ".slate-timeline__list .slate-timeline__member[data-key='A:0']"), null);
+  // Off, the row no longer carries the mark it had in the list.
+  assert.equal(q(view, ".slate-timeline__done .slate-timeline__member[data-key='A:0']").getAttribute("title"), null);
+
+  const focusMe = q(view, ".slate-timeline__list .slate-timeline__member[data-key='B:0'] [data-slate-control='pump']");
+  focusMe.focus();
+  const first = q(view, ".slate-timeline__list .slate-timeline__member");
+  const wasAt = q(view, ".slate-timeline__list .slate-timeline__member[data-key='B:0'] .slate-timeline__member-at").textContent;
+  setNow(NOW + 10 * MINUTE);
+  timers.advance(1000);
+  assert.ok(q(view, ".slate-timeline__list .slate-timeline__member") === first, "the tick re-appended the rows");
+  assert.notEqual(q(view, ".slate-timeline__list .slate-timeline__member[data-key='B:0'] .slate-timeline__member-at").textContent, wasAt);
+  assert.ok(doc.activeElement === focusMe);
 });

@@ -73,7 +73,7 @@ function tokensOf(css) {
 
 test("the Slate registry is Yaru Light over Yaru Dark, then the six palettes, default light, and its own storage key", () => {
   assert.deepEqual([...theme.THEME_IDS], GALLERY_ORDER);
-  assert.equal(theme.DEFAULT_THEME, "yaru-light");
+  assert.equal(theme.DEFAULT_THEME, "yaru-dark");
   assert.equal(theme.STORAGE_KEY, "polyn.slate.theme.v1");
   assert.deepEqual(theme.THEMES.map(item => item.scheme), ["light", "dark", "light", "dark", "dark", "dark", "dark", "dark"]);
   assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine", "Tokyo Night", "Gruvbox", "Everforest", "Catppuccin", "Retro 82"]);
@@ -115,12 +115,12 @@ test("subscribers hear a change once, and a throwing subscriber stops nobody", (
   const heard = [];
   controller.subscribe(() => { throw new Error("boom"); });
   const off = controller.subscribe(value => heard.push(value));
-  controller.setTheme("yaru-dark");
-  controller.setTheme("yaru-dark");
-  assert.deepEqual(heard, ["yaru-dark"]);
-  off();
   controller.setTheme("yaru-light");
-  assert.deepEqual(heard, ["yaru-dark"]);
+  controller.setTheme("yaru-light");
+  assert.deepEqual(heard, ["yaru-light"]);
+  off();
+  controller.setTheme("yaru-dark");
+  assert.deepEqual(heard, ["yaru-light"]);
 });
 
 test("initialize reads the environment's localStorage and survives one that throws", () => {
@@ -129,7 +129,7 @@ test("initialize reads the environment's localStorage and survives one that thro
   assert.equal(theme.initialize(root, { localStorage: saved }).getTheme(), "yaru-dark");
   const blocked = {};
   Object.defineProperty(blocked, "localStorage", { get() { throw new Error("denied"); } });
-  assert.equal(theme.initialize(node("div"), blocked).getTheme(), "yaru-light");
+  assert.equal(theme.initialize(node("div"), blocked).getTheme(), "yaru-dark");
   assert.equal(theme.create(null, saved), null);
 });
 

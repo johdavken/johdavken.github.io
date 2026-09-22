@@ -1,6 +1,6 @@
-/* The Settings section: the theme, read-only, the tracking mode, and
- * room for what comes after them - with the administrator's way in at
- * the very bottom.
+/* The Settings section: the theme, the tracking mode, read-only, the
+ * layer orientation and order, the timeline's view, and room for what
+ * comes after them - with the administrator's way in at the very bottom.
  *
  * The theme picker drives the controller slate-host.js (or the harness)
  * created on the root; the controller writes the attribute and the
@@ -50,7 +50,7 @@
    * @param {object} ctx
    * @param {object|null} ctx.theme    the theme controller {getTheme, setTheme, subscribe}
    * @param {object[]} [ctx.themes]    the registry (PolynSlateTheme.THEMES)
-   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, subscribe}
+   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, getLayerOrientation, setLayerOrientation, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
    * @param {function} [ctx.say]       a line for the operator
    */
@@ -98,7 +98,7 @@
     if (!controller) appearance.appendChild(text(doc, "p", "slate-settings__note", "The theme cannot be changed on this page."));
     rootEl.appendChild(appearance);
 
-    // Safety: read-only mode.
+    // Safety: read-only mode. Built here, placed after Tracking.
     const display = settings.display || null;
     const safety = element(doc, "section", "slate-settings__group", { "aria-label": "Safety" });
     safety.appendChild(text(doc, "h2", "slate-settings__heading", "Safety"));
@@ -115,7 +115,6 @@
     }
     safety.appendChild(modes);
     if (!display) safety.appendChild(text(doc, "p", "slate-settings__note", "Read-only cannot be changed on this page."));
-    rootEl.appendChild(safety);
 
     // Tracking: how the Track toggle is offered.
     const tracking = element(doc, "section", "slate-settings__group", { "aria-label": "Tracking" });
@@ -138,6 +137,70 @@
     tracking.appendChild(trackingModes);
     if (!display) tracking.appendChild(text(doc, "p", "slate-settings__note", "Tracking cannot be changed on this page."));
     rootEl.appendChild(tracking);
+    rootEl.appendChild(safety);
+
+    // Layout: where a layer's head stands on the Recipe and Weights pages.
+    const layout = element(doc, "section", "slate-settings__group", { "aria-label": "Layout" });
+    layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
+    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe changes."));
+    const orientations = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layers" });
+    const orientationButtons = new Map();
+    for (const [mode, label, note] of [
+      ["left", "Left", "Beside its hoppers, one layer under another."],
+      ["top", "Top", "Above its hoppers, layers side by side, three across; a fourth and fifth wrap below."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layer-orientation": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setLayerOrientation === "function") display.setLayerOrientation(mode); });
+      orientationButtons.set(mode, button);
+      orientations.appendChild(button);
+    }
+    layout.appendChild(orientations);
+    if (!display) layout.appendChild(text(doc, "p", "slate-settings__note", "Layout cannot be changed on this page."));
+    rootEl.appendChild(layout);
+
+    // Layer order: which way the same pages run the layers.
+    const ordering = element(doc, "section", "slate-settings__group", { "aria-label": "Layer order" });
+    ordering.appendChild(text(doc, "h2", "slate-settings__heading", "Layer order"));
+    ordering.appendChild(text(doc, "p", "slate-settings__lead", "Which way the Recipe and Weights pages list the layers."));
+    const orders = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layer order" });
+    const orderButtons = new Map();
+    for (const [mode, label, note] of [
+      ["forward", "A \u2192 E", "Layer A first, as the line numbers them."],
+      ["reversed", "E \u2192 A", "The last layer first; layer A at the end."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layer-order": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setLayerOrder === "function") display.setLayerOrder(mode); });
+      orderButtons.set(mode, button);
+      orders.appendChild(button);
+    }
+    ordering.appendChild(orders);
+    if (!display) ordering.appendChild(text(doc, "p", "slate-settings__note", "Layer order cannot be changed on this page."));
+    rootEl.appendChild(ordering);
+
+    // Timeline: the run-down on a clock, or as a list.
+    const timeline = element(doc, "section", "slate-settings__group", { "aria-label": "Timeline" });
+    timeline.appendChild(text(doc, "h2", "slate-settings__heading", "Timeline"));
+    timeline.appendChild(text(doc, "p", "slate-settings__lead", "How the aside shows the run-down of the tracked hoppers."));
+    const views = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Timeline view" });
+    const viewButtons = new Map();
+    for (const [mode, label, note] of [
+      ["realtime", "Realtime", "On a clock: Now at the top, each hopper at its mark, the changeover below."],
+      ["list", "List", "Rows in time order, without the clock. Pumped off stays at the foot."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-timeline-view": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setTimelineView === "function") display.setTimelineView(mode); });
+      viewButtons.set(mode, button);
+      views.appendChild(button);
+    }
+    timeline.appendChild(views);
+    if (!display) timeline.appendChild(text(doc, "p", "slate-settings__note", "The timeline's view cannot be changed on this page."));
+    rootEl.appendChild(timeline);
 
     // What comes next.
     const later = element(doc, "section", "slate-settings__group", { "aria-label": "More settings" });
@@ -304,6 +367,24 @@
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
+      const orientation = display && typeof display.getLayerOrientation === "function" ? display.getLayerOrientation() : null;
+      for (const [id, button] of orientationButtons) {
+        const on = id === orientation;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
+      const order = display && typeof display.getLayerOrder === "function" ? display.getLayerOrder() : null;
+      for (const [id, button] of orderButtons) {
+        const on = id === order;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
+      const timelineView = display && typeof display.getTimelineView === "function" ? display.getTimelineView() : null;
+      for (const [id, button] of viewButtons) {
+        const on = id === timelineView;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
       paintAdmin();
     }
 
@@ -318,6 +399,9 @@
       tile: id => tiles.get(id) || null,
       mode: id => modeButtons.get(id) || null,
       trackingMode: id => trackingButtons.get(id) || null,
+      layerOrientation: id => orientationButtons.get(id) || null,
+      layerOrder: id => orderButtons.get(id) || null,
+      timelineView: id => viewButtons.get(id) || null,
       admin: () => ({ open: adminOpen, pending: adminPending, note: adminNote.textContent, signedIn: adminGroup.classList.contains("is-signed-in") }),
       // Left behind, the block closes and the password goes with it.
       onHide() { openAdmin(false); }

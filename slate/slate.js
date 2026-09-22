@@ -146,9 +146,25 @@
     }
   }
 
-  /* The switch moved: every control re-reads its ability. */
+  /* LAYERS
+   *
+   * Where a layer's head stands and which way the layers run
+   * (slate-display.js): the words go onto the root as data-layers and
+   * data-layer-order and the sheets lay the sections out from them. No
+   * section is told and nothing is rebuilt. */
+  function renderLayout() {
+    if (!container) return;
+    const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "left";
+    const order = displayController && typeof displayController.getLayerOrder === "function" ? displayController.getLayerOrder() : "forward";
+    container.setAttribute("data-layers", orientation);
+    container.setAttribute("data-layer-order", order);
+  }
+
+  /* A preference moved: the root's attributes follow, and every control
+   * re-reads its ability. */
   function onDisplayChange() {
     renderReadOnly();
+    renderLayout();
     for (const pane of Object.values(panes)) {
       const swap = pane.swap;
       for (const definition of swap.definitions()) {
@@ -274,7 +290,8 @@
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
       readOnly: readOnlyNow,
-      trackingMode: () => (displayController && typeof displayController.getTrackingMode === "function" ? displayController.getTrackingMode() : "assisted"),
+      trackingMode: () => (displayController && typeof displayController.getTrackingMode === "function" ? displayController.getTrackingMode() : (displayModule ? displayModule.DEFAULTS.tracking : "automatic")),
+      timelineView: () => (displayController && typeof displayController.getTimelineView === "function" ? displayController.getTimelineView() : (displayModule ? displayModule.DEFAULTS.timeline : "realtime")),
       rundown,
       resins: () => {
         if (!catalog || typeof catalog.getResins !== "function") return [];
@@ -377,6 +394,7 @@
     if (badge) badge.addEventListener("click", () => sections.show("settings"));
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
+    renderLayout();
     for (const name of Object.keys(panes)) home(name);
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());

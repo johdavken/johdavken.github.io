@@ -118,7 +118,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.13.1";
+  const VERSION = "0.14.0";
 
   function requested() {
     try {
@@ -160,7 +160,7 @@
     host.slateTheme = theme && typeof theme.initialize === "function"
       ? theme.initialize(host, root)
       : null;
-    if (!host.slateTheme) host.setAttribute("data-theme", "yaru-light");
+    if (!host.slateTheme) host.setAttribute("data-theme", "yaru-dark");
     /* The display preferences (slate-display.js) the same way: read here,
      * before the boot draws, so the first render already honours them. */
     const display = root.PolynSlateDisplay;

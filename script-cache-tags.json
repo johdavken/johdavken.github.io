@@ -68,16 +68,16 @@
     "hash": "e46ac7a3d68b27a5"
   },
   "slate-theme.js": {
-    "v": "0.2.0",
-    "hash": "55ee9cbc420917e7"
+    "v": "0.3.0",
+    "hash": "91759ef5870fc4db"
   },
   "slate-display.js": {
-    "v": "0.2.0",
-    "hash": "cb84fba93b7a1f85"
+    "v": "0.3.0",
+    "hash": "0aab2fcb475e7226"
   },
   "slate-host.js": {
-    "v": "0.13.1",
-    "hash": "f9c77e769bb01080"
+    "v": "0.14.0",
+    "hash": "ddd155c8f1e75f14"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

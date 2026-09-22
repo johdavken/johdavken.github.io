@@ -476,11 +476,12 @@ test("the mode moving under a plan: Assisted to Automatic hides Track and tracks
   timers.advance(0);
   assert.equal(commands.calls.length, 2);
 
-  // An unknown word is Assisted.
+  // An unknown word is the default, Automatic: Track withdrawn, the batch asked for again.
   setTrackingMode("whatever");
   view.refresh();
-  assert.ok(!toggleOf(view, "A1").hasAttribute("hidden"));
+  assert.ok(toggleOf(view, "A1").hasAttribute("hidden"));
   assert.ok(toggleOf(view, "A3").hasAttribute("hidden"));
+  assert.equal(timers.pending(), 1);
 });
 
 /* ----------------------------------------------------------------------

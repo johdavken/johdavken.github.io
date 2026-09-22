@@ -15,9 +15,9 @@ const rowWith = overrides => Object.assign({}, ROW, overrides);
 
 test("the modes are three words and anything else is Assisted", () => {
   assert.deepEqual(tracking.MODES, ["automatic", "assisted", "manual"]);
-  assert.equal(tracking.DEFAULT_MODE, "assisted");
+  assert.equal(tracking.DEFAULT_MODE, "automatic");
   for (const mode of tracking.MODES) assert.equal(tracking.modeOf(mode), mode);
-  for (const value of [undefined, null, "", "auto", "Manual", 1]) assert.equal(tracking.modeOf(value), "assisted", String(value));
+  for (const value of [undefined, null, "", "auto", "Manual", 1]) assert.equal(tracking.modeOf(value), "automatic", String(value));
 });
 
 test("Assisted offers Track where a planned resin goes away, where it is already on or the pump is off, and everywhere without a plan", () => {
@@ -48,7 +48,9 @@ test("Automatic wants a row tracked only where a planned resin goes away from an
   assert.equal(tracking.wantsTracking("automatic", rowWith({ planned: false })), false, "no plan");
   assert.equal(tracking.wantsTracking("automatic", rowWith({ pumpOff: true })), true, "pump off is no bar");
   assert.equal(tracking.wantsTracking("automatic", null), false);
-  for (const mode of ["assisted", "manual", undefined, "auto"]) assert.equal(tracking.wantsTracking(mode, rowWith({})), false, String(mode));
+  for (const mode of ["assisted", "manual"]) assert.equal(tracking.wantsTracking(mode, rowWith({})), false, String(mode));
+  // A word that is no mode reads as the default, which is automatic.
+  for (const mode of [undefined, "auto"]) assert.equal(tracking.wantsTracking(mode, rowWith({})), true, String(mode));
 });
 
 test("trackMany asks one setHopperTracking(true) per request, on Current, in order, and returns the answers in order", () => {

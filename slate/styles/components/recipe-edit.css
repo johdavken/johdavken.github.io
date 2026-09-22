@@ -487,3 +487,20 @@
   color: var(--slate-text-faint);
   font-size: var(--slate-text-sm);
 }
+
+/* ---- Layers with the head on top (recipe.css) ---- */
+
+.slate-root[data-layers="top"] .slate-hopper__note {
+  padding-left: calc(40px + var(--slate-space-2));
+}
+
+/* The layer's menu sits at the end of the head's first line and drops
+   leftwards, so the rightmost card's list stays over its own card. */
+.slate-root[data-layers="top"] .slate-layer-menu {
+  margin-top: 0;
+}
+
+.slate-root[data-layers="top"] .slate-layer-menu__list {
+  right: 0;
+  left: auto;
+}
