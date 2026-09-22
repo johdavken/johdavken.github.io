@@ -142,7 +142,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
   for (const file of ["scheduling.js", "station-command-contract.js", "station-command-bridge.js", "station-state-bridge.js",
-    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "slate-theme.js", "slate-display.js"]) load(file);
+    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "resin-totals.js", "slate-theme.js", "slate-display.js"]) load(file);
   hostEl.slateTheme = root.PolynSlateTheme.create(hostEl, null);
   // Read-only is automatic on a linked line (slate-display.test.js covers it); this test wants the writable path.
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, null);
@@ -199,6 +199,36 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.equal(pump.getAttribute("data-able"), "true");
   pump.dispatchEvent({ type: "click", target: pump, stopPropagation() {} });
   assert.equal(JSON.stringify(executed[1]), JSON.stringify({ command: "setPumpOff", args: { recipe: "current", layer: "A", index: 0, pumpOff: true } }));
+
+  // Resin Balance runs the application's own resin-totals.js (loaded by
+  // index.html, never by the host) in the Timeline's place, and its close
+  // brings the Timeline back; the centre stays on the recipe throughout.
+  const timelineWrap = hostEl.querySelector(".slate-aside .slate-section[data-section='timeline']");
+  const balanceWrap = hostEl.querySelector(".slate-aside .slate-section[data-section='resin-balance']");
+  assert.ok(timelineWrap && balanceWrap, "the aside does not hold both the Timeline and the tool");
+  assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
+  const listed = hostEl.querySelectorAll(".slate-rail__sections [data-section]").map(item => item.getAttribute("data-section"));
+  assert.deepEqual(listed, ["recipe", "recipe-book", "resin-balance"], "Resin Balance is not listed with the sections, under the Recipe Book");
+  const toolItem = hostEl.querySelector(".slate-rail__sections [data-section='resin-balance']");
+  toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
+  assert.ok(timelineWrap.hasAttribute("hidden") && !balanceWrap.hasAttribute("hidden"), "selecting the tool did not swap the aside");
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe", "a tool took the centre");
+  assert.ok(toolItem.classList.contains("is-active"));
+  assert.ok(!hostEl.querySelector(".slate-rail__item--tools").classList.contains("is-active"), "Tools lit for a section outside its menu");
+  assert.ok(hostEl.querySelector(".slate-rail [data-section='recipe']").classList.contains("is-active"), "the recipe lost its mark to the tool");
+  const balanceRows = hostEl.querySelectorAll(".slate-balance__row");
+  assert.ok(balanceRows.length > 0, "the tool drew no rows from the live job");
+  assert.equal(balanceRows[0].getAttribute("data-resin"), "LL318");
+  const back = hostEl.querySelector(".slate-balance [data-slate-back]");
+  back.dispatchEvent({ type: "click", target: back, stopPropagation() {} });
+  assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"), "close did not bring the Timeline back");
+  assert.ok(!toolItem.classList.contains("is-active"));
+  // The rail item again: open, and once more, closed.
+  toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
+  assert.ok(!balanceWrap.hasAttribute("hidden"));
+  toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
+  assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"), "selecting the showing tool again did not close it");
+  assert.ok(!toolItem.classList.contains("is-active"));
 
   // The Recipe Book reads the recipes bridge the application connected.
   const bookRow = hostEl.querySelector(".slate-book__row[data-recipe='r1']");

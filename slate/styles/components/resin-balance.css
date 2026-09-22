@@ -1,0 +1,81 @@
+/* Resin Balance: each resin's pounds and share of the job, one row apiece,
+   the share drawn as a bar under the figures. */
+
+.slate-balance__caption {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-balance__list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  min-height: 0;
+  margin-top: var(--slate-space-2);
+  overflow-y: auto;
+}
+
+.slate-balance__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  column-gap: var(--slate-space-2);
+  padding: var(--slate-space-1) 0;
+}
+
+.slate-balance__name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-balance__lbs {
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-balance__share {
+  min-width: 3.2em;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-balance__bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: var(--slate-space-1);
+  border-radius: 2px;
+  background: var(--slate-surface-sunken);
+  overflow: hidden;
+}
+
+.slate-balance__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--slate-accent);
+  transition: width var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-balance__empty {
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-balance__foot {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--slate-space-2);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

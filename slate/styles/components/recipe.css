@@ -296,8 +296,17 @@
   color: var(--slate-warning);
 }
 
-/* ---- Compare: the other recipe under each row ---- */
+/* ---- Compare: the next order against this one ---- */
 
+/* A hopper whose resin changes at the changeover: its id alone is
+   coloured, in the accent so it never reads as trouble (red is overdue's).
+   The row itself, a row whose blend alone moves, and one that agrees are
+   left plain. */
+.slate-hopper.is-differs .slate-hopper__id {
+  color: var(--slate-accent);
+}
+
+/* The other recipe's value under a row that moves (Compare on). */
 .slate-hopper__other {
   grid-column: 1 / -1;
   padding-left: calc(56px + var(--slate-space-3));
@@ -305,28 +314,21 @@
   font-size: var(--slate-text-sm);
 }
 
-/* Green where the two recipes agree, red where the resin changes; a row
-   whose blend alone moves is left plain. */
-.slate-hopper.is-same {
-  background: var(--slate-success-soft);
-}
-
-.slate-hopper.is-differs {
-  background: var(--slate-danger-soft);
+.slate-hopper.is-differs .slate-hopper__other {
+  color: var(--slate-accent);
+  font-weight: 500;
 }
 
 .slate-layer__share-other {
+  color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
   font-variant-numeric: tabular-nums;
 }
 
-.slate-layer__head.is-same .slate-layer__share-other {
-  color: var(--slate-success);
-}
-
-.slate-layer__head.is-differs .slate-layer__share-other {
-  color: var(--slate-danger);
-  font-weight: 600;
+/* Track is withdrawn from a row with nothing to run down; the toggle's
+   own display rule would otherwise out-specify [hidden]. */
+.slate-root .slate-toggle[hidden] {
+  display: none;
 }
 
 /* Another device moved the value under an open editor. */

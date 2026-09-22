@@ -1,22 +1,7 @@
-/* The right pane: the run-down as a vertical timeline.
-   Sticky and viewport-tall, so it stays in view while the recipe scrolls.
+/* The right pane: the run-down as a vertical timeline. The card itself -
+   sticky, viewport-tall - is the aside's shared panel chrome (panel.css).
    The card geometry (padding, the when-line, a member row, the facts line)
    is mirrored by slate-timeline.js's constants: change both. */
-
-.slate-timeline {
-  position: sticky;
-  top: var(--slate-space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--slate-space-2);
-  height: calc(100vh - var(--slate-header-height) - 2 * var(--slate-space-5));
-  min-height: 480px;
-  padding: var(--slate-space-3);
-  border: var(--slate-stroke) solid var(--slate-border-subtle);
-  border-radius: var(--slate-radius-lg);
-  background: var(--slate-surface-raised);
-  box-shadow: var(--slate-shadow-card);
-}
 
 /* ---- Head ---- */
 
@@ -105,12 +90,13 @@
   opacity: 0.4;
 }
 
-/* The rail runs down the left, inside the tick-label gutter. */
+/* The rail runs down the left, inside the tick-label gutter; the gutter
+   is wide enough that a label clears the card's edge. */
 .slate-timeline__rail {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 50px;
+  left: 58px;
   width: 2px;
   border-radius: 1px;
   background: var(--slate-border);
@@ -118,19 +104,19 @@
 
 .slate-timeline__tick {
   position: absolute;
-  left: 44px;
+  left: 52px;
   width: 6px;
   height: 0;
   border-top: 1px solid var(--slate-border);
 }
 
 .slate-timeline__tick[data-kind="major"] {
-  left: 41px;
+  left: 49px;
   width: 9px;
 }
 
 .slate-timeline__tick[data-kind="hour"] {
-  left: 38px;
+  left: 46px;
   width: 12px;
   border-top-color: var(--slate-border-strong);
 }
@@ -205,7 +191,7 @@
 
 .slate-timeline__dot {
   position: absolute;
-  left: 46px;
+  left: 54px;
   width: 10px;
   height: 10px;
   margin-top: -5px;
@@ -217,7 +203,7 @@
 .slate-timeline__stem {
   position: absolute;
   top: 0;
-  left: 50px;
+  left: 58px;
   width: 2px;
   background: var(--slate-accent-soft);
 }
@@ -225,7 +211,7 @@
 .slate-timeline__card {
   position: absolute;
   right: 0;
-  left: 60px;
+  left: 68px;
   padding: 6px var(--slate-space-2);
   border: var(--slate-stroke) solid var(--slate-border);
   border-radius: var(--slate-radius);
@@ -246,7 +232,7 @@
 .slate-timeline__pinned {
   position: absolute;
   right: 0;
-  left: 60px;
+  left: 68px;
 }
 
 .slate-timeline__card.is-pinned {

@@ -26,6 +26,8 @@
     settings: "M10 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4",
     tools: "M13.5 3.5a3.5 3.5 0 0 0-3.9 4.9L3 15l2 2 6.6-6.6a3.5 3.5 0 0 0 4.9-3.9l-2.3 2.3-2-2Z",
     chevron: "M6 8l4 4 4-4",
+    balance: "M10 3v14M6 17h8M4 5h12M2 10l3-5 3 5a3 3 0 0 1-6 0ZM12 10l3-5 3 5a3 3 0 0 1-6 0Z",
+    timeline: "M5 3v14M9 6h8M9 10h6M9 14h8",
     generic: "M4 4h12v12H4Z"
   });
 
@@ -65,7 +67,7 @@
   /**
    * @param {Document} doc
    * @param {object} options
-   * @param {object[]} options.sections   section definitions ({id, label, group, icon})
+   * @param {object[]} options.sections   section definitions ({id, label, group, icon, pane?})
    * @param {function} options.onSelect   called with a section id
    * @param {string} [options.brand]      the mark's accessible name
    */
@@ -169,18 +171,28 @@
       onSelect(button.getAttribute("data-section"));
     });
 
-    function setActive(id) {
-      for (const [itemId, button] of items) {
-        const active = itemId === id;
-        button.classList.toggle("is-active", active);
-        if (active) button.setAttribute("aria-current", "page");
-        else button.removeAttribute("aria-current");
-      }
-      const activeIsTool = toolDefinitions.some(one => one.id === id);
-      toolsButton.classList.toggle("is-active", activeIsTool);
+    /* Two things are current at once: the centre's section, and what the
+       aside shows in the Timeline's place (a definition with pane
+       "aside"). Each is marked apart, so neither unmarks the other. */
+    const inAside = id => definitions.some(one => one.id === id && one.pane === "aside");
+
+    function mark(button, active) {
+      button.classList.toggle("is-active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
     }
 
-    return Object.freeze({ element: rail, setActive, openTools, closeTools, isToolsOpen: () => toolsOpen });
+    function setActive(id) {
+      for (const [itemId, button] of items) if (!inAside(itemId)) mark(button, itemId === id);
+    }
+
+    /* The aside's panel, or null when the Timeline is back. */
+    function setActiveAside(id) {
+      for (const [itemId, button] of items) if (inAside(itemId)) mark(button, itemId === id);
+      toolsButton.classList.toggle("is-active", toolDefinitions.some(one => one.id === id));
+    }
+
+    return Object.freeze({ element: rail, setActive, setActiveAside, openTools, closeTools, isToolsOpen: () => toolsOpen });
   }
 
   return Object.freeze({ GLYPHS, TOOLS_EMPTY, create });

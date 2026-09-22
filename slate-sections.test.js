@@ -151,7 +151,7 @@ test("Tools drops a menu that says there are no tools yet; Escape and an outside
 
 test("a tool section lists inside the menu as a menuitem and selecting it closes the menu", () => {
   const doc = makeDocument();
-  const { list } = definitions([{ id: "totals", label: "Resin Totals", group: "tools", icon: "totals", create: () => ({ element: doc.createElement("div") }) }]);
+  const { list } = definitions([{ id: "totals", label: "Resin Totals", group: "tools", pane: "aside", icon: "totals", create: () => ({ element: doc.createElement("div") }) }]);
   const selected = [];
   const view = rail.create(doc, { sections: list, onSelect: id => selected.push(id) });
   const menu = view.element.querySelector(".slate-rail__menu");
@@ -162,13 +162,65 @@ test("a tool section lists inside the menu as a menuitem and selecting it closes
   click(item);
   assert.deepEqual(selected, ["totals"]);
   assert.equal(view.isToolsOpen(), false);
-  view.setActive("totals");
-  assert.ok(view.element.querySelector(".slate-rail__item--tools").classList.contains("is-active"));
+  // A tool shows in the aside (pane "aside"), marked apart from the
+  // centre's section: both stay current.
+  view.setActive("recipe");
+  view.setActiveAside("totals");
+  const tools = view.element.querySelector(".slate-rail__item--tools");
+  assert.ok(tools.classList.contains("is-active"));
+  assert.equal(item.getAttribute("aria-current"), "page");
+  assert.ok(view.element.querySelector("[data-section='recipe']").classList.contains("is-active"), "marking the tool unmarked the section");
+  view.setActive("settings");
+  assert.ok(tools.classList.contains("is-active"), "marking a section unmarked the tool");
+  assert.ok(!view.element.querySelector("[data-section='recipe']").classList.contains("is-active"));
+  view.setActiveAside(null);
+  assert.ok(!tools.classList.contains("is-active"));
+  assert.equal(item.getAttribute("aria-current"), null);
+  assert.ok(view.element.querySelector("[data-section='settings']").classList.contains("is-active"), "clearing the tool unmarked the section");
+});
+
+test("a section listed with the sections but shown in the aside sits in the list, under the Recipe Book, and is marked with the aside", () => {
+  const doc = makeDocument();
+  const { list } = definitions();
+  const balance = { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: () => ({ element: doc.createElement("div") }) };
+  const withBalance = [list[0], balance, list[1]];
+  const view = rail.create(doc, { sections: withBalance, onSelect: () => {} });
+  assert.deepEqual(view.element.querySelectorAll(".slate-rail__sections [data-section]").map(item => item.getAttribute("data-section")), ["recipe", "resin-balance"]);
+  assert.equal(view.element.querySelector(".slate-rail__menu [data-section='resin-balance']"), null, "the aside section landed in Tools");
+  const item = view.element.querySelector("[data-section='resin-balance']");
+  view.setActive("recipe");
+  view.setActiveAside("resin-balance");
+  assert.ok(item.classList.contains("is-active"));
+  assert.ok(view.element.querySelector("[data-section='recipe']").classList.contains("is-active"));
+  assert.ok(!view.element.querySelector(".slate-rail__item--tools").classList.contains("is-active"), "Tools lit for a section outside its menu");
+  view.setActive("settings");
+  assert.ok(item.classList.contains("is-active"), "the centre's change unmarked the aside's section");
+  view.setActiveAside(null);
+  assert.ok(!item.classList.contains("is-active"));
 });
 
 test("the rail draws a glyph for every section the boot defines", () => {
   const boot = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate.js"), "utf8");
   const icons = [...boot.matchAll(/icon: "([a-z-]+)"/g)].map(match => match[1]);
-  assert.deepEqual(icons, ["recipe", "book", "settings"], "the boot's sections changed: Recipe, Recipe Book, Settings");
+  assert.deepEqual(icons, ["recipe", "book", "balance", "settings", "timeline"], "the boot's sections changed: Recipe, Recipe Book, Resin Balance, Settings; the aside's Timeline");
   for (const icon of icons) assert.ok(rail.GLYPHS[icon], `no glyph for ${icon}`);
+});
+
+test("an aside definition is a valid section the rail lists nowhere: the Timeline swaps in the aside without a rail item", () => {
+  const doc = makeDocument();
+  const mount = doc.createElement("aside");
+  const { list } = definitions();
+  const timeline = { id: "timeline", label: "Timeline", group: "aside", icon: "timeline", create: () => ({ element: doc.createElement("div") }) };
+  const tool = { id: "totals", label: "Resin Totals", group: "tools", pane: "aside", icon: "totals", create: () => ({ element: doc.createElement("div") }) };
+  assert.ok(sections.valid(timeline));
+  assert.ok(sections.GROUPS.includes("aside"));
+  const swap = sections.mountSections(doc, mount, [timeline, tool], {});
+  assert.ok(swap.show("timeline"));
+  assert.ok(!swap.element("timeline").hasAttribute("hidden"));
+  assert.ok(swap.element("totals").hasAttribute("hidden"));
+  assert.ok(swap.show("totals"));
+  assert.ok(swap.element("timeline").hasAttribute("hidden"), "the Timeline stayed while the tool arrived");
+  const view = rail.create(doc, { sections: list.concat([timeline, tool]), onSelect: () => {} });
+  assert.equal(view.element.querySelector("[data-section='timeline']"), null, "the rail lists the Timeline");
+  assert.ok(view.element.querySelector(".slate-rail__menu [data-section='totals']"));
 });

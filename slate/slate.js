@@ -30,6 +30,10 @@
   const admin = root.PolynStationAdminBridge || null;
   const recipes = root.PolynStationRecipesBridge || null;
   const rundown = root.PolynStationRundown || null;
+  // The application's own Resin Totals arithmetic (resin-totals.js), for
+  // the Resin Balance tool. The application loads it; the harness loads
+  // the same file. Optional: without it the tool says so.
+  const resinTotals = root.PolynResinTotals || null;
   // The shared resin catalog, for the recipe's resin search. Optional: with
   // none, the search offers only what is typed.
   const catalog = root.PolynResinCatalog || null;
@@ -47,6 +51,7 @@
   const syncModule = root.PolynSlateSync;
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
+  const balanceModule = root.PolynSlateResinBalance;
 
   /* Inside the application host (?view=slate, marked on the body by
    * slate-host.js) the application connects the bridges before any of
@@ -57,12 +62,14 @@
   const STALE_APPLICATION = "The application on this page did not connect to Slate - it is likely a cached copy from before Slate. Reload bypassing the cache.";
   const HARNESS = "Standalone harness: demo data, read-only. The application's Slate view is index.html?view=slate.";
   const DEFAULT_SECTION = "recipe";
+  const TIMELINE = "timeline";
 
   const mounts = {};
   let container = null;
   let current = null;
   let lastOwnRevision = null;
   let sections = null;
+  let aside = null;
   let railView = null;
   let stats = null;
   let summary = null;
@@ -124,14 +131,14 @@
   /* The switch moved: every control re-reads its ability. */
   function onDisplayChange() {
     renderReadOnly();
-    if (sections) {
-      for (const definition of sections.definitions()) {
-        const built = sections.section(definition.id);
+    for (const swap of [sections, aside]) {
+      if (!swap) continue;
+      for (const definition of swap.definitions()) {
+        const built = swap.section(definition.id);
         if (built && typeof built.refresh === "function") built.refresh();
       }
     }
     if (stats) stats.refresh();
-    if (summary && typeof summary.refresh === "function") summary.refresh();
   }
 
   function currentSource() {
@@ -183,10 +190,10 @@
     current = resolved;
     if (sections) sections.update(resolved, { kind, own });
     if (stats) stats.update(resolved, { kind, own });
-    if (summary) {
-      summary.update(resolved);
-      applyMarks(summary.marks());
-    }
+    // The aside's panels, the Timeline among them, are updated by the
+    // swap; the marks it then holds go to the recipe's rows.
+    if (aside) aside.update(resolved, { kind, own });
+    if (summary) applyMarks(summary.marks());
     renderNotice(resolved);
     renderReadOnly();
   }
@@ -254,30 +261,51 @@
       say
     });
 
+    // Every section the rail lists, and the pane each shows in: the
+    // centre (the default) or the aside, where the Timeline sits and a
+    // tool takes its place one at a time. Resin Balance is listed with
+    // the sections, under the Recipe Book, though it shows in the aside.
     const definitions = [
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, c) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
-      { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) }
+      { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => aside.show(TIMELINE) })) },
+      { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
+      // The timeline keeps the clock every readout follows; it is handed
+      // the same context as a section so Pump off goes through the
+      // tracking seam. No rail item: it is what the aside shows by default.
+      { id: TIMELINE, label: "Timeline", group: "aside", pane: "aside", icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) }
     ];
+    const centreDefinitions = definitions.filter(definition => definition.pane !== "aside");
+    const asideDefinitions = definitions.filter(definition => definition.pane === "aside");
 
-    sections = sectionsModule.mountSections(doc, mounts.centre, definitions, ctx, {
+    sections = sectionsModule.mountSections(doc, mounts.centre, centreDefinitions, ctx, {
       onChange(definition) {
         const title = container.querySelector(".slate-header__title");
         if (title) title.textContent = definition.label;
         if (railView) railView.setActive(definition.id);
       }
     });
+    aside = sectionsModule.mountSections(doc, mounts.aside, asideDefinitions, ctx, {
+      onChange(definition) {
+        if (railView) railView.setActiveAside(definition.id === TIMELINE ? null : definition.id);
+      }
+    });
+    summary = aside.section(TIMELINE);
 
-    railView = rail.create(doc, { sections: definitions, onSelect: id => sections.show(id) });
+    // An aside item selected again while it is showing closes it: the
+    // Timeline comes back, as the panel's own close brings it.
+    railView = rail.create(doc, {
+      sections: definitions,
+      onSelect: id => {
+        if (!aside.has(id)) { sections.show(id); return; }
+        const showing = aside.current();
+        aside.show(showing && showing.id === id ? TIMELINE : id);
+      }
+    });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
 
     stats = statCards.create(doc, ctx);
     if (mounts.stats) mounts.stats.appendChild(stats.element);
-
-    // The timeline keeps the clock every readout follows; it is handed the
-    // same context as a section so Pump off goes through the tracking seam.
-    summary = timelineModule.create(doc, Object.assign({}, ctx, { onTick, visibility: doc, view: root }));
-    if (mounts.aside) mounts.aside.appendChild(summary.element);
 
     sync = syncModule.create(doc, { connection, admin });
     if (mounts.sync) mounts.sync.appendChild(sync.element);
@@ -287,6 +315,7 @@
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
     sections.show(DEFAULT_SECTION);
+    aside.show(TIMELINE);
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());
   }

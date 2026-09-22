@@ -56,7 +56,9 @@
     "slate/styles/components/recipe-book.css",
     "slate/styles/components/sync.css",
     "slate/styles/components/settings.css",
-    "slate/styles/components/timeline.css"
+    "slate/styles/components/panel.css",
+    "slate/styles/components/timeline.css",
+    "slate/styles/components/resin-balance.css"
   ];
 
   const SCRIPTS = [
@@ -85,6 +87,7 @@
     "slate/slate-settings.js",
     "slate/slate-timeline-layout.js",
     "slate/slate-timeline.js",
+    "slate/slate-resin-balance.js",
     "slate/slate-rail.js",
     "slate/slate-sections.js",
     "slate/slate-shell.js",
@@ -94,7 +97,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.4.0";
+  const VERSION = "0.5.0";
 
   function requested() {
     try {

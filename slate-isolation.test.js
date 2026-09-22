@@ -25,7 +25,7 @@ const SLATE_FILES = [
   "slate.js", "slate-shell.js", "slate-logo.js", "slate-line.js", "slate-source.js", "slate-demo.js",
   "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-resin-search.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
-  "slate-recipe-book.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js"
+  "slate-recipe-book.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js"
 ];
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js"];
 const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"] };

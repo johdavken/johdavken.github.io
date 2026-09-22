@@ -207,7 +207,44 @@ test("a plan appearing is structural (both bodies rebuild); a Next-only edit pat
  *   Compare
  * -------------------------------------------------------------------- */
 
-test("Compare is unable without a plan; with one it writes the other recipe under differing rows on either tab and survives a values publish", () => {
+// A plan against the demo: A1 swapped, A3 at another blend, A4 newly
+// filled, B3 emptied, layer B at another share; everything else agrees.
+function planWithChanges(extra) {
+  return withPlan(snap => {
+    snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1";
+    snap.nextRecipe.layers[0].hoppers[2].pct = 15;
+    snap.nextRecipe.layers[0].hoppers[3] = { index: 3, pct: 5, resinName: "NEW1" };
+    snap.nextRecipe.layers[1].hoppers[2] = { index: 2, pct: 0, resinName: "" };
+    snap.nextRecipe.layers[1].layerPct = 40;
+    if (extra) extra(snap);
+  });
+}
+
+test("with a plan, a row whose resin changes carries the band on either tab, Compare or not; a blend-only or agreeing row never does", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.ok(!row(view, "A1").classList.contains("is-differs"), "no plan, yet a band");
+
+  view.update(planWithChanges(), { kind: "structural" });
+  assert.equal(view.getCompare(), false);
+  for (const id of ["A1", "A4", "B3"]) assert.ok(row(view, id).classList.contains("is-differs"), `${id}: a resin change without its band`);
+  for (const id of ["A2", "A3", "B1"]) assert.ok(!row(view, id).classList.contains("is-differs"), `${id}: banded without a resin change`);
+  assert.ok(row(view, "A1", "next").classList.contains("is-differs"), "the Next body is not banded");
+  assert.ok(!row(view, "A3", "next").classList.contains("is-differs"));
+  assert.ok(row(view, "A1").querySelector(".slate-hopper__other").hasAttribute("hidden"), "a compare line without Compare");
+  assert.ok(head(view, "B").querySelector(".slate-layer__share-other").hasAttribute("hidden"));
+
+  // A values publish that reverts the swap takes the band away.
+  view.update(planWithChanges(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "HX204"; }), { kind: "values" });
+  assert.ok(!row(view, "A1").classList.contains("is-differs"));
+  assert.ok(row(view, "A4").classList.contains("is-differs"));
+
+  // The plan going away clears every band.
+  view.update(resolvedFrom(), { kind: "structural" });
+  for (const id of ["A1", "A4", "B3"]) assert.ok(!row(view, id).classList.contains("is-differs"), `${id}: banded without a plan`);
+});
+
+test("Compare is unable without a plan; with one it writes what moves under each row - the resin where it changes, 'empty' where the other side has none, the blend alone where only that moves - on either tab", () => {
   const { view, said } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
   const compare = view.element.querySelector("[data-slate-compare]");
@@ -216,54 +253,74 @@ test("Compare is unable without a plan; with one it writes the other recipe unde
   assert.equal(view.getCompare(), false);
   assert.match(said[0], /Nothing is planned/);
 
-  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[0].hoppers[2].pct = 15; snap.nextRecipe.layers[1].layerPct = 40; }), { kind: "structural" });
+  view.update(planWithChanges(), { kind: "structural" });
   assert.equal(compare.getAttribute("data-able"), "true");
   click(compare);
   assert.equal(view.getCompare(), true);
   assert.equal(compare.getAttribute("aria-checked"), "true");
   assert.ok(view.element.classList.contains("is-comparing"));
-  const a1 = row(view, "A1");
-  assert.ok(a1.classList.contains("is-differs"), "a differing row is not red");
-  assert.ok(!a1.classList.contains("is-same"));
-  assert.equal(a1.querySelector(".slate-hopper__other").textContent, "Next: ZZ1 · 60%");
-  assert.ok(!a1.querySelector(".slate-hopper__other").hasAttribute("hidden"));
-  const a2 = row(view, "A2");
-  assert.ok(a2.classList.contains("is-same"), "an agreeing row is not green");
-  assert.ok(!a2.classList.contains("is-differs"));
-  assert.equal(a2.querySelector(".slate-hopper__other").textContent, "Next: LD105 · 30%");
-  // The same resin at another blend: the line says so, the row stays plain.
-  const a3 = row(view, "A3");
-  assert.equal(a3.querySelector(".slate-hopper__other").textContent, "Next: AB120 · 15%");
-  assert.ok(!a3.classList.contains("is-differs"), "a blend-only change is red");
-  assert.ok(!a3.classList.contains("is-same"), "a blend-only change is green");
-  const a4 = row(view, "A4");
-  assert.ok(a4.querySelector(".slate-hopper__other").hasAttribute("hidden"), "an empty pair got a compare line");
-  assert.ok(!a4.classList.contains("is-same") && !a4.classList.contains("is-differs"), "an empty pair was coloured");
+  const line = id => row(view, id).querySelector(".slate-hopper__other");
+  assert.equal(line("A1").textContent, "Next: ZZ1 · 60%");
+  assert.ok(!line("A1").hasAttribute("hidden"));
+  assert.ok(line("A2").hasAttribute("hidden"), "an agreeing row got a line");
+  assert.ok(!row(view, "A2").classList.contains("is-differs"));
+  assert.equal(line("A3").textContent, "Next: 15%", "a blend-only change repeats the resin");
+  assert.ok(!row(view, "A3").classList.contains("is-differs"), "a blend-only change is banded");
+  assert.equal(line("A4").textContent, "Next: NEW1 · 5%");
+  assert.equal(line("B3").textContent, "Next: empty");
+  assert.ok(line("A5").hasAttribute("hidden"), "an empty pair got a line");
+  assert.ok(!row(view, "A5").classList.contains("is-differs"), "an empty pair was banded");
   const headB = head(view, "B");
   assert.equal(headB.querySelector(".slate-layer__share-other").textContent, "Next 40%");
-  assert.ok(headB.classList.contains("is-differs"));
-  assert.ok(head(view, "A").classList.contains("is-same"));
+  assert.ok(head(view, "A").querySelector(".slate-layer__share-other").hasAttribute("hidden"), "an agreeing share got a line");
 
-  view.update(withPlan(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ1"; snap.nextRecipe.layers[0].hoppers[2].pct = 15; snap.nextRecipe.layers[1].layerPct = 40; snap.job.lineRate = 900; }), { kind: "values" });
+  view.update(planWithChanges(snap => { snap.job.lineRate = 900; }), { kind: "values" });
   assert.equal(view.getCompare(), true);
-  assert.ok(row(view, "A1").classList.contains("is-differs"));
+  assert.equal(line("A1").textContent, "Next: ZZ1 · 60%");
 
   view.setRecipe("next");
   const nextA1 = row(view, "A1", "next");
   assert.ok(nextA1.classList.contains("is-differs"));
   assert.equal(nextA1.querySelector(".slate-hopper__other").textContent, "Current: HX204 · 60%");
-  assert.ok(!row(view, "A1").classList.contains("is-differs"), "the hidden body kept its compare marks");
+  assert.equal(row(view, "B3", "next").querySelector(".slate-hopper__other").textContent, "Current: SL710 · 10%");
+  assert.equal(row(view, "A4", "next").querySelector(".slate-hopper__other").textContent, "Current: empty");
 
   click(compare);
   assert.equal(view.getCompare(), false);
-  assert.ok(!nextA1.classList.contains("is-differs"));
-  assert.ok(!row(view, "A2", "next").classList.contains("is-same"));
+  assert.ok(nextA1.classList.contains("is-differs"), "Compare off took the band with it");
   assert.ok(nextA1.querySelector(".slate-hopper__other").hasAttribute("hidden"));
 
   // The plan going away forces Compare off.
   view.setCompare(true);
   view.update(resolvedFrom(), { kind: "structural" });
   assert.equal(view.getCompare(), false);
+});
+
+test("with a plan, Track is offered only where the resin goes away - swapped or emptied - and wherever it is already on; without one, on every assigned row", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const toggle = id => row(view, id).querySelector("[data-slate-control='tracking']");
+  for (const id of ["A1", "A2", "A3", "B3"]) assert.ok(!toggle(id).hasAttribute("hidden"), `${id}: Track withheld without a plan`);
+
+  view.update(planWithChanges(), { kind: "structural" });
+  assert.ok(!toggle("A1").hasAttribute("hidden"), "a swapped resin lost Track");
+  assert.ok(!toggle("B3").hasAttribute("hidden"), "an emptied hopper lost Track");
+  assert.ok(!toggle("A2").hasAttribute("hidden"), "a tracked hopper that continues lost Track");
+  assert.ok(!toggle("B2").hasAttribute("hidden"), "a pumped-off hopper that continues lost Track");
+  assert.ok(toggle("A3").hasAttribute("hidden"), "a continuing resin at another blend kept Track");
+  assert.ok(!toggle("B1").hasAttribute("hidden"), "a tracked hopper that continues lost Track");
+  assert.ok(toggle("C1").hasAttribute("hidden"), "an untracked hopper that continues kept Track");
+  assert.ok(toggle("A4").hasAttribute("hidden"), "an empty hopper that fills next kept Track");
+
+  // Tracking turned off on a continuing hopper: the toggle goes with it.
+  view.update(planWithChanges(snap => { snap.layers[0].hoppers[1].track = false; }), { kind: "values" });
+  assert.ok(toggle("A2").hasAttribute("hidden"));
+  // ...and comes back when the plan swaps its resin.
+  view.update(planWithChanges(snap => { snap.layers[0].hoppers[1].track = false; snap.nextRecipe.layers[0].hoppers[1].resinName = "ZZ2"; }), { kind: "values" });
+  assert.ok(!toggle("A2").hasAttribute("hidden"));
+
+  view.update(resolvedFrom(), { kind: "structural" });
+  for (const id of ["A3", "A4"]) assert.ok(!toggle(id).hasAttribute("hidden"), `${id}: Track still withheld without a plan`);
 });
 
 /* ----------------------------------------------------------------------

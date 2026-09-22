@@ -1,0 +1,56 @@
+/* The aside's panels: the Timeline and, in its place, one tool at a time.
+   One card chrome for all of them - sticky and viewport-tall, so the panel
+   stays in view while the recipe scrolls - and a head for a tool: its
+   title and the close that hands the aside back to the Timeline. */
+
+/* The swap wraps each panel (slate-sections.js); the wrapper must run the
+   aside's full height or the sticky card has nothing to travel in. */
+.slate-aside .slate-section {
+  height: 100%;
+}
+
+.slate-panel {
+  position: sticky;
+  top: var(--slate-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  height: calc(100vh - var(--slate-header-height) - 2 * var(--slate-space-5));
+  min-height: 480px;
+  padding: var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+}
+
+.slate-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-panel__title {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+/* The close: a round button at the head's right end. */
+.slate-root .slate-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 50%;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-lg);
+  line-height: 1;
+}
+
+.slate-root .slate-panel__close:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}

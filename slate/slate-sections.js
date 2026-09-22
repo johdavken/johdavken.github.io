@@ -4,10 +4,11 @@
  * rail lists it) and a `create` that builds it once - and the registry
  * mounts every section up front, hidden, so a section is already current
  * the moment it is shown: `update` fans the state out to all of them,
- * visible or not. Tools land later as definitions in the "tools" group;
- * nothing here changes for them.
+ * visible or not. The aside runs a second swap from the same registry:
+ * the Timeline (group "aside": no rail item of its own) and the tools,
+ * one in its place at a time.
  *
- *   definition: { id, label, group: "sections"|"tools"|"foot", icon,
+ *   definition: { id, label, group: "sections"|"tools"|"foot"|"aside", icon,
  *                 create(doc, ctx) -> { element, update?(resolved, meta), onShow?(), onHide?() } }
  */
 (function (root, factory) {
@@ -17,7 +18,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const GROUPS = Object.freeze(["sections", "tools", "foot"]);
+  const GROUPS = Object.freeze(["sections", "tools", "foot", "aside"]);
   const ENTERING = "is-entering";
 
   function valid(definition) {

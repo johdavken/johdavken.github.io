@@ -9,9 +9,12 @@
  * at the left, its hoppers as rows beside it, and every value editable in
  * place - the resin through the catalog search, the blend and the share
  * as numbers, an assignment moved by dragging its badge onto another row.
- * The bar holds the Compare switch (the other recipe under each row: green
- * where the two agree, red where they differ), the plan's two moves on
- * the Next tab, and Print.
+ * With a plan, a row whose resin changes at the changeover carries a
+ * band on either tab, and on Current only those rows (and any already
+ * tracked or pumped off) offer Track: a resin that continues has no
+ * run-down to follow. The bar holds the Compare switch (the other
+ * recipe's value under each row that moves), the plan's two moves on the
+ * Next tab, and Print.
  *
  * The section dispatches nothing itself. Its seams - slate-tracking.js,
  * slate-recipe-actions.js, slate-plan-actions.js - are handed the command
@@ -443,41 +446,45 @@
 
     /* ---- Compare ---- */
 
+    // What the other recipe says under a row, only where something moves:
+    // the resin (with its blend) where the resin changes, "empty" where
+    // the other side has nothing, the blend alone where only that moves.
+    function otherLine(tag, other) {
+      if (other.resinDiffers) return `${tag}: ${other.resin ? `${other.resin} · ${formatPct(other.pct)}` : "empty"}`;
+      if (other.pctDiffers) return `${tag}: ${formatPct(other.pct)}`;
+      return null;
+    }
+
+    // With a plan, every row knows whether its resin changes at the
+    // changeover, on either tab: that carries the row's band and decides
+    // whether Track is offered (only a resin that goes away - swapped or
+    // emptied - has a run-down to track; a toggle already on stays, so it
+    // can be turned off; a hopper that only fills next has nothing to
+    // track). The Compare switch adds the lines that say what the other
+    // recipe holds; the blend alone moving is a line, no band.
     function paintCompare() {
-      const comparison = compare ? sourceModule.compareFor(current, recipe) : null;
-      rootEl.classList.toggle("is-comparing", !!comparison);
-      const tag = recipe === "next" ? "Current" : "Next";
+      rootEl.classList.toggle("is-comparing", compare);
       for (const id of RECIPES) {
         const body = bodies[id];
-        const here = id === recipe ? comparison : null;
+        const changes = sourceModule.compareFor(current, id);
+        const tag = id === "next" ? "Current" : "Next";
         for (const [key, entry] of body.rows) {
-          const other = here ? here.hoppers[key] : null;
-          // A line under the row only where the other recipe has something
-          // to say: an assignment, or a difference (the other side emptied).
-          // The colour is about the resin: red where it changes, green
-          // where the row agrees entirely, and nothing where only the
-          // blend moves (the line says the new percentage).
-          if (other && (other.resin || other.differs)) {
-            entry.other.textContent = `${tag}: ${other.resin || EMPTY} · ${other.resin ? formatPct(other.pct) : EMPTY}`;
-            show(entry.other, true);
-            entry.row.classList.toggle("is-differs", !!other.resinDiffers);
-            entry.row.classList.toggle("is-same", !other.differs);
-          } else {
-            show(entry.other, false);
-            entry.row.classList.remove("is-differs", "is-same");
+          const other = changes ? changes.hoppers[key] : null;
+          const line = compare && other ? otherLine(tag, other) : null;
+          entry.row.classList.toggle("is-differs", !!(other && other.resinDiffers));
+          if (line) entry.other.textContent = line;
+          show(entry.other, !!line);
+          if (entry.toggles) {
+            const last = entry.last || {};
+            const offered = !other || (other.resinDiffers && !!last.assigned) || !!last.track || !!last.pumpOff;
+            show(entry.toggles.tracking, offered);
           }
         }
         for (const [layerId, head] of body.heads) {
-          const other = here ? here.layers[layerId] : null;
-          if (other) {
-            head.shareOther.textContent = `${tag} ${formatPct(other.share)}`;
-            show(head.shareOther, true);
-            head.head.classList.toggle("is-differs", !!other.differs);
-            head.head.classList.toggle("is-same", !other.differs);
-          } else {
-            show(head.shareOther, false);
-            head.head.classList.remove("is-differs", "is-same");
-          }
+          const other = changes ? changes.layers[layerId] : null;
+          const line = compare && other && other.differs;
+          if (line) head.shareOther.textContent = `${tag} ${formatPct(other.share)}`;
+          show(head.shareOther, !!line);
         }
       }
     }

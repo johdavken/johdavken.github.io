@@ -141,7 +141,7 @@
 
     /* ---- The frame ---- */
 
-    const rootEl = element(doc, "div", "slate-timeline", { "data-mode": "fixed" });
+    const rootEl = element(doc, "div", "slate-panel slate-timeline", { "data-mode": "fixed" });
     const head = element(doc, "div", "slate-timeline__head");
     head.appendChild(text(doc, "h2", "slate-timeline__title", "Timeline"));
     const clock = text(doc, "span", "slate-timeline__clock", "");
