@@ -42,6 +42,7 @@
   <link rel="stylesheet" href="styles/components/stat-cards.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/recipe.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/recipe-edit.css?v=0.1.0">
+  <link rel="stylesheet" href="styles/components/recipe-book.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/sync.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/settings.css?v=0.1.0">
   <link rel="stylesheet" href="styles/components/summary.css?v=0.1.0">
@@ -58,6 +59,9 @@
   <!-- The read-only state bridge. Nothing connects to it here, so Slate
        falls back to the demo line. That is the fallback working. -->
   <script src="../station-state-bridge.js?v=0.7.0" defer></script>
+  <!-- The recipes bridge: the line's saved recipes. No producer here, so
+       the Recipe Book says "Not connected". -->
+  <script src="../station-recipes-bridge.js?v=0.3.0" defer></script>
   <!-- The line connection bridge and the admin bridge: no producer here,
        so the RT Sync trigger stays hidden. -->
   <script src="../station-connection-bridge.js?v=0.2.0" defer></script>
@@ -73,11 +77,13 @@
   <script src="slate-tracking.js?v=0.1.0" defer></script>
   <script src="slate-recipe-actions.js?v=0.1.0" defer></script>
   <script src="slate-plan-actions.js?v=0.1.0" defer></script>
+  <script src="slate-book-actions.js?v=0.1.0" defer></script>
   <script src="slate-resin-search.js?v=0.1.0" defer></script>
   <script src="slate-recipe-drag.js?v=0.1.0" defer></script>
   <script src="slate-layer-menu.js?v=0.1.0" defer></script>
   <script src="slate-print.js?v=0.1.0" defer></script>
-  <script src="slate-recipe.js?v=0.1.1" defer></script>
+  <script src="slate-recipe.js?v=0.1.2" defer></script>
+  <script src="slate-recipe-book.js?v=0.1.0" defer></script>
   <script src="slate-stat-cards.js?v=0.1.0" defer></script>
   <script src="slate-sync.js?v=0.1.0" defer></script>
   <script src="slate-settings.js?v=0.1.0" defer></script>

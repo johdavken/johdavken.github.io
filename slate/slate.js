@@ -9,7 +9,10 @@
  * (slate-tracking.js, slate-stat-cards.js, slate-recipe-actions.js,
  * slate-plan-actions.js) are handed the command bridge
  * and tell this file of every change they commit, so the bridge's echo of
- * the operator's own edit is recognised as such.
+ * the operator's own edit is recognised as such. The recipes bridge (the
+ * line's saved recipes) is likewise handed on, to slate-book-actions.js
+ * alone; its results carry no revision, so a load's publish reads as
+ * foreign and the rows flash, which is right.
  *
  * Slate mounts into whatever element carries [data-slate-app]: the host
  * container slate-host.js creates for ?view=slate, or the harness's body.
@@ -25,6 +28,7 @@
   const commands = root.PolynStationCommandBridge || null;
   const connection = root.PolynStationConnectionBridge || null;
   const admin = root.PolynStationAdminBridge || null;
+  const recipes = root.PolynStationRecipesBridge || null;
   const rundown = root.PolynStationRundown || null;
   // The shared resin catalog, for the recipe's resin search. Optional: with
   // none, the search offers only what is typed.
@@ -38,6 +42,7 @@
   const source = root.PolynSlateSource;
   const demo = root.PolynSlateDemo;
   const recipeModule = root.PolynSlateRecipe;
+  const bookModule = root.PolynSlateRecipeBook;
   const statCards = root.PolynSlateStatCards;
   const syncModule = root.PolynSlateSync;
   const settingsModule = root.PolynSlateSettings;
@@ -119,8 +124,12 @@
   /* The switch moved: every control re-reads its ability. */
   function onDisplayChange() {
     renderReadOnly();
-    const recipe = sections ? sections.section(DEFAULT_SECTION) : null;
-    if (recipe && typeof recipe.refresh === "function") recipe.refresh();
+    if (sections) {
+      for (const definition of sections.definitions()) {
+        const built = sections.section(definition.id);
+        if (built && typeof built.refresh === "function") built.refresh();
+      }
+    }
     if (stats) stats.refresh();
   }
 
@@ -228,6 +237,7 @@
       commands: () => commandsFor(current),
       connection,
       admin,
+      recipes,
       theme: themeController,
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
@@ -245,6 +255,7 @@
 
     const definitions = [
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, c) },
+      { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) }
     ];
 

@@ -165,3 +165,10 @@ test("a tool section lists inside the menu as a menuitem and selecting it closes
   view.setActive("totals");
   assert.ok(view.element.querySelector(".slate-rail__item--tools").classList.contains("is-active"));
 });
+
+test("the rail draws a glyph for every section the boot defines", () => {
+  const boot = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate.js"), "utf8");
+  const icons = [...boot.matchAll(/icon: "([a-z-]+)"/g)].map(match => match[1]);
+  assert.deepEqual(icons, ["recipe", "book", "settings"], "the boot's sections changed: Recipe, Recipe Book, Settings");
+  for (const icon of icons) assert.ok(rail.GLYPHS[icon], `no glyph for ${icon}`);
+});

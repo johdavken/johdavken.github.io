@@ -35,11 +35,12 @@
     pick("PolynSlateResinSearch", "./slate-resin-search.js"),
     pick("PolynSlateRecipeDrag", "./slate-recipe-drag.js"),
     pick("PolynSlateLayerMenu", "./slate-layer-menu.js"),
-    pick("PolynSlatePrint", "./slate-print.js")
+    pick("PolynSlatePrint", "./slate-print.js"),
+    pick("PolynSlateBookActions", "./slate-book-actions.js")
   );
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateRecipe = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule) {
   "use strict";
 
   const RECIPES = Object.freeze(["current", "next"]);
@@ -48,6 +49,8 @@
   const RESET_ARMED_LABEL = "Confirm reset";
   const RESET_ARM_MS = 4000;
   const PROMOTE_ARMED_LABEL = "Confirm promote";
+  const SAVE_LABEL = "Save as recipe\u2026";
+  const SAVE_ENTRY_LABEL = Object.freeze({ current: "Save the running recipe as", next: "Save the planned recipe as" });
   const EMPTY = "—";
   const NO_PLAN = "Nothing is planned yet. Start from the running recipe, then change what the changeover needs.";
   const CHANGED_UNDERNEATH = "changed in the application while you were editing; what you are entering here has not been applied.";
@@ -119,6 +122,7 @@
    * @param {function} [ctx.resins]      () -> the resin catalog
    * @param {object} [ctx.timers]        { setTimeout, clearTimeout }
    * @param {object} [ctx.print]         a printer (slate-print.js's create) - built here by default
+   * @param {object|function} [ctx.recipes]  the recipes bridge (or () -> it), for "Save as recipe"
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -130,6 +134,7 @@
     const resins = typeof settings.resins === "function" ? settings.resins : () => [];
     const guard = () => ({ readOnly: !!readOnly() });
     const commands = () => commandsFor(current);
+    const recipesFor = typeof settings.recipes === "function" ? settings.recipes : () => settings.recipes || null;
 
     const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current" });
 
@@ -181,6 +186,7 @@
     let armTimer = null;
     let promoteTimer = null;
     let printOpen = false;
+    let saving = null;
 
     /* ---- Results ---- */
 
@@ -203,21 +209,37 @@
       el.appendChild(columns);
       const layersEl = element(doc, "div", "slate-recipe__layers");
       el.appendChild(layersEl);
-      const body = { recipe: id, el, columns, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null };
+      const body = { recipe: id, el, columns, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null };
+      // "Save as recipe" leads each foot: the quiet way out to the Book.
+      body.save = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__save", SAVE_LABEL, { type: "button", "data-slate-save": id, "data-able": "false" });
       if (id === "next") {
         const empty = element(doc, "div", "slate-recipe__empty", { hidden: "" });
         empty.appendChild(text(doc, "p", "slate-recipe__empty-text", NO_PLAN));
         empty.appendChild(text(doc, "button", "slate-recipe__plan-action", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" }));
         el.appendChild(empty);
         body.empty = empty;
+        planStrip.insertBefore(body.save, planStrip.firstChild);
         el.appendChild(planStrip);
       } else {
         const foot = element(doc, "div", "slate-recipe__foot");
         const reset = text(doc, "button", "slate-recipe__reset", RESET_LABEL, { type: "button", "data-able": "false" });
+        foot.appendChild(body.save);
         foot.appendChild(reset);
         el.appendChild(foot);
         body.reset = reset;
       }
+      // The name entry under the foot, built once so a publish never
+      // takes the operator's typing.
+      const entry = element(doc, "div", "slate-recipe__save-entry", { hidden: "" });
+      const label = text(doc, "span", "slate-recipe__save-label", SAVE_ENTRY_LABEL[id]);
+      const name = element(doc, "input", "slate-recipe__save-name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off" });
+      const confirm = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", "Save", { type: "button", "data-slate-save-do": "save" });
+      const replace = text(doc, "button", "slate-recipe__plan-action", "Replace existing", { type: "button", "data-slate-save-do": "replace", hidden: "" });
+      const cancel = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Cancel", { type: "button", "data-slate-save-do": "cancel" });
+      const note = element(doc, "p", "slate-recipe__save-note", { role: "status", hidden: "" });
+      for (const node of [label, name, confirm, replace, cancel, note]) entry.appendChild(node);
+      el.appendChild(entry);
+      body.entry = { el: entry, name, confirm, replace, cancel, note };
       if (dragModule) {
         body.drag = dragModule.create(doc, {
           list: layersEl,
@@ -518,6 +540,15 @@
         }
       }
 
+      const book = bookModule ? bookModule.can(recipesFor(), { readOnly: options.readOnly, planned }) : { saveCurrent: false, saveNext: false };
+      for (const id of RECIPES) {
+        const control = id === "next" ? "saveNext" : "saveCurrent";
+        const button = bodies[id].save;
+        button.setAttribute("data-able", book[control] ? "true" : "false");
+        button.setAttribute("title", book[control] ? "Save this recipe to the line's Recipe Book" : `Save as recipe is unavailable: ${bookModule ? bookModule.reason(recipesFor(), control, { readOnly: options.readOnly, planned }) : "no application is connected to Slate's saved recipes."}`);
+      }
+      if (saving && !book[saving.recipe === "next" ? "saveNext" : "saveCurrent"]) closeSave();
+
       const planButtons = [copyButton, promoteButton].concat(bodies.next.empty ? Array.from(bodies.next.empty.querySelectorAll("[data-slate-plan]")) : []);
       for (const button of planButtons) {
         const action = button.getAttribute("data-slate-plan");
@@ -721,6 +752,7 @@
       if (!RECIPES.includes(id)) return recipe;
       if (id !== recipe) {
         closeEditor();
+        closeSave();
         for (const key of RECIPES) if (bodies[key].drag) bodies[key].drag.cancel();
         disarm();
         disarmPromote();
@@ -765,6 +797,120 @@
       disarmPromote();
       closeEditor();
       settle(planModule.promote(commands()));
+    }
+
+    /* ---- Save as recipe ---- */
+
+    function setSaveNote(body, message, kind) {
+      const note = body.entry.note;
+      note.textContent = message || "";
+      note.classList.toggle("is-error", kind === "error");
+      show(note, !!message);
+    }
+
+    function openSave(id) {
+      const body = bodies[id];
+      if (body.save.getAttribute("data-able") !== "true") { say(body.save.getAttribute("title") || "Save as recipe is unavailable."); return; }
+      if (saving && saving.recipe !== id) closeSave();
+      closeEditor();
+      disarm();
+      disarmPromote();
+      saving = { recipe: id, existing: null, busy: false };
+      body.entry.name.value = "";
+      body.entry.name.removeAttribute("aria-invalid");
+      show(body.entry.replace, false);
+      setSaveNote(body, "");
+      show(body.entry.el, true);
+      if (typeof body.entry.name.focus === "function") body.entry.name.focus();
+    }
+
+    function closeSave() {
+      if (!saving) return;
+      const body = bodies[saving.recipe];
+      saving = null;
+      body.entry.name.value = "";
+      body.entry.name.removeAttribute("aria-invalid");
+      show(body.entry.replace, false);
+      setSaveNote(body, "");
+      show(body.entry.el, false);
+    }
+
+    function setSaveBusy(body, busy) {
+      for (const button of [body.entry.confirm, body.entry.replace, body.entry.cancel]) {
+        if (busy) button.setAttribute("disabled", "");
+        else button.removeAttribute("disabled");
+      }
+    }
+
+    async function commitSave() {
+      const open = saving;
+      if (!open || open.busy || !bookModule) return;
+      const body = bodies[open.recipe];
+      const name = bookModule.cleanName(body.entry.name.value);
+      if (!name) { body.entry.name.setAttribute("aria-invalid", "true"); setSaveNote(body, bookModule.WORDING.nameNeeded, "error"); return; }
+      open.busy = true;
+      setSaveBusy(body, true);
+      let result;
+      try {
+        result = await bookModule.save(recipesFor(), open.recipe, name);
+      } finally {
+        open.busy = false;
+        if (saving === open) setSaveBusy(body, false);
+      }
+      if (saving !== open) return;
+      if (result.ok) { closeSave(); say(bookModule.WORDING.saved(name)); return; }
+      body.entry.name.setAttribute("aria-invalid", "true");
+      if (result.code === "duplicate_name" && result.existing) {
+        open.existing = result.existing;
+        show(body.entry.replace, true);
+        setSaveNote(body, bookModule.WORDING.duplicateOffer(result.existing.name), "error");
+      } else if (result.code === "duplicate_name") {
+        setSaveNote(body, bookModule.WORDING.duplicateOther, "error");
+      } else {
+        setSaveNote(body, result.message || "The application refused the change.", "error");
+      }
+    }
+
+    async function replaceSaved() {
+      const open = saving;
+      if (!open || open.busy || !open.existing || !bookModule) return;
+      const body = bodies[open.recipe];
+      open.busy = true;
+      setSaveBusy(body, true);
+      let result;
+      try {
+        result = await bookModule.replace(recipesFor(), open.existing.id);
+      } finally {
+        open.busy = false;
+        if (saving === open) setSaveBusy(body, false);
+      }
+      if (saving !== open) return;
+      if (result.ok) { const name = open.existing.name; closeSave(); say(bookModule.WORDING.replaced(name)); return; }
+      setSaveNote(body, result.message || "The recipe could not be replaced.", "error");
+    }
+
+    // The Book's abilities move on their own publishes (a line joined, a
+    // refresh), not only on the state bridge's: follow them.
+    const recipes = recipesFor();
+    if (recipes && typeof recipes.subscribe === "function") recipes.subscribe(() => applyAbilities());
+
+    for (const id of RECIPES) {
+      const body = bodies[id];
+      body.save.addEventListener("click", () => openSave(id));
+      body.entry.el.addEventListener("click", event => {
+        const target = event && event.target;
+        const button = target && typeof target.closest === "function" ? target.closest("[data-slate-save-do]") : null;
+        if (!button || button.hasAttribute("disabled")) return;
+        const what = button.getAttribute("data-slate-save-do");
+        if (what === "save") commitSave();
+        else if (what === "replace") replaceSaved();
+        else closeSave();
+      });
+      body.entry.name.addEventListener("keydown", event => {
+        if (!event) return;
+        if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); commitSave(); }
+        else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeSave(); }
+      });
     }
 
     for (const host of [planStrip, bodies.next.empty]) {
@@ -866,6 +1012,7 @@
     rootEl.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
       if (editing) { closeEditor(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
+      if (saving) { closeSave(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (bodies.current.reset.hasAttribute("data-armed") || promoteButton.hasAttribute("data-armed")) {
         disarm();
         disarmPromote();
@@ -897,6 +1044,7 @@
 
     function onHide() {
       closeEditor();
+      closeSave();
       for (const id of RECIPES) if (bodies[id].drag) bodies[id].drag.cancel();
       disarm();
       disarmPromote();
@@ -915,12 +1063,13 @@
       body: id => (bodies[id] ? bodies[id].el : null),
       rowCount: id => bodies[id || recipe].rows.size,
       editing: () => (editing ? { slot: editing.slot, recipe: editing.recipe, layer: editing.layer, index: editing.index } : null),
+      saving: () => (saving ? { recipe: saving.recipe, existing: saving.existing, busy: saving.busy } : null),
       onHide
     });
   }
 
   return Object.freeze({
-    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
+    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
     formatPct, formatWeight, cellsFor, subtitleFor, create
   });
 });

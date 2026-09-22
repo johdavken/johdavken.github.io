@@ -37,7 +37,7 @@ test("index.html loads the theme controller and the host, each once, both before
   assert.doesNotMatch(indexHtml, /["'/]slate\//, "index.html references the slate/ directory");
   assert.doesNotMatch(indexHtml, /<link[^>]+slate/, "index.html links a Slate stylesheet");
   // Every bridge Slate consumes is loaded once, before app.js, as before.
-  for (const bridge of ["station-state-bridge.js", "station-command-bridge.js", "station-command-contract.js", "station-connection-bridge.js", "station-admin-bridge.js"]) {
+  for (const bridge of ["station-state-bridge.js", "station-command-bridge.js", "station-command-contract.js", "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js"]) {
     assert.equal(scriptTags.filter(one => one.file === bridge).length, 1);
     assert.ok(order(bridge) < order("app.js"));
   }
@@ -88,6 +88,7 @@ test("slate.js takes every bridge as an optional global, subscribes once to the 
   assert.match(boot, /const commands = root\.PolynStationCommandBridge \|\| null;/);
   assert.match(boot, /const connection = root\.PolynStationConnectionBridge \|\| null;/);
   assert.match(boot, /const admin = root\.PolynStationAdminBridge \|\| null;/);
+  assert.match(boot, /const recipes = root\.PolynStationRecipesBridge \|\| null;/);
   assert.equal((boot.match(/bridge\.subscribe\(/g) || []).length, 1);
   assert.match(boot, /return commands && resolved && resolved\.live \? commands : null;/);
   assert.doesNotMatch(boot, /\.connect\(|\.publish\(/);
@@ -141,7 +142,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
   for (const file of ["scheduling.js", "station-command-contract.js", "station-command-bridge.js", "station-state-bridge.js",
-    "station-connection-bridge.js", "station-admin-bridge.js", "slate-theme.js", "slate-display.js"]) load(file);
+    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "slate-theme.js", "slate-display.js"]) load(file);
   hostEl.slateTheme = root.PolynSlateTheme.create(hostEl, null);
   // Read-only is automatic on a linked line (slate-display.test.js covers it); this test wants the writable path.
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, null);
@@ -166,6 +167,13 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
     actions: { refresh() {}, reconnect() {}, generateJoinCode() {}, renderJoinQr() {}, joinWorkspace() {}, selectWorkspace() {}, leaveWorkspace() {}, relabelDevice() {} }
   });
   connectionHandle.publish();
+  // The line's saved recipes: one, from the service's cache shape.
+  const recipeRequests = [];
+  const recipesHandle = root.PolynStationRecipesBridge.connect({
+    read: () => root.PolynStationRecipesBridge.project({ workspaceId: "ws-1", cachedAt: 1, items: { recipe: [{ id: "r1", type: "recipe", name: "Blue film", favorite: true, updatedAt: "2026-09-21T10:00:00Z", payload: { line_type: 3, hopper_naming_mode: "standard", layers: [{ name: "A", layer_pct: 25, hoppers: [{ index: 0, pct: 100, resin_name: "HX204" }] }] } }] } }, { workspaceId: "ws-1", displayName: "Line 5" }),
+    actions: { loadRecipe(args) { recipeRequests.push(args); return { ok: true }; } }
+  });
+  recipesHandle.publish();
 
   const hostScripts = [...host.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").matchAll(/"((?:slate|station)\/[^"]+\.js)"/g)].map(match => match[1]);
   for (const file of hostScripts) load(file);
@@ -185,6 +193,13 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   toggle.dispatchEvent({ type: "click", target: toggle, stopPropagation() {} });
   // Objects from the vm realm have another Object prototype: compare as JSON.
   assert.equal(JSON.stringify(executed), JSON.stringify([{ command: "setHopperTracking", args: { recipe: "current", layer: "A", index: 2, track: true } }]));
+
+  // The Recipe Book reads the recipes bridge the application connected.
+  const bookRow = hostEl.querySelector(".slate-book__row[data-recipe='r1']");
+  assert.ok(bookRow, "the Recipe Book did not list the line's recipe");
+  assert.equal(bookRow.querySelector(".slate-book__row-name").textContent, "Blue film");
+  assert.match(hostEl.querySelector(".slate-book .slate-section__subtitle").textContent, /^Line 5 /);
+  assert.equal(hostEl.querySelector(".slate-recipe__save[data-slate-save='current']").getAttribute("data-able"), "false", "Save is offered although the application declared no save action");
 });
 
 test("with no producer inside the host, the boot names the stale application; on the harness it names itself", () => {

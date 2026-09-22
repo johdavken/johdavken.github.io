@@ -407,7 +407,60 @@
 .slate-recipe__foot {
   display: flex;
   justify-content: flex-end;
+  gap: var(--slate-space-2);
   margin-top: var(--slate-space-4);
+}
+
+/* "Save as recipe" leads each foot, quiet, and pushes the rest right
+   (the base layer zeroes every button's margin, hence the scope). */
+.slate-root .slate-recipe__save {
+  margin-right: auto;
+}
+
+/* The name entry under the foot: a full-width row with the field and
+   its Save / Replace / Cancel, the application's answer on a line below. */
+.slate-recipe__save-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-3);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+}
+
+.slate-recipe__save-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  white-space: nowrap;
+}
+
+.slate-recipe__save-name {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: auto;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.slate-root .slate-recipe__save-name[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+.slate-recipe__save-note {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-recipe__save-note.is-error {
+  color: var(--slate-danger);
 }
 
 .slate-root .slate-recipe__reset {

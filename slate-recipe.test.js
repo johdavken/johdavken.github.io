@@ -54,11 +54,36 @@ function boot(options) {
     readOnly: () => readOnly,
     resins: () => CATALOG,
     timers,
-    print: printer
+    print: printer,
+    recipes: settings.recipes === undefined ? null : settings.recipes
   });
   doc.body.appendChild(view.element);
   return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; } };
 }
+
+/* A fake recipes bridge for "Save as recipe": records requests, answers as told. */
+function makeRecipes(options) {
+  const settings = options || {};
+  const requests = [];
+  const listeners = new Set();
+  let assigned = settings.assigned !== false;
+  return {
+    requests,
+    isConnected: () => true,
+    capabilities: () => ["saveCurrentRecipe", "saveNextRecipe", "replaceRecipe", "loadRecipe", "renameRecipe", "duplicateRecipe", "deleteRecipe", "refresh"],
+    getBook: () => ({ assigned, workspace: assigned ? { id: "ws-1", displayName: "Line 5" } : null, cachedAt: 1, refreshing: false, recipes: assigned ? [{ id: "r1", name: "Blue film", favorite: false, layers: [] }] : [], count: assigned ? 1 : 0 }),
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+    assign(on) { assigned = on; for (const listener of listeners) listener(); },
+    async request(action, args) {
+      requests.push({ action, args });
+      const answer = settings.answers && settings.answers[action];
+      return (typeof answer === "function" ? answer(args) : answer) || { ok: true };
+    }
+  };
+}
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const saveButton = (view, which) => view.element.querySelector(`.slate-recipe__save[data-slate-save='${which}']`);
+const saveEntry = (view, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which}'] .slate-recipe__save-entry`);
 
 const row = (view, id, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which || "current"}'] .slate-hopper[data-hopper='${id}']`);
 const head = (view, layer, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which || "current"}'] .slate-layer[data-layer='${layer}'] .slate-layer__head`);
@@ -705,4 +730,159 @@ test("with no bridge every control is unable and explains; nothing is dispatched
   click(view.element.querySelector("[data-slate-plan='copy']"));
   assert.equal(committed.length, 0);
   assert.equal(row(view, "A2").querySelector("[data-slate-control='tracking']").getAttribute("data-able"), "false");
+});
+
+/* ----------------------------------------------------------------------
+ *   Save as recipe
+ * -------------------------------------------------------------------- */
+
+test("Save as recipe leads both foots; Current's saves the running recipe, Next's the plan, each as one request, and the section says so", async () => {
+  const recipes = makeRecipes();
+  const { view, said } = boot({ recipes });
+  view.update(withPlan(), { kind: "structural" });
+  const currentFoot = view.element.querySelector(".slate-recipe__body[data-recipe='current'] .slate-recipe__foot");
+  assert.equal(currentFoot.children[0].getAttribute("data-slate-save"), "current", "Save does not lead Current's foot");
+  assert.equal(currentFoot.children[1].classList.contains("slate-recipe__reset"), true);
+  const nextFoot = view.element.querySelector(".slate-recipe__body[data-recipe='next'] .slate-recipe__plan");
+  assert.equal(nextFoot.children[0].getAttribute("data-slate-save"), "next", "Save does not lead Next's foot");
+  assert.equal(nextFoot.children[1].getAttribute("data-slate-plan"), "copy");
+  assert.equal(saveButton(view, "current").textContent, recipe.SAVE_LABEL);
+  assert.equal(saveButton(view, "current").getAttribute("data-able"), "true");
+  assert.equal(saveButton(view, "next").getAttribute("data-able"), "true");
+  assert.ok(saveEntry(view, "current").hasAttribute("hidden"));
+
+  click(saveButton(view, "current"));
+  const entry = saveEntry(view, "current");
+  assert.ok(!entry.hasAttribute("hidden"));
+  assert.equal(entry.querySelector(".slate-recipe__save-label").textContent, recipe.SAVE_ENTRY_LABEL.current);
+  const name = entry.querySelector(".slate-recipe__save-name");
+  assert.equal(name.focused, true);
+  assert.deepEqual(view.saving(), { recipe: "current", existing: null, busy: false });
+  key(name, "Enter");
+  await tick();
+  assert.equal(recipes.requests.length, 0, "an empty name was sent");
+  assert.equal(name.getAttribute("aria-invalid"), "true");
+  assert.match(entry.querySelector(".slate-recipe__save-note").textContent, /Give the recipe a name/);
+  name.value = " Blue  film 2 ";
+  key(name, "Enter");
+  await tick();
+  assert.deepEqual(recipes.requests, [{ action: "saveCurrentRecipe", args: { name: "Blue film 2" } }]);
+  assert.ok(entry.hasAttribute("hidden"));
+  assert.equal(view.saving(), null);
+  assert.match(said[said.length - 1], /Saved \u201cBlue film 2\u201d/);
+
+  view.setRecipe("next");
+  click(saveButton(view, "next"));
+  const nextEntry = saveEntry(view, "next");
+  assert.ok(!nextEntry.hasAttribute("hidden"));
+  assert.equal(nextEntry.querySelector(".slate-recipe__save-label").textContent, recipe.SAVE_ENTRY_LABEL.next);
+  nextEntry.querySelector(".slate-recipe__save-name").value = "Plan A";
+  click(nextEntry.querySelector("[data-slate-save-do='save']"));
+  await tick();
+  assert.deepEqual(recipes.requests[1], { action: "saveNextRecipe", args: { name: "Plan A" } });
+  assert.ok(nextEntry.hasAttribute("hidden"));
+});
+
+test("a colliding Save Current offers Replace, which asks replaceRecipe; a colliding Save Next only says so; a refusal shows its words", async () => {
+  const collide = { ok: false, code: "duplicate_name", message: "A recipe with that name already exists.", field: "name" };
+  const recipes = makeRecipes({ answers: { saveCurrentRecipe: collide, saveNextRecipe: collide } });
+  const { view, said } = boot({ recipes });
+  view.update(withPlan(), { kind: "structural" });
+  click(saveButton(view, "current"));
+  const entry = saveEntry(view, "current");
+  const name = entry.querySelector(".slate-recipe__save-name");
+  name.value = "BLUE film";
+  click(entry.querySelector("[data-slate-save-do='save']"));
+  await tick();
+  assert.equal(name.getAttribute("aria-invalid"), "true");
+  assert.ok(!entry.querySelector("[data-slate-save-do='replace']").hasAttribute("hidden"));
+  assert.match(entry.querySelector(".slate-recipe__save-note").textContent, /named \u201cBlue film\u201d already exists/);
+  assert.deepEqual(view.saving().existing, { id: "r1", name: "Blue film" });
+  click(entry.querySelector("[data-slate-save-do='replace']"));
+  await tick();
+  assert.deepEqual(recipes.requests[1], { action: "replaceRecipe", args: { id: "r1" } });
+  assert.ok(entry.hasAttribute("hidden"));
+  assert.match(said[said.length - 1], /Replaced \u201cBlue film\u201d/);
+
+  view.setRecipe("next");
+  click(saveButton(view, "next"));
+  const nextEntry = saveEntry(view, "next");
+  nextEntry.querySelector(".slate-recipe__save-name").value = "Blue film";
+  click(nextEntry.querySelector("[data-slate-save-do='save']"));
+  await tick();
+  assert.ok(nextEntry.querySelector("[data-slate-save-do='replace']").hasAttribute("hidden"), "a plan's save offered Replace");
+  assert.match(nextEntry.querySelector(".slate-recipe__save-note").textContent, /Choose another name/);
+  assert.ok(!nextEntry.hasAttribute("hidden"));
+  assert.equal(recipes.requests.length, 3);
+
+  // A refusal with its own words.
+  const refusing = makeRecipes({ answers: { saveCurrentRecipe: { ok: false, code: "network_error", message: "Offline." } } });
+  const other = boot({ recipes: refusing });
+  other.view.update(resolvedFrom(), { kind: "structural" });
+  click(saveButton(other.view, "current"));
+  saveEntry(other.view, "current").querySelector(".slate-recipe__save-name").value = "X";
+  click(saveEntry(other.view, "current").querySelector("[data-slate-save-do='save']"));
+  await tick();
+  assert.equal(saveEntry(other.view, "current").querySelector(".slate-recipe__save-note").textContent, "Offline.");
+  assert.ok(!saveEntry(other.view, "current").hasAttribute("hidden"));
+});
+
+test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; without a recipes bridge or a plan Save is withheld with the reason", () => {
+  const recipes = makeRecipes();
+  const { view, said, setReadOnly } = boot({ recipes });
+  view.update(withPlan(), { kind: "structural" });
+  const entry = saveEntry(view, "current");
+  click(saveButton(view, "current"));
+  click(entry.querySelector("[data-slate-save-do='cancel']"));
+  assert.ok(entry.hasAttribute("hidden"));
+  click(saveButton(view, "current"));
+  const escape = key(entry.querySelector(".slate-recipe__save-name"), "Escape");
+  assert.ok(entry.hasAttribute("hidden"));
+  assert.equal(escape._stopped, true);
+  click(saveButton(view, "current"));
+  view.setRecipe("next");
+  assert.ok(entry.hasAttribute("hidden"), "a tab switch left the entry open");
+  assert.equal(view.saving(), null);
+  click(saveButton(view, "next"));
+  view.onHide();
+  assert.ok(saveEntry(view, "next").hasAttribute("hidden"));
+  view.setRecipe("current");
+  click(saveButton(view, "current"));
+  setReadOnly(true);
+  view.refresh();
+  assert.ok(entry.hasAttribute("hidden"), "read-only left the entry open");
+  assert.equal(saveButton(view, "current").getAttribute("data-able"), "false");
+  assert.match(saveButton(view, "current").getAttribute("title"), /read-only/);
+  click(saveButton(view, "current"));
+  assert.match(said[said.length - 1], /read-only/);
+  assert.ok(entry.hasAttribute("hidden"));
+  setReadOnly(false);
+  view.refresh();
+
+  // Nothing planned: Next's Save is withheld.
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(saveButton(view, "next").getAttribute("data-able"), "false");
+  assert.match(saveButton(view, "next").getAttribute("title"), /nothing is planned/);
+  assert.equal(saveButton(view, "current").getAttribute("data-able"), "true");
+
+  // A device off any line: withheld until the Book says a line is joined,
+  // which arrives on the recipes bridge's own publish.
+  const unassigned = makeRecipes({ assigned: false });
+  const joined = boot({ recipes: unassigned });
+  joined.view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(saveButton(joined.view, "current").getAttribute("data-able"), "false");
+  assert.match(saveButton(joined.view, "current").getAttribute("title"), /not on a production line/);
+  unassigned.assign(true);
+  assert.equal(saveButton(joined.view, "current").getAttribute("data-able"), "true", "a join did not reach the foot");
+
+  // No recipes bridge at all.
+  const none = boot();
+  none.view.update(withPlan(), { kind: "structural" });
+  for (const which of ["current", "next"]) {
+    assert.equal(saveButton(none.view, which).getAttribute("data-able"), "false");
+    assert.match(saveButton(none.view, which).getAttribute("title"), /no application is connected/);
+  }
+  click(saveButton(none.view, "current"));
+  assert.match(none.said[none.said.length - 1], /no application is connected/);
+  assert.ok(saveEntry(none.view, "current").hasAttribute("hidden"));
 });
