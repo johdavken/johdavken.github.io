@@ -113,7 +113,7 @@ test("the rail lists sections, then Tools, then the foot; selecting asks the boo
   assert.equal(items[0].getAttribute("aria-current"), null);
 });
 
-test("Tools drops a menu that says there are no tools yet; Escape and an outside press close it", () => {
+test("Tools drops a menu that says there are no tools yet; it stays open through a press elsewhere, and closes on Escape or the item again", () => {
   const doc = makeDocument();
   const { list } = definitions();
   const view = rail.create(doc, { sections: list, onSelect: () => {} });
@@ -129,27 +129,23 @@ test("Tools drops a menu that says there are no tools yet; Escape and an outside
   assert.equal(view.isToolsOpen(), true);
   assert.equal(tools.getAttribute("aria-expanded"), "true");
   assert.ok(!menu.hasAttribute("hidden"));
-  assert.equal((doc.listeners.pointerdown || []).length, 1, "the outside listener is not on the document");
+  assert.equal((doc.listeners.pointerdown || []).length, 0, "the rail listens to the document for a press outside");
 
   const escape = key(menu, "Escape");
   assert.equal(view.isToolsOpen(), false);
   assert.equal(escape._stopped, true, "Escape was not stopped at the rail");
-  assert.equal((doc.listeners.pointerdown || []).length, 0, "the outside listener was not removed");
 
+  // Open, it stays open: a press elsewhere is no request to close it.
   click(tools);
   const outside = doc.createElement("div");
   doc.body.appendChild(outside);
-  doc.listeners.pointerdown[0]({ target: outside });
-  assert.equal(view.isToolsOpen(), false);
-
-  click(tools);
-  doc.listeners.pointerdown[0]({ target: menu });
-  assert.equal(view.isToolsOpen(), true, "a press inside the menu closed it");
+  click(outside);
+  assert.equal(view.isToolsOpen(), true, "a press outside closed the menu");
   click(tools);
   assert.equal(view.isToolsOpen(), false);
 });
 
-test("a tool section lists inside the menu as a menuitem and selecting it closes the menu", () => {
+test("a tool section lists inside the menu as a menuitem and selecting it leaves the menu open", () => {
   const doc = makeDocument();
   const { list } = definitions([{ id: "totals", label: "Resin Totals", group: "tools", pane: "aside", icon: "totals", create: () => ({ element: doc.createElement("div") }) }]);
   const selected = [];
@@ -161,20 +157,23 @@ test("a tool section lists inside the menu as a menuitem and selecting it closes
   click(view.element.querySelector(".slate-rail__item--tools"));
   click(item);
   assert.deepEqual(selected, ["totals"]);
-  assert.equal(view.isToolsOpen(), false);
+  assert.equal(view.isToolsOpen(), true, "selecting a tool closed the menu");
+  click(view.element.querySelector("[data-section='recipe']"));
+  assert.equal(view.isToolsOpen(), true, "selecting a section closed the menu");
   // A tool shows in the aside (pane "aside"), marked apart from the
   // centre's section: both stay current.
   view.setActive("recipe");
-  view.setActiveAside("totals");
+  view.setActivePane("aside", "totals");
   const tools = view.element.querySelector(".slate-rail__item--tools");
-  assert.ok(tools.classList.contains("is-active"));
+  assert.ok(!tools.classList.contains("is-active"), "the Tools item lit: the mark belongs to the tool's own item");
+  assert.ok(item.classList.contains("is-active"));
   assert.equal(item.getAttribute("aria-current"), "page");
   assert.ok(view.element.querySelector("[data-section='recipe']").classList.contains("is-active"), "marking the tool unmarked the section");
   view.setActive("settings");
-  assert.ok(tools.classList.contains("is-active"), "marking a section unmarked the tool");
+  assert.ok(item.classList.contains("is-active"), "marking a section unmarked the tool");
   assert.ok(!view.element.querySelector("[data-section='recipe']").classList.contains("is-active"));
-  view.setActiveAside(null);
-  assert.ok(!tools.classList.contains("is-active"));
+  view.setActivePane("aside", null);
+  assert.ok(!item.classList.contains("is-active"));
   assert.equal(item.getAttribute("aria-current"), null);
   assert.ok(view.element.querySelector("[data-section='settings']").classList.contains("is-active"), "clearing the tool unmarked the section");
 });
@@ -189,20 +188,53 @@ test("a section listed with the sections but shown in the aside sits in the list
   assert.equal(view.element.querySelector(".slate-rail__menu [data-section='resin-balance']"), null, "the aside section landed in Tools");
   const item = view.element.querySelector("[data-section='resin-balance']");
   view.setActive("recipe");
-  view.setActiveAside("resin-balance");
+  view.setActivePane("aside", "resin-balance");
   assert.ok(item.classList.contains("is-active"));
   assert.ok(view.element.querySelector("[data-section='recipe']").classList.contains("is-active"));
-  assert.ok(!view.element.querySelector(".slate-rail__item--tools").classList.contains("is-active"), "Tools lit for a section outside its menu");
   view.setActive("settings");
   assert.ok(item.classList.contains("is-active"), "the centre's change unmarked the aside's section");
-  view.setActiveAside(null);
+  view.setActivePane("aside", null);
   assert.ok(!item.classList.contains("is-active"));
+});
+
+test("a tool in the stats pane marks apart from the aside's, and the Tools item itself never lights", () => {
+  const doc = makeDocument();
+  const { list } = definitions([
+    { id: "pressure", label: "PSI", group: "tools", pane: "stats", icon: "gauge", create: () => ({ element: doc.createElement("div") }) },
+    { id: "winding", label: "Winding", group: "tools", pane: "aside", icon: "winding", create: () => ({ element: doc.createElement("div") }) }
+  ]);
+  const view = rail.create(doc, { sections: list, onSelect: () => {} });
+  const tools = view.element.querySelector(".slate-rail__item--tools");
+  const pressure = view.element.querySelector("[data-section='pressure']");
+  const windingItem = view.element.querySelector("[data-section='winding']");
+  assert.equal(rail.CENTRE, "centre");
+  view.setActive("recipe");
+  view.setActivePane("stats", "pressure");
+  assert.ok(!tools.classList.contains("is-active"), "the Tools item lit");
+  assert.equal(pressure.getAttribute("aria-current"), "page");
+  assert.equal(windingItem.getAttribute("aria-current"), null);
+  view.setActivePane("aside", "winding");
+  assert.ok(pressure.classList.contains("is-active"), "the aside's mark unmarked the stats pane");
+  assert.ok(windingItem.classList.contains("is-active"));
+  assert.ok(!tools.classList.contains("is-active"), "the Tools item lit");
+  view.setActivePane("stats", null);
+  assert.ok(!pressure.classList.contains("is-active"));
+  assert.ok(windingItem.classList.contains("is-active"), "the stats pane's home unmarked the aside's tool");
+  assert.ok(view.element.querySelector("[data-section='recipe']").classList.contains("is-active"), "the centre lost its mark");
+  view.setActivePane("aside", null);
+  assert.ok(!windingItem.classList.contains("is-active"));
+  // The stats group is a valid home for a swap and is listed nowhere.
+  const scrap = { id: "scrap", label: "Scrap", group: "stats", pane: "stats", create: () => ({ element: doc.createElement("div") }) };
+  assert.ok(sections.valid(scrap));
+  assert.ok(sections.GROUPS.includes("stats"));
+  const listed = rail.create(doc, { sections: list.concat([scrap]), onSelect: () => {} });
+  assert.equal(listed.element.querySelector("[data-section='scrap']"), null, "the rail lists the Scrap card");
 });
 
 test("the rail draws a glyph for every section the boot defines", () => {
   const boot = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate.js"), "utf8");
   const icons = [...boot.matchAll(/icon: "([a-z-]+)"/g)].map(match => match[1]);
-  assert.deepEqual(icons, ["recipe", "book", "balance", "settings", "timeline"], "the boot's sections changed: Recipe, Recipe Book, Resin Balance, Settings; the aside's Timeline");
+  assert.deepEqual(icons, ["recipe", "book", "balance", "gauge", "winding", "settings", "timeline"], "the boot's sections changed: Recipe, Recipe Book, Resin Balance, the two Tools, Settings; the aside's Timeline");
   for (const icon of icons) assert.ok(rail.GLYPHS[icon], `no glyph for ${icon}`);
 });
 

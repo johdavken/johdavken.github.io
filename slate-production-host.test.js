@@ -127,7 +127,7 @@ test("inside the host, an unconnected state bridge is reported as a stale applic
  *   5. The chain, executed
  * -------------------------------------------------------------------- */
 
-test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger and the timeline from live state", () => {
+test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger, the timeline and the tools from live state", () => {
   const { makeDocument } = require("./tools/slate-test/fake-dom.js");
   const doc = makeDocument({ href: "https://resin.tools/?view=slate" });
   doc.body.setAttribute("data-slate-view", "slate");
@@ -142,7 +142,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
   for (const file of ["scheduling.js", "station-command-contract.js", "station-command-bridge.js", "station-state-bridge.js",
-    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "resin-totals.js", "slate-theme.js", "slate-display.js"]) load(file);
+    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "resin-totals.js", "pressure-conversion.js", "winding-tension.js", "slate-theme.js", "slate-display.js"]) load(file);
   hostEl.slateTheme = root.PolynSlateTheme.create(hostEl, null);
   // Read-only is automatic on a linked line (slate-display.test.js covers it); this test wants the writable path.
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, null);
@@ -208,13 +208,13 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.ok(timelineWrap && balanceWrap, "the aside does not hold both the Timeline and the tool");
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
   const listed = hostEl.querySelectorAll(".slate-rail__sections [data-section]").map(item => item.getAttribute("data-section"));
-  assert.deepEqual(listed, ["recipe", "recipe-book", "resin-balance"], "Resin Balance is not listed with the sections, under the Recipe Book");
+  assert.deepEqual(listed, ["recipe", "recipe-book", "resin-balance", "pressure", "winding-tension"], "Resin Balance is not listed with the sections, under the Recipe Book, with the two calculators in the Tools menu after");
+  assert.deepEqual(hostEl.querySelectorAll(".slate-rail__menu [data-section]").map(item => item.getAttribute("data-section")), ["pressure", "winding-tension"]);
   const toolItem = hostEl.querySelector(".slate-rail__sections [data-section='resin-balance']");
   toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
   assert.ok(timelineWrap.hasAttribute("hidden") && !balanceWrap.hasAttribute("hidden"), "selecting the tool did not swap the aside");
   assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe", "a tool took the centre");
   assert.ok(toolItem.classList.contains("is-active"));
-  assert.ok(!hostEl.querySelector(".slate-rail__item--tools").classList.contains("is-active"), "Tools lit for a section outside its menu");
   assert.ok(hostEl.querySelector(".slate-rail [data-section='recipe']").classList.contains("is-active"), "the recipe lost its mark to the tool");
   const balanceRows = hostEl.querySelectorAll(".slate-balance__row");
   assert.ok(balanceRows.length > 0, "the tool drew no rows from the live job");
@@ -229,6 +229,63 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"), "selecting the showing tool again did not close it");
   assert.ok(!toolItem.classList.contains("is-active"));
+
+  // The two calculators list under Tools. PSI ⇄ bar takes the Scrap
+  // card's place in the job's row; Winding Tension takes the Timeline's.
+  // Each runs the application's own module (loaded by index.html, never
+  // by the host), each hands its place back, and the two are open at
+  // once with the centre untouched. The menu stays open through it all.
+  const toolsButton = hostEl.querySelector(".slate-rail__item--tools");
+  toolsButton.dispatchEvent({ type: "click", target: toolsButton, stopPropagation() {} });
+  assert.equal(toolsButton.getAttribute("aria-expanded"), "true");
+  const scrapWrap = hostEl.querySelector(".slate-cards__slot[data-slot='scrap'] .slate-section[data-section='scrap']");
+  const pressureWrap = hostEl.querySelector(".slate-cards__slot[data-slot='scrap'] .slate-section[data-section='pressure']");
+  assert.ok(scrapWrap && pressureWrap, "the Scrap slot does not hold both the card and the converter");
+  assert.ok(scrapWrap.querySelector(".slate-card--scrap"), "the Scrap card left its slot");
+  assert.ok(!scrapWrap.hasAttribute("hidden") && pressureWrap.hasAttribute("hidden"));
+  const pressureItem = hostEl.querySelector(".slate-rail__menu [data-section='pressure']");
+  pressureItem.dispatchEvent({ type: "click", target: pressureItem, stopPropagation() {} });
+  assert.ok(scrapWrap.hasAttribute("hidden") && !pressureWrap.hasAttribute("hidden"), "selecting the converter did not swap the Scrap slot");
+  assert.ok(!timelineWrap.hasAttribute("hidden"), "the converter took the aside");
+  assert.equal(toolsButton.getAttribute("aria-expanded"), "true", "selecting a tool closed the menu");
+  assert.ok(!toolsButton.classList.contains("is-active"), "the Tools item lit: the mark is the tool's own");
+  assert.ok(pressureItem.classList.contains("is-active"));
+  assert.ok(hostEl.querySelector(".slate-rail [data-section='recipe']").classList.contains("is-active"), "the recipe lost its mark to the converter");
+  const pressureInput = hostEl.querySelector(".slate-pressure__input");
+  assert.ok(pressureInput.focused, "the converter did not take focus on arrival");
+  pressureInput.value = "120";
+  pressureInput.dispatchEvent({ type: "input", target: pressureInput });
+  assert.equal(hostEl.querySelector(".slate-pressure__answer").textContent, "8.27 bar");
+  assert.equal(hostEl.querySelector(".slate-card--rate .slate-card__value").textContent, "850 lb/hr", "the other cards changed under the converter");
+
+  const windingWrap = hostEl.querySelector(".slate-aside .slate-section[data-section='winding-tension']");
+  const windingItem = hostEl.querySelector(".slate-rail__menu [data-section='winding-tension']");
+  windingItem.dispatchEvent({ type: "click", target: windingItem, stopPropagation() {} });
+  assert.ok(timelineWrap.hasAttribute("hidden") && !windingWrap.hasAttribute("hidden"), "selecting the calculator did not swap the aside");
+  assert.ok(!pressureWrap.hasAttribute("hidden"), "the aside's tool closed the converter");
+  assert.ok(windingItem.classList.contains("is-active") && pressureItem.classList.contains("is-active"));
+  const thickness = hostEl.querySelector(".slate-winding__input[data-field='thickness']");
+  const width = hostEl.querySelector(".slate-winding__input[data-field='width']");
+  thickness.value = "2.3"; thickness.dispatchEvent({ type: "input", target: thickness });
+  width.value = "40"; width.dispatchEvent({ type: "input", target: width });
+  assert.equal(hostEl.querySelector(".slate-winding__target").textContent, "13.2");
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe", "a tool took the centre");
+  assert.equal(executed.length, 2, "a calculator dispatched a command");
+
+  // Each close hands its own place back and unmarks its own item.
+  const pressureClose = hostEl.querySelector(".slate-pressure [data-slate-back]");
+  pressureClose.dispatchEvent({ type: "click", target: pressureClose, stopPropagation() {} });
+  assert.ok(!scrapWrap.hasAttribute("hidden") && pressureWrap.hasAttribute("hidden"), "the converter's close did not bring Scrap back");
+  assert.ok(!pressureItem.classList.contains("is-active"));
+  assert.ok(windingItem.classList.contains("is-active"), "the converter's close unmarked the calculator");
+  assert.equal(hostEl.querySelector(".slate-card--scrap .slate-card__value").textContent, "310 lb", "the Scrap card came back unpainted");
+  windingItem.dispatchEvent({ type: "click", target: windingItem, stopPropagation() {} });
+  assert.ok(!timelineWrap.hasAttribute("hidden") && windingWrap.hasAttribute("hidden"), "selecting the showing calculator again did not close it");
+  assert.ok(!windingItem.classList.contains("is-active"));
+  assert.ok(!toolsButton.classList.contains("is-active"));
+  assert.equal(toolsButton.getAttribute("aria-expanded"), "true", "the menu closed on its own");
+  toolsButton.dispatchEvent({ type: "click", target: toolsButton, stopPropagation() {} });
+  assert.equal(toolsButton.getAttribute("aria-expanded"), "false");
 
   // The Recipe Book reads the recipes bridge the application connected.
   const bookRow = hostEl.querySelector(".slate-book__row[data-recipe='r1']");

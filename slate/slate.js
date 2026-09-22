@@ -30,10 +30,13 @@
   const admin = root.PolynStationAdminBridge || null;
   const recipes = root.PolynStationRecipesBridge || null;
   const rundown = root.PolynStationRundown || null;
-  // The application's own Resin Totals arithmetic (resin-totals.js), for
-  // the Resin Balance tool. The application loads it; the harness loads
-  // the same file. Optional: without it the tool says so.
+  // The application's own arithmetic for the tools - Resin Totals
+  // (resin-totals.js), the pressure factor (pressure-conversion.js), the
+  // tension bands (winding-tension.js). The application loads them; the
+  // harness loads the same files. Optional: without one, its tool says so.
   const resinTotals = root.PolynResinTotals || null;
+  const pressureConversion = root.PolynPressureConversion || null;
+  const windingTension = root.PolynWindingTension || null;
   // The shared resin catalog, for the recipe's resin search. Optional: with
   // none, the search offers only what is typed.
   const catalog = root.PolynResinCatalog || null;
@@ -52,6 +55,8 @@
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
+  const pressureModule = root.PolynSlatePressure;
+  const windingModule = root.PolynSlateWindingTension;
 
   /* Inside the application host (?view=slate, marked on the body by
    * slate-host.js) the application connects the bridges before any of
@@ -63,13 +68,16 @@
   const HARNESS = "Standalone harness: demo data, read-only. The application's Slate view is index.html?view=slate.";
   const DEFAULT_SECTION = "recipe";
   const TIMELINE = "timeline";
+  const SCRAP = "scrap";
 
   const mounts = {};
   let container = null;
   let current = null;
   let lastOwnRevision = null;
   let sections = null;
-  let aside = null;
+  /* Every swap, by pane: the centre, the aside, the Scrap card's slot.
+   * Each has a home - what it shows when no tool is in it. */
+  const panes = {};
   let railView = null;
   let stats = null;
   let summary = null;
@@ -131,8 +139,8 @@
   /* The switch moved: every control re-reads its ability. */
   function onDisplayChange() {
     renderReadOnly();
-    for (const swap of [sections, aside]) {
-      if (!swap) continue;
+    for (const pane of Object.values(panes)) {
+      const swap = pane.swap;
       for (const definition of swap.definitions()) {
         const built = swap.section(definition.id);
         if (built && typeof built.refresh === "function") built.refresh();
@@ -188,11 +196,10 @@
     const own = !!settings.own || (resolved.revision !== null && resolved.revision === lastOwnRevision);
     if (kind === "none") { current = resolved; return; }
     current = resolved;
-    if (sections) sections.update(resolved, { kind, own });
     if (stats) stats.update(resolved, { kind, own });
-    // The aside's panels, the Timeline among them, are updated by the
-    // swap; the marks it then holds go to the recipe's rows.
-    if (aside) aside.update(resolved, { kind, own });
+    // Every pane's panels, the Timeline among them, are updated by their
+    // swap; the marks the Timeline then holds go to the recipe's rows.
+    for (const pane of Object.values(panes)) pane.swap.update(resolved, { kind, own });
     if (summary) applyMarks(summary.marks());
     renderNotice(resolved);
     renderReadOnly();
@@ -261,51 +268,67 @@
       say
     });
 
+    stats = statCards.create(doc, ctx);
+    if (mounts.stats) mounts.stats.appendChild(stats.element);
+
     // Every section the rail lists, and the pane each shows in: the
-    // centre (the default) or the aside, where the Timeline sits and a
-    // tool takes its place one at a time. Resin Balance is listed with
-    // the sections, under the Recipe Book, though it shows in the aside.
+    // centre (the default); the aside, where the Timeline sits and a
+    // tool takes its place one at a time; or the stats row, where the
+    // Scrap card does the same for the one tool small enough for a card.
+    // Resin Balance is listed with the sections, under the Recipe Book,
+    // though it shows in the aside; the two calculators list under Tools.
     const definitions = [
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, c) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
-      { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => aside.show(TIMELINE) })) },
+      { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => home("aside") })) },
+      { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
+      { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
       { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
       // The timeline keeps the clock every readout follows; it is handed
       // the same context as a section so Pump off goes through the
       // tracking seam. No rail item: it is what the aside shows by default.
-      { id: TIMELINE, label: "Timeline", group: "aside", pane: "aside", icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) }
+      { id: TIMELINE, label: "Timeline", group: "aside", pane: "aside", icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) },
+      // The Scrap card, already built and painted by the job's cards: the
+      // stats row's home, the way the Timeline is the aside's.
+      { id: SCRAP, label: "Scrap", group: "stats", pane: "stats", create: () => ({ element: stats.card(SCRAP).card }) }
     ];
-    const centreDefinitions = definitions.filter(definition => definition.pane !== "aside");
-    const asideDefinitions = definitions.filter(definition => definition.pane === "aside");
+    const paneOf = definition => definition.pane || rail.CENTRE;
+    const inPane = name => definitions.filter(definition => paneOf(definition) === name);
+    const home = name => panes[name].swap.show(panes[name].home);
 
-    sections = sectionsModule.mountSections(doc, mounts.centre, centreDefinitions, ctx, {
+    sections = sectionsModule.mountSections(doc, mounts.centre, inPane(rail.CENTRE), ctx, {
       onChange(definition) {
         const title = container.querySelector(".slate-header__title");
         if (title) title.textContent = definition.label;
         if (railView) railView.setActive(definition.id);
       }
     });
-    aside = sectionsModule.mountSections(doc, mounts.aside, asideDefinitions, ctx, {
-      onChange(definition) {
-        if (railView) railView.setActiveAside(definition.id === TIMELINE ? null : definition.id);
-      }
-    });
-    summary = aside.section(TIMELINE);
+    panes[rail.CENTRE] = { swap: sections, home: DEFAULT_SECTION };
+    for (const [name, mount, homeId] of [["aside", mounts.aside, TIMELINE], ["stats", stats.slot(SCRAP), SCRAP]]) {
+      const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
+        onChange(definition) {
+          if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
+        }
+      });
+      panes[name] = { swap, home: homeId };
+    }
+    summary = panes.aside.swap.section(TIMELINE);
 
-    // An aside item selected again while it is showing closes it: the
-    // Timeline comes back, as the panel's own close brings it.
+    // A tool selected again while it is showing closes it: the pane's
+    // home comes back, as the tool's own close brings it.
     railView = rail.create(doc, {
       sections: definitions,
       onSelect: id => {
-        if (!aside.has(id)) { sections.show(id); return; }
-        const showing = aside.current();
-        aside.show(showing && showing.id === id ? TIMELINE : id);
+        const definition = definitions.find(one => one.id === id);
+        if (!definition) return;
+        const name = paneOf(definition);
+        if (name === rail.CENTRE) { sections.show(id); return; }
+        const showing = panes[name].swap.current();
+        if (showing && showing.id === id) home(name);
+        else panes[name].swap.show(id);
       }
     });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
-
-    stats = statCards.create(doc, ctx);
-    if (mounts.stats) mounts.stats.appendChild(stats.element);
 
     sync = syncModule.create(doc, { connection, admin });
     if (mounts.sync) mounts.sync.appendChild(sync.element);
@@ -314,8 +337,7 @@
     if (badge) badge.addEventListener("click", () => sections.show("settings"));
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
-    sections.show(DEFAULT_SECTION);
-    aside.show(TIMELINE);
+    for (const name of Object.keys(panes)) home(name);
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());
   }

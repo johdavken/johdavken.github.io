@@ -6,6 +6,24 @@
   gap: var(--slate-space-4);
 }
 
+/* A card's slot: one cell the card fills. The Scrap slot is a mount as
+   well, and the swap wraps what it shows (slate-sections.js), so the
+   wrapper is a cell of the same kind - a card is the same height whether
+   it stands in the slot or inside the swap's wrapper. */
+.slate-cards__slot {
+  display: grid;
+  min-width: 0;
+}
+
+.slate-stats .slate-section {
+  display: grid;
+  min-width: 0;
+}
+
+.slate-stats .slate-section[hidden] {
+  display: none;
+}
+
 .slate-card {
   position: relative;
   display: flex;

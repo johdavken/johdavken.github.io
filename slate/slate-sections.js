@@ -6,9 +6,12 @@
  * the moment it is shown: `update` fans the state out to all of them,
  * visible or not. The aside runs a second swap from the same registry:
  * the Timeline (group "aside": no rail item of its own) and the tools,
- * one in its place at a time.
+ * one in its place at a time; the job's Scrap card runs a third (group
+ * "stats", likewise unlisted), for the one tool small enough to stand in
+ * a card.
  *
- *   definition: { id, label, group: "sections"|"tools"|"foot"|"aside", icon,
+ *   definition: { id, label, group: "sections"|"tools"|"foot"|"aside"|"stats", icon,
+ *                 pane?: "aside"|"stats" (the centre when absent),
  *                 create(doc, ctx) -> { element, update?(resolved, meta), onShow?(), onHide?() } }
  */
 (function (root, factory) {
@@ -18,7 +21,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const GROUPS = Object.freeze(["sections", "tools", "foot", "aside"]);
+  const GROUPS = Object.freeze(["sections", "tools", "foot", "aside", "stats"]);
   const ENTERING = "is-entering";
 
   function valid(definition) {

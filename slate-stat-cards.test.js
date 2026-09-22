@@ -72,6 +72,25 @@ test("the four cards render, and an update repaints them", () => {
   assert.ok(view.card("rate").card.classList.contains("is-unset"));
 });
 
+test("each card stands in a slot of the row, and the slot is a mount: a tool can take the Scrap card's place and the card still paints", () => {
+  const { view } = boot();
+  const slots = view.element.querySelectorAll(".slate-cards__slot");
+  assert.deepEqual(slots.map(slot => slot.getAttribute("data-slot")), cards.FIELDS);
+  for (const field of cards.FIELDS) {
+    assert.ok(view.slot(field) === slots[cards.FIELDS.indexOf(field)]);
+    assert.ok(view.card(field).card.parentNode === view.slot(field), `${field} does not stand in its slot`);
+  }
+  assert.equal(view.slot("nonsense"), null);
+  // The boot's swap re-parents the card into a wrapper inside the slot;
+  // the card is painted wherever it stands.
+  const wrapper = view.element.ownerDocument.createElement("div");
+  wrapper.appendChild(view.card("scrap").card);
+  view.slot("scrap").appendChild(wrapper);
+  view.update({ job: jobAt({ scrapResinLb: 310 }) }, {});
+  assert.equal(view.card("scrap").value.textContent, "310 lb");
+  assert.ok(view.card("scrap").card.parentNode === wrapper);
+});
+
 test("click opens the editor with the current value; Enter commits one command and the boot hears of it", () => {
   const { view, commands, committed } = boot();
   view.update({ job: jobAt() }, {});

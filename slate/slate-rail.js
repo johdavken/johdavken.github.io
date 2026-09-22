@@ -1,9 +1,12 @@
 /* The section rail: the column down Slate's left edge.
  *
  * The mark at the top; one item per section in the middle,
- * with Tools as a drop-down listing the tool sections; Settings at the
- * foot. Selecting an item asks the boot to show that section - the rail
- * never shows anything itself, and it never reads state.
+ * with Tools as a drop-down listing the tool sections (open until it is
+ * closed by hand); Settings at the foot. Selecting an item asks the boot to show that section - the rail
+ * never shows anything itself, and it never reads state. It marks what is
+ * current per pane (setActive for the centre, setActivePane for the rest),
+ * since a tool can be open in the aside or the stats row while the
+ * centre keeps its section.
  */
 (function (root, factory) {
   const logo = typeof require === "function"
@@ -17,6 +20,8 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const TOOLS_EMPTY = "No tools yet";
+  /* The pane a definition without one shows in. */
+  const CENTRE = "centre";
 
   /* Glyphs, 20 units square, stroked in currentColor. No image asset,
    * no icon font: the rail's shapes are its own. */
@@ -28,6 +33,8 @@
     chevron: "M6 8l4 4 4-4",
     balance: "M10 3v14M6 17h8M4 5h12M2 10l3-5 3 5a3 3 0 0 1-6 0ZM12 10l3-5 3 5a3 3 0 0 1-6 0Z",
     timeline: "M5 3v14M9 6h8M9 10h6M9 14h8",
+    gauge: "M3 15a7 7 0 0 1 14 0M10 15l4-5M10 15h.01",
+    winding: "M8 10a5 5 0 1 0 10 0a5 5 0 1 0-10 0M13 10h.01M2 10h5M4.5 7.5 7 10l-2.5 2.5",
     generic: "M4 4h12v12H4Z"
   });
 
@@ -133,18 +140,17 @@
     }
     rail.appendChild(foot);
 
+    /* The menu stays open once opened - through a selection, through a
+       press elsewhere on the page - until the Tools item is pressed
+       again, or Escape while the rail has focus. The tools are used
+       side by side, and the list is the way to them. */
     let toolsOpen = false;
-    function outside(event) {
-      if (event && event.target && typeof tools.contains === "function" && tools.contains(event.target)) return;
-      closeTools();
-    }
     function openTools() {
       if (toolsOpen) return;
       toolsOpen = true;
       menu.removeAttribute("hidden");
       toolsButton.setAttribute("aria-expanded", "true");
       tools.classList.add("is-open");
-      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outside, true);
     }
     function closeTools() {
       if (!toolsOpen) return;
@@ -152,7 +158,6 @@
       menu.setAttribute("hidden", "");
       toolsButton.setAttribute("aria-expanded", "false");
       tools.classList.remove("is-open");
-      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outside, true);
     }
 
     toolsButton.addEventListener("click", () => { if (toolsOpen) closeTools(); else openTools(); });
@@ -167,33 +172,37 @@
       const target = event && event.target;
       const button = target && typeof target.closest === "function" ? target.closest("[data-section]") : null;
       if (!button || !rail.contains(button)) return;
-      closeTools();
       onSelect(button.getAttribute("data-section"));
     });
 
-    /* Two things are current at once: the centre's section, and what the
-       aside shows in the Timeline's place (a definition with pane
-       "aside"). Each is marked apart, so neither unmarks the other. */
-    const inAside = id => definitions.some(one => one.id === id && one.pane === "aside");
+    /* Several things are current at once: the centre's section, and what
+       each other pane shows in its home's place (a definition with a
+       `pane`: the aside in the Timeline's, the stats row in the Scrap
+       card's). Each pane is marked apart, so none unmarks another. The
+       mark is on the item alone: the Tools item is a list, not a place,
+       and never lights. */
+    const paneOf = id => {
+      const definition = definitions.find(one => one.id === id);
+      return definition && definition.pane ? definition.pane : CENTRE;
+    };
 
-    function mark(button, active) {
-      button.classList.toggle("is-active", active);
-      if (active) button.setAttribute("aria-current", "page");
+    function mark(button, on) {
+      button.classList.toggle("is-active", on);
+      if (on) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     }
 
+    /* `id` is the pane's current section, or null when its home is back. */
+    function setActivePane(pane, id) {
+      for (const [itemId, button] of items) if (paneOf(itemId) === pane) mark(button, itemId === id);
+    }
+
     function setActive(id) {
-      for (const [itemId, button] of items) if (!inAside(itemId)) mark(button, itemId === id);
+      setActivePane(CENTRE, id);
     }
 
-    /* The aside's panel, or null when the Timeline is back. */
-    function setActiveAside(id) {
-      for (const [itemId, button] of items) if (inAside(itemId)) mark(button, itemId === id);
-      toolsButton.classList.toggle("is-active", toolDefinitions.some(one => one.id === id));
-    }
-
-    return Object.freeze({ element: rail, setActive, setActiveAside, openTools, closeTools, isToolsOpen: () => toolsOpen });
+    return Object.freeze({ element: rail, setActive, setActivePane, openTools, closeTools, isToolsOpen: () => toolsOpen });
   }
 
-  return Object.freeze({ GLYPHS, TOOLS_EMPTY, create });
+  return Object.freeze({ GLYPHS, TOOLS_EMPTY, CENTRE, create });
 });

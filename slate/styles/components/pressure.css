@@ -1,0 +1,78 @@
+/* PSI ⇄ bar: the pressure converter as a card in the job's row. The
+   card's chrome is the job cards' (stat-cards.css); this sheet lays out
+   what is inside: the label and the close, the entry with its unit, and
+   the answer in the other unit. */
+
+.slate-pressure {
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-4);
+}
+
+.slate-pressure__head {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  min-height: 28px;
+}
+
+/* The entry and, at its end, the unit it is typed in. */
+.slate-pressure__row {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-pressure__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--slate-text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The unit: a chip that flips the entry to the other unit. */
+.slate-root .slate-pressure__unit {
+  flex: none;
+  min-width: 3em;
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  text-align: center;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-pressure__unit:hover {
+  border-color: var(--slate-accent);
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+/* The answer: the same pressure in the other unit. */
+.slate-pressure__answer {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-pressure.is-answered .slate-pressure__answer {
+  color: var(--slate-text);
+}
+
+/* The card's note sits flush here: the card carries its own padding. */
+.slate-pressure .slate-card__note {
+  padding: 0;
+}

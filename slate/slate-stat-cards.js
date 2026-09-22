@@ -12,6 +12,11 @@
  * parsed by scheduling.js's own parser so Slate and the application
  * agree on which day a clock time means. The application refuses an
  * instant more than a minute in the past or more than a day away.
+ *
+ * Each card stands in a slot of the row. A slot is a mount: the boot runs
+ * a swap in the Scrap card's (slate-sections.js), so a tool small enough
+ * for a card - the pressure converter - takes its place and hands it
+ * back. This file knows nothing of the tool; it only leaves the slot.
  */
 (function (root, factory) {
   const rundown = typeof require === "function"
@@ -151,10 +156,13 @@
 
     const rootEl = element(doc, "div", "slate-cards");
     const cards = {};
+    const slots = {};
     let job = null;
     let editing = null;
 
     for (const field of FIELDS) {
+      const slot = element(doc, "div", "slate-cards__slot", { "data-slot": field });
+      slots[field] = slot;
       const card = element(doc, "div", `slate-card slate-card--${field}`, { "data-field": field });
       const trigger = element(doc, "button", "slate-card__trigger", { type: "button", "aria-expanded": "false" });
       trigger.appendChild(text(doc, "span", "slate-card__label", LABEL[field]));
@@ -175,7 +183,8 @@
       card.appendChild(editor);
       const note = element(doc, "p", "slate-card__note", { role: "status", hidden: "" });
       card.appendChild(note);
-      rootEl.appendChild(card);
+      slot.appendChild(card);
+      rootEl.appendChild(slot);
       cards[field] = { card, trigger, value, sub, editor, input, note };
     }
 
@@ -298,7 +307,8 @@
       close,
       commit,
       editing: () => editing,
-      card: field => cards[field] || null
+      card: field => cards[field] || null,
+      slot: field => slots[field] || null
     });
   }
 
