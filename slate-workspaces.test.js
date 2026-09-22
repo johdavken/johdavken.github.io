@@ -370,6 +370,38 @@ test("Delete asks with the whole sentence and lets the line go afterwards", asyn
   assert.equal(view.view.getState().devices, 0);
 });
 
+test("a row click while a request is in flight is refused, so the answer cannot land on a line chosen meanwhile", async () => {
+  let release = null;
+  const admin = makeAdmin({
+    answer: action => (action === "addThisDevice" ? new Promise(resolve => { release = () => resolve({ ok: true, alreadyMember: false, role: "member" }); }) : undefined)
+  });
+  const view = boot({ admin });
+  await view.open();
+  click(view.row("ws-1"));
+  await settle();
+  click(view.action("add-this-device"));
+  click(view.action("confirm-view"));
+  await tick();
+  assert.equal(view.view.getState().pending, "addThisDevice");
+
+  // The other line is turned away while the request is out.
+  const before = admin.calls.length;
+  click(view.row("ws-2"));
+  await tick();
+  assert.equal(view.view.getState().focusId, "ws-1", "a row click during a request moved the chosen line");
+  assert.equal(admin.calls.length, before, "a row click during a request read another line's devices");
+
+  release();
+  await settle();
+  // The answer landed on the line it was asked for, not on another.
+  assert.equal(view.view.getState().focusId, "ws-1");
+  assert.equal(view.note().textContent, "This device is now on Line 5.");
+  // And the rows take a click again the moment nothing is in flight.
+  click(view.row("ws-2"));
+  await settle();
+  assert.equal(view.view.getState().focusId, "ws-2");
+});
+
 test("a refused procedure keeps the line and says the application's words", async () => {
   const admin = makeAdmin({ answer: action => (action === "deleteWorkspace" ? { ok: false, code: "failed", message: "Another device is using that line." } : undefined) });
   const view = boot({ admin });

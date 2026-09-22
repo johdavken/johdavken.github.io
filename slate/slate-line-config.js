@@ -744,7 +744,13 @@
     }
 
     /** Choose a line - or, with unsaved changes in hand, ask first. */
+    /* A row click while a request is in flight is refused: the request's
+     * own answer writes the chosen record and the editor's baseline when
+     * it lands, and it would land on whatever had been chosen meanwhile.
+     * The buttons disable themselves for the same moment; a row cannot,
+     * so it is turned away here. */
     function choose(id) {
+      if (busy()) return;
       if (id === state.focusId) return;
       if (dirty()) {
         const line = chosen() || { displayName: state.draft && state.draft.displayName };

@@ -592,7 +592,14 @@
       return result;
     }
 
+    /* A row click while a request is in flight is refused: the request's
+     * own answer writes the chosen line and its devices when it lands,
+     * and it would land on whatever had been chosen meanwhile. The
+     * buttons disable themselves for the same moment; a row cannot, so
+     * it is turned away here. (reload() reaches this after its request
+     * has finished, so nothing is in flight and it passes through.) */
     async function choose(id) {
+      if (busy()) return null;
       state.focusId = id || null;
       state.view = null;
       state.mergeTargetId = null;

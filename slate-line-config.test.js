@@ -24,6 +24,7 @@ function makeAdmin(options) {
   const calls = [];
   const listeners = new Set();
   let stored = (settings.lines || LINES).map(one => Object.assign({}, one));
+  const held = [];
   let state = Object.assign({ ready: true, signedIn: true, isAdmin: true, email: "ada@example.com" }, settings.state || {});
   let access = bridge.project(state, { ready: true, userId: "user-1234abcd", deviceId: "dev-5678efgh", deviceLabel: "This browser" });
   function publish() { access = bridge.project(state, { ready: true, userId: "user-1234abcd", deviceId: "dev-5678efgh", deviceLabel: "This browser" }); for (const listener of listeners) listener(access); }
@@ -34,20 +35,27 @@ function makeAdmin(options) {
     getAccess: () => access,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     set(next) { state = Object.assign({}, state, next); publish(); },
+    // An action named in `hold` waits here until release() is called, so a
+    // test can act while the request is genuinely in flight.
+    release() { const waiting = held.slice(); held.length = 0; for (const resolve of waiting) resolve(); },
     async request(action, args) {
       calls.push({ action, args });
-      if (typeof settings.answer === "function") {
-        const answered = settings.answer(action, args);
-        if (answered !== undefined) return answered;
-      }
-      if (action === "listLineConfigurations") return { ok: true, lines: stored.map(one => Object.assign({}, one)) };
-      if (action === "saveLineConfiguration") {
-        // As the service does: the definition is stored and answered with.
-        const saved = Object.assign({ updatedAt: "2026-09-22T10:00:00.000Z" }, args.line, { id: args.id || "l-new" });
-        stored = stored.filter(one => one.id !== saved.id).concat([saved]);
-        return { ok: true, line: saved };
-      }
-      return { ok: true };
+      const produce = () => {
+        if (typeof settings.answer === "function") {
+          const answered = settings.answer(action, args);
+          if (answered !== undefined) return answered;
+        }
+        if (action === "listLineConfigurations") return { ok: true, lines: stored.map(one => Object.assign({}, one)) };
+        if (action === "saveLineConfiguration") {
+          // As the service does: the definition is stored and answered with.
+          const saved = Object.assign({ updatedAt: "2026-09-22T10:00:00.000Z" }, args.line, { id: args.id || "l-new" });
+          stored = stored.filter(one => one.id !== saved.id).concat([saved]);
+          return { ok: true, line: saved };
+        }
+        return { ok: true };
+      };
+      if (settings.hold === action) return new Promise(resolve => held.push(() => resolve(produce())));
+      return produce();
     }
   };
 }
@@ -456,6 +464,31 @@ test("adding a line sends it with no id, and the line the application answers wi
   assert.equal(sent.args.line.displayName, "Line 9");
   assert.equal(view.view.getState().focusId, "l-new");
   assert.equal(view.view.getState().dirty, false);
+});
+
+test("a row click while a save is in flight is refused, so the saved line cannot land on another one chosen meanwhile", async () => {
+  const admin = makeAdmin({ hold: "saveLineConfiguration" });
+  const view = boot({ admin });
+  await view.open();
+  click(view.row("l-5"));
+  await settle();
+  view.type("displayName", "Line Five");
+  click(view.action("save"));
+  await tick();
+  assert.equal(view.view.getState().pending, "saveLineConfiguration");
+
+  click(view.row("l-8"));
+  await tick();
+  assert.equal(view.view.getState().focusId, "l-5", "a row click during a save moved the chosen line");
+
+  admin.release();
+  await settle();
+  // The answer landed on the line it was asked for, not on another.
+  assert.equal(view.view.getState().focusId, "l-5");
+  assert.equal(view.view.getState().dirty, false);
+  click(view.row("l-8"));
+  await settle();
+  assert.equal(view.view.getState().focusId, "l-8");
 });
 
 test("a refused save keeps the draft as it was typed and marks what the application named", async () => {

@@ -24,6 +24,7 @@ function makeAdmin(options) {
   const calls = [];
   const listeners = new Set();
   let stored = (settings.resins || RESINS).map(one => Object.assign({}, one));
+  const held = [];
   let state = Object.assign({ ready: true, signedIn: true, isAdmin: true, email: "ada@example.com" }, settings.state || {});
   let access = bridge.project(state, { ready: true, userId: "user-1234abcd", deviceId: "dev-5678efgh", deviceLabel: "This browser" });
   function publish() { access = bridge.project(state, { ready: true, userId: "user-1234abcd", deviceId: "dev-5678efgh", deviceLabel: "This browser" }); for (const listener of listeners) listener(access); }
@@ -34,20 +35,27 @@ function makeAdmin(options) {
     getAccess: () => access,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     set(next) { state = Object.assign({}, state, next); publish(); },
+    // An action named in `hold` waits here until release() is called, so a
+    // test can act while the request is genuinely in flight.
+    release() { const waiting = held.slice(); held.length = 0; for (const resolve of waiting) resolve(); },
     async request(action, args) {
       calls.push({ action, args });
-      if (typeof settings.answer === "function") {
-        const answered = settings.answer(action, args);
-        if (answered !== undefined) return answered;
-      }
-      if (action === "listResins") return { ok: true, resins: stored.map(one => Object.assign({}, one)) };
-      if (action === "saveResin") {
-        const saved = Object.assign({ updatedAt: "2026-09-22T10:00:00.000Z" }, args.resin, { id: args.id || "r-new" });
-        stored = stored.filter(one => one.id !== saved.id).concat([saved]);
-        return { ok: true, resin: saved };
-      }
-      if (action === "deleteResin") { stored = stored.filter(one => one.id !== args.id); return { ok: true }; }
-      return { ok: true };
+      const produce = () => {
+        if (typeof settings.answer === "function") {
+          const answered = settings.answer(action, args);
+          if (answered !== undefined) return answered;
+        }
+        if (action === "listResins") return { ok: true, resins: stored.map(one => Object.assign({}, one)) };
+        if (action === "saveResin") {
+          const saved = Object.assign({ updatedAt: "2026-09-22T10:00:00.000Z" }, args.resin, { id: args.id || "r-new" });
+          stored = stored.filter(one => one.id !== saved.id).concat([saved]);
+          return { ok: true, resin: saved };
+        }
+        if (action === "deleteResin") { stored = stored.filter(one => one.id !== args.id); return { ok: true }; }
+        return { ok: true };
+      };
+      if (settings.hold === action) return new Promise(resolve => held.push(() => resolve(produce())));
+      return produce();
     }
   };
 }
@@ -289,6 +297,30 @@ test("adding a record sends it with no id and stands in the list under its code 
   });
   assert.equal(view.view.getState().focusId, "r-new");
   assert.equal(view.view.getState().dirty, false);
+});
+
+test("a row click while a save is in flight is refused, so the saved record cannot land on another one chosen meanwhile", async () => {
+  const admin = makeAdmin({ hold: "saveResin" });
+  const view = boot({ admin });
+  await view.open();
+  click(view.row("r-1"));
+  view.type("densityGCm3", "0.952");
+  click(view.action("save"));
+  await tick();
+  assert.equal(view.view.getState().pending, "saveResin");
+
+  click(view.row("r-2"));
+  await tick();
+  assert.equal(view.view.getState().focusId, "r-1", "a row click during a save moved the chosen record");
+
+  admin.release();
+  await settle();
+  // The answer landed on the record it was asked for, not on another.
+  assert.equal(view.view.getState().focusId, "r-1");
+  assert.equal(view.view.getState().dirty, false);
+  click(view.row("r-2"));
+  await settle();
+  assert.equal(view.view.getState().focusId, "r-2");
 });
 
 test("a refusal from the application keeps the draft and marks the field it names, by field or by its words", async () => {
