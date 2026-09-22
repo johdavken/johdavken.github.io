@@ -18,25 +18,38 @@
 
   const STORAGE_KEY = "polyn.slate.theme.v1";
   const DEFAULT_THEME = "yaru-dark";
-  /* The registry, in gallery order: Yaru's light and dark first, then
-   * the light Rosé Pine, then the dark palettes. Each is a well-known
-   * palette mapped onto Slate's contract; these are Slate's own files,
-   * not Station's. */
+  /* The registry, in gallery order: every family as a pair, its light
+   * over its dark. Each is a well-known palette mapped onto Slate's
+   * contract; these are Slate's own files, not Station's. */
   const THEMES = Object.freeze([
     Object.freeze({ id: "yaru-light", label: "Yaru Light", scheme: "light", description: "Cool white, near-black text, Ubuntu orange." }),
     Object.freeze({ id: "yaru-dark", label: "Yaru Dark", scheme: "dark", description: "Neutral graphite, white text, Ubuntu orange." }),
-    Object.freeze({ id: "rose-pine", label: "Rosé Pine", scheme: "light", description: "Dawn: warm parchment, ink-violet text, pine accent." }),
-    Object.freeze({ id: "tokyo-night", label: "Tokyo Night", scheme: "dark", description: "Deep blue-black, lavender text, blue accent." }),
-    Object.freeze({ id: "gruvbox", label: "Gruvbox", scheme: "dark", description: "Warm charcoal, sand text, blue-teal accent." }),
-    Object.freeze({ id: "everforest", label: "Everforest", scheme: "dark", description: "Green-grey, parchment text, blue accent." }),
-    Object.freeze({ id: "catppuccin", label: "Catppuccin", scheme: "dark", description: "Mocha: soft navy, pale text, blue accent." }),
-    Object.freeze({ id: "retro-82", label: "Retro 82", scheme: "dark", description: "Deep navy, cream text, orange accent." })
+    Object.freeze({ id: "rose-pine-light", label: "Rosé Pine Dawn", scheme: "light", description: "Warm parchment, ink-violet text, pine accent." }),
+    Object.freeze({ id: "rose-pine-dark", label: "Rosé Pine Moon", scheme: "dark", description: "Dusk violet, lilac-white text, pine accent." }),
+    Object.freeze({ id: "tokyo-night-light", label: "Tokyo Night Day", scheme: "light", description: "Cool grey, navy text, blue accent." }),
+    Object.freeze({ id: "tokyo-night-dark", label: "Tokyo Night", scheme: "dark", description: "Deep blue-black, lavender text, blue accent." }),
+    Object.freeze({ id: "gruvbox-light", label: "Gruvbox Light", scheme: "light", description: "Cream, dark-brown text, faded-blue accent." }),
+    Object.freeze({ id: "gruvbox-dark", label: "Gruvbox Dark", scheme: "dark", description: "Warm charcoal, sand text, blue-teal accent." }),
+    Object.freeze({ id: "everforest-light", label: "Everforest Light", scheme: "light", description: "Paper, slate-green text, blue accent." }),
+    Object.freeze({ id: "everforest-dark", label: "Everforest Dark", scheme: "dark", description: "Green-grey, parchment text, blue accent." }),
+    Object.freeze({ id: "catppuccin-light", label: "Catppuccin Latte", scheme: "light", description: "Cool white, ink-grey text, blue accent." }),
+    Object.freeze({ id: "catppuccin-dark", label: "Catppuccin Mocha", scheme: "dark", description: "Soft navy, pale text, blue accent." }),
+    Object.freeze({ id: "retro-82-light", label: "Retro 82 Light", scheme: "light", description: "Cream, navy text, orange accent." }),
+    Object.freeze({ id: "retro-82-dark", label: "Retro 82 Dark", scheme: "dark", description: "Deep navy, cream text, orange accent." })
   ]);
   const THEME_IDS = Object.freeze(THEMES.map(theme => theme.id));
   const VALID = new Set(THEME_IDS);
+  /* The ids the six single themes carried before each family had both
+   * halves: a device that saved one keeps the palette it chose. */
+  const RENAMED = Object.freeze({
+    "rose-pine": "rose-pine-light", "tokyo-night": "tokyo-night-dark", "gruvbox": "gruvbox-dark",
+    "everforest": "everforest-dark", "catppuccin": "catppuccin-dark", "retro-82": "retro-82-dark"
+  });
 
   function normalize(value) {
-    return VALID.has(value) ? value : DEFAULT_THEME;
+    if (VALID.has(value)) return value;
+    if (typeof value === "string" && Object.prototype.hasOwnProperty.call(RENAMED, value)) return RENAMED[value];
+    return DEFAULT_THEME;
   }
 
   function read(storage) {

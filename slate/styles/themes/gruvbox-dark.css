@@ -1,4 +1,4 @@
-/* Slate theme: Gruvbox.
+/* Slate theme: Gruvbox Dark.
  *
  * Gruvbox's dark palette (the softer material contrast) on Slate's
  * semantic contract: warm charcoal surfaces, sand text, the palette's
@@ -6,8 +6,8 @@
  * statuses, purple for a pumped-off hopper. Same token set as
  * yaru-light.css.
  */
-.slate-root[data-theme="gruvbox"],
-.slate-theme-scope[data-theme="gruvbox"] {
+.slate-root[data-theme="gruvbox-dark"],
+.slate-theme-scope[data-theme="gruvbox-dark"] {
   color-scheme: dark;
   --slate-color-scheme: dark;
 

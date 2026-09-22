@@ -1,12 +1,12 @@
-/* Slate theme: Catppuccin.
+/* Slate theme: Catppuccin Mocha.
  *
  * Catppuccin Mocha on Slate's semantic contract: soft navy surfaces,
  * pale text, the palette's blue for the accent, its green, yellow, red
  * and sky for the statuses, mauve for a pumped-off hopper, teal for a
  * computed weight. Same token set as yaru-light.css.
  */
-.slate-root[data-theme="catppuccin"],
-.slate-theme-scope[data-theme="catppuccin"] {
+.slate-root[data-theme="catppuccin-dark"],
+.slate-theme-scope[data-theme="catppuccin-dark"] {
   color-scheme: dark;
   --slate-color-scheme: dark;
 

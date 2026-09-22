@@ -1,12 +1,12 @@
-/* Slate theme: Everforest.
+/* Slate theme: Everforest Dark.
  *
  * Everforest's dark palette on Slate's semantic contract: green-grey
  * surfaces, parchment text, the palette's blue for the accent, its
  * green, yellow, red and aqua for the statuses, purple for a pumped-off
  * hopper. Same token set as yaru-light.css.
  */
-.slate-root[data-theme="everforest"],
-.slate-theme-scope[data-theme="everforest"] {
+.slate-root[data-theme="everforest-dark"],
+.slate-theme-scope[data-theme="everforest-dark"] {
   color-scheme: dark;
   --slate-color-scheme: dark;
 

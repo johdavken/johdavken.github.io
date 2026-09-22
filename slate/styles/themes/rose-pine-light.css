@@ -1,4 +1,4 @@
-/* Slate theme: Rosé Pine.
+/* Slate theme: Rosé Pine Dawn.
  *
  * Rosé Pine Dawn - the light variant Omarchy ships - on Slate's semantic
  * contract: warm parchment surfaces, ink-violet text, pine for the
@@ -7,8 +7,8 @@
  * weight, gold for a warning, love for danger, iris for a pumped-off
  * hopper. Same token set as yaru-light.css.
  */
-.slate-root[data-theme="rose-pine"],
-.slate-theme-scope[data-theme="rose-pine"] {
+.slate-root[data-theme="rose-pine-light"],
+.slate-theme-scope[data-theme="rose-pine-light"] {
   color-scheme: light;
   --slate-color-scheme: light;
 

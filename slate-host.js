@@ -45,12 +45,18 @@
     "slate/styles/tokens.css",
     "slate/styles/themes/yaru-light.css",
     "slate/styles/themes/yaru-dark.css",
-    "slate/styles/themes/rose-pine.css",
-    "slate/styles/themes/tokyo-night.css",
-    "slate/styles/themes/gruvbox.css",
-    "slate/styles/themes/everforest.css",
-    "slate/styles/themes/catppuccin.css",
-    "slate/styles/themes/retro-82.css",
+    "slate/styles/themes/rose-pine-light.css",
+    "slate/styles/themes/rose-pine-dark.css",
+    "slate/styles/themes/tokyo-night-light.css",
+    "slate/styles/themes/tokyo-night-dark.css",
+    "slate/styles/themes/gruvbox-light.css",
+    "slate/styles/themes/gruvbox-dark.css",
+    "slate/styles/themes/everforest-light.css",
+    "slate/styles/themes/everforest-dark.css",
+    "slate/styles/themes/catppuccin-light.css",
+    "slate/styles/themes/catppuccin-dark.css",
+    "slate/styles/themes/retro-82-light.css",
+    "slate/styles/themes/retro-82-dark.css",
     "slate/styles/base.css",
     "slate/styles/shell.css",
     "slate/styles/components/rail.css",
@@ -118,7 +124,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.14.0";
+  const VERSION = "0.15.0";
 
   function requested() {
     try {

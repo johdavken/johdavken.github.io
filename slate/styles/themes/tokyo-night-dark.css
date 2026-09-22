@@ -5,8 +5,8 @@
  * yellow, red and cyan for the statuses, purple for a pumped-off hopper,
  * teal for a computed weight. Same token set as yaru-light.css.
  */
-.slate-root[data-theme="tokyo-night"],
-.slate-theme-scope[data-theme="tokyo-night"] {
+.slate-root[data-theme="tokyo-night-dark"],
+.slate-theme-scope[data-theme="tokyo-night-dark"] {
   color-scheme: dark;
   --slate-color-scheme: dark;
 

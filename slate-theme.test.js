@@ -15,7 +15,8 @@ const theme = require("./slate-theme.js");
 
 const ROOT = __dirname;
 const THEMES_DIR = path.join(ROOT, "slate/styles/themes");
-const GALLERY_ORDER = ["yaru-light", "yaru-dark", "rose-pine", "tokyo-night", "gruvbox", "everforest", "catppuccin", "retro-82"];
+const GALLERY_ORDER = ["yaru-light", "yaru-dark", "rose-pine-light", "rose-pine-dark", "tokyo-night-light", "tokyo-night-dark", "gruvbox-light", "gruvbox-dark", "everforest-light", "everforest-dark", "catppuccin-light", "catppuccin-dark", "retro-82-light", "retro-82-dark"];
+const RENAMED = { "rose-pine": "rose-pine-light", "tokyo-night": "tokyo-night-dark", "gruvbox": "gruvbox-dark", "everforest": "everforest-dark", "catppuccin": "catppuccin-dark", "retro-82": "retro-82-dark" };
 
 function node(tag) {
   return {
@@ -71,12 +72,13 @@ function tokensOf(css) {
  *   Registry and controller
  * -------------------------------------------------------------------- */
 
-test("the Slate registry is Yaru Light over Yaru Dark, then the six palettes, default light, and its own storage key", () => {
+test("the Slate registry is seven families as light-over-dark pairs, default Yaru Dark, and its own storage key", () => {
   assert.deepEqual([...theme.THEME_IDS], GALLERY_ORDER);
   assert.equal(theme.DEFAULT_THEME, "yaru-dark");
   assert.equal(theme.STORAGE_KEY, "polyn.slate.theme.v1");
-  assert.deepEqual(theme.THEMES.map(item => item.scheme), ["light", "dark", "light", "dark", "dark", "dark", "dark", "dark"]);
-  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine", "Tokyo Night", "Gruvbox", "Everforest", "Catppuccin", "Retro 82"]);
+  assert.deepEqual(theme.THEMES.map(item => item.scheme), GALLERY_ORDER.map((id, i) => (i % 2 === 0 ? "light" : "dark")));
+  for (const item of theme.THEMES) assert.ok(item.id.endsWith(`-${item.scheme}`), `${item.id} is not named for its scheme`);
+  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine Dawn", "Rosé Pine Moon", "Tokyo Night Day", "Tokyo Night", "Gruvbox Light", "Gruvbox Dark", "Everforest Light", "Everforest Dark", "Catppuccin Latte", "Catppuccin Mocha", "Retro 82 Light", "Retro 82 Dark"]);
   assert.ok(Object.isFrozen(theme.THEMES) && theme.THEMES.every(Object.isFrozen));
   // Station's preference is a different key: choosing here never recolours Station.
   const station = require("./station-theme.js");
@@ -100,7 +102,14 @@ test("persisted themes restore and invalid, Station-only or obsolete values fall
     const controller = theme.create(node("div"), storage({ [theme.STORAGE_KEY]: id }));
     assert.equal(controller.getTheme(), id);
   }
-  for (const invalid of ["", "dark", "system", "industrial-dark", "gruvbox-light", "yaru", "__proto__", null]) {
+  // The single ids the six families carried before they were pairs keep the palette they named.
+  for (const [old, now] of Object.entries(RENAMED)) {
+    const root = node("div");
+    const controller = theme.create(root, storage({ [theme.STORAGE_KEY]: old }));
+    assert.equal(controller.getTheme(), now, `${old} did not carry over`);
+    assert.equal(root.getAttribute("data-theme"), now);
+  }
+  for (const invalid of ["", "dark", "system", "industrial-dark", "gruvbox-day", "yaru", "__proto__", "constructor", null]) {
     const root = node("div");
     const controller = theme.create(root, storage({ [theme.STORAGE_KEY]: invalid }));
     assert.equal(controller.getTheme(), theme.DEFAULT_THEME, `${invalid} was accepted`);

@@ -1,4 +1,4 @@
-/* Slate theme: Retro 82.
+/* Slate theme: Retro 82 Dark.
  *
  * Omarchy's Retro 82 on Slate's semantic contract: deep navy surfaces,
  * cream text, the palette's orange for the accent, its teal and cyan for
@@ -6,8 +6,8 @@
  * are. The palette has no purple, so a pumped-off hopper borrows a
  * muted violet. Same token set as yaru-light.css.
  */
-.slate-root[data-theme="retro-82"],
-.slate-theme-scope[data-theme="retro-82"] {
+.slate-root[data-theme="retro-82-dark"],
+.slate-theme-scope[data-theme="retro-82-dark"] {
   color-scheme: dark;
   --slate-color-scheme: dark;
 
