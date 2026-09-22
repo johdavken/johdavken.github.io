@@ -337,6 +337,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A measured value, which wants room for its decimals. */
+.slate-lines__input[data-width="value"] {
+  --slate-field-width: 12ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .slate-lines__chips {
   display: flex;
   flex-wrap: wrap;
@@ -390,4 +397,36 @@
   margin-top: var(--slate-space-3);
   color: var(--slate-text-faint);
   font-size: var(--slate-text-xs);
+}
+
+/* ---- Resin Database ----
+   The list has a search of its own above it, standing outside the rows
+   so a redraw never takes the caret. The record's fields reuse Line
+   Configuration's aligned rows. */
+
+.slate-resins__list-pane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+}
+
+.slate-resins__search {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  --slate-field-width: 100%;
+  min-width: 0;
+}
+
+.slate-root .slate-resins__search:focus {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
+}
+
+.slate-resins__count {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
 }
