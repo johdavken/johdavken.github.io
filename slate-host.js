@@ -90,7 +90,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
 
   function requested() {
     try {

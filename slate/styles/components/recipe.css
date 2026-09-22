@@ -65,16 +65,12 @@
   cursor: not-allowed;
 }
 
-/* ---- The plan's moves (Next tab only) ---- */
+/* ---- The plan's moves: the foot of the Next table ----
+   Promote is the one prominent button - it is the changeover - and Copy
+   the quiet one beside it. The foot shares .slate-recipe__foot's layout. */
 
 .slate-recipe__plan {
-  display: none;
-  flex: none;
   gap: var(--slate-space-2);
-}
-
-.slate-recipe[data-recipe="next"] .slate-recipe__plan {
-  display: inline-flex;
 }
 
 .slate-root .slate-recipe__plan-action {
@@ -97,8 +93,19 @@
 }
 
 .slate-root .slate-recipe__plan-action--promote {
+  padding: var(--slate-space-2) var(--slate-space-4);
   border-color: var(--slate-accent);
-  color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-recipe__plan-action--promote:hover {
+  background: var(--slate-accent-hover);
+}
+
+.slate-root .slate-recipe__plan-action--quiet {
+  border-color: transparent;
+  color: var(--slate-text-muted);
 }
 
 .slate-root .slate-recipe__plan-action[data-armed] {
@@ -128,7 +135,7 @@
 .slate-recipe__columns,
 .slate-hopper {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 72px 96px auto 80px;
+  grid-template-columns: 56px minmax(0, 1fr) 72px 96px var(--slate-controls-width) 80px;
   align-items: center;
   gap: var(--slate-space-3);
 }
@@ -267,9 +274,13 @@
   color: var(--slate-text-muted);
 }
 
+/* Track at the left of its column, Pump-off to its right; the column is
+   fixed (tokens.css) so the pills never push the blend and weight. */
 .slate-hopper__controls {
   display: flex;
+  justify-content: flex-start;
   gap: var(--slate-space-2);
+  min-width: 0;
 }
 
 .slate-hopper__mark {
@@ -351,6 +362,12 @@
 .slate-root .slate-toggle:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* A control that does not apply yet, holding its place in the row. */
+.slate-root .slate-toggle.is-idle {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .slate-root .slate-toggle[data-able="false"] {

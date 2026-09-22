@@ -5,9 +5,12 @@
  * ring, and the RT letterforms. Slate draws the same geometry - every path
  * here is that symbol's, and slate-logo.test.js pins them equal - but on
  * its own tokens: the letterforms in the text colour, the streams in the
- * theme's layer and accent colours, and nothing turning. The application's
- * sprite sits inside the <main> host.css hides, and its colours and rotor
- * are legacy CSS; a <use> of it would draw in the wrong palette.
+ * theme's layer and accent colours. It turns as the application's does -
+ * the streams revolve, a glint travels each channel, the output strokes
+ * breathe - on Slate's own keyframes (rail.css), with a reduced-motion
+ * switch. The application's sprite sits inside the <main> host.css hides,
+ * and its colours and rotor are legacy CSS; a <use> of it would draw in
+ * the wrong palette.
  */
 (function (root, factory) {
   const api = factory();
@@ -31,6 +34,7 @@
     filmFolds: "m-7 .5 7 3.3L7 .5M-7 4l7 3.3L7 4",
     letterR: "M99 28h23c14 0 22 7 22 19 0 8-4 14-11 17l15 19h-15l-13-17h-9v17H99Zm12 11v16h10c8 0 11-3 11-8s-3-8-11-8Z",
     letterT: "M146 28h43v11h-16v44h-12V39h-15Z",
+    glint: "M-18-22C-11-30 0-33 11-28C20-25 26-18 28-12",
     outputs: Object.freeze(["M100 91h12", "M117 91h12", "M134 91h12", "M151 91h12", "M168 91h20"]),
     rule: "M100 20h24m4 0h4"
   });
@@ -84,7 +88,16 @@
     svg.appendChild(ring);
 
     const confluence = svgNode(doc, "g", { transform: "translate(49 52)" });
-    for (let index = 0; index < STREAMS.length; index += 1) confluence.appendChild(channel(doc, index));
+    // The rotor: the five channels and the glint that travels each, turning
+    // together about the die.
+    const rotor = svgNode(doc, "g", { class: "slate-logo__rotor" });
+    for (let index = 0; index < STREAMS.length; index += 1) rotor.appendChild(channel(doc, index));
+    for (let index = 0; index < STREAMS.length; index += 1) {
+      const glint = svgNode(doc, "path", { class: "slate-logo__glint", d: PATHS.glint, pathLength: "100", transform: `rotate(${index * 72})`, fill: "none", stroke: "var(--slate-text)" });
+      glint.style.setProperty("--slate-flow-delay", `${(-1.2 * index).toFixed(1)}s`);
+      rotor.appendChild(glint);
+    }
+    confluence.appendChild(rotor);
     confluence.appendChild(svgNode(doc, "path", { d: PATHS.die, fill: "none", stroke: "currentColor", "stroke-width": "1.25", "stroke-linejoin": "round", opacity: ".75" }));
     const film = svgNode(doc, "g", { fill: "none", stroke: "currentColor", "stroke-width": "1.45", "stroke-linecap": "round", "stroke-linejoin": "round" });
     film.appendChild(svgNode(doc, "path", { d: PATHS.filmTop }));
@@ -99,7 +112,9 @@
 
     const outputs = svgNode(doc, "g", { fill: "none", "stroke-width": "1.5" });
     PATHS.outputs.forEach((d, index) => {
-      outputs.appendChild(svgNode(doc, "path", { d, stroke: STREAMS[index] }));
+      const stroke = svgNode(doc, "path", { class: "slate-logo__output", d, stroke: STREAMS[index] });
+      stroke.style.setProperty("--slate-flow-delay", `${(-1.2 * index).toFixed(1)}s`);
+      outputs.appendChild(stroke);
     });
     svg.appendChild(outputs);
 

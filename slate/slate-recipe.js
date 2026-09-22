@@ -151,12 +151,13 @@
     const compareSwitch = text(doc, "button", "slate-switch", "Compare", { type: "button", role: "switch", "aria-checked": "false", "data-slate-compare": "", "data-able": "false" });
     bar.appendChild(compareSwitch);
 
-    const planStrip = element(doc, "div", "slate-recipe__plan");
-    const copyButton = text(doc, "button", "slate-recipe__plan-action", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" });
+    // The plan's two moves stand in the Next body's foot (built below), as
+    // Current's reset does: read the plan, then act on it at its end.
+    const planStrip = element(doc, "div", "slate-recipe__foot slate-recipe__plan");
+    const copyButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" });
     const promoteButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", planModule.LABEL.promote, { type: "button", "data-slate-plan": "promote", "data-able": "false" });
     planStrip.appendChild(copyButton);
     planStrip.appendChild(promoteButton);
-    bar.appendChild(planStrip);
 
     const printBox = element(doc, "div", "slate-print");
     const printTrigger = text(doc, "button", "slate-print__trigger", "Print", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
@@ -209,6 +210,7 @@
         empty.appendChild(text(doc, "button", "slate-recipe__plan-action", planModule.LABEL.copy, { type: "button", "data-slate-plan": "copy", "data-able": "false" }));
         el.appendChild(empty);
         body.empty = empty;
+        el.appendChild(planStrip);
       } else {
         const foot = element(doc, "div", "slate-recipe__foot");
         const reset = text(doc, "button", "slate-recipe__reset", RESET_LABEL, { type: "button", "data-able": "false" });
@@ -302,8 +304,11 @@
       if (entry.toggles) {
         // Pump-off is a tracking mark, so keep it out of rows that are not
         // being tracked. If a stale pump-off mark exists, leave the control
-        // visible until the operator clears it.
-        show(entry.toggles.pump, cells.track || cells.pumpOff);
+        // visible until the operator clears it. It keeps its space either
+        // way: each row is its own grid, and a controls cell that shrank
+        // would pull the blend and weight columns out of line with the
+        // rows above and below.
+        entry.toggles.pump.classList.toggle("is-idle", !(cells.track || cells.pumpOff));
         if (last.track !== cells.track) {
           entry.toggles.tracking.setAttribute("aria-pressed", cells.track ? "true" : "false");
           entry.row.classList.toggle("is-tracked", cells.track);
@@ -356,6 +361,7 @@
       const model = resolved && resolved.line;
       const planned = body.recipe !== "next" || !!(resolved && resolved.plan && resolved.plan.planned);
       if (body.empty) show(body.empty, !!model && !planned);
+      if (body.recipe === "next") show(planStrip, !!model && planned);
       show(body.columns, !!model && planned);
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);

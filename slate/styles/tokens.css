@@ -47,6 +47,10 @@
   /* The recipe's layer column: the layer's name, role and share at the
      left of its hopper rows. */
   --slate-layer-head-width: 168px;
+  /* The recipe row's tracking column: room for the Track and Pump-off
+     pills side by side, fixed so a pill appearing or hiding can never
+     shift the blend and weight columns beside it. */
+  --slate-controls-width: 156px;
 
   /* ---- Fields ----
    * base.css resets every input to these; a component sets the property

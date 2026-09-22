@@ -1,6 +1,6 @@
 /* The section rail: the column down Slate's left edge.
  *
- * The mark and the name at the top; one item per section in the middle,
+ * The mark at the top; one item per section in the middle,
  * with Tools as a drop-down listing the tool sections; Settings at the
  * foot. Selecting an item asks the boot to show that section - the rail
  * never shows anything itself, and it never reads state.
@@ -66,7 +66,7 @@
    * @param {object} options
    * @param {object[]} options.sections   section definitions ({id, label, group, icon})
    * @param {function} options.onSelect   called with a section id
-   * @param {string} [options.brand]      the wordmark beside the logo
+   * @param {string} [options.brand]      the mark's accessible name
    */
   function create(doc, options) {
     const settings = options || {};
@@ -74,12 +74,10 @@
     const onSelect = typeof settings.onSelect === "function" ? settings.onSelect : () => {};
     const rail = element(doc, "div", "slate-rail__inner");
 
-    // The brand: the mark, then the name.
+    // The brand: the mark alone, filling the width of the rail. It carries
+    // its own name for assistive tech (the SVG's aria-label).
     const brand = element(doc, "div", "slate-rail__brand");
-    if (logoModule && typeof logoModule.create === "function") brand.appendChild(logoModule.create(doc));
-    const word = element(doc, "span", "slate-rail__word");
-    word.textContent = settings.brand || "Resin.Tools";
-    brand.appendChild(word);
+    if (logoModule && typeof logoModule.create === "function") brand.appendChild(logoModule.create(doc, { label: settings.brand || "Resin.Tools" }));
     rail.appendChild(brand);
 
     // The sections.

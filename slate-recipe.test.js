@@ -87,8 +87,12 @@ test("a structural update lists every layer in recipe order with its role, share
   assert.equal(a1.querySelector(".slate-hopper__weight").textContent, "400 lb");
   assert.equal(a1.querySelector("[data-slate-control='tracking']").getAttribute("aria-pressed"), "true");
   assert.ok(a1.classList.contains("is-tracked"));
-  assert.ok(!a1.querySelector("[data-slate-control='pump']").hasAttribute("hidden"));
-  assert.ok(row(view, "A3").querySelector("[data-slate-control='pump']").hasAttribute("hidden"));
+  // Pump-off shows only on tracked rows, but keeps its place so the
+  // blend and weight columns line up across rows.
+  assert.ok(!a1.querySelector("[data-slate-control='pump']").classList.contains("is-idle"));
+  assert.ok(row(view, "A3").querySelector("[data-slate-control='pump']").classList.contains("is-idle"));
+  assert.ok(!row(view, "A3").querySelector("[data-slate-control='pump']").hasAttribute("hidden"), "an idle pump toggle left the grid");
+  assert.ok(!row(view, "B2").querySelector("[data-slate-control='pump']").classList.contains("is-idle"), "a stale pump-off mark was hidden");
   assert.ok(a1.querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), "the badge is not the drag handle");
   assert.equal(a1.style.getPropertyValue("--slate-row-i"), "0");
 
@@ -549,6 +553,8 @@ test("the plan's moves: Copy current → Next from the bar or the empty state; P
   view.update(resolvedFrom(), { kind: "structural" });
   view.setRecipe("next");
   const promote = view.element.querySelector("[data-slate-plan='promote']");
+  assert.ok(view.body("next").contains(promote), "the plan's moves are not in the Next body");
+  assert.ok(promote.closest(".slate-recipe__plan").hasAttribute("hidden"), "the plan's foot shows with nothing planned");
   assert.equal(promote.getAttribute("data-able"), "false");
   assert.match(promote.getAttribute("title"), /nothing is planned/);
   click(promote);
@@ -559,6 +565,8 @@ test("the plan's moves: Copy current → Next from the bar or the empty state; P
 
   view.update(withPlan(), { kind: "structural" });
   view.setRecipe("next");
+  assert.ok(!promote.closest(".slate-recipe__plan").hasAttribute("hidden"));
+  assert.equal(view.element.querySelector(".slate-section__bar [data-slate-plan]"), null, "the bar still carries the plan's moves");
   assert.equal(promote.getAttribute("data-able"), "true");
   click(promote);
   assert.ok(promote.hasAttribute("data-armed"));
@@ -572,6 +580,7 @@ test("the plan's moves: Copy current → Next from the bar or the empty state; P
   assert.ok(!promote.hasAttribute("data-armed"));
   click(view.element.querySelector(".slate-recipe__plan [data-slate-plan='copy']"));
   assert.deepEqual(commands.calls[2], { command: "copyCurrentToNext", args: {} });
+  assert.ok(view.element.querySelector(".slate-recipe__plan [data-slate-plan='copy']").classList.contains("slate-recipe__plan-action--quiet"), "Copy is not the quiet one");
 });
 
 test("Print drops a menu whose items follow what there is to print, and asks the printer for the page chosen", () => {

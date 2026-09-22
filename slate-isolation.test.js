@@ -67,8 +67,9 @@ function selectorsIn(css) {
   let match;
   while ((match = pattern.exec(withoutComments))) {
     const text = match[2].trim();
-    if (!text || text.startsWith("@") || /^(from|to|\d+%)$/.test(text)) continue;
-    for (const part of text.split(",")) if (part.trim()) selectors.push(part.trim());
+    if (!text || text.startsWith("@")) continue;
+    // Keyframe stops (from, to, 10%, "25%, 45%") are not selectors.
+    for (const part of text.split(",")) if (part.trim() && !/^(from|to|\d+%)$/.test(part.trim())) selectors.push(part.trim());
   }
   return selectors;
 }

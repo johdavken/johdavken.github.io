@@ -97,8 +97,10 @@ test("the rail lists sections, then Tools, then the foot; selecting asks the boo
   const view = rail.create(doc, { sections: list, onSelect: id => selected.push(id) });
   const items = view.element.querySelectorAll("[data-section]");
   assert.deepEqual(items.map(item => item.getAttribute("data-section")), ["recipe", "settings"]);
-  assert.ok(view.element.querySelector(".slate-rail__brand .slate-logo"), "the mark is missing from the brand");
-  assert.equal(view.element.querySelector(".slate-rail__word").textContent, "Resin.Tools");
+  const mark = view.element.querySelector(".slate-rail__brand .slate-logo");
+  assert.ok(mark, "the mark is missing from the brand");
+  assert.equal(mark.getAttribute("aria-label"), "Resin.Tools", "the mark lost its name when the wordmark went");
+  assert.equal(view.element.querySelector(".slate-rail__word"), null, "the wordmark is still in the rail");
   assert.ok(view.element.querySelector(".slate-rail__foot [data-section='settings']"), "Settings is not in the foot");
   assert.ok(view.element.querySelector(".slate-rail__sections [data-section='recipe']"));
 

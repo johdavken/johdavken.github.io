@@ -78,7 +78,7 @@ test("the logo's path data is the application's own symbol, verbatim", () => {
   assert.equal(symbol.match(/viewBox="([^"]+)"/)[1], logo.VIEW_BOX);
 });
 
-test("the mark draws in tokens and currentColor only, and does not turn", () => {
+test("the mark draws in tokens and currentColor only, and turns on its own keyframes", () => {
   const doc = makeDocument();
   const svg = logo.create(doc);
   assert.equal(svg.tagName, "SVG");
@@ -93,8 +93,21 @@ test("the mark draws in tokens and currentColor only, and does not turn", () => 
       if (value === null) continue;
       assert.ok(value === "none" || value === "currentColor" || /^var\(--slate-/.test(value), `${attr}="${value}"`);
     }
-    assert.ok(!node.hasAttribute("class") || !/rotor|rtConfluence/.test(node.getAttribute("class")), "legacy animation class");
+    assert.ok(!node.hasAttribute("class") || !/rtConfluence/.test(node.getAttribute("class")), "legacy animation class");
   }
+  // The rotor carries the five channels and a glint per channel, each glint
+  // and each output stroke offset by its own delay; the keyframes are
+  // Slate's, in rail.css, each with a reduced-motion switch.
+  const rotor = svg.querySelector(".slate-logo__rotor");
+  assert.ok(rotor, "no rotor");
+  assert.equal(rotor.querySelectorAll(".slate-logo__stream").length, 5);
+  const glints = rotor.querySelectorAll(".slate-logo__glint");
+  assert.equal(glints.length, 5);
+  assert.deepEqual(glints.map(node => node.style.getPropertyValue("--slate-flow-delay")), ["0.0s", "-1.2s", "-2.4s", "-3.6s", "-4.8s"]);
+  assert.deepEqual(svg.querySelectorAll(".slate-logo__output").map(node => node.style.getPropertyValue("--slate-flow-delay")), ["0.0s", "-1.2s", "-2.4s", "-3.6s", "-4.8s"]);
+  const railCss = fs.readFileSync(path.join(__dirname, "slate/styles/components/rail.css"), "utf8");
+  for (const name of ["slate-logo-revolve", "slate-logo-travel", "slate-logo-output"]) assert.match(railCss, new RegExp(`@keyframes ${name}`));
+  assert.match(railCss, /prefers-reduced-motion: reduce\)[\s\S]*\.slate-logo__rotor/);
   const streams = svg.querySelectorAll(".slate-logo__stream");
   assert.equal(streams.length, 5);
   assert.deepEqual(streams.map(node => node.style.color), [...logo.STREAMS]);

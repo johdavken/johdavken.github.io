@@ -15,24 +15,76 @@
 .slate-rail__brand {
   display: flex;
   align-items: center;
-  gap: var(--slate-space-2);
-  height: calc(var(--slate-header-height) - var(--slate-space-4));
   padding: 0 var(--slate-space-2);
   margin-bottom: var(--slate-space-4);
   color: var(--slate-text);
 }
 
+/* The mark fills the rail's width; its height follows from the viewBox. */
 .slate-logo {
-  width: 72px;
+  display: block;
+  width: 100%;
   height: auto;
-  flex: none;
 }
 
-.slate-rail__word {
-  font-size: var(--slate-text-md);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
+/* The mark turns as the application's does: the streams revolve once a
+   half-minute, a glint travels each channel, the output strokes breathe.
+   Each glint and stroke is offset by its own --slate-flow-delay. */
+.slate-logo__rotor {
+  transform-origin: 0 0;
+  animation: slate-logo-revolve 30s linear infinite;
+}
+
+.slate-logo__glint {
+  stroke-width: 0.85;
+  stroke-linecap: round;
+  stroke-dasharray: 14 86;
+  opacity: 0;
+  animation: slate-logo-travel 6s linear var(--slate-flow-delay, 0s) infinite;
+}
+
+.slate-logo__output {
+  animation: slate-logo-output 6s ease-in-out var(--slate-flow-delay, 0s) infinite;
+}
+
+@keyframes slate-logo-revolve {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slate-logo-travel {
+  0% {
+    stroke-dashoffset: 18;
+    opacity: 0;
+  }
+
+  10%,
+  72% {
+    opacity: 0.7;
+  }
+
+  90%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes slate-logo-output {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  25%,
+  45% {
+    opacity: 1;
+  }
+
+  75% {
+    opacity: 0.45;
+  }
 }
 
 /* ---- Items ---- */
@@ -140,7 +192,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slate-rail__menu {
+  .slate-rail__menu,
+  .slate-logo__rotor,
+  .slate-logo__glint,
+  .slate-logo__output {
     animation: none;
+  }
+
+  .slate-logo__glint {
+    opacity: 0;
   }
 }
