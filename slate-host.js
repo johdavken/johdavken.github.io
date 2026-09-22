@@ -63,11 +63,14 @@
     "slate/styles/components/header.css",
     "slate/styles/components/section.css",
     "slate/styles/components/stat-cards.css",
+    "slate/styles/components/wizard.css",
+    "slate/styles/components/time-picker.css",
     "slate/styles/components/recipe.css",
     "slate/styles/components/recipe-edit.css",
     "slate/styles/components/recipe-book.css",
     "slate/styles/components/weights.css",
     "slate/styles/components/sync.css",
+    "slate/styles/components/modal.css",
     "slate/styles/components/settings.css",
     "slate/styles/components/panel.css",
     "slate/styles/components/timeline.css",
@@ -104,7 +107,12 @@
     "slate/slate-recipe.js",
     "slate/slate-recipe-book.js",
     "slate/slate-weights.js",
+    "slate/slate-wizard.js",
+    "slate/slate-changeover.js",
+    "slate/slate-line-rate.js",
+    "slate/slate-time-picker.js",
     "slate/slate-stat-cards.js",
+    "slate/slate-conflict.js",
     "slate/slate-sync.js",
     "slate/slate-settings.js",
     "slate/slate-timeline-layout.js",
@@ -124,7 +132,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.15.0";
+  const VERSION = "0.16.0";
 
   function requested() {
     try {

@@ -133,48 +133,51 @@ test("blur commits, Escape cancels without dispatching, and opening another card
   assert.ok(scrap.editor.hasAttribute("hidden"));
 });
 
-test("the changeover is entered as a clock time and sent as an instant; a bad time never dispatches", () => {
+test("the changeover has no typed field: its value opens the picker marked with the time as it stands, and Set sends the clock time as an instant", () => {
   const { view, commands } = boot();
   view.update({ job: jobAt() }, {});
   const changeover = view.card("changeover");
-  assert.equal(changeover.input.getAttribute("type"), "time");
+  assert.equal(changeover.input, null);
+  assert.equal(changeover.editor, null);
+  const picker = view.picker();
   click(changeover.trigger);
-  changeover.input.value = "14:00";
-  key(changeover.input, "Enter");
+  assert.equal(view.editing(), null);
+  assert.ok(picker.isOpen());
+  assert.ok(changeover.card.classList.contains("is-picking"));
+  assert.equal(changeover.trigger.getAttribute("aria-expanded"), "true");
+  assert.deepEqual(picker.choice(), { hour12: 12, minute: 30, period: "PM" });
+  click(picker.element.querySelector("[data-time-hour='2']"));
+  click(picker.element.querySelector("[data-time-minute='0']"));
+  picker.set();
   assert.deepEqual(commands.calls, [{ command: "setChangeover", args: { at: NOW + 4 * HOUR } }]);
-
+  assert.ok(!picker.isOpen());
+  assert.ok(!changeover.card.classList.contains("is-picking"));
+  // The value again closes an open picker; Clear sends no changeover.
   click(changeover.trigger);
-  changeover.input.value = "later";
-  const result = view.commit();
-  assert.equal(result.ok, false);
-  assert.equal(commands.calls.length, 1);
-  assert.equal(changeover.note.textContent, cards.BAD_TIME);
-  assert.equal(changeover.input.getAttribute("aria-invalid"), "true");
-  assert.equal(view.editing(), "changeover", "the editor closed on a bad time");
-
   click(changeover.trigger);
-  changeover.input.value = "";
-  key(changeover.input, "Enter");
+  assert.ok(!picker.isOpen());
+  click(changeover.trigger);
+  picker.clear();
   assert.deepEqual(commands.calls[1], { command: "setChangeover", args: { at: null } });
 });
 
 test("a refusal keeps the editor open and shows the application's own words; an unchanged answer closes quietly", () => {
   const answers = [
-    { ok: false, code: "out_of_range", field: "at", message: "That changeover time has already passed." },
+    { ok: false, code: "out_of_range", field: "lineRate", message: "The line rate cannot be negative." },
     { ok: true, changed: false, revision: 3, persisted: false, snapshot: null }
   ];
   const commands = makeCommands({ capabilities: ALL, answer: () => answers.shift() });
   const { view, committed } = boot({ commands });
   view.update({ job: jobAt() }, {});
-  const changeover = view.card("changeover");
-  click(changeover.trigger);
-  changeover.input.value = "09:59";
-  key(changeover.input, "Enter");
-  assert.equal(view.editing(), "changeover");
-  assert.equal(changeover.note.textContent, "That changeover time has already passed.");
-  assert.equal(changeover.input.getAttribute("aria-invalid"), "true");
+  const rate = view.card("rate");
+  click(rate.trigger);
+  rate.input.value = "-5";
+  key(rate.input, "Enter");
+  assert.equal(view.editing(), "rate");
+  assert.equal(rate.note.textContent, "The line rate cannot be negative.");
+  assert.equal(rate.input.getAttribute("aria-invalid"), "true");
   assert.equal(committed.length, 0);
-  key(changeover.input, "Enter");
+  key(rate.input, "Enter");
   assert.equal(view.editing(), null);
   assert.equal(committed.length, 0, "an unchanged answer was reported as a commit");
 });

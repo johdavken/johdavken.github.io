@@ -324,3 +324,47 @@ test("disconnecting withdraws the actions along with the window", async () => {
   assert.equal((await bridge.request("refresh")).code, "unavailable");
   assert.equal(bridge.getStatus(), null);
 });
+
+/* ----------------------------------------------------------------------
+ *   Questions: the application asks, a console answers
+ * -------------------------------------------------------------------- */
+
+test("with no answerer the application is told null and asks its own way; an answerer turns the ask into a promise of an allowed answer, with the details frozen and rebuilt", async () => {
+  const bridge = bridgeModule.create();
+  assert.deepEqual(bridgeModule.QUESTIONS, { conflict: ["remote", "local", "cancel"] });
+  assert.equal(bridge.ask("conflict", { localRevision: 1, remoteRevision: 2 }), null);
+  assert.equal(bridge.answers("conflict"), false);
+  const seen = [];
+  const off = bridge.answer("conflict", details => { seen.push(details); return "local"; });
+  assert.equal(bridge.answers("conflict"), true);
+  const asked = bridge.ask("conflict", { localRevision: "3", remoteRevision: 5, extra: "dropped" });
+  assert.ok(asked && typeof asked.then === "function");
+  assert.equal(await asked, "local");
+  assert.deepEqual(seen, [{ localRevision: 3, remoteRevision: 5 }]);
+  assert.ok(Object.isFrozen(seen[0]));
+  assert.equal(await bridge.ask("conflict", null), "local");
+  assert.deepEqual(seen[1], { localRevision: null, remoteRevision: null });
+  assert.equal(off(), true);
+  assert.equal(off(), false);
+  assert.equal(bridge.ask("conflict", {}), null);
+});
+
+test("an answer outside the kind's list, a throw, a rejection or a non-answer all read as the safe answer; the last answerer registered answers; an unknown kind is never asked", async () => {
+  const bridge = bridgeModule.create();
+  bridge.answer("conflict", () => "discard");
+  assert.equal(await bridge.ask("conflict", {}), "cancel");
+  bridge.answer("conflict", () => { throw new Error("boom"); });
+  assert.equal(await bridge.ask("conflict", {}), "cancel");
+  bridge.answer("conflict", () => Promise.reject(new Error("no")));
+  assert.equal(await bridge.ask("conflict", {}), "cancel");
+  bridge.answer("conflict", () => undefined);
+  assert.equal(await bridge.ask("conflict", {}), "cancel");
+  bridge.answer("conflict", async () => "remote");
+  assert.equal(await bridge.ask("conflict", {}), "remote");
+  assert.equal(typeof bridge.answer("weather", () => "sunny"), "function");
+  assert.equal(bridge.answers("weather"), false);
+  assert.equal(bridge.ask("weather", {}), null);
+  assert.equal(typeof bridge.answer("conflict", "not a function"), "function");
+  // The module surface offers the same three, on the shared bridge.
+  for (const name of ["ask", "answer", "answers"]) assert.equal(typeof bridgeModule[name], "function");
+});

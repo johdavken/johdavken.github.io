@@ -194,3 +194,13 @@ test("the shell reserves one header slot for the console, and the boot file moun
   // The boot file hands the bridge over and reads nothing from it itself.
   assert.doesNotMatch(boot, /connection\.(getStatus|request|subscribe)/);
 });
+
+test("the conflict question goes to the connection bridge first, and only a bridge with no answerer leaves it to the floor UI's own dialog", () => {
+  const resolve = between("function resolveLineSyncConflict(conflict){", "\n  function replaceSavedConfigsFromSync(");
+  assert.match(resolve, /const asked = stationConnection\?\.ask\?\.\("conflict", \{ localRevision: conflict\?\.localRevision, remoteRevision: conflict\?\.remoteRevision \}\);/);
+  assert.match(resolve, /if \(asked\) return asked;/);
+  assert.ok(resolve.indexOf("stationConnection?.ask?.(") < resolve.indexOf('$("lineSyncConflictDialog")'), "the dialog is reached for before the bridge is asked");
+  // The bridge's contract for the question stays the dialog's three answers.
+  const bridge = require("./station-connection-bridge.js");
+  assert.deepEqual(bridge.QUESTIONS.conflict, ["remote", "local", "cancel"]);
+});

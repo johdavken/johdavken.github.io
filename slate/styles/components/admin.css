@@ -322,10 +322,6 @@
   min-width: 0;
 }
 
-.slate-root .slate-lines__input:focus {
-  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
-}
-
 .slate-root .slate-lines__input[aria-invalid="true"] {
   --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
 }
@@ -419,10 +415,6 @@
   --slate-field-min-height: 32px;
   --slate-field-width: 100%;
   min-width: 0;
-}
-
-.slate-root .slate-resins__search:focus {
-  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
 }
 
 .slate-resins__count {

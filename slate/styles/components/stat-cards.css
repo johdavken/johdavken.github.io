@@ -40,7 +40,8 @@
   border-color: var(--slate-border);
 }
 
-.slate-card.is-editing {
+.slate-card.is-editing,
+.slate-card.is-picking {
   border-color: var(--slate-accent);
 }
 

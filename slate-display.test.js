@@ -194,13 +194,13 @@ test("Settings offers Automatic / On / Off as radios, marks the current one, and
   const controller = display.create(node(), storage());
   const view = settings.create(doc, { theme: null, themes: [], display: controller });
   const modes = view.element.querySelectorAll("[data-readonly-mode]");
-  assert.deepEqual(modes.map(one => one.getAttribute("data-readonly-mode")), ["auto", "on", "off"]);
-  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "false", "true"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("data-readonly-mode")), ["off", "on", "auto"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
   click(view.mode("on"));
   assert.equal(controller.getReadOnly(), true);
   assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "true", "false"]);
   controller.setReadOnly("auto");
-  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "false", "true"]);
   // Safety stands after Tracking, before Layout.
   assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")).slice(0, 4), ["Appearance", "Tracking", "Safety", "Layout"]);
   assert.match(view.element.querySelectorAll(".slate-settings__lead")[1].textContent, /Connecting to and leaving lines is not affected/);
@@ -227,7 +227,7 @@ test("Settings offers Automatic / Assisted / Manual tracking as radios after Saf
   controller.setTrackingMode("automatic");
   assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
   // The read-only radios are untouched by a tracking click.
-  assert.deepEqual(view.element.querySelectorAll("[data-readonly-mode]").map(one => one.getAttribute("aria-checked")), ["false", "false", "true"]);
+  assert.deepEqual(view.element.querySelectorAll("[data-readonly-mode]").map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
   const leads = view.element.querySelectorAll(".slate-settings__lead").map(one => one.textContent);
   assert.match(leads[0], /Read-only Off/);
   assert.match(leads[0], /only ever turns tracking on/);
@@ -290,7 +290,7 @@ test("Settings offers Left / Top layers as radios after Tracking, marks the curr
   controller.setLayerOrientation("left");
   assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false"]);
   // The other radios are untouched by an orientation click.
-  assert.deepEqual(view.element.querySelectorAll("[data-readonly-mode]").map(one => one.getAttribute("aria-checked")), ["false", "false", "true"]);
+  assert.deepEqual(view.element.querySelectorAll("[data-readonly-mode]").map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
   assert.deepEqual(view.element.querySelectorAll("[data-tracking-mode]").map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
   assert.deepEqual(view.element.querySelectorAll("[data-layer-order]").map(one => one.getAttribute("aria-checked")), ["true", "false"]);
   const inert = settings.create(doc, { theme: null, themes: [], display: null });

@@ -359,11 +359,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.slate-root .slate-hopper__draft-resin:focus,
-.slate-root .slate-hopper__draft-pct:focus {
-  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
-}
-
 .slate-hopper__draft-pct {
   text-align: right;
 }
@@ -471,11 +466,6 @@
 .slate-recipe__fill-pct {
   flex: 0 1 140px;
   text-align: right;
-}
-
-.slate-root .slate-recipe__fill-resin:focus,
-.slate-root .slate-recipe__fill-pct:focus {
-  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
 }
 
 .slate-root .slate-recipe__fill-pct[aria-invalid="true"] {

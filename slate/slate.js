@@ -39,6 +39,14 @@
   const resinTotals = root.PolynResinTotals || null;
   const pressureConversion = root.PolynPressureConversion || null;
   const windingTension = root.PolynWindingTension || null;
+  // The changeover calculator's arithmetic and records (changeover-estimate.js):
+  // the application's own wizard, restated. Its storage is the module's to
+  // find; Slate is handed the result and never looks itself.
+  const changeoverEstimate = root.PolynChangeoverEstimate || null;
+  const changeoverStorage = changeoverEstimate && typeof changeoverEstimate.storageFrom === "function" ? changeoverEstimate.storageFrom(root) : null;
+  // The line rate calculator's arithmetic and answers (line-rate-estimate.js), the same way.
+  const lineRateEstimate = root.PolynLineRateEstimate || null;
+  const lineRateStorage = lineRateEstimate && typeof lineRateEstimate.storageFrom === "function" ? lineRateEstimate.storageFrom(root) : null;
   // The application's own percentage rule, for the bulk edit's totals.
   const validation = root.PolynValidation || null;
   const validate = validation && typeof validation.validateHopperPercentages === "function" ? validation.validateHopperPercentages : null;
@@ -58,6 +66,7 @@
   const weightsModule = root.PolynSlateWeights;
   const statCards = root.PolynSlateStatCards;
   const syncModule = root.PolynSlateSync;
+  const conflictModule = root.PolynSlateConflict;
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
@@ -300,7 +309,11 @@
       now: () => Date.now(),
       timers: { setTimeout: (fn, ms) => root.setTimeout(fn, ms), clearTimeout: id => root.clearTimeout(id) },
       onCommitted,
-      say
+      say,
+      estimate: changeoverEstimate,
+      estimateStorage: changeoverStorage,
+      lineRate: lineRateEstimate,
+      lineRateStorage
     });
 
     stats = statCards.create(doc, ctx);
@@ -387,7 +400,11 @@
     applyAdmin();
     if (admin && typeof admin.subscribe === "function") admin.subscribe(applyAdmin);
 
-    sync = syncModule.create(doc, { connection, admin });
+    // The conflict question's dialog stands in the root, where the theme's
+    // tokens reach it; the sync module registers it with the bridge.
+    const conflict = conflictModule ? conflictModule.create(doc) : null;
+    if (conflict) container.appendChild(conflict.element);
+    sync = syncModule.create(doc, { connection, admin, conflict });
     if (mounts.sync) mounts.sync.appendChild(sync.element);
 
     const badge = container.querySelector("[data-slate-readonly]");

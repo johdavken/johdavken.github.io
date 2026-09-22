@@ -26,7 +26,7 @@ const SLATE_FILES = [
   "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
-  "slate-recipe-book.js", "slate-weights.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
+  "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
   "slate-pressure.js", "slate-winding-tension.js",
   "slate-workspaces.js", "slate-line-config.js", "slate-resin-db.js"
 ];
@@ -293,6 +293,10 @@ test("exactly one Slate file requests connection actions, one recipe actions, on
     else if (REQUESTS.weightProfiles.includes(file)) assert.match(source, /profiles\.request\s*\(/);
     else if (REQUESTS.admin.includes(file)) assert.match(source, /admin\.request\s*\(/);
     else assert.doesNotMatch(source, /\.request\s*\(/, `${file} requests a bridge action`);
+    // The bridge's questions are answered from the same one file: the
+    // conflict dialog only asks the operator; slate-sync.js registers it.
+    if (REQUESTS.connection.includes(file)) assert.match(source, /connection\.answer\s*\(/);
+    else assert.doesNotMatch(source, /\.answer\s*\(/, `${file} registers a bridge answerer`);
     // The administrator's session opens and ends through one seam, as
     // every other bridge does: no other file may ask it to act.
     if (!REQUESTS.admin.includes(file)) assert.doesNotMatch(source, /admin\.request/, `${file} asks the admin bridge to act`);

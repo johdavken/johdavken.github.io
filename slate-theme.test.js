@@ -304,3 +304,20 @@ test("the overdue pulse animates only the line and respects reduced motion", () 
   assert.match(pulse[0][1], /\.slate-timeline__now::before\s*$/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.slate-timeline__now::before,[^{]*\{\s*animation:\s*none/);
 });
+
+test("a field carries no focus highlight: no ring on an input, and no sheet turns a field's border to the accent on focus; buttons keep the keyboard ring", () => {
+  const base = fs.readFileSync(path.join(ROOT, "slate/styles/base.css"), "utf8");
+  assert.match(base, /\.slate-root :focus-visible\s*\{[^}]*outline: 2px solid var\(--slate-focus-ring\)/);
+  assert.match(base, /\.slate-root input:focus-visible\s*\{\s*outline: none;\s*\}/);
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) { if (entry.name !== "themes") walk(full); continue; }
+      if (!entry.name.endsWith(".css")) continue;
+      const css = fs.readFileSync(full, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      for (const match of css.matchAll(/([^{}]+):focus(?!-visible)[^{]*\{([^}]*)\}/g)) {
+        assert.doesNotMatch(match[2], /--slate-field-border:\s*[^;]*accent|outline:/, `${path.relative(ROOT, full)}: "${match[1].trim()}" highlights a field on focus`);
+      }
+    }
+  })(path.join(ROOT, "slate/styles"));
+});

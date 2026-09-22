@@ -56,5 +56,6 @@
 
   --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34);
   --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
   --slate-qr-surface: #d3c6aa;
 }

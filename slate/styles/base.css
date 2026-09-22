@@ -146,10 +146,6 @@
   cursor: default;
 }
 
-.slate-root input[aria-invalid="true"]:focus-visible {
-  outline-color: var(--slate-danger);
-}
-
 .slate-root ol,
 .slate-root ul {
   margin: 0;
@@ -165,6 +161,13 @@
 .slate-root :focus-visible {
   outline: 2px solid var(--slate-focus-ring);
   outline-offset: 2px;
+}
+
+/* A field shows no ring while it is typed in: the caret and the field's
+   own border say where the operator is. Keyboard focus on a button keeps
+   the ring above. */
+.slate-root input:focus-visible {
+  outline: none;
 }
 
 /* Utility: visible to assistive tech, not on screen. */

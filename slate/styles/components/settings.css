@@ -305,10 +305,6 @@
   min-width: 0;
 }
 
-.slate-root .slate-settings__admin-field:focus {
-  --slate-field-border: var(--slate-stroke) solid var(--slate-accent);
-}
-
 .slate-root .slate-settings__admin-action {
   flex: none;
   padding: var(--slate-space-1) var(--slate-space-4);

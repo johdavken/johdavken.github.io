@@ -24,6 +24,7 @@
  * So this module is a window and a letterbox, and nothing else:
  *
  *   Producer (app.js, once):  connect({ read, actions }) -> { publish, disconnect }
+ *                             ask(kind, details) -> Promise | null   (see QUESTIONS)
  *   Consumer (Station):       getStatus(), subscribe(fn), isConnected(),
  *                             capabilities(), request(action, args)
  *
@@ -110,6 +111,25 @@
   ]);
 
   const NONE = Object.freeze([]);
+
+  /* QUESTIONS
+   *
+   * The other direction: the application has something to ask the
+   * operator, and the console on screen is the one that can ask it. The
+   * floor UI asks with a <dialog>; behind a console that dialog is a
+   * question nobody sees. So a console may register an answerer for a
+   * kind of question, and the application asks the bridge FIRST: with an
+   * answerer the answer comes back as a promise; with none, `ask` says
+   * null and the application falls back to its own dialog. One answerer
+   * per kind; an answer outside the kind's list, a throw or a rejection
+   * reads as the safe one - the last in the list - never as a choice the
+   * operator did not make.
+   *
+   *   conflict   the active job changed here and on another device:
+   *              { localRevision, remoteRevision } -> "remote" | "local" | "cancel" */
+  const QUESTIONS = Object.freeze({
+    conflict: Object.freeze(["remote", "local", "cancel"])
+  });
 
   function nullableInteger(value) {
     const number = Number(value);
@@ -333,6 +353,46 @@
     // one notification per tick. Nothing about that is connection-specific.
     const inner = stateBridge.create(options);
     let actions = null;   // the producer's action functions, or null
+    const answerers = {}; // kind -> the console's answerer, or nothing
+
+    /** Register the console's answerer for one kind of question; the last
+     * registered answers. Returns the way to withdraw it. */
+    function answer(kind, handler) {
+      if (!Object.prototype.hasOwnProperty.call(QUESTIONS, kind) || typeof handler !== "function") return () => false;
+      answerers[kind] = handler;
+      return () => {
+        if (answerers[kind] !== handler) return false;
+        delete answerers[kind];
+        return true;
+      };
+    }
+
+    /** Whether a console will answer this kind of question now. */
+    function answers(kind) {
+      return Object.prototype.hasOwnProperty.call(answerers, kind);
+    }
+
+    /** The application asks. Null when nobody answers (ask your own way);
+     * otherwise a promise of an answer the kind allows. Never throws. */
+    function ask(kind, details) {
+      if (!answers(kind)) return null;
+      const allowed = QUESTIONS[kind];
+      const fallback = allowed[allowed.length - 1];
+      const source = details && typeof details === "object" ? details : {};
+      const frozen = kind === "conflict"
+        ? Object.freeze({ localRevision: nullableInteger(source.localRevision), remoteRevision: nullableInteger(source.remoteRevision) })
+        : Object.freeze(Object.assign({}, source));
+      const handler = answerers[kind];
+      return new Promise(resolve => {
+        let settled = false;
+        const finish = value => { if (settled) return; settled = true; resolve(allowed.includes(value) ? value : fallback); };
+        try {
+          Promise.resolve(handler(frozen)).then(finish, () => finish(fallback));
+        } catch (error) {
+          finish(fallback);
+        }
+      });
+    }
 
     function capabilities() {
       return actions ? Object.freeze(Object.keys(actions)) : NONE;
@@ -398,7 +458,10 @@
       isConnected: inner.isConnected,
       getRevision: inner.getRevision,
       capabilities,
-      request
+      request,
+      answer,
+      answers,
+      ask
     });
   }
 
@@ -417,6 +480,10 @@
     getRevision: shared.getRevision,
     capabilities: shared.capabilities,
     request: shared.request,
+    QUESTIONS,
+    answer: shared.answer,
+    answers: shared.answers,
+    ask: shared.ask,
     // A fresh, isolated bridge for tests; production has one.
     create: createBridge
   });

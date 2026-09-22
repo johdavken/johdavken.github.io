@@ -1,0 +1,202 @@
+/* The prompt popovers (slate-wizard.js): a calculator button beside a
+   card's value and the popover it opens under the card - one prompt at a
+   time, then the estimate. The Changeover and Line rate cards each carry
+   one. The actions wear the recipe's plan-action classes. */
+
+/* The button: the mark alone, at the card's top right on the label's
+   line, above the value, which keeps its whole width. */
+.slate-root .slate-card__calc {
+  position: absolute;
+  top: var(--slate-space-2);
+  right: var(--slate-space-3);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  transition: color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-card__calc:hover {
+  color: var(--slate-text);
+}
+
+.slate-root .slate-card__calc[aria-expanded="true"] {
+  color: var(--slate-accent-text);
+}
+
+.slate-wizard__glyph {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- The popover ---- */
+
+.slate-wizard {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  width: 400px;
+  margin-top: var(--slate-space-2);
+  padding: var(--slate-space-3) var(--slate-space-4) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-wizard__head {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-wizard__title {
+  font-weight: 600;
+}
+
+.slate-wizard__progress {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-root .slate-wizard__close {
+  margin-left: auto;
+}
+
+.slate-wizard__question {
+  margin-bottom: var(--slate-space-3);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-wizard__field {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-wizard__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-2) var(--slate-space-3);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 40px;
+  min-width: 0;
+  font-size: var(--slate-text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-wizard__input--short {
+  --slate-field-width: 5em;
+  text-align: right;
+}
+
+.slate-wizard__unit {
+  flex: none;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-wizard__time {
+  display: flex;
+  gap: var(--slate-space-4);
+}
+
+.slate-wizard__time-field {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+/* The tiles: ten across for how many up, two for the winders. */
+.slate-wizard__choices {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-wizard__choices.is-binary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slate-root .slate-wizard__choice {
+  padding: var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text);
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-wizard__choice:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-wizard__choice.is-selected {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+.slate-wizard__error {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-wizard__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-4);
+}
+
+/* A line under a prompt: the recipe's blend average beside the density. */
+.slate-wizard__hint {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* The estimate. */
+.slate-wizard__result {
+  font-size: var(--slate-text-2xl);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-wizard__lead {
+  margin-top: var(--slate-space-1);
+  color: var(--slate-text-muted);
+}
+
+.slate-wizard__summary {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-wizard__unavailable {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-wizard {
+    animation: none;
+  }
+}

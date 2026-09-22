@@ -1,0 +1,131 @@
+/* The changeover time picker: a popover under the Changeover card, in
+   place of a typed field - hour tiles, minute tiles in fives, AM or PM,
+   the exact minute, and Set / Clear / Cancel. The actions wear the
+   recipe's plan-action classes; the popover the calculator's shape. */
+
+.slate-time {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  width: 400px;
+  margin-top: var(--slate-space-2);
+  padding: var(--slate-space-3) var(--slate-space-4) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-time__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-time__title {
+  font-weight: 600;
+}
+
+.slate-time__preview {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-root .slate-time__close {
+  align-self: center;
+  margin-left: auto;
+}
+
+.slate-time__tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-time__minutes {
+  margin-top: var(--slate-space-3);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-time__tile {
+  padding: var(--slate-space-2) 0;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text);
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-time__tile:hover {
+  background: var(--slate-surface-hover);
+}
+
+.slate-root .slate-time__tile.is-selected {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+/* AM / PM at the left, the exact minute at the right. */
+.slate-time__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slate-space-4);
+  margin-top: var(--slate-space-3);
+}
+
+.slate-time__periods {
+  flex: 0 0 auto;
+  grid-template-columns: repeat(2, 56px);
+}
+
+.slate-time__exact {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-time__exact-label {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-time__minute {
+  --slate-field-width: 4em;
+  --slate-field-padding: var(--slate-space-2) var(--slate-space-3);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 40px;
+  font-size: var(--slate-text-md);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.slate-time__error {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-time__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-time {
+    animation: none;
+  }
+}

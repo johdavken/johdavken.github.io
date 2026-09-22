@@ -105,7 +105,8 @@
     safety.appendChild(text(doc, "p", "slate-settings__lead", "Read-only keeps Slate from changing the line's job: the recipe, the plan, tracking, pump-off, the changeover and the output stay as they are. Connecting to and leaving lines is not affected."));
     const modes = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Read-only" });
     const modeButtons = new Map();
-    for (const [mode, label, note] of [["auto", "Automatic", "Read-only whenever a line is linked; writable on this device's own session."], ["on", "On", "Always read-only."], ["off", "Off", "Always writable."]]) {
+    // Off, the default, leads, as every group's default does.
+    for (const [mode, label, note] of [["off", "Off", "Always writable."], ["on", "On", "Always read-only."], ["auto", "Automatic", "Read-only whenever a line is linked; writable on this device's own session."]]) {
       const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-readonly-mode": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
       button.appendChild(text(doc, "span", "slate-settings__mode-note", note));

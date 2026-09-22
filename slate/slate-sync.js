@@ -101,6 +101,10 @@
     const settings = ctx || {};
     const connection = settings.connection || null;
     const admin = settings.admin || null;
+    // The conflict question (slate-conflict.js): registered with the
+    // bridge here, since this is the one file that speaks to it.
+    const conflict = settings.conflict && typeof settings.conflict.ask === "function" ? settings.conflict : null;
+    if (conflict && connection && typeof connection.answer === "function") connection.answer("conflict", details => conflict.ask(details));
 
     const rootEl = element(doc, "div", "slate-sync", { hidden: "" });
     const trigger = element(doc, "button", "slate-sync__trigger", { type: "button", "aria-haspopup": "dialog", "aria-expanded": "false" });

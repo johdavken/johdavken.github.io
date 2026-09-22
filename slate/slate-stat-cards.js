@@ -13,6 +13,17 @@
  * agree on which day a clock time means. The application refuses an
  * instant more than a minute in the past or more than a day away.
  *
+ * The Changeover card is different: its value opens no typed field but a
+ * picker under the card (slate-time-picker.js) - hour and minute tiles,
+ * AM or PM - whose Set hands a clock time to this file's own setChangeover
+ * path, read as the field's text always was. Beside its value stands the
+ * changeover calculator - the floor UI's wizard as another popover
+ * (slate-changeover.js) - whose Use hands an estimate to the same path;
+ * the Line rate card carries its own calculator the same way
+ * (slate-line-rate.js), whose Use hands pounds per hour to setLineRate.
+ * The picker, the calculators and the cards' editors never stand open
+ * together.
+ *
  * Each card stands in a slot of the row. A slot is a mount: the boot runs
  * a swap in the Scrap card's (slate-sections.js), so a tool small enough
  * for a card - the pressure converter - takes its place and hands it
@@ -25,10 +36,19 @@
   const scheduling = typeof require === "function"
     ? (function () { try { return require("../scheduling.js"); } catch (error) { return null; } })()
     : (root && root.PolynScheduling);
-  const api = factory(rundown, scheduling);
+  const changeover = typeof require === "function"
+    ? require("./slate-changeover.js")
+    : (root && root.PolynSlateChangeover);
+  const timePicker = typeof require === "function"
+    ? require("./slate-time-picker.js")
+    : (root && root.PolynSlateTimePicker);
+  const lineRate = typeof require === "function"
+    ? require("./slate-line-rate.js")
+    : (root && root.PolynSlateLineRate);
+  const api = factory(rundown, scheduling, changeover, timePicker, lineRate);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateStatCards = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule, schedulingModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule, schedulingModule, changeoverModule, timePickerModule, lineRateModule) {
   "use strict";
 
   const FIELDS = Object.freeze(["changeover", "rate", "production", "scrap"]);
@@ -145,6 +165,12 @@
    * @param {function} ctx.commands      () -> the command bridge, or null
    * @param {function} [ctx.onCommitted]
    * @param {function} [ctx.now]
+   * @param {object} [ctx.estimate]          changeover-estimate.js, for the changeover calculator
+   * @param {object} [ctx.estimateStorage]   where its answers live
+   * @param {object} [ctx.lineRate]          line-rate-estimate.js, for the line rate calculator
+   * @param {object} [ctx.lineRateStorage]   where its answers live
+   * @param {function} [ctx.resins]          () -> the resin catalog, for the blend average
+   * @param {function} [ctx.say]
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -153,12 +179,17 @@
     const now = typeof settings.now === "function" ? settings.now : () => Date.now();
     const readOnly = typeof settings.readOnly === "function" ? settings.readOnly : () => false;
     const guard = () => ({ readOnly: !!readOnly() });
+    const sayOut = typeof settings.say === "function" ? settings.say : () => {};
 
     const rootEl = element(doc, "div", "slate-cards");
     const cards = {};
     const slots = {};
     let job = null;
     let editing = null;
+    let picker = null;
+    let current = null;
+    const calculators = {};
+    const resins = typeof settings.resins === "function" ? settings.resins : () => [];
 
     for (const field of FIELDS) {
       const slot = element(doc, "div", "slate-cards__slot", { "data-slot": field });
@@ -172,26 +203,112 @@
       trigger.appendChild(sub);
       card.appendChild(trigger);
 
-      const editor = element(doc, "div", "slate-card__editor", { hidden: "" });
-      const input = element(doc, "input", "slate-card__input", {
-        type: field === "changeover" ? "time" : "text",
-        inputmode: field === "changeover" ? "numeric" : "decimal",
-        "aria-label": LABEL[field]
-      });
-      editor.appendChild(input);
-      if (UNIT[field]) editor.appendChild(text(doc, "span", "slate-card__unit", UNIT[field]));
-      card.appendChild(editor);
+      // The typed editor, for every card but the changeover's when the
+      // picker is here to take its place.
+      const typed = !(field === "changeover" && timePickerModule);
+      let editor = null;
+      let input = null;
+      if (typed) {
+        editor = element(doc, "div", "slate-card__editor", { hidden: "" });
+        input = element(doc, "input", "slate-card__input", {
+          type: field === "changeover" ? "time" : "text",
+          inputmode: field === "changeover" ? "numeric" : "decimal",
+          "aria-label": LABEL[field]
+        });
+        editor.appendChild(input);
+        if (UNIT[field]) editor.appendChild(text(doc, "span", "slate-card__unit", UNIT[field]));
+        card.appendChild(editor);
+      }
       const note = element(doc, "p", "slate-card__note", { role: "status", hidden: "" });
       card.appendChild(note);
       slot.appendChild(card);
       rootEl.appendChild(slot);
-      cards[field] = { card, trigger, value, sub, editor, input, note };
+      cards[field] = { card, trigger, value, sub, editor, input, note, calc: null };
+    }
+
+    // The picker, under the Changeover card, in the typed field's place.
+    if (timePickerModule) {
+      const c = cards.changeover;
+      picker = timePickerModule.create(doc, {
+        now,
+        clock: at => rundownModule.formatClock(at),
+        remaining: ms => rundownModule.formatRemaining(ms),
+        preview: clockTime => { const request = requestFor("changeover", clockTime, now()); return request.error || request.args.at === null ? null : request.args.at; },
+        able: () => ({ ok: able(commandsFor(), "changeover", guard()), reason: reason(commandsFor(), "changeover", guard()) }),
+        apply: clockTime => {
+          const request = requestFor("changeover", clockTime, now());
+          if (request.error) return { ok: false, code: "bad_argument", message: request.error };
+          return apply("changeover", request);
+        },
+        anchor: c.trigger,
+        view: doc,
+        onChange: on => {
+          c.card.classList.toggle("is-picking", on);
+          c.trigger.setAttribute("aria-expanded", on ? "true" : "false");
+          if (!on) say("changeover", "", false);
+        }
+      });
+      c.card.appendChild(picker.element);
+    }
+
+    /* A calculator on a card: a button beside the value and the popover
+     * under the card, built by the module handed in. Use goes through
+     * apply(), the same command the card's editor sends. Whatever else
+     * is open - an editor, the picker, the other calculator - closes
+     * first: one thing open at a time. */
+    function attachCalculator(field, module, build) {
+      const c = cards[field];
+      const button = element(doc, "button", "slate-card__calc", { type: "button", "aria-label": module.OPEN_LABEL, title: module.OPEN_LABEL, "aria-haspopup": "dialog", "aria-expanded": "false" });
+      button.appendChild(module.glyph(doc));
+      c.card.appendChild(button);
+      c.card.classList.add("has-calc");
+      const popover = build(button);
+      c.card.appendChild(popover.element);
+      c.calc = button;
+      calculators[field] = popover;
+      button.addEventListener("click", () => {
+        if (editing) close();
+        if (picker) picker.close();
+        for (const other of Object.keys(calculators)) if (other !== field) calculators[other].close();
+        popover.toggle();
+      });
+      return popover;
+    }
+
+    if (changeoverModule && settings.estimate) {
+      attachCalculator("changeover", changeoverModule, button => changeoverModule.create(doc, {
+        estimate: settings.estimate,
+        storage: settings.estimateStorage || null,
+        now,
+        clock: at => rundownModule.formatClock(at),
+        able: () => ({ ok: able(commandsFor(), "changeover", guard()), reason: reason(commandsFor(), "changeover", guard()) }),
+        apply: at => apply("changeover", { command: COMMAND.changeover, args: { at } }),
+        say: sayOut,
+        anchor: button,
+        view: doc,
+        onChange: on => button.setAttribute("aria-expanded", on ? "true" : "false")
+      }));
+    }
+
+    if (lineRateModule && settings.lineRate) {
+      attachCalculator("rate", lineRateModule, button => lineRateModule.create(doc, {
+        estimate: settings.lineRate,
+        storage: settings.lineRateStorage || null,
+        blendDensity: () => settings.lineRate.blendDensity(lineRateModule.blendItems(current, resins())),
+        able: () => ({ ok: able(commandsFor(), "rate", guard()), reason: reason(commandsFor(), "rate", guard()) }),
+        apply: lbPerHour => apply("rate", { command: COMMAND.rate, args: { lineRate: lbPerHour } }),
+        say: sayOut,
+        anchor: button,
+        view: doc,
+        onChange: on => button.setAttribute("aria-expanded", on ? "true" : "false")
+      }));
     }
 
     function say(field, message, invalid) {
       const c = cards[field];
       c.note.textContent = message || "";
       show(c.note, !!message);
+      if (!c.input) return;
       if (invalid) c.input.setAttribute("aria-invalid", "true");
       else c.input.removeAttribute("aria-invalid");
     }
@@ -215,11 +332,19 @@
     function open(field) {
       if (editing === field) return;
       if (editing) close();
+      for (const popover of Object.values(calculators)) if (popover.isOpen()) popover.close();
       const commands = commandsFor();
       if (!able(commands, field, guard())) {
         say(field, `${LABEL[field]} cannot be changed here: ${reason(commands, field, guard())}`, false);
         return;
       }
+      // The changeover opens its picker, marked with the time as it stands.
+      if (field === "changeover" && picker) {
+        say(field, "", false);
+        picker.open(draftFor(field, job, now()));
+        return;
+      }
+      if (picker && picker.isOpen()) picker.close();
       editing = field;
       const c = cards[field];
       c.input.value = draftFor(field, job, now());
@@ -256,22 +381,28 @@
         say(field, request.error, true);
         return { ok: false, code: "bad_argument", message: request.error };
       }
+      const result = apply(field, request);
+      if (result && result.ok) close({ refocus: true });
+      else say(field, (result && result.message) || "The application refused the change.", true);
+      return result;
+    }
+
+    /* One request to the application, told to the boot when it changed
+     * something. The editors and the calculator both come through here. */
+    function apply(field, request) {
+      if (!able(commandsFor(), field, guard())) return { ok: false, code: "unavailable", message: reason(commandsFor(), field, guard()) };
       const commands = commandsFor();
       const result = commands && typeof commands.dispatch === "function"
         ? commands.dispatch(request.command, request.args)
         : { ok: false, code: "unavailable", message: "No application is connected to Slate commands." };
-      if (result && result.ok) {
-        if (result.changed) onCommitted(result);
-        close({ refocus: true });
-      } else {
-        say(field, (result && result.message) || "The application refused the change.", true);
-      }
+      if (result && result.ok && result.changed) onCommitted(result);
       return result;
     }
 
     for (const field of FIELDS) {
       const c = cards[field];
-      c.trigger.addEventListener("click", () => open(field));
+      c.trigger.addEventListener("click", () => { if (field === "changeover" && picker && picker.isOpen()) { picker.close(); return; } open(field); });
+      if (!c.input) continue;
       c.input.addEventListener("keydown", event => {
         if (!event) return;
         if (event.key === "Enter") {
@@ -285,13 +416,15 @@
       c.input.addEventListener("blur", () => { if (editing === field) commit(); });
     }
 
-    /** New job state. A card being edited keeps its draft; if the change
-     * came from elsewhere it is told so. */
+    /** New job state. A card being edited keeps its draft - and the
+     * picker its choice; if the change came from elsewhere it is told so. */
     function update(resolved, meta) {
       const options = meta || {};
+      current = resolved || null;
       job = resolved ? resolved.job : null;
       paint();
       if (editing && !options.own) say(editing, CHANGED_ELSEWHERE, false);
+      if (picker && picker.isOpen() && !options.own) say("changeover", CHANGED_ELSEWHERE, false);
     }
 
     /** The clock moved: the changeover's "in 2h 26m" walks. */
@@ -308,7 +441,9 @@
       commit,
       editing: () => editing,
       card: field => cards[field] || null,
-      slot: field => slots[field] || null
+      slot: field => slots[field] || null,
+      calculator: field => calculators[field || "changeover"] || null,
+      picker: () => picker
     });
   }
 

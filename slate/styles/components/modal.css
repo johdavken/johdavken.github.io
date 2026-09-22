@@ -1,0 +1,63 @@
+/* A question over the page: the RT Sync conflict (slate-conflict.js).
+   A scrim across the viewport and a card in the middle; the choices wear
+   the recipe's plan-action classes, the primary one the promote style. */
+
+.slate-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--slate-space-5);
+}
+
+.slate-modal__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--slate-scrim);
+}
+
+.slate-modal__card {
+  position: relative;
+  width: 440px;
+  max-width: 100%;
+  padding: var(--slate-space-5);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
+}
+
+.slate-modal__title {
+  margin-bottom: var(--slate-space-3);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-modal__body {
+  color: var(--slate-text);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-modal__detail {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-modal__card {
+    animation: none;
+  }
+}
