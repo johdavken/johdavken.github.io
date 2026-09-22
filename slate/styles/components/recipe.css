@@ -274,6 +274,12 @@
   color: var(--slate-text-muted);
 }
 
+/* Smart Hoppers computed the weight shown; the entered one is in the title. */
+.slate-hopper__weight.is-smart {
+  color: var(--slate-smart);
+  font-weight: 600;
+}
+
 /* Track at the left of its column; the column is fixed (tokens.css) so
    the pill never pushes the blend and weight. */
 .slate-hopper__controls {

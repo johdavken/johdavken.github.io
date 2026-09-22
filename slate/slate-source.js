@@ -25,9 +25,27 @@
     return Number.isFinite(number) ? number : 0;
   }
 
-  /* Runtime state by slot ("A:0"): what the recipe rows and the run-down
-   * read. The receiver weight that counts is the EFFECTIVE one - the
-   * entered weight, or Smart Hoppers' computed one when it stands in. */
+  /* Smart Hoppers' computed weight for a hopper, as the bridge carries it
+   * (value, the resin's bulk density, the resin it came from), or null
+   * when nothing is computed: the switch is off, the geometry or the
+   * circumference is missing, the resin has no measured bulk density. */
+  function smartWeightFrom(hopper) {
+    const raw = hopper && hopper.smartWeight;
+    if (!raw || typeof raw !== "object") return null;
+    const value = Number(raw.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return {
+      value,
+      bulkDensity: finite(raw.bulkDensity),
+      resinCode: raw.resinCode ? String(raw.resinCode) : ""
+    };
+  }
+
+  /* Runtime state by slot ("A:0"): what the recipe rows, the Weights
+   * section and the run-down read. The receiver weight that counts is the
+   * EFFECTIVE one - the entered weight, or Smart Hoppers' computed one when
+   * it stands in; the Weights section shows the entered weight and the
+   * geometry beside it. */
   function hopperStateFrom(snapshot) {
     const state = {};
     if (!snapshot || !Array.isArray(snapshot.layers)) return state;
@@ -41,11 +59,27 @@
           pumpOff: !!(hopper && hopper.pumpOff),
           resinName: hopper && hopper.resinName ? String(hopper.resinName) : "",
           pct: finite(hopper && hopper.pct),
-          effectiveWeight: finite(hopper && hopper.effectiveWeight)
+          effectiveWeight: finite(hopper && hopper.effectiveWeight),
+          weight: finite(hopper && hopper.weight),
+          usableHeight: finite(hopper && hopper.usableHeight),
+          usableGallons: finite(hopper && hopper.usableGallons),
+          smartWeight: smartWeightFrom(hopper)
         };
       }
     }
     return state;
+  }
+
+  /* Smart Hoppers as the bridge carries it; at rest when it carries none
+   * (an older producer). `geometryMode` null means the application is not
+   * on an identified line: no measure, no switch. */
+  function smartHoppersFrom(snapshot) {
+    const raw = snapshot && snapshot.smartHoppers && typeof snapshot.smartHoppers === "object" ? snapshot.smartHoppers : {};
+    return {
+      enabled: raw.enabled === true,
+      geometryMode: raw.geometryMode === "cylindrical" || raw.geometryMode === "volume" ? raw.geometryMode : null,
+      circumference: Number.isFinite(raw.circumference) && raw.circumference > 0 ? raw.circumference : 0
+    };
   }
 
   function layerStateFrom(snapshot) {
@@ -146,6 +180,7 @@
       line: model,
       hopperState: hopperStateFrom(snapshot),
       layerState: layerStateFrom(snapshot),
+      smartHoppers: smartHoppersFrom(snapshot),
       nextHopperState: nextHopperStateFrom(snapshot),
       nextLayerState: nextLayerStateFrom(snapshot),
       plan: planFrom(snapshot),
@@ -218,6 +253,7 @@
     return JSON.stringify({
       hopperState: resolved.hopperState || {},
       layerState: resolved.layerState || {},
+      smartHoppers: resolved.smartHoppers || null,
       nextHopperState: resolved.nextHopperState || {},
       nextLayerState: resolved.nextLayerState || {},
       history: resolved.history || null,
@@ -232,7 +268,7 @@
   }
 
   return Object.freeze({
-    normalizeResin, sameResin, hopperStateFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, historyFrom,
+    normalizeResin, sameResin, hopperStateFrom, smartWeightFrom, smartHoppersFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, historyFrom,
     jobStateFrom, stateFor, compareFor, resolveSource, structureKey, valuesKey, classifyChange
   });
 });

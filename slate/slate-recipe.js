@@ -91,11 +91,21 @@
     return `${Number(number.toFixed(1)).toLocaleString("en-US")} lb`;
   }
 
+  /* The weight cell's title when Smart Hoppers computed the weight shown:
+   * where it came from, and the entered weight it stands in for. */
+  function smartTitle(state) {
+    const smart = state.smartWeight;
+    const from = smart.resinCode ? `${smart.resinCode}'s bulk density${smart.bulkDensity ? ` (${smart.bulkDensity} lb/ft³)` : ""}` : "its resin's bulk density";
+    return `Computed by Smart Hoppers from the hopper's geometry and ${from}. Entered weight: ${formatWeight(state.weight)}.`;
+  }
+
   /* What a row shows, from a slot's state. Compared field by field on a
-   * values change, so only what moved is rewritten. */
+   * values change, so only what moved is rewritten. The weight is the
+   * EFFECTIVE one; when Smart Hoppers computed it the cell says so. */
   function cellsFor(runtime) {
     const state = runtime || {};
     const assigned = !!(state.resinName && String(state.resinName).trim());
+    const smart = assigned && !!(state.smartWeight && state.smartWeight.value > 0);
     return {
       assigned,
       resinName: assigned ? String(state.resinName) : "",
@@ -103,6 +113,8 @@
       resin: assigned ? String(state.resinName) : EMPTY,
       pct: assigned ? formatPct(state.pct) : EMPTY,
       weight: assigned ? formatWeight(state.effectiveWeight) : EMPTY,
+      smart,
+      weightTitle: smart ? smartTitle(state) : "",
       track: !!state.track,
       pumpOff: !!state.pumpOff
     };
@@ -317,6 +329,11 @@
       if (skip !== "resin" && last.resin !== cells.resin) entry.cells.resin.textContent = cells.resin;
       if (skip !== "pct" && last.pct !== cells.pct) entry.cells.pct.textContent = cells.pct;
       if (entry.cells.weight && last.weight !== cells.weight) entry.cells.weight.textContent = cells.weight;
+      if (entry.cells.weight && (last.smart !== cells.smart || last.weightTitle !== cells.weightTitle)) {
+        entry.cells.weight.classList.toggle("is-smart", cells.smart);
+        if (cells.weightTitle) entry.cells.weight.setAttribute("title", cells.weightTitle);
+        else entry.cells.weight.removeAttribute("title");
+      }
       if (last.assigned !== cells.assigned) {
         entry.row.classList.toggle("is-empty", !cells.assigned);
         if (entry.toggles) {
@@ -334,7 +351,7 @@
         // Pump-off is read and set in the timeline; the row only shows it.
         if (last.pumpOff !== cells.pumpOff) entry.row.classList.toggle("is-pump-off", cells.pumpOff);
       }
-      const changed = !!entry.last && ["resin", "pct", "weight", "track", "pumpOff", "assigned"].some(key => last[key] !== cells[key]);
+      const changed = !!entry.last && ["resin", "pct", "weight", "smart", "track", "pumpOff", "assigned"].some(key => last[key] !== cells[key]);
       entry.last = cells;
       return changed;
     }

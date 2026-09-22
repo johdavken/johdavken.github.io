@@ -36,13 +36,36 @@ test("a connected snapshot is live; none falls back to the demo, which is never 
 
 test("runtime state is keyed by slot and reduced to what the rows and run-down read", () => {
   const resolved = source.resolveSource({ snapshot: live() });
-  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, resinName: "HX204", pct: 60, effectiveWeight: 400 });
-  assert.deepEqual(resolved.hopperState["B:1"], { track: true, pumpOff: true, resinName: "HD622", pct: 20, effectiveWeight: 260 });
-  assert.deepEqual(resolved.hopperState["C:5"], { track: false, pumpOff: false, resinName: "", pct: 0, effectiveWeight: 0 });
+  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, resinName: "HX204", pct: 60, effectiveWeight: 400, weight: 400, usableHeight: 0, usableGallons: 0, smartWeight: null });
+  assert.deepEqual(resolved.hopperState["B:1"], { track: true, pumpOff: true, resinName: "HD622", pct: 20, effectiveWeight: 260, weight: 260, usableHeight: 0, usableGallons: 0, smartWeight: null });
+  assert.deepEqual(resolved.hopperState["C:5"], { track: false, pumpOff: false, resinName: "", pct: 0, effectiveWeight: 0, weight: 0, usableHeight: 0, usableGallons: 0, smartWeight: null });
   assert.deepEqual(resolved.layerState, { A: { layerPct: 25 }, B: { layerPct: 50 }, C: { layerPct: 25 } });
+  assert.deepEqual(resolved.smartHoppers, { enabled: false, geometryMode: null, circumference: 0 });
   assert.equal(resolved.job.lineRate, 850);
   assert.equal(resolved.job.changeoverSetAt, 5000);
   assert.equal(resolved.job.prodResinLb, 12400);
+});
+
+test("Smart Hoppers cross as the bridge carries them: the entered weight and geometry beside the effective weight, the computed weight only when there is one", () => {
+  const snap = live();
+  snap.smartHoppers = { enabled: true, geometryMode: "cylindrical", circumference: 30 };
+  const a0 = snap.layers[0].hoppers[0];
+  a0.usableHeight = 48;
+  a0.smartWeight = { value: 412.4, bulkDensity: 44.9, resinCode: "HX204" };
+  a0.effectiveWeight = 412.4;
+  snap.layers[0].hoppers[1].usableHeight = 48;
+  snap.layers[0].hoppers[1].smartWeight = { value: 0, bulkDensity: 0, resinCode: "" };
+  const resolved = source.resolveSource({ snapshot: snap });
+  assert.deepEqual(resolved.smartHoppers, { enabled: true, geometryMode: "cylindrical", circumference: 30 });
+  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, resinName: "HX204", pct: 60, effectiveWeight: 412.4, weight: 400, usableHeight: 48, usableGallons: 0, smartWeight: { value: 412.4, bulkDensity: 44.9, resinCode: "HX204" } });
+  assert.equal(resolved.hopperState["A:1"].smartWeight, null, "a zero computation is a computation");
+  assert.equal(resolved.hopperState["A:1"].usableHeight, 48);
+  // Normalisation: anything the bridge does not say is at rest.
+  assert.deepEqual(source.smartHoppersFrom(null), { enabled: false, geometryMode: null, circumference: 0 });
+  assert.deepEqual(source.smartHoppersFrom({ smartHoppers: { enabled: "yes", geometryMode: "spherical", circumference: -3 } }), { enabled: false, geometryMode: null, circumference: 0 });
+  assert.deepEqual(source.smartHoppersFrom({ smartHoppers: { enabled: true, geometryMode: "volume", circumference: 0 } }), { enabled: true, geometryMode: "volume", circumference: 0 });
+  assert.equal(source.smartWeightFrom({ smartWeight: "412" }), null);
+  assert.deepEqual(source.smartWeightFrom({ smartWeight: { value: 5 } }), { value: 5, bulkDensity: 0, resinCode: "" });
 });
 
 test("the job reads a missing or negative rate as zero and carries pounds as stored", () => {
@@ -72,6 +95,24 @@ test("classifyChange: values move in place, structure rebuilds, nothing is nothi
   const share = live();
   share.layers[1].layerPct = 40;
   assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: share })), "values");
+
+  // Weights, geometry and Smart Hoppers are values: the Weights section
+  // patches its fields in place, the recipe's column follows.
+  const weighed = live();
+  weighed.layers[0].hoppers[0].weight = 420;
+  assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: weighed })), "values");
+  const measured = live();
+  measured.layers[0].hoppers[0].usableHeight = 48;
+  assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: measured })), "values");
+  const switched = live();
+  switched.smartHoppers = { enabled: true, geometryMode: "cylindrical", circumference: 0 };
+  assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: switched })), "values");
+  const rounder = live();
+  rounder.smartHoppers = { enabled: false, geometryMode: null, circumference: 30 };
+  assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: rounder })), "values");
+  const computed = live();
+  computed.layers[0].hoppers[0].smartWeight = { value: 412, bulkDensity: 44.9, resinCode: "HX204" };
+  assert.equal(source.classifyChange(before, source.resolveSource({ snapshot: computed })), "values");
 
   const counts = live();
   counts.line.hopperCounts = [6, 6, 6];

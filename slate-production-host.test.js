@@ -89,6 +89,7 @@ test("slate.js takes every bridge as an optional global, subscribes once to the 
   assert.match(boot, /const connection = root\.PolynStationConnectionBridge \|\| null;/);
   assert.match(boot, /const admin = root\.PolynStationAdminBridge \|\| null;/);
   assert.match(boot, /const recipes = root\.PolynStationRecipesBridge \|\| null;/);
+  assert.match(boot, /const weightProfiles = root\.PolynStationWeightProfilesBridge \|\| null;/);
   assert.equal((boot.match(/bridge\.subscribe\(/g) || []).length, 1);
   assert.match(boot, /return commands && resolved && resolved\.live \? commands : null;/);
   assert.doesNotMatch(boot, /\.connect\(|\.publish\(/);
@@ -127,7 +128,7 @@ test("inside the host, an unconnected state bridge is reported as a stale applic
  *   5. The chain, executed
  * -------------------------------------------------------------------- */
 
-test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger, the timeline and the tools from live state", () => {
+test("with the bridges connected, the hosted boot draws the recipe, the cards, the sync trigger, the timeline, the tools and the weights from live state", async () => {
   const { makeDocument } = require("./tools/slate-test/fake-dom.js");
   const doc = makeDocument({ href: "https://resin.tools/?view=slate" });
   doc.body.setAttribute("data-slate-view", "slate");
@@ -142,7 +143,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
   for (const file of ["scheduling.js", "station-command-contract.js", "station-command-bridge.js", "station-state-bridge.js",
-    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "resin-totals.js", "pressure-conversion.js", "winding-tension.js", "slate-theme.js", "slate-display.js"]) load(file);
+    "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "station-weight-profiles-bridge.js", "resin-totals.js", "pressure-conversion.js", "winding-tension.js", "slate-theme.js", "slate-display.js"]) load(file);
   hostEl.slateTheme = root.PolynSlateTheme.create(hostEl, null);
   // Read-only is automatic on a linked line (slate-display.test.js covers it); this test wants the writable path.
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, null);
@@ -156,7 +157,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   stateHandle.publish();
   const executed = [];
   root.PolynStationCommandBridge.connect({
-    capabilities: ["setHopperTracking", "setPumpOff", "resetTracking", "setLineRate"],
+    capabilities: ["setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setHopperWeight", "setHopperGeometry", "setHopperCircumference", "setSmartHoppers"],
     execute(command, args) {
       executed.push({ command, args });
       return root.PolynStationCommandContract.success({ changed: true, revision: 1, persisted: true, snapshot: root.PolynStationStateBridge.getSnapshot() });
@@ -192,6 +193,17 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.equal(toggle.getAttribute("data-able"), "true");
   toggle.dispatchEvent({ type: "click", target: toggle, stopPropagation() {} });
   // Objects from the vm realm have another Object prototype: compare as JSON.
+  // The line's saved weight profiles: one, from the service's cache shape.
+  const profileRequests = [];
+  const profilesHandle = root.PolynStationWeightProfilesBridge.connect({
+    read: () => root.PolynStationWeightProfilesBridge.project({ workspaceId: "ws-1", cachedAt: 1, items: { receiver_weight_profile: [{ id: "w1", type: "receiver_weight_profile", name: "Standard 48in", updatedAt: "2026-09-21T10:00:00Z", payload: { line_type: 3, hopper_naming_mode: "standard", layers: [{ name: "A", weights: [400, 380, 120, 0, 0, 0] }, { name: "B", weights: [620, 260, 140, 0] }, { name: "C", weights: [500, 90, 0, 0, 0, 0] }] } }] } }, { workspaceId: "ws-1", displayName: "Line 5" }),
+    actions: { loadWeightProfile(args) { profileRequests.push(args); return { ok: true }; } }
+  });
+  // Connected after Slate booted, as a late producer would be: its publish
+  // reaches the section through the subscription, on the bridge's own
+  // microtask.
+  profilesHandle.publish();
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(JSON.stringify(executed), JSON.stringify([{ command: "setHopperTracking", args: { recipe: "current", layer: "A", index: 2, track: true } }]));
 
   // The timeline's Pump off goes through the same executor, addressed to Current.
@@ -208,7 +220,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.ok(timelineWrap && balanceWrap, "the aside does not hold both the Timeline and the tool");
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
   const listed = hostEl.querySelectorAll(".slate-rail__sections [data-section]").map(item => item.getAttribute("data-section"));
-  assert.deepEqual(listed, ["recipe", "recipe-book", "resin-balance", "pressure", "winding-tension"], "Resin Balance is not listed with the sections, under the Recipe Book, with the two calculators in the Tools menu after");
+  assert.deepEqual(listed, ["recipe", "recipe-book", "weights", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Recipe Book, Weights, Resin Balance, with the two calculators in the Tools menu after");
   assert.deepEqual(hostEl.querySelectorAll(".slate-rail__menu [data-section]").map(item => item.getAttribute("data-section")), ["pressure", "winding-tension"]);
   const toolItem = hostEl.querySelector(".slate-rail__sections [data-section='resin-balance']");
   toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
@@ -286,6 +298,36 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.equal(toolsButton.getAttribute("aria-expanded"), "true", "the menu closed on its own");
   toolsButton.dispatchEvent({ type: "click", target: toolsButton, stopPropagation() {} });
   assert.equal(toolsButton.getAttribute("aria-expanded"), "false");
+
+  // Weights: a section of its own, under the Recipe Book. A weight goes
+  // through the same executor as one setHopperWeight to Current, the
+  // profiles come off the weight-profiles bridge the application
+  // connected (loaded by index.html, never by the host), and the Recipe's
+  // rows are untouched by the visit.
+  const weightsItem = hostEl.querySelector(".slate-rail__sections [data-section='weights']");
+  weightsItem.dispatchEvent({ type: "click", target: weightsItem, stopPropagation() {} });
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Weights");
+  assert.ok(!hostEl.querySelector(".slate-centre .slate-section[data-section='weights']").hasAttribute("hidden"));
+  const weightField = hostEl.querySelector(".slate-weights__field[data-key='A:0'][data-kind='weight']");
+  assert.equal(weightField.value, "400");
+  assert.equal(weightField.getAttribute("readonly"), null, "the field is withheld on a writable live line");
+  weightField.dispatchEvent({ type: "focus", target: weightField });
+  weightField.value = "450";
+  weightField.dispatchEvent({ type: "keydown", key: "Enter", target: weightField, preventDefault() {} });
+  // The contract read the draft text into pounds before the executor saw it.
+  assert.equal(JSON.stringify(executed[2]), JSON.stringify({ command: "setHopperWeight", args: { recipe: "current", layer: "A", index: 0, weight: 450 } }));
+  assert.equal(hostEl.querySelector(".slate-weights [data-slate-smart]").getAttribute("data-able"), "false", "Smart Hoppers offered off an identified line");
+  assert.equal(hostEl.querySelectorAll(".slate-book__row[data-profile]").length, 1);
+  assert.equal(hostEl.querySelector(".slate-book__row[data-profile='w1'] .slate-book__row-name").textContent, "Standard 48in");
+  const profileRow = hostEl.querySelector(".slate-book__row[data-profile='w1']");
+  profileRow.dispatchEvent({ type: "click", target: profileRow, stopPropagation() {} });
+  const loadButton = hostEl.querySelector(".slate-weights [data-book-action='load']");
+  assert.equal(loadButton.getAttribute("data-able"), "true");
+  assert.equal(hostEl.querySelectorAll(".slate-hopper").length, 16, "the Weights rows count as recipe rows");
+  const recipeItem = hostEl.querySelector(".slate-rail__sections [data-section='recipe']");
+  recipeItem.dispatchEvent({ type: "click", target: recipeItem, stopPropagation() {} });
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
+  profilesHandle.disconnect();
 
   // The Recipe Book reads the recipes bridge the application connected.
   const bookRow = hostEl.querySelector(".slate-book__row[data-recipe='r1']");

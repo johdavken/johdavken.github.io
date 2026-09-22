@@ -45,6 +45,8 @@
   --slate-tracking: #0b6d1b;
   --slate-pump-off: #8e3a8e;
   --slate-overdue: #c7162b;
+  /* A weight Smart Hoppers computed, standing in for the entered one. */
+  --slate-smart: #0f766e;
 
   --slate-layer-outside: #0073e5;
   --slate-layer-subskin: #03875b;

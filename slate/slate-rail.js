@@ -34,6 +34,7 @@
     balance: "M10 3v14M6 17h8M4 5h12M2 10l3-5 3 5a3 3 0 0 1-6 0ZM12 10l3-5 3 5a3 3 0 0 1-6 0Z",
     timeline: "M5 3v14M9 6h8M9 10h6M9 14h8",
     gauge: "M3 15a7 7 0 0 1 14 0M10 15l4-5M10 15h.01",
+    weights: "M10 3v3M6 6h8l2 11H4ZM7.5 11.5h5",
     winding: "M8 10a5 5 0 1 0 10 0a5 5 0 1 0-10 0M13 10h.01M2 10h5M4.5 7.5 7 10l-2.5 2.5",
     generic: "M4 4h12v12H4Z"
   });

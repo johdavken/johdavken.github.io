@@ -234,7 +234,7 @@ test("a tool in the stats pane marks apart from the aside's, and the Tools item 
 test("the rail draws a glyph for every section the boot defines", () => {
   const boot = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate.js"), "utf8");
   const icons = [...boot.matchAll(/icon: "([a-z-]+)"/g)].map(match => match[1]);
-  assert.deepEqual(icons, ["recipe", "book", "balance", "gauge", "winding", "settings", "timeline"], "the boot's sections changed: Recipe, Recipe Book, Resin Balance, the two Tools, Settings; the aside's Timeline");
+  assert.deepEqual(icons, ["recipe", "book", "weights", "balance", "gauge", "winding", "settings", "timeline"], "the boot's sections changed: Recipe, Recipe Book, Weights, Resin Balance, the two Tools, Settings; the aside's Timeline");
   for (const icon of icons) assert.ok(rail.GLYPHS[icon], `no glyph for ${icon}`);
 });
 

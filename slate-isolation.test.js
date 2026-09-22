@@ -24,12 +24,13 @@ const STYLES = path.join(SLATE, "styles");
 const SLATE_FILES = [
   "slate.js", "slate-shell.js", "slate-logo.js", "slate-line.js", "slate-source.js", "slate-demo.js",
   "slate-sections.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
-  "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-resin-search.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
-  "slate-recipe-book.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
+  "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js",
+  "slate-resin-search.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
+  "slate-recipe-book.js", "slate-weights.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",
   "slate-pressure.js", "slate-winding-tension.js"
 ];
-const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js"];
-const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"] };
+const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];
+const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"] };
 const INNER_HTML = ["slate-sync.js"];
 const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js"];
 /* The pure Station modules Slate shares: the run-down arithmetic and the
@@ -264,12 +265,12 @@ test("Slate never writes through a bridge - it only reads and subscribes", () =>
     assert.doesNotMatch(source, /\.connect\s*\(/, `${file} connects a producer to a bridge`);
     assert.doesNotMatch(source, /\.publish\s*\(/, `${file} publishes to a bridge`);
     for (const match of source.matchAll(/(\w+)\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection", "admin", "recipes", "controller", "theme", "display", "displayController"].includes(match[1]), `${file} subscribes to ${match[1]}`);
+      assert.ok(["bridge", "connection", "admin", "recipes", "profiles", "controller", "theme", "display", "displayController"].includes(match[1]), `${file} subscribes to ${match[1]}`);
     }
   }
 });
 
-test("exactly four Slate files dispatch commands - tracking, the job's cards, the recipe's edits and the plan's moves - and only through the bridge they are handed", () => {
+test("exactly five Slate files dispatch commands - tracking, the job's cards, the recipe's edits, the plan's moves and the weights - and only through the bridge they are handed", () => {
   for (const file of SLATE_FILES) {
     const source = codeOnly(read(file));
     if (DISPATCHES.includes(file)) {
@@ -283,18 +284,21 @@ test("exactly four Slate files dispatch commands - tracking, the job's cards, th
   assert.doesNotMatch(codeOnly(read("slate.js")), /dispatch\s*\(/);
 });
 
-test("exactly one Slate file requests connection actions, exactly one requests recipe actions, and none asks the admin bridge for anything", () => {
+test("exactly one Slate file requests connection actions, one recipe actions, one weight-profile actions, and none asks the admin bridge for anything", () => {
   for (const file of SLATE_FILES) {
     const source = codeOnly(read(file));
     if (REQUESTS.connection.includes(file)) assert.match(source, /connection\.request\s*\(/);
     else if (REQUESTS.recipes.includes(file)) assert.match(source, /recipes\.request\s*\(/);
+    else if (REQUESTS.weightProfiles.includes(file)) assert.match(source, /profiles\.request\s*\(/);
     else assert.doesNotMatch(source, /\.request\s*\(/, `${file} requests a bridge action`);
     assert.doesNotMatch(source, /admin\.request/, `${file} asks the admin bridge to act`);
-    assert.doesNotMatch(source, /PolynStationWeightProfilesBridge/, `${file} reaches a bridge Slate does not consume`);
-    // The recipes bridge is read from the global once, by the boot file,
-    // and handed on: the seam acts on the bridge it is given.
-    if (file === "slate.js") assert.equal((source.match(/PolynStationRecipesBridge/g) || []).length, 1, "slate.js reads the recipes bridge other than once");
-    else assert.doesNotMatch(source, /PolynStationRecipesBridge/, `${file} reaches the recipes bridge global`);
+    // The recipes and weight-profiles bridges are read from their globals
+    // once each, by the boot file, and handed on: the seams act on the
+    // bridge they are given.
+    for (const [global, name] of [["PolynStationRecipesBridge", "recipes"], ["PolynStationWeightProfilesBridge", "weight-profiles"]]) {
+      if (file === "slate.js") assert.equal((source.match(new RegExp(global, "g")) || []).length, 1, `slate.js reads the ${name} bridge other than once`);
+      else assert.ok(!source.includes(global), `${file} reaches the ${name} bridge global`);
+    }
   }
 });
 

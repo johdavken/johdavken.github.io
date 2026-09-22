@@ -5,14 +5,15 @@
  * decides for each publish whether the sections are rebuilt, patched or
  * left alone. It never connects a producer and never publishes: the
  * application is the only writer of the bridges, and Slate is one of the
- * readers. It dispatches nothing itself either - the four files that do
+ * readers. It dispatches nothing itself either - the five files that do
  * (slate-tracking.js, slate-stat-cards.js, slate-recipe-actions.js,
- * slate-plan-actions.js) are handed the command bridge
- * and tell this file of every change they commit, so the bridge's echo of
- * the operator's own edit is recognised as such. The recipes bridge (the
- * line's saved recipes) is likewise handed on, to slate-book-actions.js
- * alone; its results carry no revision, so a load's publish reads as
- * foreign and the rows flash, which is right.
+ * slate-plan-actions.js, slate-weight-actions.js) are handed the command
+ * bridge and tell this file of every change they commit, so the bridge's
+ * echo of the operator's own edit is recognised as such. The recipes
+ * bridge (the line's saved recipes) is likewise handed on, to
+ * slate-book-actions.js alone, and the weight-profiles bridge to
+ * slate-profile-actions.js alone; their results carry no revision, so a
+ * load's publish reads as foreign and the rows flash, which is right.
  *
  * Slate mounts into whatever element carries [data-slate-app]: the host
  * container slate-host.js creates for ?view=slate, or the harness's body.
@@ -29,6 +30,7 @@
   const connection = root.PolynStationConnectionBridge || null;
   const admin = root.PolynStationAdminBridge || null;
   const recipes = root.PolynStationRecipesBridge || null;
+  const weightProfiles = root.PolynStationWeightProfilesBridge || null;
   const rundown = root.PolynStationRundown || null;
   // The application's own arithmetic for the tools - Resin Totals
   // (resin-totals.js), the pressure factor (pressure-conversion.js), the
@@ -50,6 +52,7 @@
   const demo = root.PolynSlateDemo;
   const recipeModule = root.PolynSlateRecipe;
   const bookModule = root.PolynSlateRecipeBook;
+  const weightsModule = root.PolynSlateWeights;
   const statCards = root.PolynSlateStatCards;
   const syncModule = root.PolynSlateSync;
   const settingsModule = root.PolynSlateSettings;
@@ -253,6 +256,7 @@
       connection,
       admin,
       recipes,
+      weightProfiles,
       theme: themeController,
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
@@ -280,6 +284,7 @@
     const definitions = [
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, c) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
+      { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => home("aside") })) },
       { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },

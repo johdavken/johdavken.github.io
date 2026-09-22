@@ -145,6 +145,32 @@ test("a values update rewrites only the cells that moved, keeps every row's elem
   assert.equal(head(view, "B").querySelector(".slate-layer__share").textContent, "45%");
 });
 
+test("a weight Smart Hoppers computed shows tinted with its source and the entered weight in the title; an entered weight carries neither", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a1 = row(view, "A1");
+  const cell = a1.querySelector(".slate-hopper__weight");
+  assert.ok(!cell.classList.contains("is-smart"));
+  assert.equal(cell.getAttribute("title"), null);
+  view.update(resolvedFrom(snap => {
+    snap.smartHoppers = { enabled: true, geometryMode: "cylindrical", circumference: 30 };
+    const hopper = snap.layers[0].hoppers[0];
+    hopper.usableHeight = 48;
+    hopper.smartWeight = { value: 412.4, bulkDensity: 44.9, resinCode: "HX204" };
+    hopper.effectiveWeight = 412.4;
+  }), { kind: "values", own: true });
+  assert.ok(a1.querySelector(".slate-hopper__weight") === cell, "the row was rebuilt");
+  assert.equal(cell.textContent, "412.4 lb");
+  assert.ok(cell.classList.contains("is-smart"));
+  assert.equal(cell.getAttribute("title"), "Computed by Smart Hoppers from the hopper's geometry and HX204's bulk density (44.9 lb/ft³). Entered weight: 400 lb.");
+  assert.ok(!row(view, "A2").querySelector(".slate-hopper__weight").classList.contains("is-smart"), "a hopper nothing was computed for is tinted");
+  // The switch off again: the entered weight, untinted.
+  view.update(resolvedFrom(), { kind: "values", own: true });
+  assert.equal(cell.textContent, "400 lb");
+  assert.ok(!cell.classList.contains("is-smart"));
+  assert.equal(cell.getAttribute("title"), null);
+});
+
 test("formatting reads as the floor does", () => {
   assert.equal(recipe.formatPct(60), "60%");
   assert.equal(recipe.formatPct(33.333), "33.3%");

@@ -146,7 +146,7 @@ test("every theme declares the identical token set", () => {
     assert.deepEqual([...set.tokens.keys()].sort(), reference, `${set.id}.css declares a different token set`);
   }
   for (const required of ["--slate-bg", "--slate-surface", "--slate-text", "--slate-text-muted", "--slate-accent",
-    "--slate-focus-ring", "--slate-tracking", "--slate-pump-off", "--slate-overdue",
+    "--slate-focus-ring", "--slate-tracking", "--slate-pump-off", "--slate-overdue", "--slate-smart",
     "--slate-layer-outside", "--slate-layer-subskin", "--slate-layer-core", "--slate-layer-inside", "--slate-layer-single",
     "--slate-color-scheme"]) {
     assert.ok(reference.includes(required), `the contract lacks ${required}`);
@@ -176,7 +176,7 @@ test("every theme meets the contrast floors for text and status colours", () => 
       const ratio = contrastRatio(get(name), bg);
       assert.ok(ratio >= 4.5, `${id}: ${name} ${get(name)} on bg ${bg} is ${ratio.toFixed(2)}:1`);
     }
-    for (const name of ["text", "text-muted", "text-faint", "tracking", "pump-off", "overdue"]) {
+    for (const name of ["text", "text-muted", "text-faint", "tracking", "pump-off", "overdue", "smart"]) {
       const ratio = contrastRatio(get(name), surface);
       assert.ok(ratio >= 4.5, `${id}: ${name} ${get(name)} on surface ${surface} is ${ratio.toFixed(2)}:1`);
     }
