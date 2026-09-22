@@ -27,6 +27,7 @@ dependency, so it works with whatever browser tooling is to hand.
 ```
 node tools/css-parity/probe.js --print          # print the expression
 # serve the app, set the viewport, evaluate it, save the JSON as before.json
+# (open the page as ?view=legacy: at desktop widths the bare URL is Slate's)
 # ... make the change, reload, evaluate again, save as after.json
 node tools/css-parity/probe.js --diff before.json after.json
 ```

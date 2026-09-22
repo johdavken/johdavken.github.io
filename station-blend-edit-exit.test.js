@@ -1290,7 +1290,7 @@ test("the header around the stage is identity, the way back and the two readouts
   const legacy = header.querySelector(".station-header__legacy");
   assert.equal(legacy.tagName, "A");
   assert.equal(legacy.textContent, "Legacy");
-  assert.equal(legacy.getAttribute("href"), "/");
+  assert.equal(legacy.getAttribute("href"), "/?view=legacy");
   assert.deepEqual(Object.keys(legacy.listeners), []);
   // The readouts are what they were: Output and Changeover, editable.
   assert.deepEqual(header.querySelectorAll(".station-job__key").map(n => n.textContent), ["Output", "Changeover"]);

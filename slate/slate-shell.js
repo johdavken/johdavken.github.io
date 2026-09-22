@@ -41,10 +41,11 @@
   /* THE WAY BACK
    *
    * Slate and the legacy interface coexist on one page: the application
-   * host is index.html, and ?view=slate is the one flag that makes it show
-   * Slate instead. So the route back is that same URL without the flag. On
-   * the standalone harness (slate/slate.html), which has no application,
-   * the route is the application's page beside it. */
+   * host is index.html, and Slate is what a desktop gets there unless the
+   * URL names another view (slate-host.js). So the route back is that same
+   * URL naming the floor UI: ?view=legacy. On the standalone harness
+   * (slate/slate.html), which has no application, the route is the
+   * application's page beside it. */
   const HARNESS_LEGACY = "../index.html";
   function legacyHref(href) {
     let url;
@@ -53,8 +54,11 @@
     } catch (error) {
       return HARNESS_LEGACY;
     }
-    if (url.searchParams.get("view") !== "slate") return HARNESS_LEGACY;
+    const view = url.searchParams.get("view");
+    if (view !== null && view !== "slate") return HARNESS_LEGACY;
+    if (/\/slate\/[^/]*$/.test(url.pathname)) return HARNESS_LEGACY;
     url.searchParams.delete("view");
+    url.searchParams.set("view", "legacy");
     return url.pathname + url.search + url.hash;
   }
 

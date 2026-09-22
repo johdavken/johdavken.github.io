@@ -130,7 +130,7 @@ test("the header is identity, status and the one edit form: the picture's slot, 
   assert.equal(find(tagged, node => /experimental|live/i.test(String(node.textContent))).length, 0);
 });
 
-test("Legacy is a plain link beside the name - the word alone, no explanation - to the application without the Station flag", () => {
+test("Legacy is a plain link beside the name - the word alone, no explanation - to the application naming the legacy view", () => {
   const root = built();
   const link = find(root, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0];
   assert.equal(link.nodeName, "A", "a link: keyboard-reachable and focusable as itself, nothing scripted");
@@ -145,14 +145,14 @@ test("Legacy is a plain link beside the name - the word alone, no explanation - 
   const given = shell.createShell(fakeDocument(), { legacy: "/?demo=x" });
   assert.equal(find(given, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0].getAttribute("href"), "/?demo=x");
   const located = shell.createShell(Object.assign(fakeDocument(), { location: { href: "https://resin.tools/index.html?view=station&x=1#top" } }));
-  assert.equal(find(located, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0].getAttribute("href"), "/index.html?x=1#top");
+  assert.equal(find(located, node => /station-header__legacy/.test(node.getAttribute("class") || ""))[0].getAttribute("href"), "/index.html?x=1&view=legacy#top");
 });
 
-test("legacyHref is the existing route: the page's own URL with ?view=station removed and nothing else touched; the harness goes to the application beside it", () => {
-  assert.equal(shell.legacyHref("https://resin.tools/?view=station"), "/");
-  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=station"), "/index.html");
-  assert.equal(shell.legacyHref("https://johdavken.github.io/repo/?demo=three-layer&view=station&rtSyncCode=ABC"), "/repo/?demo=three-layer&rtSyncCode=ABC", "other parameters are kept, in order, under the deployment's own path");
-  assert.equal(shell.legacyHref("http://127.0.0.1:8791/?view=station#station"), "/#station");
+test("legacyHref names the legacy interface: the page's own URL with ?view=legacy in Station's place and nothing else touched; the harness goes to the application beside it", () => {
+  assert.equal(shell.legacyHref("https://resin.tools/?view=station"), "/?view=legacy");
+  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=station"), "/index.html?view=legacy");
+  assert.equal(shell.legacyHref("https://johdavken.github.io/repo/?demo=three-layer&view=station&rtSyncCode=ABC"), "/repo/?demo=three-layer&rtSyncCode=ABC&view=legacy", "other parameters are kept, in order, under the deployment's own path");
+  assert.equal(shell.legacyHref("http://127.0.0.1:8791/?view=station#station"), "/?view=legacy#station");
   assert.equal(shell.legacyHref("https://resin.tools/station/station.html?source=demo&demo=three-layer"), "../index.html", "the standalone harness");
   assert.equal(shell.legacyHref("https://resin.tools/?view=legacy"), "../index.html", "any other view flag is not Station's");
   assert.equal(shell.legacyHref(undefined), "../index.html");

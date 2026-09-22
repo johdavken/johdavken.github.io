@@ -17,14 +17,23 @@
  * always does, connects the bridges exactly as it always does, and Slate
  * subscribes to those same bridges as an ordinary consumer beside Station.
  *
- * NORMAL STARTUP IS PROTECTED BY DOING NOTHING
+ * WHICH VIEW A LOAD GETS
  *
- * Without ?view=slate this file returns before it touches the document. No
- * attribute is set, no element is created, no stylesheet is linked, no
- * script is fetched. In normal mode the Slate rules are not in the document
- * at all. Loading is dynamic for the same reason: a statically linked Slate
- * stylesheet would be inert but present, and "inert but present" is a thing
- * that stops being true one edit later.
+ * Slate is the desktop's default. A URL that names a view gets that view:
+ * ?view=slate is Slate, ?view=legacy the floor UI, ?view=station Station
+ * (station-host.js reads the same flag). A URL that names none boots Slate
+ * when the window is a desktop's - at least MIN_WIDTH wide and not the
+ * native Android shell - and the floor UI otherwise: a phone, and the app
+ * on it, keep the mobile interface Slate was never drawn for.
+ *
+ * STARTUP THAT IS NOT SLATE'S IS PROTECTED BY DOING NOTHING
+ *
+ * When the load is not Slate's this file returns before it touches the
+ * document. No attribute is set, no element is created, no stylesheet is
+ * linked, no script is fetched. In that mode the Slate rules are not in
+ * the document at all. Loading is dynamic for the same reason: a statically
+ * linked Slate stylesheet would be inert but present, and "inert but
+ * present" is a thing that stops being true one edit later.
  */
 (function (root) {
   "use strict";
@@ -34,6 +43,8 @@
 
   const FLAG = "view";
   const VALUE = "slate";
+  /* The narrowest window Slate is drawn for (slate-shell.js says the same). */
+  const MIN_WIDTH = 1100;
   const ATTRIBUTE = "data-slate-view";
 
   /* Assets, in load order. Slate's own modules are order-dependent -
@@ -132,11 +143,32 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.16.0";
+  const VERSION = "0.17.0";
+
+  /* A desktop's window: wide enough for the sheet, and not the native
+   * Android shell, whose bridge is on the page before any script runs.
+   * Nothing to measure with reads as not a desktop: never assume yes. */
+  function desktop() {
+    try {
+      const capacitor = root.Capacitor;
+      if (capacitor && typeof capacitor.isNativePlatform === "function" && capacitor.isNativePlatform()) return false;
+    } catch (error) {
+      return false;
+    }
+    try {
+      if (typeof root.matchMedia === "function") return !!root.matchMedia(`(min-width: ${MIN_WIDTH}px)`).matches;
+    } catch (error) {
+      /* fall through to the width */
+    }
+    return Number(root.innerWidth) >= MIN_WIDTH;
+  }
 
   function requested() {
     try {
-      return new URL(root.location.href).searchParams.get(FLAG) === VALUE;
+      const view = new URL(root.location.href).searchParams.get(FLAG);
+      if (view === VALUE) return true;
+      if (view !== null) return false;
+      return desktop();
     } catch (error) {
       return false;
     }
