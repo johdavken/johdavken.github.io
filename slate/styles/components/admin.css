@@ -17,3 +17,233 @@
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
 }
+
+/* ---- Workspaces ----
+   The list and the detail are the Recipe Book's (recipe-book.css); what
+   is here is the line's own parts: the device on this browser, the
+   linked devices, and the maintenance kept folded away. */
+
+/* This device's RT Sync identity, under the bar when it is asked for. */
+.slate-admin__diagnostics {
+  margin-bottom: var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A row in the list whose line this device is already on. */
+.slate-root .slate-book__row.is-connected {
+  color: var(--slate-accent-text);
+}
+
+.slate-admin__detail-head {
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-admin__detail-meta {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-admin__connected {
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+/* ---- Linked devices ---- */
+
+.slate-admin__devices {
+  margin-top: var(--slate-space-4);
+}
+
+.slate-admin__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-admin__section-title {
+  flex: 1 1 auto;
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__section-note {
+  margin-bottom: var(--slate-space-2);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__device-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-admin__device-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+}
+
+.slate-admin__device-row.is-this-device {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+}
+
+.slate-admin__device-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-admin__device-role {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__device-seen {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-admin__device-self {
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__device-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+}
+
+/* ---- Maintenance, folded ---- */
+
+.slate-admin__maintenance {
+  margin-top: var(--slate-space-4);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-admin__fold {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  width: 100%;
+  padding: var(--slate-space-1);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+}
+
+.slate-root .slate-admin__fold:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-admin__fold-title {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slate-admin__fold-note {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-admin__maintenance-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  padding-top: var(--slate-space-3);
+}
+
+.slate-admin__maintenance-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+}
+
+.slate-admin__maintenance-item.is-danger {
+  border-color: var(--slate-danger);
+}
+
+.slate-admin__maintenance-title {
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+}
+
+.slate-admin__maintenance-copy {
+  max-width: 60ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* The line a merge would write into. */
+.slate-admin__targets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-admin__targets-label,
+.slate-admin__targets-none {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root .slate-admin__chip {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root .slate-admin__chip:hover {
+  background: var(--slate-surface-hover);
+  color: var(--slate-text);
+}
+
+.slate-root .slate-admin__chip[aria-checked="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+/* ---- A confirmation, in the detail's place ---- */
+
+.slate-admin__confirm-title {
+  margin-bottom: var(--slate-space-2);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-admin__confirm-line {
+  min-height: var(--slate-space-3);
+  max-width: 68ch;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
