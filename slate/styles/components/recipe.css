@@ -217,6 +217,28 @@
   background: var(--slate-surface-sunken);
 }
 
+/* The layer's tone as a property too, for what spreads it wider than the
+   head's stripe (the Grid layout's wash). */
+.slate-layer {
+  --slate-layer-tone: var(--slate-layer-single);
+}
+
+.slate-layer[data-tone="outside"] {
+  --slate-layer-tone: var(--slate-layer-outside);
+}
+
+.slate-layer[data-tone="subskin"] {
+  --slate-layer-tone: var(--slate-layer-subskin);
+}
+
+.slate-layer[data-tone="core"] {
+  --slate-layer-tone: var(--slate-layer-core);
+}
+
+.slate-layer[data-tone="inside"] {
+  --slate-layer-tone: var(--slate-layer-inside);
+}
+
 .slate-layer[data-tone="outside"] .slate-layer__head {
   border-left-color: var(--slate-layer-outside);
 }
@@ -326,9 +348,6 @@
   text-align: right;
 }
 
-.slate-hopper.is-late .slate-hopper__mark {
-  color: var(--slate-warning);
-}
 
 /* ---- Compare: the next order against this one ---- */
 
@@ -357,6 +376,12 @@
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
   font-variant-numeric: tabular-nums;
+}
+
+/* Compare's band is the Grid layout's and a phone's (below): the Left
+   and Top rows carry the other recipe as a line instead. */
+.slate-hopper__next {
+  display: none;
 }
 
 /* Track is withdrawn from a row with nothing to run down; the toggle's
@@ -406,6 +431,12 @@
 .slate-root .slate-toggle[data-able="false"] {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* The word, which a Grid cell under Compare folds away (the button keeps
+   its aria-label). */
+.slate-toggle__label {
+  display: var(--slate-toggle-label, inline);
 }
 
 .slate-toggle__dot {
@@ -783,6 +814,301 @@
   }
 }
 
+/* ---- The Grid layout: a row of cells per layer ----
+   The third Layout preference (data-layers="grid"). Each layer is a row:
+   its head a tile at the start, then one self-contained cell per hopper -
+   id and blend, the resin, and on Current the weight with Track. Every
+   row has the same columns (--slate-hopper-rows, the deepest layer's
+   count, from the section), so a position lines up down the page and a
+   line with more layers only grows longer, never narrower. The layer's
+   tone washes across its row behind the cells. The cells
+   wear their state on their own border: tracked, pumped off, empty
+   (dashed). Compare puts the phone's band in the weight's place where
+   the resin changes - what it becomes (on Next, what it replaces) and its
+   blend - and the line there for a blend alone moving. Rules below the phone's
+   own out-specify these, so a phone keeps its grid. */
+
+.slate-root[data-layers="grid"] .slate-recipe__layers {
+  gap: var(--slate-space-3);
+}
+
+/* The row: the layer's tone washes from its head across the cells and
+   fades out, so the tiles read as one layer's row. */
+.slate-root[data-layers="grid"] .slate-layer {
+  grid-template-columns: var(--slate-grid-head-width) repeat(var(--slate-hopper-rows, 6), minmax(0, 1fr));
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-2) var(--slate-space-2) 0;
+  border: 0;
+  border-radius: var(--slate-radius);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+  box-shadow: none;
+}
+
+/* The head stands in the wash itself, with no stripe: the wash carries
+   the tone (the stripe's width stays, transparent, so the text keeps its
+   place). The name and role lead, the share sits at the foot, and the
+   menu keeps the top corner out of their way. */
+.slate-root[data-layers="grid"] .slate-layer__head {
+  position: relative;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-left-color: transparent;
+  border-radius: var(--slate-radius) 0 0 var(--slate-radius);
+  background: none;
+}
+
+.slate-root[data-layers="grid"] .slate-layer-menu {
+  position: absolute;
+  top: var(--slate-space-1);
+  right: var(--slate-space-1);
+  margin-top: 0;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__name {
+  font-size: var(--slate-text-xl);
+  font-weight: 700;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__word {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__role {
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-tight);
+}
+
+.slate-root[data-layers="grid"] .slate-layer__share {
+  font-size: var(--slate-text-lg);
+}
+
+.slate-root[data-layers="grid"] .slate-layer__input {
+  font-size: var(--slate-text-lg);
+}
+
+.slate-root[data-layers="grid"] .slate-layer__rows {
+  display: contents;
+}
+
+/* The attribute out-specifies the Next body's and the touch tier's rows. */
+.slate-root[data-layers="grid"] .slate-hopper[data-recipe] {
+  grid-column: calc(var(--slate-hopper-slot, 0) + 2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "id pct"
+    "resin resin"
+    "weight controls"
+    "mark mark"
+    "note note";
+  align-content: start;
+  align-items: center;
+  gap: 2px var(--slate-space-1);
+  padding: var(--slate-space-2);
+  /* On a light theme no outline: a tile is its fill and shadow, its state
+     its tint (the border keeps its width, unseen, so nothing moves). A
+     dark theme's fill is too close to the wash, so there the outline and
+     the state's edge stay (light-dark() follows the theme's color-scheme). */
+  border: var(--slate-stroke) solid light-dark(transparent, var(--slate-border));
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+}
+
+/* An empty hopper: a tile holding its id and a + where the resin goes -
+   faintly filled on a light theme, dashed on a dark one - a press on it opens the resin, as on any cell. Its blend, weight
+   and Track keep their places, unseen, so the tile is its neighbours'
+   size; Compare's band still stands in the weight's place. */
+.slate-root[data-layers="grid"] .slate-hopper.is-empty {
+  --slate-grid-unset: hidden;
+  --slate-grid-plus: "+";
+  --slate-grid-resin-ink: transparent;
+  border-style: dashed;
+  background: light-dark(color-mix(in srgb, var(--slate-text) 5%, transparent), transparent);
+  box-shadow: none;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper.is-tracked {
+  border-color: light-dark(transparent, color-mix(in srgb, var(--slate-tracking) 55%, var(--slate-border)));
+  background: color-mix(in srgb, var(--slate-tracking) 14%, var(--slate-surface-raised));
+}
+
+.slate-root[data-layers="grid"] .slate-hopper.is-pump-off {
+  border-color: light-dark(transparent, var(--slate-pump-off));
+  background: var(--slate-pump-off-soft);
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__id {
+  grid-area: id;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__pct {
+  grid-area: pct;
+  visibility: var(--slate-grid-unset, visible);
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__resin {
+  grid-area: resin;
+  position: relative;
+  color: var(--slate-grid-resin-ink, inherit);
+  justify-self: stretch;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  text-align: left;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__weight {
+  grid-area: weight;
+  display: var(--slate-grid-weight, block);
+  visibility: var(--slate-grid-unset, visible);
+  min-width: 0;
+  font-size: var(--slate-text-sm);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__controls {
+  grid-area: controls;
+  justify-content: flex-end;
+  visibility: var(--slate-grid-unset, visible);
+}
+
+/* The +: over the empty resin's dash (its ink made transparent above),
+   centred in the cell's width. */
+.slate-root[data-layers="grid"] .slate-hopper__resin::after {
+  content: var(--slate-grid-plus, none);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-2xl);
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* The pill keeps its height with its word folded away (Compare, below),
+   so the cell does not move. */
+.slate-root[data-layers="grid"] .slate-toggle {
+  min-height: calc(var(--slate-text-xs) * var(--slate-line-tight) + 2 * var(--slate-space-1) + 2 * var(--slate-stroke));
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__mark {
+  grid-area: mark;
+  text-align: left;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__mark:empty {
+  display: none;
+}
+
+/* Under Compare a cell that moves says so in its weight's place (the
+   section marks it is-comparing), so no cell changes size: a blend alone
+   moving in plain text, a resin change as the band (below). */
+.slate-root[data-layers="grid"] .slate-hopper.is-comparing {
+  --slate-grid-weight: none;
+  --slate-toggle-label: none;
+}
+
+/* The line spans the cell, but for Track's column where the pill stands;
+   there the pill folds to its dot (the cell's own tint says tracked) and
+   leaves the line the room. */
+.slate-root[data-layers="grid"] .slate-hopper.is-offering {
+  --slate-grid-say-end: 2;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__other:not([hidden]) {
+  grid-area: weight;
+  grid-column: 1 / var(--slate-grid-say-end, -1);
+  min-width: 0;
+  /* The weight's line, so nothing moves when one takes the other's place. */
+  line-height: calc(var(--slate-text-sm) * var(--slate-line-normal));
+  padding-left: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A resin change is the band's to say. */
+.slate-root[data-layers="grid"] .slate-hopper__other[data-change="resin"] {
+  display: none;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__note {
+  grid-area: note;
+  padding-left: 0;
+}
+
+/* The fields that open in place take their cell's place. */
+.slate-root[data-layers="grid"] .slate-combobox {
+  grid-area: resin;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__input,
+.slate-root[data-layers="grid"] .slate-editor-field,
+.slate-root[data-layers="grid"] .slate-hopper__draft-pct,
+.slate-root[data-layers="grid"] .slate-hopper__draft-h1 {
+  grid-area: pct;
+  --slate-field-width: 5em;
+}
+
+/* Compare's band, as a phone's, in the weight's place: the resin the cell
+   becomes and its blend, dropping in one position after another. */
+.slate-root[data-layers="grid"] .slate-hopper__next:not([hidden]) {
+  grid-area: weight;
+  grid-column: 1 / var(--slate-grid-say-end, -1);
+  display: flex;
+  gap: var(--slate-space-1);
+  letter-spacing: -0.01em;
+  line-height: calc(var(--slate-text-sm) * var(--slate-line-normal));
+  min-width: 0;
+  margin-left: calc(-1 * var(--slate-space-1));
+  padding: 0 var(--slate-space-1);
+  overflow: hidden;
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform-origin: top;
+  animation: slate-band-drop var(--slate-motion-band) var(--slate-motion-ease) both;
+  animation-delay: calc((var(--slate-hopper-slot, 0) + var(--slate-layer-i, 0)) * var(--slate-motion-lead) * 2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root[data-layers="grid"] .slate-hopper__next:not([hidden]) {
+    animation: none;
+  }
+}
+
+/* No arrow in a Grid cell: the band's colour says the resin changes, the
+   tab which way, and its title the words ("Changes to", "Replaces"); the
+   arrow's width goes to the resin. */
+
+/* The resin gives way first; the blend, at the band's end, stays whole. */
+.slate-root[data-layers="grid"] .slate-hopper__next-resin {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slate-root[data-layers="grid"] .slate-hopper__next-pct {
+  flex: none;
+  margin-left: auto;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 /* ---- A phone: the recipe as the floor UI's grid ----
    On a phone (the phone tier under touch) the recipe reads as the floor
    UI's phone grid does: one column per layer (the section writes
@@ -967,6 +1293,11 @@
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next[data-way="from"]::before {
   content: "\2190\2009";
+}
+
+/* A phone's column has room for the resin alone. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next-pct {
+  display: none;
 }
 
 /* The cell holds the recipe alone: the weight, Track's pill, the

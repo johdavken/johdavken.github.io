@@ -257,24 +257,28 @@
 }
 
 /* ---- Layers with the head on top ----
-   The same Layout preference the Recipe follows (recipe.css): cards side
+   The same Layout preference the Recipe follows (recipe.css), Top and
+   Grid alike - the Grid's cells are the Recipe's alone: cards side
    by side, the head across the top, and each row its id and resin with
    the field - and, with Smart Hoppers, the geometry and the computed
    weight - stacked under the resin; the unit stands beside every field. */
 
-.slate-root[data-layers="top"] .slate-weights__layers {
+.slate-root[data-layers="top"] .slate-weights__layers,
+.slate-root[data-layers="grid"] .slate-weights__layers {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   align-items: start;
 }
 
-.slate-root[data-layers="top"] .slate-weights__layer {
+.slate-root[data-layers="top"] .slate-weights__layer,
+.slate-root[data-layers="grid"] .slate-weights__layer {
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
   overflow: visible;
 }
 
-.slate-root[data-layers="top"] .slate-weights__head {
+.slate-root[data-layers="top"] .slate-weights__head,
+.slate-root[data-layers="grid"] .slate-weights__head {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: baseline;
@@ -284,20 +288,23 @@
   border-top-right-radius: var(--slate-radius-lg);
 }
 
-.slate-root[data-layers="top"] .slate-weights__rows {
+.slate-root[data-layers="top"] .slate-weights__rows,
+.slate-root[data-layers="grid"] .slate-weights__rows {
   padding: var(--slate-space-1) var(--slate-space-2) var(--slate-space-2);
 }
 
 /* Every row, Smart Hoppers or not: the attribute out-specifies the
    five-column smart rule rather than relying on source order. */
-.slate-root[data-layers="top"] .slate-weights__row[data-key] {
+.slate-root[data-layers="top"] .slate-weights__row[data-key],
+.slate-root[data-layers="grid"] .slate-weights__row[data-key] {
   grid-template-columns: 40px minmax(0, 1fr);
   column-gap: var(--slate-space-2);
   row-gap: var(--slate-space-1);
   padding: var(--slate-space-1) var(--slate-space-2);
 }
 
-.slate-root[data-layers="top"] .slate-weights__wrap {
+.slate-root[data-layers="top"] .slate-weights__wrap,
+.slate-root[data-layers="grid"] .slate-weights__wrap {
   grid-column: 2;
   justify-content: flex-start;
 }
@@ -305,16 +312,20 @@
 /* A row's field, which its line would otherwise size to the input's own
    width; the bar's circumference keeps its width. */
 .slate-root[data-layers="top"] .slate-weights__field[data-kind="weight"],
-.slate-root[data-layers="top"] .slate-weights__field[data-kind="geometry"] {
+.slate-root[data-layers="grid"] .slate-weights__field[data-kind="weight"],
+.slate-root[data-layers="top"] .slate-weights__field[data-kind="geometry"],
+.slate-root[data-layers="grid"] .slate-weights__field[data-kind="geometry"] {
   --slate-field-width: 7em;
 }
 
-.slate-root[data-layers="top"] .slate-weights__computed {
+.slate-root[data-layers="top"] .slate-weights__computed,
+.slate-root[data-layers="grid"] .slate-weights__computed {
   grid-column: 2;
   white-space: normal;
 }
 
-.slate-root[data-layers="top"] .slate-weights__row-note {
+.slate-root[data-layers="top"] .slate-weights__row-note,
+.slate-root[data-layers="grid"] .slate-weights__row-note {
   padding-left: calc(40px + var(--slate-space-2));
 }
 

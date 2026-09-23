@@ -312,8 +312,8 @@
       const resin = text(doc, "span", "slate-timeline__member-resin", "");
       name.appendChild(id);
       name.appendChild(resin);
-      // What goes into the hopper next, where the plan changes it: under a
-      // finger, beside the resin (timeline.css).
+      // What goes into the hopper next, where the plan changes it: on a
+      // phone, beside the resin (timeline.css).
       const next = element(doc, "span", "slate-timeline__member-next", { hidden: "" });
       name.appendChild(next);
       const at = text(doc, "span", "slate-timeline__member-at", "");

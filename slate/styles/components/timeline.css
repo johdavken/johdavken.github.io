@@ -492,12 +492,14 @@
   color: var(--slate-accent-text);
 }
 
-/* What goes into a hopper next, where the plan changes it (under touch). */
+/* What goes into a hopper next, where the plan changes it: a phone's,
+   whose cards span the screen. A tablet's aside is too narrow for it
+   beside the resin and the time. */
 .slate-timeline__member-next {
   display: none;
 }
 
-.slate-root[data-input="touch"] .slate-timeline__member-next:not([hidden]) {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__member-next:not([hidden]) {
   display: inline;
   flex: 0 0 auto;
   color: var(--slate-accent-text);

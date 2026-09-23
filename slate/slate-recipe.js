@@ -409,7 +409,9 @@
 
     function toggleButton(control, hopper) {
       const button = element(doc, "button", `slate-toggle slate-toggle--${control}`, {
-        type: "button", "data-slate-control": control, "data-layer": hopper.layer, "data-index": String(hopper.index), "aria-pressed": "false", "data-able": "false"
+        type: "button", "data-slate-control": control, "data-layer": hopper.layer, "data-index": String(hopper.index), "aria-pressed": "false", "data-able": "false",
+        // Named apart from its word, which the Grid layout can fold away.
+        "aria-label": `Track ${hopper.id}`
       });
       button.appendChild(element(doc, "span", "slate-toggle__dot", { "aria-hidden": "true" }));
       button.appendChild(text(doc, "span", "slate-toggle__label", "Track"));
@@ -532,8 +534,11 @@
       if (body.recipe === "next") show(planStrip, !!model && planned);
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);
-      // How many layers stand side by side on a phone (components/recipe.css).
+      // How many layers stand side by side on a phone, and how many hopper
+      // positions every layer's row has in the Grid layout (components/recipe.css).
       body.layersEl.style.setProperty("--slate-layers", String(model.layers.length));
+      const rows = model.layers.reduce((most, layer) => layer.hoppers.reduce((deepest, hopper) => Math.max(deepest, hopper.index + 1), most), 1);
+      body.layersEl.style.setProperty("--slate-hopper-rows", String(rows));
       let position = 0;
       model.layers.forEach((layer, i) => {
         const block = element(doc, "div", "slate-layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone, "data-recipe": body.recipe });
@@ -626,13 +631,18 @@
       return null;
     }
 
-    /* Compare's band on a phone: where the resin changes, the resin the
-     * hopper becomes on Current, and the one it replaces on Next (the
-     * arrow is the sheet's, data-way). Nothing without Compare. */
+    /* Compare's band on a phone and in the Grid layout: where the resin
+     * changes, the resin the hopper becomes on Current, and the one it
+     * replaces on Next (the arrow is the sheet's, data-way), with its
+     * blend where there is room for it. Nothing without Compare. */
     function paintChange(entry, id, other) {
       const resinChange = !!(other && other.resinDiffers);
       if (resinChange) {
-        entry.next.textContent = other.resin || "—";
+        while (entry.next.firstChild) entry.next.removeChild(entry.next.firstChild);
+        // The resin and its blend apart: where the band is short the resin
+        // gives way and the blend stays whole (components/recipe.css).
+        entry.next.appendChild(text(doc, "span", "slate-hopper__next-resin", other.resin || "—"));
+        if (other.resin && Number(other.pct) > 0) entry.next.appendChild(text(doc, "span", "slate-hopper__next-pct", formatPct(other.pct)));
         entry.next.setAttribute("data-way", id === "next" ? "from" : "to");
         entry.next.setAttribute("title", `${id === "next" ? "Replaces" : "Changes to"} ${other.resin || "nothing"}`);
       }
@@ -668,13 +678,20 @@
           const empty = !String((mine && mine.resinName) || "").trim() && !(other && String(other.resin || "").trim());
           emptyAt.set(entry.index, (emptyAt.has(entry.index) ? emptyAt.get(entry.index) : true) && empty);
           if (line) entry.other.textContent = line;
+          // A resin change is also the band's, which the Grid layout shows in its stead.
+          if (other && other.resinDiffers) entry.other.setAttribute("data-change", "resin");
+          else entry.other.removeAttribute("data-change");
           show(entry.other, !!line);
+          // A cell saying what moves: the Grid layout says it in the weight's place.
+          entry.row.classList.toggle("is-comparing", !!line || !entry.next.hasAttribute("hidden"));
           if (entry.toggles) {
             const last = entry.last || {};
             const offered = trackingModule.offersToggle(mode, {
               planned: !!other, resinDiffers: !!(other && other.resinDiffers), assigned: !!last.assigned, track: !!last.track, pumpOff: !!last.pumpOff
             });
             show(entry.toggles.tracking, offered);
+            // The Grid layout's Compare line leaves Track's column to the pill.
+            entry.row.classList.toggle("is-offering", offered);
           }
         }
         for (const entry of body.rows.values()) entry.row.classList.toggle("is-vacant", !drafting && emptyAt.get(entry.index) === true);
@@ -845,15 +862,16 @@
 
     /* ---- Marks from the run-down (Current only) ---- */
 
+    // Overdue alone: a hopper past its pump-off point with the pump still
+    // running. The run-down's `late` also covers one already pumped off,
+    // which is done, not late - Station's rule too - so it carries no mark.
     function applyMarks(next) {
       marks = next || {};
       for (const [key, entry] of bodies.current.rows) {
         const mark = marks[key] || null;
-        const overdue = !!(mark && mark.overdue);
-        const late = !!(mark && mark.late && !mark.overdue);
+        const overdue = !!(mark && mark.overdue && !mark.pumpOff);
         entry.row.classList.toggle("is-overdue", overdue);
-        entry.row.classList.toggle("is-late", late);
-        entry.mark.textContent = overdue ? "Overdue" : (late ? "Late" : "");
+        entry.mark.textContent = overdue ? "Overdue" : "";
       }
     }
 

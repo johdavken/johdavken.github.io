@@ -175,7 +175,7 @@
    * section is told and nothing is rebuilt. */
   function renderLayout() {
     if (!container) return;
-    const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "left";
+    const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "grid";
     const order = displayController && typeof displayController.getLayerOrder === "function" ? displayController.getLayerOrder() : "forward";
     const tier = tierNow();
     // A phone's column has no room for a layer's head beside its hoppers:
