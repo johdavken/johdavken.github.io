@@ -372,6 +372,51 @@
   font-weight: 500;
 }
 
+/* Under Compare the Left layout's rows have the room to say it on the
+   same line: a column after the resin holds the other recipe's value, so
+   no row grows a second line. The Top, Grid, touch and phone rows (their
+   rules below) keep their own placements. */
+.slate-recipe.is-comparing .slate-hopper[data-recipe="current"] {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.6fr) 72px 96px var(--slate-controls-width) 80px;
+}
+
+.slate-recipe.is-comparing .slate-hopper[data-recipe="next"] {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.6fr) 72px 80px;
+}
+
+.slate-recipe.is-comparing .slate-hopper__other {
+  --slate-other-tag: none;
+  grid-row: 1;
+  grid-column: 3;
+  padding-left: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In the column the arrow stands for the word: to what Current becomes,
+   from what Next replaces. */
+.slate-hopper__other-tag {
+  display: var(--slate-other-tag, inline);
+}
+
+.slate-hopper__other::before {
+  content: var(--slate-other-arrow, none);
+}
+
+.slate-hopper__other[data-way="to"] {
+  --slate-other-arrow: var(--slate-other-to);
+}
+
+.slate-hopper__other[data-way="from"] {
+  --slate-other-arrow: var(--slate-other-from);
+}
+
+.slate-recipe.is-comparing {
+  --slate-other-to: "\2192\2009";
+  --slate-other-from: "\2190\2009";
+}
+
 .slate-layer__share-other {
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
@@ -689,8 +734,15 @@
   display: none;
 }
 
+/* The line under the row, as ever: the Left layout's Compare column
+   (above) is not the Top's. */
 .slate-root[data-layers="top"] .slate-hopper__other {
+  --slate-other-tag: inline;
+  --slate-other-arrow: none;
+  grid-row: auto;
+  grid-column: 1 / -1;
   padding-left: calc(40px + var(--slate-space-2));
+  white-space: normal;
 }
 
 /* ---- Touch ----
@@ -806,7 +858,12 @@
   }
 
   .slate-root[data-input="touch"] .slate-hopper__other {
+    --slate-other-tag: inline;
+    --slate-other-arrow: none;
+    grid-row: auto;
+    grid-column: 1 / -1;
     padding-left: calc(40px + var(--slate-space-2));
+    white-space: normal;
   }
 
   .slate-root[data-input="touch"] .slate-hopper__note {
@@ -1025,6 +1082,8 @@
 }
 
 .slate-root[data-layers="grid"] .slate-hopper__other:not([hidden]) {
+  --slate-other-tag: inline;
+  --slate-other-arrow: none;
   grid-area: weight;
   grid-column: 1 / var(--slate-grid-say-end, -1);
   min-width: 0;
