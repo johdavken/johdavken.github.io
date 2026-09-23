@@ -878,10 +878,12 @@ test("a toggle click dispatches one command with the state wanted; the reset arm
   click(reset);
   assert.deepEqual(commands.calls[1], { command: "resetTracking", args: { recipe: "current" } });
 
-  view.applyMarks({ "A:0": { tracked: true, pumpOff: false, late: true, overdue: true }, "A:1": { tracked: true, pumpOff: false, late: true, overdue: false } });
+  view.applyMarks({ "A:0": { tracked: true, pumpOff: false, late: true, overdue: true }, "A:1": { tracked: true, pumpOff: true, late: true, overdue: false } });
   assert.ok(a1.classList.contains("is-overdue"));
   assert.equal(a1.querySelector(".slate-hopper__mark").textContent, "Overdue");
-  assert.equal(row(view, "A2").querySelector(".slate-hopper__mark").textContent, "Late");
+  // Past its point but pumped off: done, not late - no mark at all.
+  assert.equal(row(view, "A2").querySelector(".slate-hopper__mark").textContent, "");
+  assert.ok(!row(view, "A2").classList.contains("is-overdue") && !row(view, "A2").classList.contains("is-late"));
   view.applyMarks({});
   assert.ok(!a1.classList.contains("is-overdue"));
 });
@@ -1714,6 +1716,15 @@ test("on a phone turning to the other tab lets its cells rise again; with a mous
   assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter")));
 });
 
+test("the section says how many rows the layers share - the deepest layer's - for the Grid layout's columns, with a mouse too", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const layers = view.body("current").querySelector(".slate-recipe__layers");
+  assert.equal(layers.style.getPropertyValue("--slate-layers"), "3");
+  assert.equal(layers.style.getPropertyValue("--slate-hopper-rows"), "6", "layer B has four hoppers; the rows are the deepest layer's");
+  assert.equal(row(view, "A3").style.getPropertyValue("--slate-hopper-slot"), "2");
+});
+
 test("on a phone a cell holds the hopper, its blend and its resin; Compare adds the resin it becomes where the resin changes (on Next, the one it replaces); a position empty in every layer and both recipes is left out, except under Bulk edit", () => {
   const { view } = boot({ phone: true });
   view.update(planWithChanges(), { kind: "structural" });
@@ -1722,11 +1733,22 @@ test("on a phone a cell holds the hopper, its blend and its resin; Compare adds 
   // Without Compare, nothing but the recipe.
   assert.ok(next("A1").hasAttribute("hidden"));
   click(view.element.querySelector("[data-slate-compare]"));
-  assert.equal(next("A1").textContent, "ZZ1");
+  // The resin it becomes, and its blend (the Grid layout shows it; a phone's sheet leaves it out).
+  assert.equal(next("A1").querySelector(".slate-hopper__next-resin").textContent, "ZZ1");
+  assert.equal(next("A1").querySelector(".slate-hopper__next-pct").textContent, "60%");
   assert.equal(next("A1").getAttribute("data-way"), "to");
   assert.ok(next("A2").hasAttribute("hidden"), "an agreeing hopper got a band");
   assert.ok(next("A3").hasAttribute("hidden"), "a blend-only change got a band");
   assert.equal(next("B3").textContent, "—", "a hopper the plan empties");
+  assert.equal(next("B3").querySelector(".slate-hopper__next-pct"), null, "an emptied hopper has no blend to show");
+  // The line under a row says a resin change too; the Grid layout leaves that to the band.
+  assert.equal(row(view, "A1").querySelector(".slate-hopper__other").getAttribute("data-change"), "resin");
+  assert.equal(row(view, "A3").querySelector(".slate-hopper__other").getAttribute("data-change"), null, "a blend-only line was marked a resin change");
+  // A cell that says what moves is marked, for the Grid layout to put it in the weight's place.
+  assert.ok(row(view, "A1").classList.contains("is-comparing") && row(view, "A3").classList.contains("is-comparing"));
+  assert.ok(!row(view, "A2").classList.contains("is-comparing"), "an agreeing hopper was marked");
+  // Track is named on the button itself, so the Grid can fold its word away.
+  assert.equal(row(view, "A1").querySelector("[data-slate-control='tracking']").getAttribute("aria-label"), "Track A1");
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
   assert.equal(next("A1", "next").getAttribute("data-way"), "from");
   click(view.element.querySelector("[data-slate-compare]"));

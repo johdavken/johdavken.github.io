@@ -151,7 +151,8 @@
     const orientationButtons = new Map();
     for (const [mode, label, note] of [
       ["left", "Left", "Beside its hoppers, one layer under another."],
-      ["top", "Top", "Above its hoppers, layers side by side, three across; a fourth and fifth wrap below."]
+      ["top", "Top", "Above its hoppers, layers side by side, three across; a fourth and fifth wrap below."],
+      ["grid", "Grid", "Every layer a row of cells, one per hopper, positions lined up down the page."]
     ]) {
       const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layer-orientation": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));

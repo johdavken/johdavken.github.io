@@ -6,6 +6,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { makeDocument, makeTimers, makeCommands, click } = require("./tools/slate-test/fake-dom.js");
 const timelineModule = require("./slate/slate-timeline.js");
@@ -623,6 +625,11 @@ test("under a finger a row says what goes into its hopper next where the plan ch
   mouse.view.update(withChangeover(NOW, 5, plan));
   const mouseRow = qa(mouse.view, ".slate-timeline__member").find(one => !one.classList.contains("is-off"));
   assert.equal(mouseRow.querySelector(".slate-toggle__label").textContent, "Off");
+  // The sheet shows the next resin on a phone alone: a tablet's aside is
+  // too narrow for it beside the resin and the time.
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "timeline.css"), "utf8");
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-timeline__member-next:not\(\[hidden\]\) \{\n  display: inline;/);
+  assert.doesNotMatch(css, /\.slate-root\[data-input="touch"\] \.slate-timeline__member-next/);
 });
 
 test("on a phone the late block stands above the Now line and the scale starts under it, so nothing lies over the changeover however many are late; the axis takes the height all of it needs; elsewhere the late block pins under Now as before", () => {

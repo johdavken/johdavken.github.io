@@ -30,9 +30,13 @@
  * LAYERS
  *
  * Where a layer's head - its name, role and share - stands on the Recipe
- * and Weights pages. `left`, the default, keeps it in a column beside the
- * layer's hoppers, one layer under another; `top` puts it above them and
- * lays the layers side by side, wrapping when there are more than fit.
+ * and Weights pages. `grid`, the default, makes every layer a row of
+ * self-contained cells, one per hopper, the positions lined up down the
+ * page (the Weights page reads it as `top`); `left` keeps the head in a
+ * column beside the layer's hoppers, one layer under another; `top` puts
+ * it above them and lays the layers side by side, wrapping when there
+ * are more than fit. A record saved without a layout reads `grid`; an
+ * operator's Left or Top is kept.
  * The boot writes the word onto the Slate root as data-layers and the
  * sheets do the rest: nothing is rebuilt, so an open editor or a drag in
  * flight outlives the switch.
@@ -78,11 +82,11 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "grid", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const READ_ONLY_MODES = Object.freeze(["auto", "on", "off"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
-  const LAYER_ORIENTATIONS = Object.freeze(["left", "top"]);
+  const LAYER_ORIENTATIONS = Object.freeze(["left", "top", "grid"]);
   const LAYER_ORDERS = Object.freeze(["forward", "reversed"]);
   const TIMELINE_VIEWS = Object.freeze(["realtime", "list"]);
   const INPUT_MODES = Object.freeze(["auto", "touch", "pointer"]);
