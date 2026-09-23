@@ -45,6 +45,56 @@
     else node.setAttribute("hidden", "");
   }
 
+  /* The switch's sun and moon, drawn in the text's colour (a glyph falls
+   * back to a colour emoji on some systems). */
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const SUN = "M10 6.6a3.4 3.4 0 1 0 0 6.8a3.4 3.4 0 1 0 0-6.8Z M10 2v1.8 M10 16.2V18 M2 10h1.8 M16.2 10H18 M4.3 4.3l1.3 1.3 M14.4 14.4l1.3 1.3 M4.3 15.7l1.3-1.3 M14.4 5.6l1.3-1.3";
+  const MOON = "M16 12.6A6.6 6.6 0 0 1 7.4 4a6.6 6.6 0 1 0 8.6 8.6Z";
+
+  function icon(doc, className, d) {
+    const holder = element(doc, "span", className, { "aria-hidden": "true" });
+    const svg = doc.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("focusable", "false");
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.8");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+    holder.appendChild(svg);
+    return holder;
+  }
+
+  /* The registry's themes grouped into families by name: `<family>-light`
+   * and `<family>-dark` are one family's two halves, in the registry's
+   * order. A theme without its other half is a family of one. */
+  function familiesOf(themes) {
+    const families = [];
+    const byId = new Map();
+    for (const item of themes) {
+      const id = String(item.id).replace(/-(light|dark)$/, "");
+      let family = byId.get(id);
+      if (!family) {
+        family = { id, light: null, dark: null, only: null };
+        byId.set(id, family);
+        families.push(family);
+      }
+      if (item.scheme === "dark" && !family.dark) family.dark = item;
+      else if (item.scheme === "light" && !family.light) family.light = item;
+      else family.only = family.only || item;
+    }
+    return families;
+  }
+
+  /* The half a tile shows: its chosen scheme's, or the only one it has. */
+  function shown(entry) {
+    const family = entry.family;
+    return (entry.scheme === "dark" ? family.dark : family.light) || family.light || family.dark || family.only;
+  }
+
   /**
    * @param {Document} doc
    * @param {object} ctx
@@ -71,11 +121,23 @@
     // Appearance.
     const appearance = element(doc, "section", "slate-settings__group", { "aria-label": "Appearance" });
     appearance.appendChild(text(doc, "h2", "slate-settings__heading", "Appearance"));
+    // One tile per family - a theme's light and dark halves - with a day /
+    // night switch in its corner. The tile shows one half at a time: the
+    // live theme's in its own family, elsewhere the half matching the live
+    // theme's scheme - until its own switch is turned, which it then keeps. Choosing the tile chooses
+    // the half it shows; turning the switch of the live family changes the
+    // theme at once.
     const gallery = element(doc, "div", "slate-settings__themes", { role: "radiogroup", "aria-label": "Theme" });
+    const families = familiesOf(themes);
     const tiles = new Map();
-    for (const item of themes) {
-      const tile = element(doc, "button", "slate-theme-tile", { type: "button", role: "radio", "aria-checked": "false", "data-theme-choice": item.id });
-      const swatch = element(doc, "span", "slate-theme-tile__swatch slate-theme-scope", { "data-theme": item.id, "aria-hidden": "true" });
+    const liveScheme = () => {
+      const live = controller ? themes.find(item => item.id === controller.getTheme()) : null;
+      return live ? live.scheme : "light";
+    };
+    for (const family of families) {
+      const box = element(doc, "div", "slate-theme-tile", { "data-theme-family": family.id });
+      const choose = element(doc, "button", "slate-theme-tile__choose", { type: "button", role: "radio", "aria-checked": "false" });
+      const swatch = element(doc, "span", "slate-theme-tile__swatch slate-theme-scope", { "aria-hidden": "true" });
       swatch.appendChild(element(doc, "span", "slate-theme-tile__swatch-bar"));
       swatch.appendChild(element(doc, "span", "slate-theme-tile__swatch-accent"));
       const preview = element(doc, "span", "slate-theme-tile__preview");
@@ -87,13 +149,33 @@
       preview.appendChild(previewStatus);
       preview.appendChild(element(doc, "span", "slate-theme-tile__preview-action"));
       swatch.appendChild(preview);
-      tile.appendChild(text(doc, "span", "slate-theme-tile__selected-mark", "✓", { "aria-hidden": "true" }));
-      tile.appendChild(swatch);
-      tile.appendChild(text(doc, "span", "slate-theme-tile__name", item.label));
-      tile.appendChild(text(doc, "span", "slate-theme-tile__description", item.description || ""));
-      tile.addEventListener("click", () => { if (controller) controller.setTheme(item.id); });
-      tiles.set(item.id, tile);
-      gallery.appendChild(tile);
+      choose.appendChild(text(doc, "span", "slate-theme-tile__selected-mark", "✓", { "aria-hidden": "true" }));
+      choose.appendChild(swatch);
+      const name = text(doc, "span", "slate-theme-tile__name", "");
+      const description = text(doc, "span", "slate-theme-tile__description", "");
+      choose.appendChild(name);
+      choose.appendChild(description);
+      box.appendChild(choose);
+      const entry = { family, box, choose, swatch, name, description, toggle: null, scheme: null, turned: false };
+      choose.addEventListener("click", () => { if (controller) controller.setTheme(shown(entry).id); });
+      if (family.light && family.dark) {
+        const toggle = element(doc, "button", "slate-theme-tile__toggle", { type: "button", role: "switch", "aria-checked": "false" });
+        toggle.appendChild(icon(doc, "slate-theme-tile__toggle-day", SUN));
+        toggle.appendChild(icon(doc, "slate-theme-tile__toggle-night", MOON));
+        toggle.appendChild(element(doc, "span", "slate-theme-tile__toggle-knob", { "aria-hidden": "true" }));
+        toggle.addEventListener("click", () => {
+          const live = controller ? controller.getTheme() : null;
+          const was = shown(entry).id;
+          entry.scheme = entry.scheme === "dark" ? "light" : "dark";
+          // The live family's switch is the theme's own: it changes at once.
+          if (controller && live === was) controller.setTheme(shown(entry).id);
+          else { entry.turned = true; paint(); }
+        });
+        box.appendChild(toggle);
+        entry.toggle = toggle;
+      }
+      tiles.set(family.id, entry);
+      gallery.appendChild(box);
     }
     appearance.appendChild(gallery);
     if (!controller) appearance.appendChild(text(doc, "p", "slate-settings__note", "The theme cannot be changed on this page."));
@@ -407,10 +489,27 @@
 
     function paint() {
       const selected = controller ? controller.getTheme() : null;
-      for (const [id, tile] of tiles) {
-        const on = id === selected;
-        tile.setAttribute("aria-checked", on ? "true" : "false");
-        tile.classList.toggle("is-selected", on);
+      for (const entry of tiles.values()) {
+        const family = entry.family;
+        const live = [family.light, family.dark, family.only].find(item => item && item.id === selected);
+        // The live family shows the live half; the others keep a turned
+        // switch, or start on the live theme's scheme.
+        if (live) { entry.scheme = live.scheme; entry.turned = false; }
+        else if (!entry.turned) entry.scheme = liveScheme();
+        const item = shown(entry);
+        const on = !!live;
+        entry.choose.setAttribute("data-theme-choice", item.id);
+        entry.choose.setAttribute("aria-checked", on ? "true" : "false");
+        entry.box.classList.toggle("is-selected", on);
+        entry.swatch.setAttribute("data-theme", item.id);
+        if (entry.name.textContent !== item.label) entry.name.textContent = item.label;
+        if (entry.description.textContent !== (item.description || "")) entry.description.textContent = item.description || "";
+        if (entry.toggle) {
+          const night = item.scheme === "dark";
+          entry.toggle.setAttribute("aria-checked", night ? "true" : "false");
+          entry.toggle.setAttribute("aria-label", `${night ? "Night" : "Day"}: ${item.label}`);
+          entry.toggle.setAttribute("title", night ? `Switch to ${family.light.label}` : `Switch to ${family.dark.label}`);
+        }
       }
       const mode = display ? display.getReadOnlyMode() : null;
       for (const [id, button] of modeButtons) {
@@ -465,7 +564,10 @@
     return Object.freeze({
       element: rootEl,
       paint,
-      tile: id => tiles.get(id) || null,
+      // A family's tile - by the family (yaru) or either half (yaru-dark) -
+      // its choosing button and its day / night switch.
+      tile: id => { const entry = tiles.get(String(id).replace(/-(light|dark)$/, "")); return entry ? entry.choose : null; },
+      themeSwitch: id => { const entry = tiles.get(String(id).replace(/-(light|dark)$/, "")); return entry ? entry.toggle : null; },
       mode: id => modeButtons.get(id) || null,
       trackingMode: id => trackingButtons.get(id) || null,
       layerOrientation: id => orientationButtons.get(id) || null,

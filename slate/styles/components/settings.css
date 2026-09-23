@@ -24,16 +24,25 @@
   gap: var(--slate-space-4);
 }
 
+/* A family's tile: the button that chooses the half it shows fills it,
+   and the day / night switch sits in its bottom-right corner. */
 .slate-root .slate-theme-tile {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--slate-space-2);
-  padding: var(--slate-space-3);
   border: 2px solid var(--slate-border-subtle);
   border-radius: var(--slate-radius-lg);
   background: var(--slate-surface-raised);
   transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-theme-tile__choose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  width: 100%;
+  height: 100%;
+  padding: var(--slate-space-3);
+  border-radius: calc(var(--slate-radius-lg) - 2px);
+  text-align: left;
 }
 
 @media (hover: hover) {
@@ -182,9 +191,85 @@
   font-weight: 600;
 }
 
+/* Clear of the switch in the corner. */
 .slate-theme-tile__description {
+  padding-right: calc(var(--slate-theme-switch-width) + var(--slate-space-2));
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
+}
+
+/* ---- The day / night switch ----
+   A pill with the sun and the moon; the knob slides under the half the
+   tile shows (aria-checked is night). */
+
+.slate-settings__themes {
+  --slate-theme-switch-width: 48px;
+}
+
+.slate-root .slate-theme-tile__toggle {
+  position: absolute;
+  right: var(--slate-space-3);
+  bottom: var(--slate-space-3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  width: var(--slate-theme-switch-width);
+  height: 26px;
+  padding: 2px;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: 1;
+}
+
+@media (hover: hover) {
+  .slate-root .slate-theme-tile__toggle:hover {
+    border-color: var(--slate-border-strong);
+  }
+}
+
+.slate-theme-tile__toggle-day,
+.slate-theme-tile__toggle-night {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  transition: color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-theme-tile__toggle-day svg,
+.slate-theme-tile__toggle-night svg {
+  width: 14px;
+  height: 14px;
+}
+
+.slate-theme-tile__toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc((var(--slate-theme-switch-width) - 6px) / 2);
+  height: calc(100% - 4px);
+  border-radius: 999px;
+  background: var(--slate-accent);
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-theme-tile__toggle[aria-checked="false"] .slate-theme-tile__toggle-day,
+.slate-theme-tile__toggle[aria-checked="true"] .slate-theme-tile__toggle-night {
+  color: var(--slate-text-on-accent);
+}
+
+.slate-theme-tile__toggle[aria-checked="true"] .slate-theme-tile__toggle-knob {
+  transform: translateX(100%);
+}
+
+/* A finger's target around the small pill. */
+.slate-root[data-input="touch"] .slate-theme-tile__toggle::after {
+  content: "";
+  position: absolute;
+  inset: -10px -8px;
 }
 
 /* ---- Safety: the read-only mode ---- */
