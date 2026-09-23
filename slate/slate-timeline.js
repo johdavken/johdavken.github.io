@@ -46,6 +46,8 @@
   // tracks a hopper once a plan changes its resin.
   const NONE_TRACKED_AUTOMATIC = "No hoppers tracked. Plan a Next Recipe; hoppers whose resin changes are tracked automatically.";
   const STALE_CHANGEOVER = "Changeover needs confirming";
+  /* On a phone the scale stretches for crowded cards, up to this. */
+  const MAX_PHONE_SPAN = 4000;
   const ALARM_LABEL = "Alarm when pump-off is due";
   const NO_LINE = "No line to project.";
 
@@ -179,7 +181,6 @@
     // seam. Offered under a finger (timeline.css), where the floor UI
     // offers it too, and only when the application says how it stands.
     const alarmButton = text(doc, "button", "slate-switch slate-timeline__alarm", ALARM_LABEL, { type: "button", role: "switch", "aria-checked": "false", hidden: "" });
-    rootEl.appendChild(alarmButton);
     alarmButton.addEventListener("click", () => {
       const on = alarmButton.getAttribute("aria-checked") === "true";
       settle(trackingModule.setAlarm(commands(), !on));
@@ -214,6 +215,12 @@
     const listEl = element(doc, "div", "slate-timeline__list", { hidden: "" });
     rootEl.appendChild(listEl);
 
+    const phoneTier = () => {
+      try { const tier = typeof settings.tier === "function" ? settings.tier() : null; return !!tier && tier.input === "touch" && tier.width === "phone"; } catch (error) { return false; }
+    };
+    const touchTier = () => {
+      try { const tier = typeof settings.tier === "function" ? settings.tier() : null; return !!tier && tier.input === "touch"; } catch (error) { return false; }
+    };
     const chips = element(doc, "div", "slate-timeline__chips", { hidden: "" });
     chips.addEventListener("click", event => {
       const target = event && event.target;
@@ -228,6 +235,8 @@
     const doneList = element(doc, "div", "slate-timeline__done-list");
     done.appendChild(doneList);
     rootEl.appendChild(done);
+    // The alarm's switch stands at the foot, under what it is about.
+    rootEl.appendChild(alarmButton);
 
     const state = {
       inputs: null,
@@ -303,6 +312,10 @@
       const resin = text(doc, "span", "slate-timeline__member-resin", "");
       name.appendChild(id);
       name.appendChild(resin);
+      // What goes into the hopper next, where the plan changes it: under a
+      // finger, beside the resin (timeline.css).
+      const next = element(doc, "span", "slate-timeline__member-next", { hidden: "" });
+      name.appendChild(next);
       const at = text(doc, "span", "slate-timeline__member-at", "");
       // The pill is short - the card is narrow - and its title says the rest.
       const button = element(doc, "button", "slate-toggle slate-toggle--pump slate-timeline__pump", {
@@ -314,7 +327,7 @@
       el.appendChild(name);
       el.appendChild(at);
       el.appendChild(button);
-      built = { el, id, resin, at, button, label };
+      built = { el, id, resin, next, at, button, label };
       state.rows.set(entry.key, built);
       return built;
     }
@@ -324,7 +337,14 @@
       setText(built.resin, entry.resin || "no resin");
       setText(built.at, atText);
       built.button.setAttribute("aria-pressed", entry.pumpOff ? "true" : "false");
-      setText(built.label, entry.pumpOff ? "Back on" : "Off");
+      // Under a finger the pill says what it does ("Pump off"): it stands
+      // beside a hopper still running, where "Off" reads as its state.
+      setText(built.label, entry.pumpOff ? "Back on" : (touchTier() ? "Pump off" : "Off"));
+      const planned = state.inputs && state.inputs.next ? state.inputs.next[entry.key] : null;
+      const nextResin = state.inputs && state.inputs.next ? String((planned && planned.resinName) || "").trim() : null;
+      const changes = nextResin !== null && nextResin.toUpperCase() !== String(entry.resin || "").trim().toUpperCase();
+      if (changes) setText(built.next, `→ ${nextResin || "empty"}`);
+      show(built.next, changes);
       built.button.setAttribute("aria-label", entry.pumpOff ? `Mark ${entry.id}'s pump running again` : `Mark ${entry.id}'s pump off`);
       built.el.classList.toggle("is-overdue", !!entry.overdue);
       built.el.classList.toggle("is-off", !!entry.pumpOff);
@@ -396,11 +416,12 @@
 
     /* The marks down the axis; a label that would run into the changeover
      * line keeps its tick and loses its label. */
-    function paintTicks(marks, avoidY) {
+    function paintTicks(marks, avoidY, origin) {
       clear(ticksEl);
+      const start = Number.isFinite(origin) ? origin : TOP_INSET;
       for (const mark of marks) {
         const tick = element(doc, "div", "slate-timeline__tick", { "data-kind": mark.kind });
-        tick.style.top = px(TOP_INSET + mark.y);
+        tick.style.top = px(start + mark.y);
         const clear = !Number.isFinite(avoidY) || Math.abs(mark.y - avoidY) >= layoutModule.LABEL_EDGE_PX;
         if (mark.label && clear) tick.appendChild(text(doc, "span", "slate-timeline__tick-label", mark.label));
         ticksEl.appendChild(tick);
@@ -551,33 +572,67 @@
     /* The axis: the clock, the cards at their marks, the pinned block,
      * the chips beyond the horizon. */
     function renderAxis(entries, at, keep, fit) {
+      const bottomInsetFor = fit ? CHANGEOVER_INSET : BOTTOM_INSET;
+      /* On a phone the Timeline is a page that scrolls. What is late is
+       * past: its block stands above the Now line, and the time scale - the
+       * ticks, the cards, the changeover - starts under it, so however many
+       * hoppers are late none of it lies over the changeover. The axis
+       * takes the height all of that needs. */
+      const phone = phoneTier();
+      let origin = TOP_INSET;
+      if (phone) {
+        const early = layoutModule.groupEvents(entries, { now: at, windowMs: state.window.windowMs });
+        const late = early.overdue ? cardHeight(Object.assign({ pinned: true }, early.overdue)) + 2 * GAP : 0;
+        origin = TOP_INSET + late;
+        const cards = early.groups.reduce((sum, group) => sum + cardHeight(group) + GAP, 0);
+        // Every run of cards - from any one to the last - stacks from its
+        // first card's instant and must end by the changeover's (or the
+        // axis's end): the scale is stretched until the most crowded run
+        // fits, within reason.
+        const windowMs = state.window.windowMs;
+        const changeoverAt = state.changeover && Number.isFinite(state.changeover.at) && !state.changeover.stale ? state.changeover.at : null;
+        const endFraction = changeoverAt !== null && changeoverAt > at && changeoverAt <= at + windowMs ? (changeoverAt - at) / windowMs : 1;
+        let span = cards;
+        let tail = 0;
+        for (let index = early.groups.length - 1; index >= 0; index -= 1) {
+          const group = early.groups[index];
+          tail += cardHeight(group) + GAP;
+          const fraction = Math.max(0, Math.min(1, group.fraction || 0));
+          span = Math.max(span, tail / Math.max(endFraction - fraction, 0.05));
+        }
+        span = Math.min(span, MAX_PHONE_SPAN);
+        axis.style.minHeight = px(origin + bottomInsetFor + span + GAP);
+      } else if (axis.style.minHeight) {
+        axis.style.minHeight = "";
+      }
       const height = measuredHeight();
       state.height = height;
       const windowMs = state.window.windowMs;
       const bottomInset = fit ? CHANGEOVER_INSET : BOTTOM_INSET;
-      const span = Math.max(height - TOP_INSET - bottomInset, 0);
-      nowLine.style.top = px(TOP_INSET);
+      const span = Math.max(height - origin - bottomInset, 0);
+      nowLine.style.top = px(origin);
 
       const usable = Number.isFinite(state.changeover.at) && !state.changeover.stale && state.changeover.at > at && state.changeover.at <= at + windowMs;
       const changeoverY = usable ? ((state.changeover.at - at) / windowMs) * span : null;
       show(changeoverMark, usable);
       if (usable) {
-        changeoverMark.style.top = px(TOP_INSET + changeoverY);
+        changeoverMark.style.top = px(origin + changeoverY);
         setText(changeoverLabel, `Changeover ${rundownModule.formatClock(state.changeover.at)}`);
       }
-      paintTicks(layoutModule.verticalTicks({ now: at, windowMs, height: span }).marks, changeoverY);
+      paintTicks(layoutModule.verticalTicks({ now: at, windowMs, height: span }).marks, changeoverY, origin);
 
       state.grouped = layoutModule.groupEvents(entries, { now: at, windowMs });
       const grouped = state.grouped;
       const overdueBlock = grouped.overdue ? Object.assign({ pinned: true }, grouped.overdue) : null;
-      state.placed = layoutModule.placeCards(grouped.groups, { height, topInset: TOP_INSET, bottomInset, gap: GAP, cardHeight, pinned: overdueBlock });
+      // A phone's late block is laid above the scale (origin), not on it.
+      state.placed = layoutModule.placeCards(grouped.groups, { height, topInset: origin, bottomInset, gap: GAP, cardHeight, pinned: phone ? null : overdueBlock });
       const placed = state.placed;
 
       // The pinned block: what is late now.
       rootEl.classList.toggle("is-overdue", !!overdueBlock);
       show(pinned, !!overdueBlock);
       if (overdueBlock) {
-        pinned.style.top = px(placed.pinned.y);
+        pinned.style.top = px(phone ? GAP : placed.pinned.y);
         const count = overdueBlock.members.length;
         setText(pinnedWhen, overdueBlock.kind === "empty"
           ? (count > 1 ? `${count} hoppers past their estimated empty` : "Past its estimated empty")
@@ -732,7 +787,7 @@
       paintAlarm();
       const at = now();
       state.inputs = resolved && resolved.line
-        ? { model: resolved.line, hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || {} }
+        ? { model: resolved.line, hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || {}, next: resolved.plan && resolved.plan.planned ? (resolved.nextHopperState || {}) : null }
         : null;
       observe(state.inputs, at);
       const placed = render();

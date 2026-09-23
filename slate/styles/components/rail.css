@@ -116,6 +116,13 @@
   }
 }
 
+.slate-root .slate-rail__item[hidden] {
+  /* The item's own display (flex, above) would out-specify [hidden] in
+     base.css: an unlisted item - an administrator's section with nobody
+     signed in, a phone's Home elsewhere - is not drawn at all. */
+  display: none;
+}
+
 .slate-root .slate-rail__item:active {
   background: var(--slate-surface-selected);
 }

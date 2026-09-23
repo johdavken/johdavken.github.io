@@ -337,6 +337,8 @@ function bootHosted(options) {
   hostEl.setAttribute("data-slate-host", "");
   hostEl.setAttribute("data-slate-app", "");
   hostEl.setAttribute("class", "slate-root");
+  // The host's mark for a visit (slate-host.js), before the boot reads it.
+  if (settings2.visit) hostEl.setAttribute("data-slate-visit", "");
   doc.body.appendChild(hostEl);
   // Zero-delay timers are kept so a test can run Automatic tracking's
   // batch; the Timeline's tick and the notice's timer stay unfired.
@@ -780,7 +782,7 @@ test("the drawer's handle carries a dot while a hopper is overdue and running", 
   assert.equal(handle.classList.contains("is-overdue"), overdue);
 });
 
-test("on a phone the layers stand on top whatever is chosen, the bar moves between pages, Menu raises the rail as a sheet, and Back walks back to the Recipe before it lets the app go", () => {
+test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home and the bar move between pages, Tools and Menu raise sheets, and Back walks back Home before it lets the app go", () => {
   const media = fakeMedia({ coarse: true, width: 412 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media, stored: { layers: "left" } });
   const doc = hostEl.ownerDocument;
@@ -790,10 +792,12 @@ test("on a phone the layers stand on top whatever is chosen, the bar moves betwe
   const aside = hostEl.querySelector("[data-slate-mount='aside']");
   const rail = hostEl.querySelector("[data-slate-mount='rail']");
   const scrim = hostEl.querySelector("[data-slate-scrim]");
+  const tools = hostEl.querySelector(".slate-toolsheet");
   const title = () => hostEl.querySelector(".slate-header__title").textContent;
   const keys = [...hostEl.querySelectorAll("[data-slate-mount='bar'] [data-bar-key]")];
-  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["recipe", "timeline", "weights", "recipe-book", "menu"]);
+  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["weights", "tools", "home", "settings", "menu"]);
   const bar = id => keys.find(one => one.getAttribute("data-bar-key") === id);
+  const step = id => hostEl.querySelector(`[data-home-step='${id}']`);
   const active = () => keys.filter(one => one.classList.contains("is-active")).map(one => one.getAttribute("data-bar-key"));
   const shown = () => hostEl.querySelector("[data-slate-mount='centre']").querySelectorAll(".slate-section").find(one => !one.hasAttribute("hidden"));
   const back = () => {
@@ -801,70 +805,79 @@ test("on a phone the layers stand on top whatever is chosen, the bar moves betwe
     for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  assert.deepEqual(active(), ["recipe"]);
-
-  // The Timeline is a page over the centre: no scrim, no drawer.
-  click(bar("timeline"));
+  // A phone opens on Home.
+  assert.deepEqual(active(), ["home"]);
+  assert.equal(shown().getAttribute("data-section"), "home");
+  // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance; all light Home.
+  click(step("recipe"));
+  assert.equal(shown().getAttribute("data-section"), "recipe");
+  assert.deepEqual(active(), ["home"]);
+  click(bar("home"));
+  click(step("timeline"));
   assert.ok(aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"), "the Timeline's page raised a scrim");
-  assert.deepEqual(active(), ["timeline"]);
+  assert.deepEqual(active(), ["home"]);
   assert.equal(title(), "Timeline");
   click(bar("weights"));
   assert.ok(!aside.classList.contains("is-open"));
   assert.deepEqual(active(), ["weights"]);
   assert.equal(shown().getAttribute("data-section"), "weights");
-  assert.notEqual(title(), "Timeline", "the header still names the Timeline's page");
+  click(bar("settings"));
+  assert.deepEqual(active(), ["settings"]);
+  assert.equal(shown().getAttribute("data-section"), "settings");
+  assert.ok(hostEl.querySelector(".slate-settings__legacy-link"), "Settings has no way back to the floor UI");
 
-  // Menu raises the rail over a scrim; a choice lowers it and a page the bar has no key for lights Menu.
+  // Tools raises its sheet over the scrim; a choice opens the tool and lights Tools.
+  click(bar("tools"));
+  assert.ok(!tools.hasAttribute("hidden"));
+  assert.ok(!scrim.hasAttribute("hidden"));
+  assert.equal(bar("tools").getAttribute("aria-expanded"), "true");
+  assert.deepEqual(tools.querySelectorAll("[data-tool]").map(one => one.getAttribute("data-tool")), ["pressure", "winding-tension"]);
+  click(tools.querySelector("[data-tool='winding-tension']"));
+  assert.ok(tools.hasAttribute("hidden"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.deepEqual(active(), ["tools"]);
+  // Menu raises the rail with everything; the Book, which the bar does not name, lights Menu.
   click(bar("menu"));
   assert.ok(rail.classList.contains("is-open"));
   assert.ok(!scrim.hasAttribute("hidden"));
-  assert.equal(bar("menu").getAttribute("aria-expanded"), "true");
-  click(hostEl.querySelector(".slate-rail__item[data-section='settings']"));
+  click(hostEl.querySelector(".slate-rail__item[data-section='recipe-book']"));
   assert.ok(!rail.classList.contains("is-open"));
-  assert.ok(scrim.hasAttribute("hidden"));
+  assert.ok(!aside.classList.contains("is-open"));
   assert.deepEqual(active(), ["menu"]);
-  assert.equal(title(), "Settings");
-  // An aside tool from the sheet takes the Timeline's page.
-  click(bar("menu"));
-  click(hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
-  assert.ok(aside.classList.contains("is-open"));
-  assert.deepEqual(active(), ["menu"]);
-  assert.equal(title(), "Resin Balance");
-  // The scrim lowers the sheet.
-  click(bar("menu"));
+  // The scrim lowers a sheet.
+  click(bar("tools"));
   click(scrim);
-  assert.ok(!rail.classList.contains("is-open"));
+  assert.ok(tools.hasAttribute("hidden"));
 
-  // Back: the page, then the section, then the app.
+  // Back: a sheet, the page, then the section, then the app.
+  click(bar("tools"));
   let event = back();
+  assert.ok(tools.hasAttribute("hidden"), "Back left the Tools sheet up");
   assert.equal(event.detail.minimize, false);
+  click(step("timeline")); // not on screen, but the step stays wired
+  event = back();
   assert.ok(!aside.classList.contains("is-open"), "Back left the page up");
-  assert.equal(shown().getAttribute("data-section"), "settings");
   event = back();
   assert.equal(event.detail.minimize, false);
-  assert.deepEqual(active(), ["recipe"], "Back did not come home to the Recipe");
+  assert.deepEqual(active(), ["home"], "Back did not come home");
   event = back();
   assert.equal(event.defaultPrevented, true);
   assert.equal(event.detail.minimize, true);
-  // The rail's sheet is on the stack too.
-  click(bar("menu"));
-  event = back();
-  assert.ok(!rail.classList.contains("is-open"));
-  assert.equal(event.detail.minimize, false);
 
   // The drawer's handle does nothing on a phone.
   click(hostEl.querySelector("[data-slate-aside-handle]"));
   assert.ok(!aside.classList.contains("is-open"));
 
-  // Wider again: no page, no sheet, the operator's layout back.
-  click(bar("timeline"));
+  // Wider again: no page, no sheet, the operator's layout back, Home unlisted.
+  click(step("timeline"));
   click(bar("menu"));
   media.change({ width: 1280 });
   assert.equal(hostEl.getAttribute("data-viewport"), "wide");
   assert.equal(hostEl.getAttribute("data-layers"), "left");
   assert.ok(!aside.classList.contains("is-open"));
   assert.ok(!rail.classList.contains("is-open"));
+  assert.ok(hostEl.querySelector(".slate-rail__item[data-section='home']").hasAttribute("hidden"));
   assert.equal(executed.length, 0);
 });
 
@@ -913,4 +926,21 @@ test("Back closes a tool in the Scrap card's place on a phone, where it is a she
   assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
   assert.equal(back(tablet.hostEl.ownerDocument).detail.minimize, true, "a tablet's Back changed");
   assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
+});
+
+test("a visit - the address asked for Slate where the device would have opened the floor UI - offers to open Slate every time; Always makes it this device's choice, Not now only closes; a device that chose, or no visit, is not asked", () => {
+  const offer = hostEl => hostEl.querySelector("[data-slate-offer]");
+  const visit = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }), visit: true });
+  assert.ok(!offer(visit.hostEl).hasAttribute("hidden"));
+  click(offer(visit.hostEl).querySelector("[data-slate-offer-do='always']"));
+  assert.equal(visit.hostEl.slateDisplay.getHostChoice(), "slate");
+  assert.ok(offer(visit.hostEl).hasAttribute("hidden"));
+  const later = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }), visit: true });
+  click(offer(later.hostEl).querySelector("[data-slate-offer-do='dismiss']"));
+  assert.equal(later.hostEl.slateDisplay.getHostChoice(), "auto");
+  assert.ok(offer(later.hostEl).hasAttribute("hidden"));
+  const chose = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }), visit: true, stored: { host: "legacy" } });
+  assert.ok(offer(chose.hostEl).hasAttribute("hidden"), "a device that chose the floor UI was asked");
+  const desk = bootHosted({ linked: false, env: fakeMedia({ coarse: false, width: 1440 }) });
+  assert.ok(offer(desk.hostEl).hasAttribute("hidden"));
 });

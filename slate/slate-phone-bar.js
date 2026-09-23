@@ -1,11 +1,11 @@
 /* The phone's bar: five keys along the foot of the screen.
  *
  * On a phone (data-viewport="phone" under touch, slate/slate-tier.js) the
- * rail gives way to this bar: the three sections an operator moves between
- * all shift - Recipe, Weights, the Recipe Book - the Timeline, which is a
- * page of its own there, and Menu, which raises the rail itself as a sheet
- * for everything else (Resin Balance, the tools, Settings, the
- * administrator's sections).
+ * rail gives way to this bar: Home in the middle - the phone's first page,
+ * the way to the Recipe, the Timeline and Resin Balance - with Weights,
+ * Tools (a sheet of the calculators), Settings, and Menu, which raises the
+ * rail itself as a sheet with everything at once (the Recipe Book, the
+ * administrator's sections among them).
  *
  * The bar never shows anything itself and never reads state: a key asks
  * the boot (`onSelect(id)`), which owns the pages, and the boot marks the
@@ -27,11 +27,12 @@
   const MENU = "menu";
   /* The keys, left to right: a section id (or the Timeline's, or Menu),
    * the word under it, and the rail's glyph for it. */
+  const TOOLS = "tools";
   const KEYS = Object.freeze([
-    Object.freeze({ id: "recipe", label: "Recipe", icon: "recipe" }),
-    Object.freeze({ id: "timeline", label: "Timeline", icon: "timeline" }),
     Object.freeze({ id: "weights", label: "Weights", icon: "weights" }),
-    Object.freeze({ id: "recipe-book", label: "Book", icon: "book" }),
+    Object.freeze({ id: TOOLS, label: "Tools", icon: "tools" }),
+    Object.freeze({ id: "home", label: "Home", icon: "home" }),
+    Object.freeze({ id: "settings", label: "Settings", icon: "settings" }),
     Object.freeze({ id: MENU, label: "Menu", icon: MENU })
   ]);
   const MENU_GLYPH = "M4 6h12M4 10h12M4 14h12";
@@ -73,7 +74,7 @@
     const keys = new Map();
     for (const key of KEYS) {
       const attributes = { type: "button", "data-bar-key": key.id };
-      if (key.id === MENU) Object.assign(attributes, { "aria-haspopup": "dialog", "aria-expanded": "false" });
+      if (key.id === MENU || key.id === TOOLS) Object.assign(attributes, { "aria-haspopup": "dialog", "aria-expanded": "false" });
       const button = element(doc, "button", "slate-bar__key", attributes);
       button.appendChild(glyph(doc, key.icon));
       const label = element(doc, "span", "slate-bar__label");
@@ -106,12 +107,14 @@
       return true;
     }
 
-    function setExpanded(on) {
-      keys.get(MENU).button.setAttribute("aria-expanded", on ? "true" : "false");
+    /* Whether a key's sheet is up: Menu's (the rail) or Tools'. */
+    function setExpanded(on, id) {
+      const key = keys.get(id || MENU);
+      if (key) key.button.setAttribute("aria-expanded", on ? "true" : "false");
     }
 
     return Object.freeze({ element: bar, setActive, setDot, setExpanded, key: id => (keys.has(id) ? keys.get(id).button : null) });
   }
 
-  return Object.freeze({ KEYS, MENU, create });
+  return Object.freeze({ KEYS, MENU, TOOLS, create });
 });

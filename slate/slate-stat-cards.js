@@ -198,7 +198,7 @@
       const trigger = element(doc, "button", "slate-card__trigger", { type: "button", "aria-expanded": "false" });
       trigger.appendChild(text(doc, "span", "slate-card__label", LABEL[field]));
       const value = text(doc, "span", "slate-card__value", EMPTY);
-      const sub = text(doc, "span", "slate-card__sub", "");
+      const sub = text(doc, "span", `slate-card__sub slate-card__sub--${field}`, "");
       trigger.appendChild(value);
       trigger.appendChild(sub);
       card.appendChild(trigger);

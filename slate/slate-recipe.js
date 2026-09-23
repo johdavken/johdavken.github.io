@@ -428,7 +428,11 @@
       row.appendChild(id);
       row.appendChild(resin);
       row.appendChild(pct);
-      const entry = { row, idCell: id, cells: { resin, pct }, toggles: null, mark: null, other: null, note: null, last: null, layer: layer.id, index: hopper.index, hopper: hopper.id };
+      // Compare's band on a phone: the resin this hopper becomes (on Next,
+      // the one it replaces), small, under the cell (components/recipe.css).
+      const next = element(doc, "span", "slate-hopper__next", { hidden: "" });
+      row.appendChild(next);
+      const entry = { row, idCell: id, cells: { resin, pct }, toggles: null, mark: null, other: null, note: null, next, last: null, layer: layer.id, index: hopper.index, hopper: hopper.id };
       if (body.recipe === "current") {
         const weight = text(doc, "span", "slate-hopper__weight", cells.weight);
         const controls = element(doc, "div", "slate-hopper__controls");
@@ -546,6 +550,8 @@
           const entry = buildRow(body, layer, hopper, cellsFor(state.hoppers[key]));
           entry.row.classList.add("slate-row-enter");
           entry.row.style.setProperty("--slate-row-i", String(position));
+          // Its position in the layer, for a wave across a phone's grid.
+          entry.row.style.setProperty("--slate-hopper-slot", String(hopper.index));
           entry.row.addEventListener("animationend", () => entry.row.classList.remove("slate-row-enter", "is-updated"));
           position += 1;
           body.rows.set(key, entry);
@@ -620,6 +626,19 @@
       return null;
     }
 
+    /* Compare's band on a phone: where the resin changes, the resin the
+     * hopper becomes on Current, and the one it replaces on Next (the
+     * arrow is the sheet's, data-way). Nothing without Compare. */
+    function paintChange(entry, id, other) {
+      const resinChange = !!(other && other.resinDiffers);
+      if (resinChange) {
+        entry.next.textContent = other.resin || "—";
+        entry.next.setAttribute("data-way", id === "next" ? "from" : "to");
+        entry.next.setAttribute("title", `${id === "next" ? "Replaces" : "Changes to"} ${other.resin || "nothing"}`);
+      }
+      show(entry.next, resinChange);
+    }
+
     // With a plan, every row knows whether its resin changes at the
     // changeover, on either tab: that carries the row's band and, with
     // the tracking mode, decides whether Track is offered (the rule is
@@ -632,18 +651,22 @@
       for (const id of RECIPES) {
         const body = bodies[id];
         const changes = sourceModule.compareFor(current, id);
+        const own = current ? sourceModule.stateFor(current, id) : null;
+        const drafting = !!(form && form.recipe === id);
+        // A position empty in every layer and in both recipes: a phone
+        // leaves its cells out (components/recipe.css) - except under Bulk
+        // edit, where an empty hopper is one to fill.
+        const emptyAt = new Map();
         const tag = id === "next" ? "Current" : "Next";
         for (const [key, entry] of body.rows) {
           const other = changes ? changes.hoppers[key] : null;
           const line = compare && other ? otherLine(tag, other) : null;
           entry.row.classList.toggle("is-differs", !!(other && other.resinDiffers));
-          // Under Compare a phone's cell turns over to the other recipe
-          // where the resin changes, and the cells where nothing moves
-          // step back (components/recipe.css); elsewhere the classes are
-          // unstyled.
-          const turned = compare && !!(other && other.resinDiffers);
-          entry.row.classList.toggle("is-turned", turned);
-          entry.row.classList.toggle("is-quiet", compare && !line);
+          const mine = own ? own.hoppers[key] : null;
+          // Under Bulk edit the drafts are the cell's news: Compare's band steps aside.
+          paintChange(entry, id, compare && !drafting ? other : null);
+          const empty = !String((mine && mine.resinName) || "").trim() && !(other && String(other.resin || "").trim());
+          emptyAt.set(entry.index, (emptyAt.has(entry.index) ? emptyAt.get(entry.index) : true) && empty);
           if (line) entry.other.textContent = line;
           show(entry.other, !!line);
           if (entry.toggles) {
@@ -654,6 +677,7 @@
             show(entry.toggles.tracking, offered);
           }
         }
+        for (const entry of body.rows.values()) entry.row.classList.toggle("is-vacant", !drafting && emptyAt.get(entry.index) === true);
         for (const [layerId, head] of body.heads) {
           const other = changes ? changes.layers[layerId] : null;
           const line = compare && other && other.differs;
@@ -1384,6 +1408,8 @@
         view
       });
       form = { recipe: body.recipe, body, view: formView, armTimer: null };
+      // Empty hoppers come back to be filled.
+      paintCompare();
       resetFill(body);
       body.bulk.hint.textContent = phone() ? BULK_HINT_PHONE : BULK_HINT;
       show(body.bulk.hint, true);
@@ -1417,6 +1443,7 @@
       const planned = !!(current && current.plan && current.plan.planned);
       show(open.body.foot, open.body.recipe !== "next" || planned);
       applyAbilities();
+      paintCompare();
       if (typeof bulkButton.focus === "function") bulkButton.focus();
     }
 

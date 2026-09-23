@@ -109,6 +109,85 @@ User answers: **B1** (no home page). Bar keys left at the plan's default
   new `enter(field, raw)` / `draft(field)` — the card editors are no longer opened from
   elsewhere (on a narrow tablet the drawer would have stood above them). The hidden-slot
   visibility rules for the card editor and note are gone.
+- **Operator inspection follow-ups (2026-09-22, uncommitted after 474e709).** From a run
+  of the preview APK in the Android emulator (real WebView driven over CDP): the two
+  glances and the two friction points the user picked.
+  - Recipe cells (phone): `.slate-hopper__next` says "→ LD317" on Current / "was LD165"
+    on Next where the resin changes (the weight yields its line, `is-yielding`), and
+    "→77%" where only the blend moves (the ▲n tag beside the blend was dropped after the device showed it crowding the id); changing cells wear an
+    accent edge. No Compare needed.
+  - Timeline (touch): rows say what goes into the hopper next (`→ MS1200`), and the pill
+    reads "Pump off" (a mouse keeps "Off").
+  - Changeover tile (phone): the countdown ("in 4h 59m") under the time.
+  - A visit (host marks `data-slate-visit` when ?view=slate opens where the device, left
+    on automatic, would open the floor UI): Slate offers "Open Slate every time on this
+    device?" - Always sets the host choice, Not now closes.
+  - Landscape phone: new root word `data-orientation` (tier; guard regex widened); the bar
+    becomes a left column, the header and strip share one row, quiet notices hide and
+    others ride as a toast.
+  - Still open from the inspection: turned Compare card lacks the hopper id and shows a
+    doubled border; empty trailing slots; bar over the keyboard; tile label truncation at
+    font ×1.3 and the focus ring after Save; Menu repeats bar keys; Settings theme tiles one
+    per row; "Connect this desktop" on a phone; no brand in the phone header; the floor
+    UI's vibrate(0) console error at every launch.
+- **Tight rows replace the cell grid on a phone (user, same night).** Device screenshots
+  showed the cells could not say a resin change and a blend change together, Compare
+  repeated what the cells said, and five layers crowded the ids. Now: layers stack, one
+  36 px row per hopper - id, resin, `.slate-hopper__next` ("→MS0400"), blend,
+  `.slate-hopper__pct-to` ("→59.5%"), weight - arrows from the sheet via `data-way`
+  (← on Next). A hopper empty in both recipes is `is-vacant` and left out (user: "drop
+  empty"); Bulk edit brings those back and hides the plan's marks beside the drafts. A
+  hopper filled from or emptied to nothing says so by its resin alone. Compare is hidden
+  on a phone; the phone card flip, its token and its test are gone.
+- **Back to cells, the floor UI's way (user: "show less, use the legacy as a guide").**
+  The rows tried to say too much. Now the phone grid mirrors the floor UI's phone grid:
+  one shared grid (layer wrappers `display: contents`, each column from `--slate-layer-i`,
+  `grid-auto-flow: column`) so positions line up across layers; a cell is `id  blend` over
+  `resin` - no weight, no marks. Compare is back and adds one small band under a cell
+  whose resin changes ("→ MS1200"; on Next "← MS0440"; "—" where the plan empties it).
+  Blend-only changes are not shown (as on the floor UI). A position empty in every layer
+  and both recipes is dropped (Bulk edit brings it back). The per-layer ⋯ menu is hidden
+  on a phone (the floor UI's phone has none). Hopper 1's blend is not dimmed there.
+- **Then (user):** no overdue outline on a phone's cells; Compare's band drops in as a
+  split-flap wave (`slate-band-drop`, delay from `--slate-hopper-slot` + `--slate-layer-i`,
+  `--slate-motion-band` in the off-switch); the phone Timeline's axis takes a min-height
+  from its cards and late block (`phoneTier()` in `renderAxis`), the panel grows and the
+  page scrolls - no card over another or over the changeover; its title and changeover
+  line are hidden on a phone (the header and strip say them) and the alarm switch moved to
+  the panel's foot.
+- **Denser Weights on a phone (user).** One ~40 px line per hopper (id, resin, weight
+  field, geometry field, computed weight), head bars instead of side heads, the Smart
+  Hoppers explanation and "shared by every hopper" hidden; hoppers empty in both recipes
+  are `is-vacant` and left out, with a "Show empty hoppers (n)" switch
+  (`state.showEmpty`, never hiding a row being typed in).
+- **Home (user: "a dashboard like legacy where the logo can be shown off").** New
+  `slate/slate-home.js` + `components/home.css`: the turning mark large, the line's name,
+  the changeover (with countdown) and output as big figures that open the cards' editors,
+  and three numbered steps with live lines - hoppers changing resin, late/next on the
+  Timeline, the job's pounds - that open their pages. It reads through `ctx.home` (boot
+  hooks) and dispatches nothing. Phone only: the definition carries `phone: true`, the
+  rail keeps it unlisted elsewhere (`setListed(HOME, page())`), a phone boots onto it,
+  Back walks back to it, and the strip hides on it (`.slate-stats.is-home`, built and
+  unseen so its editors still rise as sheets). Bar keys are now Home · Recipe · Timeline
+  · Weights · Menu (the Book is in the Menu sheet). This answers the plan's B1/B2 question
+  in B2's favour after all.
+- **Desktop bug found and fixed on the way (a deliberate desktop change).** The rail's
+  `.slate-root .slate-rail__item { display: flex }` out-specified base.css's `[hidden]`, so
+  the administrator's three sections were drawn on every desktop rail with nobody signed in
+  (their `hidden` attribute set, the item still shown). `rail.css` now hides
+  `.slate-rail__item[hidden]`; pinned in slate-production-host.test.js.
+- **Home carries the job (user).** On a phone the job's strip leaves every page (built
+  and unseen, so Home's figures still open its editors as sheets); the header keeps the
+  RT Sync trigger alone (no page title, no Legacy link - that moved to the foot of
+  Settings, `.slate-settings__legacy`, phone only). Bar: Weights · Tools · **Home** ·
+  Settings · Menu; Recipe, Timeline and Resin Balance are reached from Home and light
+  Home; Tools raises `.slate-toolsheet` (the calculators); Menu still lists everything;
+  the overdue dot moved to Home.
+- **Timeline overlap, second cause (device screenshot, 15 late).** On a phone the late
+  block now stands above the Now line (it is past) and the scale - ticks, cards,
+  changeover - starts under it (`origin` in `renderAxis`; placeCards gets no pinned block
+  there). The axis's min-height stretches the scale until the most crowded run of cards
+  (any card to the last) fits before the changeover, capped at `MAX_PHONE_SPAN`.
 - **Gates.** Full suite green but the known `privacy-policy` Capacitor test. Parity
   (computed styles, base b252faf served from a `git archive` on 8798) byte-identical at
   1440×900 pointer, 1280×800 / 800×1280 / 933×704 touch; the only differences are the new

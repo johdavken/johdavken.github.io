@@ -601,3 +601,56 @@ test("the pump-off alarm's switch is offered only where the application says how
   old.view.update(withChangeover(NOW, 2, snap => { snap.alarm = { enabled: true }; }));
   assert.ok(q(old.view, ".slate-timeline__alarm").hasAttribute("hidden"));
 });
+
+test("under a finger a row says what goes into its hopper next where the plan changes it, and its pill says Pump off; with a mouse the row and the pill are as they were", () => {
+  const plan = snap => {
+    snap.nextRecipe = { layers: snap.layers.map(layer => ({ name: layer.name, layerPct: layer.layerPct, hoppers: layer.hoppers.map(h => ({ index: h.index, pct: h.pct, resinName: h.resinName })) })) };
+    snap.nextRecipe.layers[0].hoppers[0].resinName = "ZZ9";
+  };
+  const touch = boot({ height: 700, tier: () => ({ input: "touch", width: "phone" }) });
+  touch.view.update(withChangeover(NOW, 5, plan));
+  const rows = qa(touch.view, ".slate-timeline__member");
+  const a1 = rows.find(one => one.getAttribute("data-key") === "A:0");
+  assert.ok(a1, "A1 is not on the timeline");
+  const next = a1.querySelector(".slate-timeline__member-next");
+  assert.ok(!next.hasAttribute("hidden"));
+  assert.equal(next.textContent, "→ ZZ9");
+  const others = rows.filter(one => one !== a1).map(one => one.querySelector(".slate-timeline__member-next"));
+  assert.ok(others.every(one => one.hasAttribute("hidden")), "a hopper the plan keeps named a next resin");
+  const running = rows.find(one => !one.classList.contains("is-off"));
+  assert.equal(running.querySelector(".slate-toggle__label").textContent, "Pump off");
+  const mouse = boot({ height: 700 });
+  mouse.view.update(withChangeover(NOW, 5, plan));
+  const mouseRow = qa(mouse.view, ".slate-timeline__member").find(one => !one.classList.contains("is-off"));
+  assert.equal(mouseRow.querySelector(".slate-toggle__label").textContent, "Off");
+});
+
+test("on a phone the late block stands above the Now line and the scale starts under it, so nothing lies over the changeover however many are late; the axis takes the height all of it needs; elsewhere the late block pins under Now as before", () => {
+  const late = snap => { for (const layer of snap.layers) for (const hopper of layer.hoppers) hopper.track = !!hopper.resinName; };
+  const topOfPx = node => Number(String(node.style.top).replace("px", ""));
+  const phone = boot({ height: 300, tier: () => ({ input: "touch", width: "phone" }) });
+  phone.view.update(withChangeover(NOW, 1, late));
+  const q = selector => phone.view.element.querySelector(selector);
+  const pinned = q(".slate-timeline__pinned");
+  assert.ok(!pinned.hasAttribute("hidden"), "nothing is late in this job");
+  const pinnedBottom = topOfPx(pinned) + timelineModule.cardHeight(Object.assign({ pinned: true }, { members: q(".slate-timeline__pinned").querySelectorAll(".slate-timeline__member") }));
+  const nowTop = topOfPx(q(".slate-timeline__now"));
+  assert.ok(nowTop >= pinnedBottom, `Now (${nowTop}) runs through the late block (to ${pinnedBottom})`);
+  const changeover = q(".slate-timeline__changeover");
+  if (!changeover.hasAttribute("hidden")) assert.ok(topOfPx(changeover) > nowTop, "the changeover stands above Now");
+  const placed = phone.view.placed();
+  for (const card of placed.cards) assert.ok(card.y >= nowTop, "a card stands above Now");
+  if (!changeover.hasAttribute("hidden")) {
+    const last = placed.cards[placed.cards.length - 1];
+    if (last) assert.ok(last.y + last.height <= topOfPx(changeover) + 1, `the last card (to ${last.y + last.height}) runs over the changeover (${topOfPx(changeover)})`);
+  }
+  const need = Number(String(q(".slate-timeline__axis").style.minHeight).replace("px", ""));
+  assert.ok(need >= nowTop + placed.cards.reduce((sum, card) => sum + card.height, 0), "the axis is shorter than its cards");
+  // Elsewhere: pinned under Now, the axis the pane's.
+  const tablet = boot({ height: 300, tier: () => ({ input: "touch", width: "narrow" }) });
+  tablet.view.update(withChangeover(NOW, 1, late));
+  const tq = selector => tablet.view.element.querySelector(selector);
+  assert.equal(tq(".slate-timeline__axis").style.minHeight || "", "", "a tablet's axis grew");
+  assert.equal(topOfPx(tq(".slate-timeline__now")), timelineModule.TOP_INSET);
+  assert.ok(topOfPx(tq(".slate-timeline__pinned")) > timelineModule.TOP_INSET);
+});

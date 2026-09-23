@@ -53,6 +53,7 @@
    * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, getLayerOrientation, setLayerOrientation, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
    * @param {function} [ctx.say]       a line for the operator
+   * @param {function} [ctx.legacy]    () => the floor UI's address, for the way back at the foot
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -293,6 +294,14 @@
     adminBody.appendChild(adminNote);
     adminGroup.appendChild(adminBody);
     rootEl.appendChild(adminGroup);
+
+    // The way back to the floor UI, at the very foot: a phone's header has
+    // no room for it (settings.css shows it there only).
+    const legacyHref = typeof settings.legacy === "function" ? settings.legacy() : "?view=legacy";
+    const legacyFoot = element(doc, "p", "slate-settings__legacy");
+    const legacyLink = text(doc, "a", "slate-settings__legacy-link", "Open Resin.Tools (Legacy)", { href: legacyHref || "?view=legacy" });
+    legacyFoot.appendChild(legacyLink);
+    rootEl.appendChild(legacyFoot);
 
     let adminOpen = false;
     let adminPending = false;

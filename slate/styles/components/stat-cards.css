@@ -286,3 +286,22 @@
   margin: 0 auto;
   box-shadow: var(--slate-shadow-pop);
 }
+
+/* A phone keeps the changeover's countdown ("in 4h 53m") under its time:
+   the figure a glance is for. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__trigger {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__sub--changeover {
+  display: block;
+  flex: 1 0 100%;
+  min-height: 0;
+  font-size: var(--slate-text-xs);
+  text-align: right;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__sub--changeover:empty {
+  display: none;
+}

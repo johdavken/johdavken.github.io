@@ -491,3 +491,28 @@
   background: var(--slate-accent-soft);
   color: var(--slate-accent-text);
 }
+
+/* What goes into a hopper next, where the plan changes it (under touch). */
+.slate-timeline__member-next {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-timeline__member-next:not([hidden]) {
+  display: inline;
+  flex: 0 0 auto;
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* A phone: the header names the page and the job's strip carries the
+   changeover, so the panel's own title and changeover line step aside. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__title,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__changeover-line {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__alarm:not([hidden]) {
+  margin-top: var(--slate-space-3);
+}

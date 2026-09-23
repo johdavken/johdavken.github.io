@@ -59,6 +59,8 @@
   const dismissModule = root.PolynSlateDismiss || null;
   const drawerDragModule = root.PolynSlateDrawerDrag || null;
   const phoneBarModule = root.PolynSlatePhoneBar || null;
+  const homeModule = root.PolynSlateHome || null;
+  const lineModule = root.PolynSlateLine || null;
 
   const shell = root.PolynSlateShell;
   const rail = root.PolynSlateRail;
@@ -91,6 +93,8 @@
   const HARNESS = "Standalone harness: demo data, read-only. The application's Slate view is index.html?view=slate.";
   const DEFAULT_SECTION = "recipe";
   const TIMELINE = "timeline";
+  /* A phone's first page (slate-home.js), listed only there. */
+  const HOME = "home";
   const SCRAP = "scrap";
 
   const mounts = {};
@@ -103,6 +107,9 @@
   const panes = {};
   let railView = null;
   let phoneBar = null;
+  /* Every section the boot defines (start() fills it), for the bar to
+   * know which are tools. */
+  const sectionDefinitions = [];
   let stats = null;
   let summary = null;
   let sync = null;
@@ -178,10 +185,16 @@
     container.setAttribute("data-layer-order", order);
     container.setAttribute("data-input", tier.input);
     container.setAttribute("data-viewport", tier.width);
+    container.setAttribute("data-orientation", tier.orientation || "portrait");
     // Wide again, or a mouse: there is no drawer or page to hold open,
     // and no rail sheet to raise.
     if (asideOpen && !drawer() && !page()) setAside(false);
     if (railOpen && !page()) setRail(false);
+    if (toolsOpen && !page()) setTools(false);
+    // Home is a phone's alone: listed there, and left for the Recipe
+    // when the screen stops being one.
+    if (railView) railView.setListed(HOME, page());
+    if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
     paintBar();
   }
 
@@ -233,7 +246,7 @@
   function paintScrim() {
     const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
     if (!scrim) return;
-    if ((asideOpen && drawer()) || railOpen) scrim.removeAttribute("hidden");
+    if ((asideOpen && drawer()) || railOpen || toolsOpen) scrim.removeAttribute("hidden");
     else scrim.setAttribute("hidden", "");
   }
   function setAside(open) {
@@ -273,13 +286,20 @@
   function paintBar() {
     paintTitle();
     if (!phoneBar || !panes.aside || !sections) return;
+    // The pages Home leads to (the Recipe, the Timeline, Resin Balance)
+    // light Home; a tool lights Tools; what only Menu lists lights Menu.
+    const fromHome = new Set([HOME, DEFAULT_SECTION, TIMELINE, "resin-balance"]);
+    const tools = new Set(sectionDefinitions.filter(one => one.group === "tools").map(one => one.id));
+    let id;
     if (asideOpen) {
       const showing = panes.aside.swap.current();
-      phoneBar.setActive(showing && showing.id !== TIMELINE ? phoneBarModule.MENU : TIMELINE);
-      return;
+      id = showing ? showing.id : TIMELINE;
+    } else {
+      const centre = sections.current();
+      id = centre ? centre.id : DEFAULT_SECTION;
     }
-    const centre = sections.current();
-    const id = centre ? centre.id : DEFAULT_SECTION;
+    if (fromHome.has(id)) id = HOME;
+    else if (tools.has(id)) id = phoneBarModule.TOOLS;
     phoneBar.setActive(phoneBarModule.KEYS.some(key => key.id === id) ? id : phoneBarModule.MENU);
   }
 
@@ -296,15 +316,51 @@
   /* A key on the phone's bar. */
   function onBarKey(id) {
     if (!phoneBarModule) return;
-    if (id === phoneBarModule.MENU) { setRail(!railOpen); return; }
+    if (id === phoneBarModule.MENU) { setTools(false); setRail(!railOpen); return; }
+    if (id === phoneBarModule.TOOLS) { setRail(false); setTools(!toolsOpen); return; }
     setRail(false);
-    if (id === TIMELINE) {
-      panes.aside.swap.show(TIMELINE);
-      setAside(true);
+    setTools(false);
+    goTo(id);
+  }
+
+  /* THE TOOLS SHEET (phone)
+   *
+   * The bar's Tools raises a short sheet of the calculators over the
+   * scrim; a choice opens it where it lives (the pressure conversion in
+   * the Scrap card's place, a sheet itself on a phone; Winding Tension as
+   * the page over the centre). */
+  let toolsOpen = false;
+  let toolsOffStack = null;
+  let toolSheet = null;
+  function setTools(open) {
+    toolsOpen = !!open && page() && !!toolSheet;
+    if (toolsOpen && !toolsOffStack && dismissModule) toolsOffStack = dismissModule.register(() => setTools(false));
+    if (!toolsOpen && toolsOffStack) { const off = toolsOffStack; toolsOffStack = null; off(); }
+    if (toolSheet) {
+      if (toolsOpen) toolSheet.removeAttribute("hidden");
+      else toolSheet.setAttribute("hidden", "");
+    }
+    if (phoneBar && phoneBarModule) phoneBar.setExpanded(toolsOpen, phoneBarModule.TOOLS);
+    paintScrim();
+  }
+
+  /* A page by id: a centre section, or the Timeline or a tool in the
+   * aside, which on a phone is the page over the centre. */
+  function goTo(id) {
+    if (panes.stats && panes.stats.swap.definitions().some(one => one.id === id)) { panes.stats.swap.show(id); return; }
+    const inAside = id === TIMELINE || (panes.aside && panes.aside.swap.definitions().some(one => one.id === id));
+    if (inAside) {
+      panes.aside.swap.show(id);
+      if (drawer() || page()) setAside(true);
       return;
     }
     setAside(false);
     sections.show(id);
+  }
+
+  function refreshHome() {
+    const homeView = sections ? sections.section(HOME) : null;
+    if (homeView && typeof homeView.refresh === "function") homeView.refresh();
   }
 
   /* A drag's position (px from open), or null when it ends: written on the
@@ -326,7 +382,8 @@
     const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
     const dot = handle ? handle.querySelector(".slate-shell__handle-dot") : null;
     const overdue = !!(summary && typeof summary.entries === "function") && summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
-    if (phoneBar) phoneBar.setDot(TIMELINE, overdue);
+    // On a phone the dot is Home's: the Timeline is one of its steps.
+    if (phoneBar) phoneBar.setDot(HOME, overdue);
     if (!dot || !summary || typeof summary.entries !== "function") return;
     if (overdue) dot.removeAttribute("hidden");
     else dot.setAttribute("hidden", "");
@@ -411,6 +468,8 @@
     // Every pane's panels, the Timeline among them, are updated by their
     // swap; the marks the Timeline then holds go to the recipe's rows.
     for (const pane of Object.values(panes)) pane.swap.update(resolved, { kind, own });
+    // Home reads the Timeline, which the aside's swap has just updated.
+    refreshHome();
     if (summary) applyMarks(summary.marks());
     paintHandle();
     renderNotice(resolved);
@@ -429,6 +488,7 @@
 
   function onTick(marks) {
     if (stats) stats.refresh();
+    refreshHome();
     applyMarks(marks);
     paintHandle();
   }
@@ -494,6 +554,8 @@
       lineRateStorage,
       tier: tierNow,
       scan: scanner(),
+      // The floor UI's address, for the way back at the foot of Settings.
+      legacy: () => { const link = container.querySelector(".slate-header__legacy"); return link ? link.getAttribute("href") : "?view=legacy"; },
       // The Timeline's "No weight" on a phone: the Weights page, over it.
       openWeights: () => { setAside(false); if (sections) sections.show("weights"); }
     });
@@ -507,7 +569,32 @@
     // Scrap card does the same for the one tool small enough for a card.
     // Resin Balance is listed with the sections, under the Recipe Book,
     // though it shows in the aside; the two calculators list under Tools.
-    const definitions = [
+    // What Home reads and asks for: the job's cards' words and editors, the
+    // Timeline's entries, the balance's arithmetic, and the way to a page.
+    const homeHooks = Object.freeze({
+      line: resolved => (lineModule && typeof lineModule.lineTitle === "function" ? lineModule.lineTitle(resolved && resolved.line) : ""),
+      readout: field => statCards.display(field, current ? current.job : null, Date.now()),
+      open: field => { if (stats) stats.open(field); },
+      go: id => goTo(id),
+      recipe: resolved => {
+        const changes = resolved ? source.compareFor(resolved, "current") : null;
+        return {
+          line: !!(resolved && resolved.line),
+          planned: !!(resolved && resolved.plan && resolved.plan.planned),
+          resinChanges: changes ? Object.values(changes.hoppers).filter(one => one && one.resinDiffers).length : 0
+        };
+      },
+      timeline: () => (summary && typeof summary.entries === "function" ? summary.entries() : []),
+      balance: resolved => {
+        const inputs = balanceModule && typeof balanceModule.inputsFor === "function" ? balanceModule.inputsFor(resolved) : null;
+        return resinTotals && inputs ? resinTotals.compute(inputs).total : 0;
+      },
+      clock: at => (rundown && typeof rundown.formatClock === "function" ? rundown.formatClock(at) : new Date(at).toLocaleTimeString())
+    });
+
+    const definitions = sectionDefinitions;
+    sectionDefinitions.push(
+      ...(homeModule ? [{ id: HOME, label: homeModule.TITLE, group: "sections", phone: true, icon: "home", create: (d, c) => homeModule.create(d, Object.assign({}, c, { home: homeHooks })) }] : []),
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
@@ -539,7 +626,7 @@
       // The Scrap card, already built and painted by the job's cards: the
       // stats row's home, the way the Timeline is the aside's.
       { id: SCRAP, label: "Scrap", group: "stats", pane: "stats", create: () => ({ element: stats.card(SCRAP).card }) }
-    ];
+    );
     const paneOf = definition => definition.pane || rail.CENTRE;
     const inPane = name => definitions.filter(definition => paneOf(definition) === name);
     const home = name => panes[name].swap.show(panes[name].home);
@@ -547,6 +634,9 @@
     sections = sectionsModule.mountSections(doc, mounts.centre, inPane(rail.CENTRE), ctx, {
       onChange(definition) {
         if (railView) railView.setActive(definition.id);
+        // Home carries the job's figures itself: the strip steps aside
+        // (shell.css), its editors still rising from it as sheets.
+        if (mounts.stats) mounts.stats.classList.toggle("is-home", definition.id === HOME);
         paintBar();
       }
     });
@@ -604,6 +694,26 @@
     if (phoneBarModule && mounts.bar) {
       phoneBar = phoneBarModule.create(doc, { onSelect: onBarKey });
       mounts.bar.appendChild(phoneBar.element);
+      // The Tools key's sheet: one row per calculator the rail lists under Tools.
+      toolSheet = doc.createElement("div");
+      toolSheet.setAttribute("class", "slate-toolsheet");
+      toolSheet.setAttribute("role", "dialog");
+      toolSheet.setAttribute("aria-label", "Tools");
+      toolSheet.setAttribute("hidden", "");
+      const heading = doc.createElement("p");
+      heading.setAttribute("class", "slate-toolsheet__title");
+      heading.textContent = "Tools";
+      toolSheet.appendChild(heading);
+      for (const definition of definitions.filter(one => one.group === "tools")) {
+        const button = doc.createElement("button");
+        button.setAttribute("type", "button");
+        button.setAttribute("class", "slate-toolsheet__item");
+        button.setAttribute("data-tool", definition.id);
+        button.textContent = definition.label;
+        button.addEventListener("click", () => { setTools(false); goTo(definition.id); });
+        toolSheet.appendChild(button);
+      }
+      container.appendChild(toolSheet);
     }
 
     // The administrator's sections appear and vanish with the one session,
@@ -644,10 +754,11 @@
       });
     }
     const scrim = container.querySelector("[data-slate-scrim]");
-    if (scrim) scrim.addEventListener("click", () => { if (railOpen) setRail(false); else setAside(false); });
+    if (scrim) scrim.addEventListener("click", () => { if (toolsOpen) setTools(false); else if (railOpen) setRail(false); else setAside(false); });
     container.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
-      if (railOpen) setRail(false);
+      if (toolsOpen) setTools(false);
+      else if (railOpen) setRail(false);
       else if (asideOpen) setAside(false);
     });
 
@@ -667,10 +778,32 @@
         let handled = dismissModule ? dismissModule.dismissTop() : false;
         if (!handled && page()) {
           const showing = sections.current();
-          if (showing && showing.id !== DEFAULT_SECTION) { sections.show(DEFAULT_SECTION); handled = true; }
+          const first = sections.section(HOME) ? HOME : DEFAULT_SECTION;
+          if (showing && showing.id !== first) { sections.show(first); handled = true; }
         }
         if (!handled && event.detail && typeof event.detail === "object") event.detail.minimize = true;
         event.preventDefault();
+      });
+    }
+
+    /* A VISIT
+     *
+     * The host marks a load where the address asked for Slate but the
+     * device would have opened the floor UI (data-slate-visit). With the
+     * device's choice still automatic, Slate offers to open every time -
+     * the same choice as Settings > This device opens > Slate. */
+    const offerEl = container.querySelector("[data-slate-offer]");
+    if (offerEl && container.hasAttribute("data-slate-visit") && displayController && typeof displayController.getHostChoice === "function" && displayController.getHostChoice() === "auto") {
+      offerEl.removeAttribute("hidden");
+      offerEl.addEventListener("click", event => {
+        const target = event && event.target;
+        const button = target && typeof target.closest === "function" ? target.closest("[data-slate-offer-do]") : null;
+        if (!button) return;
+        if (button.getAttribute("data-slate-offer-do") === "always" && typeof displayController.setHostChoice === "function") {
+          displayController.setHostChoice("slate");
+          say("This device opens Slate from now on. Settings > This device opens changes it.");
+        }
+        offerEl.setAttribute("hidden", "");
       });
     }
 
@@ -710,6 +843,8 @@
     renderLayout();
     if (tierModule) tierModule.observe(root, renderLayout);
     for (const name of Object.keys(panes)) home(name);
+    // A phone opens on Home, as the floor UI's phone does.
+    if (page() && sections.section(HOME)) sections.show(HOME);
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());
   }

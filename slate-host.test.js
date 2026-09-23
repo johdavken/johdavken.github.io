@@ -431,3 +431,12 @@ test("on a touch device the host brings back a zoom the page never asked for - c
   capped.flushTimers();
   assert.equal(capped.meta.getAttribute("content"), "width=device-width,maximum-scale=2", "a page's own maximum-scale was overridden");
 });
+
+test("the host marks a visit - ?view=slate where the device, left to choose, would open the floor UI - and only then", () => {
+  const mark = options => run(ACTIVE, options).body.children.find(node => node.hasAttribute("data-slate-host")).hasAttribute("data-slate-visit");
+  assert.equal(mark({ wide: false, coarse: true, screen: [412, 915] }), true, "a phone's visit");
+  assert.equal(mark({ wide: true }), false, "a desktop opens Slate anyway");
+  assert.equal(mark({ wide: false, roomy: true, coarse: true, screen: [800, 1280] }), false, "a tablet opens Slate anyway");
+  assert.equal(mark({ wide: false, coarse: true, screen: [412, 915], host: "slate" }), false, "the device already chose Slate");
+  assert.equal(mark({ wide: false, coarse: true, screen: [412, 915], host: "legacy" }), false, "the device chose the floor UI");
+});

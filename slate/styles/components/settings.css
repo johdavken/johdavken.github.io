@@ -391,3 +391,23 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__group--layout {
   display: none;
 }
+
+/* The way back to the floor UI at the foot of Settings: a phone's, whose
+   header has no room for it (header.css). */
+.slate-settings__legacy {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__legacy {
+  display: block;
+  margin: var(--slate-space-4) 0 var(--slate-space-5);
+  text-align: center;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__legacy-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--slate-tap);
+  color: var(--slate-text-muted);
+  text-decoration: underline;
+}

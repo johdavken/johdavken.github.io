@@ -226,7 +226,8 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is
   // not drawn.
-  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["workspaces", "line-config", "resins"]);
+  // A phone's Home is built and unlisted too, on a screen that is not one.
+  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "workspaces", "line-config", "resins"]);
   assert.ok(hostEl.querySelector(".slate-rail__divider").hasAttribute("hidden"), "the administrator's rule is drawn with nobody signed in");
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);
@@ -379,4 +380,9 @@ test("with no producer inside the host, the boot names the stale application; on
   assert.equal(harness.querySelector("[data-slate-control='tracking']").getAttribute("data-able"), "false");
   assert.ok(harness.querySelector(".slate-card").classList.contains("is-readonly"));
   assert.ok(harness.querySelector(".slate-sync").hasAttribute("hidden"));
+});
+
+test("the rail's own display rule never out-specifies [hidden]: an unlisted item is not drawn", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/rail.css"), "utf8");
+  assert.match(css, /\.slate-root \.slate-rail__item\[hidden\] \{[^}]*display: none;/);
 });

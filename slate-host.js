@@ -108,7 +108,8 @@
     "slate/styles/components/admin.css",
     "slate/styles/components/pressure.css",
     "slate/styles/components/winding-tension.css",
-    "slate/styles/components/phone.css"
+    "slate/styles/components/phone.css",
+    "slate/styles/components/home.css"
   ];
 
   const SCRIPTS = [
@@ -159,6 +160,7 @@
     "slate/slate-tier.js",
     "slate/slate-rail.js",
     "slate/slate-phone-bar.js",
+    "slate/slate-home.js",
     "slate/slate-sections.js",
     "slate/slate-shell.js",
     "slate/slate.js"
@@ -167,7 +169,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.35.4";
+  const VERSION = "0.42.1";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a
@@ -324,6 +326,13 @@
      * operator's Settings choice with it - and the frame is fluid from the
      * first paint. */
     const touchDevice = nativeApp() || matches("(pointer: coarse)") === true;
+    /* A VISIT
+     *
+     * The address asked for Slate where the device, left to choose, would
+     * have opened the floor UI - a phone following the floor UI's "Slate
+     * (Beta)" link. Slate then offers to open every time (slate.js), since
+     * the Android app has no address bar to come back by. */
+    if (hostChoice() === "auto" && !slateDevice()) host.setAttribute("data-slate-visit", "");
     host.setAttribute("data-input", touchDevice ? "touch" : "pointer");
     host.setAttribute("data-viewport", phoneViewport() ? "phone" : (wideWindow() ? "wide" : "narrow"));
     doc.body.appendChild(host);

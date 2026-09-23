@@ -1701,19 +1701,6 @@ test("on a phone Bulk edit picks a whole cell - its drafts are values there, not
   assert.match(bulkFoot(mouse.view).querySelector(".slate-recipe__bulk-hint").textContent, /^Click a hopper id/);
 });
 
-test("under Compare a cell whose resin changes is turned and the cells where nothing moves step back; Compare off returns them all; a blend-only change is neither", () => {
-  const { view } = boot({ phone: true });
-  view.update(planWithChanges(), { kind: "structural" });
-  const classes = id => ["is-turned", "is-quiet"].filter(name => row(view, id).classList.contains(name));
-  assert.deepEqual(classes("A1"), []);
-  click(view.element.querySelector("[data-slate-compare]"));
-  assert.deepEqual(classes("A1"), ["is-turned"]);
-  assert.deepEqual(classes("A2"), ["is-quiet"]);
-  assert.deepEqual(classes("A3"), [], "a blend-only change turned or stepped back");
-  click(view.element.querySelector("[data-slate-compare]"));
-  for (const id of ["A1", "A2", "A3"]) assert.deepEqual(classes(id), []);
-});
-
 test("on a phone turning to the other tab lets its cells rise again; with a mouse nothing replays", () => {
   const { view } = boot({ phone: true });
   view.update(withPlan(), { kind: "structural" });
@@ -1725,4 +1712,31 @@ test("on a phone turning to the other tab lets its cells rise again; with a mous
   for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
   click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
   assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter")));
+});
+
+test("on a phone a cell holds the hopper, its blend and its resin; Compare adds the resin it becomes where the resin changes (on Next, the one it replaces); a position empty in every layer and both recipes is left out, except under Bulk edit", () => {
+  const { view } = boot({ phone: true });
+  view.update(planWithChanges(), { kind: "structural" });
+  const next = (id, which) => row(view, id, which).querySelector(".slate-hopper__next");
+  assert.equal(view.element.querySelectorAll(".slate-hopper__pct-to, .slate-hopper__delta").length, 0);
+  // Without Compare, nothing but the recipe.
+  assert.ok(next("A1").hasAttribute("hidden"));
+  click(view.element.querySelector("[data-slate-compare]"));
+  assert.equal(next("A1").textContent, "ZZ1");
+  assert.equal(next("A1").getAttribute("data-way"), "to");
+  assert.ok(next("A2").hasAttribute("hidden"), "an agreeing hopper got a band");
+  assert.ok(next("A3").hasAttribute("hidden"), "a blend-only change got a band");
+  assert.equal(next("B3").textContent, "—", "a hopper the plan empties");
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
+  assert.equal(next("A1", "next").getAttribute("data-way"), "from");
+  click(view.element.querySelector("[data-slate-compare]"));
+  assert.ok(next("A1", "next").hasAttribute("hidden"));
+  // Vacant: a position empty in every layer, in both recipes (the demo line's fifth and sixth; layer B has four).
+  const vacant = which => view.body(which).querySelectorAll(".slate-hopper.is-vacant").map(one => one.getAttribute("data-hopper")).sort();
+  assert.deepEqual(vacant("current"), ["A5", "A6", "C5", "C6"]);
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
+  click(bulkButton(view));
+  assert.deepEqual(vacant("current"), []);
+  click(bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']"));
+  assert.deepEqual(vacant("current"), ["A5", "A6", "C5", "C6"]);
 });

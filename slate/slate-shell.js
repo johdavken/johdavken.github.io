@@ -108,6 +108,12 @@
     handle.appendChild(element(doc, "span", "slate-shell__grip", { "aria-hidden": "true" }));
     handle.appendChild(element(doc, "span", "slate-shell__handle-dot", { "aria-hidden": "true", hidden: "" }));
     root.appendChild(handle);
+    // The offer to open Slate every time, on a visit (slate-host.js, slate.js).
+    const offer = element(doc, "div", "slate-offer", { "data-slate-offer": "", role: "region", "aria-label": "Open Slate every time", hidden: "" });
+    offer.appendChild(text(doc, "p", "slate-offer__text", "Open Slate every time on this device?"));
+    offer.appendChild(text(doc, "button", "slate-offer__action slate-offer__action--quiet", "Not now", { type: "button", "data-slate-offer-do": "dismiss" }));
+    offer.appendChild(text(doc, "button", "slate-offer__action", "Always", { type: "button", "data-slate-offer-do": "always" }));
+    root.appendChild(offer);
     // The pump-off alarm's alert, in the floor UI's banner's place (slate.js).
     const alert = element(doc, "div", "slate-alert", { "data-slate-alert": "", role: "alert", hidden: "" });
     alert.appendChild(element(doc, "p", "slate-alert__text"));

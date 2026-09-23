@@ -13,6 +13,10 @@
  *               stays a phone and a tablet under its browser's bars never
  *               becomes one.
  *
+ *   data-orientation  "portrait" | "landscape" - which way the viewport
+ *               stands; only a phone's sheets read it (a phone on its side
+ *               has a short page to spare).
+ *
  * Every tablet rule in the sheets is scoped to those attributes, never to a
  * media query, so there is ONE decider: this file, answering to the
  * operator's Settings choice (slate-display.js `input`). The pointer tier
@@ -40,6 +44,7 @@
   const COARSE = "(pointer: coarse)";
   const WIDE = `(min-width: ${WIDE_MIN}px)`;
   const ROOMY = `(min-width: ${PHONE_MAX_SHORT}px)`;
+  const LANDSCAPE = "(orientation: landscape)";
   const INPUTS = Object.freeze(["touch", "pointer"]);
   const WIDTHS = Object.freeze(["wide", "narrow", "phone"]);
 
@@ -49,8 +54,9 @@
    * @param {boolean} facts.native      inside the Android app
    * @param {number}  facts.width       the viewport's width, CSS px
    * @param {number}  [facts.screenShort] the screen's shorter side, CSS px
+   * @param {boolean} [facts.landscape] the viewport is wider than it is tall
    * @param {string}  [facts.preference] "auto" | "touch" | "pointer"
-   * @returns {{input: string, width: string}}
+   * @returns {{input: string, width: string, orientation: string}}
    */
   function tierFor(facts) {
     const settings = facts || {};
@@ -63,8 +69,9 @@
     // Nothing to measure reads as wide: the desktop's layout, never a
     // drawer or a phone's bar the operator did not ask for.
     const measured = Number.isFinite(width) && width > 0;
-    if ((measured && width < PHONE_MAX_SHORT) || (Number.isFinite(short) && short > 0 && short < PHONE_MAX_SHORT)) return { input, width: "phone" };
-    return { input, width: measured && width < WIDE_MIN ? "narrow" : "wide" };
+    const orientation = settings.landscape === true ? "landscape" : "portrait";
+    if ((measured && width < PHONE_MAX_SHORT) || (Number.isFinite(short) && short > 0 && short < PHONE_MAX_SHORT)) return { input, width: "phone", orientation };
+    return { input, width: measured && width < WIDE_MIN ? "narrow" : "wide", orientation };
   }
 
   function matches(view, query) {
@@ -103,7 +110,7 @@
     } catch (error) {
       screenShort = NaN;
     }
-    return { coarse: matches(view, COARSE), native, width, screenShort };
+    return { coarse: matches(view, COARSE), native, width, screenShort, landscape: matches(view, LANDSCAPE) };
   }
 
   /** Call onChange whenever the pointer or the width class changes.
@@ -111,7 +118,7 @@
   function observe(view, onChange) {
     const stops = [];
     if (!view || typeof view.matchMedia !== "function" || typeof onChange !== "function") return () => {};
-    for (const query of [COARSE, WIDE, ROOMY]) {
+    for (const query of [COARSE, WIDE, ROOMY, LANDSCAPE]) {
       let list = null;
       try { list = view.matchMedia(query); } catch (error) { list = null; }
       if (!list) continue;

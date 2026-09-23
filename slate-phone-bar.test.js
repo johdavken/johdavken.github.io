@@ -20,16 +20,18 @@ function boot() {
   return { doc, bar, asked, keys: bar.element.querySelectorAll("[data-bar-key]") };
 }
 
-test("five keys, left to right - Recipe, Timeline, Weights, Book, Menu - each a button with the rail's glyph and a word", () => {
+test("five keys, left to right - Weights, Tools, Home in the middle, Settings, Menu - each a button with the rail's glyph and a word", () => {
   const { keys } = boot();
-  assert.deepEqual(keys.map(key => key.getAttribute("data-bar-key")), ["recipe", "timeline", "weights", "recipe-book", "menu"]);
-  assert.deepEqual(keys.map(key => key.querySelector(".slate-bar__label").textContent), ["Recipe", "Timeline", "Weights", "Book", "Menu"]);
+  assert.deepEqual(keys.map(key => key.getAttribute("data-bar-key")), ["weights", "tools", "home", "settings", "menu"]);
+  assert.deepEqual(keys.map(key => key.querySelector(".slate-bar__label").textContent), ["Weights", "Tools", "Home", "Settings", "Menu"]);
   for (const key of keys) {
     assert.equal(key.tagName, "BUTTON");
     assert.equal(key.getAttribute("type"), "button");
     assert.ok(key.querySelector("svg.slate-bar__glyph"));
   }
-  assert.equal(keys[0].querySelector("path").getAttribute("d"), rail.GLYPHS.recipe);
+  assert.equal(keys[0].querySelector("path").getAttribute("d"), rail.GLYPHS.weights);
+  assert.equal(keys[2].querySelector("path").getAttribute("d"), rail.GLYPHS.home);
+  assert.equal(keys[1].getAttribute("aria-haspopup"), "dialog", "Tools raises a sheet");
   assert.equal(keys[4].getAttribute("aria-haspopup"), "dialog");
   assert.equal(keys[4].getAttribute("aria-expanded"), "false");
 });
@@ -37,7 +39,7 @@ test("five keys, left to right - Recipe, Timeline, Weights, Book, Menu - each a 
 test("a key only asks: its id goes to onSelect, and nothing is marked until the boot says so", () => {
   const { bar, asked, keys } = boot();
   for (const key of keys) click(key);
-  assert.deepEqual(asked, ["recipe", "timeline", "weights", "recipe-book", "menu"]);
+  assert.deepEqual(asked, ["weights", "tools", "home", "settings", "menu"]);
   assert.ok(keys.every(key => !key.classList.contains("is-active")));
   bar.setActive("weights");
   assert.deepEqual(keys.filter(key => key.classList.contains("is-active")).map(key => key.getAttribute("data-bar-key")), ["weights"]);
@@ -48,16 +50,18 @@ test("a key only asks: its id goes to onSelect, and nothing is marked until the 
 
 test("a key's dot and the Menu's expanded state follow the boot", () => {
   const { bar } = boot();
-  const dot = bar.key("timeline").querySelector(".slate-bar__dot");
+  const dot = bar.key("home").querySelector(".slate-bar__dot");
   assert.ok(dot.hasAttribute("hidden"));
-  assert.equal(bar.setDot("timeline", true), true);
+  assert.equal(bar.setDot("home", true), true);
   assert.ok(!dot.hasAttribute("hidden"));
-  assert.ok(bar.key("timeline").classList.contains("has-dot"));
-  bar.setDot("timeline", false);
+  assert.ok(bar.key("home").classList.contains("has-dot"));
+  bar.setDot("home", false);
   assert.ok(dot.hasAttribute("hidden"));
   assert.equal(bar.setDot("nowhere", true), false);
   bar.setExpanded(true);
   assert.equal(bar.key("menu").getAttribute("aria-expanded"), "true");
+  bar.setExpanded(true, "tools");
+  assert.equal(bar.key("tools").getAttribute("aria-expanded"), "true");
 });
 
 test("the bar reads no state, dispatches nothing and keeps no timer", () => {

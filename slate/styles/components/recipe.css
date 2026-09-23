@@ -783,113 +783,110 @@
   }
 }
 
-/* ---- A phone: the recipe as a grid of cells ----
-   On a phone (the phone tier under touch; the boot stands the layer heads
-   on top) every hopper of the line is on one screen: one column per
-   layer (the section writes --slate-layers), a short head over each, and
-   under it a cell per hopper - its id and blend on the first line, the
-   resin on two more, the weight at the foot. A tap on a cell is its Track
-   on Current (slate-recipe.js); a tracked cell wears the tracking tint.
-   The cells' own editors are left to Bulk edit, whose drafts stand in the
-   cells as values while the fill strip at the foot changes them. */
+/* ---- A phone: the recipe as the floor UI's grid ----
+   On a phone (the phone tier under touch) the recipe reads as the floor
+   UI's phone grid does: one column per layer (the section writes
+   --slate-layers; each layer's --slate-layer-i picks its column), a short
+   head over each, and a cell per hopper with its id and blend on the first
+   line and its resin on the second - nothing else. The layers' wrappers
+   step aside (display: contents) so every column shares the grid's rows
+   and the hoppers of one position line up across the layers. Compare adds
+   a band under the cells whose resin changes: the resin it becomes (on
+   Next, the one it replaces), small. A tap on a cell is its Track on
+   Current. A position empty in every layer and in both recipes is left
+   out (is-vacant, slate-recipe.js). */
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__layers {
   display: grid;
+  grid-auto-flow: column;
   grid-template-columns: repeat(var(--slate-layers, 3), minmax(0, 1fr));
-  align-items: start;
-  gap: var(--slate-space-1);
+  gap: var(--slate-stroke);
+  overflow: hidden;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-border-subtle);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--slate-space-1);
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__rows {
+  display: contents;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "name menu"
-    "share share"
-    "other other"
-    "note note";
+  grid-column: calc(var(--slate-layer-i, 0) + 1);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0;
+  gap: 0 var(--slate-space-1);
   min-height: var(--slate-tap);
-  padding: var(--slate-space-1) 0 var(--slate-space-1) var(--slate-space-2);
-  border-radius: var(--slate-radius);
+  padding: 0 0 0 var(--slate-space-2);
+  border-width: 0 0 0 3px;
+  border-radius: 0;
+  background: var(--slate-surface);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__name {
-  grid-area: name;
-  font-size: var(--slate-text-md);
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__word,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__role {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__role,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__share-other {
   display: none;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__share {
-  grid-area: share;
-  justify-self: start;
   min-height: 0;
   margin: 0;
   padding: 0;
-  font-size: var(--slate-text-sm);
+  font-size: var(--slate-text-md);
+  font-weight: 600;
 }
 
+/* The floor UI's phone has no per-layer menu either: copying or clearing
+   a layer is Bulk edit's there. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu {
-  grid-area: menu;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__share-other {
-  grid-area: other;
-  font-size: var(--slate-text-xs);
+  display: none;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__note {
-  grid-area: note;
+  flex: 1 0 100%;
   font-size: var(--slate-text-xs);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__rows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--slate-space-1);
-  padding: 0;
 }
 
 /* The attribute out-specifies the Top layout's and the container's rows. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
+  grid-column: calc(var(--slate-layer-i, 0) + 1);
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "id pct"
     "resin resin"
-    "weight weight";
+    "next next";
   align-content: start;
   align-items: baseline;
-  column-gap: 2px;
+  column-gap: 3px;
   row-gap: 0;
   min-height: 56px;
-  padding: var(--slate-space-1) 5px;
-  border: var(--slate-stroke) solid var(--slate-border-subtle);
-  border-radius: var(--slate-radius);
+  padding: 6px 5px 5px 6px;
+  border: 0;
+  border-radius: 0;
   background: var(--slate-surface-raised);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-vacant {
+  display: none;
+}
+
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__id {
   grid-area: id;
   display: block;
+  align-self: baseline;
   min-width: 0;
+  color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
   font-weight: 700;
 }
@@ -898,90 +895,87 @@
   grid-area: pct;
   min-height: 0;
   padding: 0;
-  font-size: var(--slate-text-sm);
+  font-size: var(--slate-text-md);
   font-weight: 700;
-  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+
+/* Hopper 1's blend reads as the others do, as on the floor UI's phone. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct[data-derived] {
+  color: inherit;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin {
   grid-area: resin;
-  display: -webkit-box;
+  min-width: 0;
   min-height: 0;
   padding: 0;
   overflow: hidden;
   font-size: var(--slate-text-sm);
-  line-height: 1.2;
-  text-align: left;
-  text-decoration: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__weight {
-  grid-area: weight;
-  font-size: var(--slate-text-xs);
-  text-align: left;
-}
-
-/* Track is the cell itself; the run-down's words have no room in it (the
-   Timeline says them). */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__controls,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__mark {
-  display: none;
-}
-
-/* ---- Compare on a phone: the cells turn over ----
-   Where the resin changes at the changeover the cell turns over, top to
-   bottom, to show the other recipe on its back, one cell after another
-   down the columns; the cells where nothing moves step back. The row
-   itself turns (is-turned, slate-recipe.js): the arrival's animation is
-   taken off each row when it ends, so it never holds the row's transform
-   against the turn. The back is the row's line for the other recipe,
-   laid over the face and turned away until the row turns. */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__rows {
-  perspective: 800px;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
-  transform-style: preserve-3d;
-  transition: transform var(--slate-motion-flip) var(--slate-motion-ease), opacity var(--slate-motion-move) var(--slate-motion-ease);
-  transition-delay: calc(var(--slate-row-i, 0) * var(--slate-motion-lead));
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-turned {
-  transform: rotateX(180deg);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-quiet {
-  opacity: 0.45;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__id,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__weight,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__note {
-  backface-visibility: hidden;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__other:not([hidden]) {
-  position: absolute;
-  inset: calc(-1 * var(--slate-stroke));
-  display: flex;
-  align-items: center;
-  padding: var(--slate-space-1) 5px;
-  border: var(--slate-stroke) solid var(--slate-accent);
-  border-radius: var(--slate-radius);
-  background: linear-gradient(var(--slate-accent-soft), var(--slate-accent-soft)), var(--slate-surface-raised);
-  color: var(--slate-accent-text);
-  font-size: var(--slate-text-sm);
   font-weight: 600;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-  transform: rotateX(180deg);
-  backface-visibility: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Compare's band: the resin the hopper becomes (or replaces), small. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next:not([hidden]) {
+  grid-area: next;
+  display: block;
+  min-width: 0;
+  margin: var(--slate-space-1) -5px -5px -6px;
+  padding: 1px 3px 2px 4px;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next:not([hidden]) {
+  transform-origin: top;
+  animation: slate-band-drop var(--slate-motion-band) var(--slate-motion-ease) both;
+  animation-delay: calc((var(--slate-hopper-slot, 0) + var(--slate-layer-i, 0)) * var(--slate-motion-lead) * 2);
+}
+
+/* The band drops in like a split-flap, one position after another, the
+   wave running down and across the grid. */
+@keyframes slate-band-drop {
+  from {
+    opacity: 0;
+    transform: perspective(300px) rotateX(-90deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next:not([hidden]) {
+    animation: none;
+  }
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next[data-way="to"]::before {
+  content: "\2192\2009";
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next[data-way="from"]::before {
+  content: "\2190\2009";
+}
+
+/* The cell holds the recipe alone: the weight, Track's pill, the
+   run-down's words and Compare's desktop line are elsewhere. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__weight,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__controls,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__mark,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__other {
+  display: none;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__note {
@@ -990,30 +984,26 @@
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-empty {
-  border-style: dashed;
+  background: var(--slate-surface);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-tracked {
-  border-color: var(--slate-tracking);
-  background: color-mix(in srgb, var(--slate-tracking) 16%, var(--slate-surface-raised));
+  background: color-mix(in srgb, var(--slate-tracking) 18%, var(--slate-surface-raised));
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-pump-off {
   background: var(--slate-pump-off-soft);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-overdue {
-  border-color: var(--slate-overdue);
-}
-
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-picked {
-  border-color: var(--slate-accent);
+  box-shadow: inset 0 0 0 2px var(--slate-accent);
 }
 
 /* Bulk edit: a draft is read in its cell, not typed there - a tap picks
    the cell, and the fill strip at the foot changes what is picked. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft {
   grid-area: resin;
+  min-width: 0;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-resin,
@@ -1045,12 +1035,6 @@
 
 /* A phone: the tabs and switches keep a finger's height and give up
    width, so the whole row fits a phone's. */
-@media (prefers-reduced-motion: reduce) {
-  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
-    transition: none;
-  }
-}
-
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-tabs__tab,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-switch,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__trigger {
@@ -1058,7 +1042,7 @@
 }
 
 /* The dotted underline that says a cell edits is the touch tier's; a
-   phone's cell tracks instead. */
+   phone's row tracks instead. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin[data-able],
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct[data-able] {
   text-decoration: none;

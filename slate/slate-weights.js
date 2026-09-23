@@ -244,6 +244,11 @@
     // full name as its label, and the row of labels only repeated them.
     const layersEl = element(doc, "div", "slate-weights__layers");
     rootEl.appendChild(layersEl);
+    // A phone leaves out the hoppers empty in both recipes (weights.css);
+    // this brings them back - a weight is the equipment's, empty or not.
+    const showEmpty = text(doc, "button", "slate-weights__show-empty", "", { type: "button", hidden: "", "aria-pressed": "false" });
+    rootEl.appendChild(showEmpty);
+    showEmpty.addEventListener("click", () => { state.showEmpty = !state.showEmpty; paintRows(true); });
     const emptyLine = text(doc, "p", "slate-weights__empty", NO_LINE, { hidden: "" });
     rootEl.appendChild(emptyLine);
 
@@ -280,7 +285,7 @@
 
     const state = {
       resolved: null, smart: actionsModule.smartFrom(null), shape: null, measure: null, built: false,
-      editing: null, committing: null, rows: new Map(),
+      editing: null, committing: null, rows: new Map(), showEmpty: false,
       book: null, selectedId: null, entry: null, confirm: null, moreOpen: false, pending: null, duplicate: null
     };
 
@@ -591,9 +596,16 @@
     }
 
     function paintRows(own) {
+      const planned = !!(state.resolved && state.resolved.plan && state.resolved.plan.planned);
+      const nextOf = key => (planned && state.resolved.nextHopperState && state.resolved.nextHopperState[key]) || {};
+      let vacant = 0;
       for (const [key, entry] of state.rows) {
         const runtime = runtimeOf(key);
         const assigned = !!(runtime.resinName && String(runtime.resinName).trim());
+        const unused = !assigned && !String(nextOf(key).resinName || "").trim();
+        if (unused) vacant += 1;
+        // Never a row being typed in.
+        entry.row.classList.toggle("is-vacant", unused && !state.showEmpty && !(state.editing && state.editing.key === key));
         const resinText = assigned ? String(runtime.resinName) : EMPTY;
         if (entry.resin.textContent !== resinText) entry.resin.textContent = resinText;
         entry.resin.classList.toggle("is-placeholder", !assigned);
@@ -603,6 +615,9 @@
         paintComputed(entry, key);
       }
       patchField(circumferenceInput, "circumference", KIND.circumference, own);
+      show(showEmpty, vacant > 0);
+      showEmpty.textContent = state.showEmpty ? "Hide empty hoppers" : `Show empty hoppers (${vacant})`;
+      showEmpty.setAttribute("aria-pressed", state.showEmpty ? "true" : "false");
     }
 
     function applyAbilities() {

@@ -44,6 +44,7 @@
     gauge: "M3 15a7 7 0 0 1 14 0M10 15l4-5M10 15h.01",
     weights: "M10 3v3M6 6h8l2 11H4ZM7.5 11.5h5",
     winding: "M8 10a5 5 0 1 0 10 0a5 5 0 1 0-10 0M13 10h.01M2 10h5M4.5 7.5 7 10l-2.5 2.5",
+    home: "M3 9.5 10 3.5l7 6V17h-4.5v-4.5h-5V17H3Z",
     workspaces: "M10 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM5 12.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM15 12.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4M8.8 7.4 6.2 11M11.2 7.4l2.6 3.6",
     lines: "M3 6h4M11 6h6M3 12h8M15 12h2M9 4v4M13 10v4",
     resins: "M8 3h4M9 3v4.5L5.6 14.8a1 1 0 0 0 .9 1.5h7a1 1 0 0 0 .9-1.5L11 7.5V3M7.6 11h4.8",
@@ -122,7 +123,8 @@
         list.appendChild(divider);
       }
       const button = item(doc, definition);
-      if (definition.admin) button.setAttribute("hidden", "");
+      // An administrator's section, and a phone's own (Home), wait to be listed.
+      if (definition.admin || definition.phone) button.setAttribute("hidden", "");
       items.set(definition.id, button);
       list.appendChild(button);
     }

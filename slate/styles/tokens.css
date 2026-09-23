@@ -99,8 +99,8 @@
   --slate-motion-move: 220ms;
   --slate-motion-lead: 30ms;
   --slate-motion-flash: 600ms;
-  /* A phone's cell turning over under Compare (components/recipe.css). */
-  --slate-motion-flip: 600ms;
+  /* Compare's band dropping in on a phone (components/recipe.css). */
+  --slate-motion-band: 360ms;
   --slate-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -115,7 +115,7 @@
     --slate-motion-move: 0ms;
     --slate-motion-lead: 0ms;
     --slate-motion-flash: 0ms;
-    --slate-motion-flip: 0ms;
+    --slate-motion-band: 0ms;
   }
 }
 
