@@ -1,0 +1,157 @@
+/* A phone (touch, data-viewport="phone"; slate/slate-tier.js): the bar
+   along the foot of the screen, and the one shape every popover takes
+   there - a sheet risen from the foot. Each component's own sheet keeps
+   its phone rules for its contents; the geometry of the sheet is here,
+   once.
+
+   The bar (slate-phone-bar.js): five keys - Recipe, Timeline, Weights,
+   Book, Menu. Built everywhere, seen only on a phone under touch, where it
+   takes the shell's last row (shell.css) and stands clear of the gesture
+   bar. */
+
+.slate-bar {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-bar {
+  grid-area: bar;
+  display: block;
+  padding-bottom: var(--slate-inset-bottom);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  background: var(--slate-surface);
+}
+
+.slate-bar__keys {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.slate-root .slate-bar__key {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: var(--slate-bar-height);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  line-height: var(--slate-line-tight);
+  transition: color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-bar__key:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-bar__key.is-active {
+  color: var(--slate-accent-text);
+  font-weight: 600;
+}
+
+/* The glyph sits in a pill that fills in for the current key. */
+.slate-bar__glyph {
+  width: 44px;
+  height: 26px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-bar__key.is-active .slate-bar__glyph {
+  background: var(--slate-accent-soft);
+}
+
+.slate-bar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A key's dot: the Timeline's when a hopper is overdue. */
+.slate-bar__dot {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 12px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--slate-overdue);
+}
+
+/* ---- Sheets ----
+   The job's editors and pickers, the calculators, the pressure
+   conversion (in the Scrap card's place elsewhere), the layer's menu, the
+   Scan menu and the RT Sync panel: anchored to what opened them they
+   would run off a phone's screen, so there each rises from the foot, the
+   screen's width, over the bar, clear of the gesture bar - and above the
+   keyboard, which shortens the page on a phone (slate-host.js). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 32;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: 85dvh;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--slate-space-4) var(--slate-space-4) calc(var(--slate-space-4) + var(--slate-inset-bottom));
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-bottom: 0;
+  border-radius: var(--slate-radius-lg) var(--slate-radius-lg) 0 0;
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  animation: slate-sheet-rise var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+@keyframes slate-sheet-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root .slate-bar__key,
+  .slate-bar__glyph {
+    transition: none;
+  }
+
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
+    animation: none;
+  }
+}
+
+/* The pressure conversion is a tool, not a passing popover: it stays up
+   until its close or Back (slate.js), so it stands above the bar, which
+   stays in reach. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure {
+  bottom: calc(var(--slate-bar-height) + var(--slate-inset-bottom));
+  padding-bottom: var(--slate-space-4);
+  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
+}

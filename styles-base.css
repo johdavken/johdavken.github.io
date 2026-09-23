@@ -876,6 +876,9 @@ body[data-theme-family="gruvbox"] .baseGlyph{display:none}
      itself is never rendered on desktop even if reached some other way. */
   #workspaceNavNotes,
   #notesBlock{ display: none !important; }
+  /* Slate (Beta) is the touch shell's way in: a desktop window opens Slate
+     on its own (slate-host.js). */
+  #workspaceNavSlate{ display: none !important; }
   .workspaceContent > .workspacePanel.card,
   .workspaceContent > .workspacePanel.card[open]{
     border: 1px solid transparent;

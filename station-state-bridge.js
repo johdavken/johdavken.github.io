@@ -257,6 +257,12 @@
         geometryMode,
         circumference: finite(state.hopperCircumference)
       },
+      /* The pump-off alarm, as this device has it: the floor UI's "Alarm
+       * when pump-off is due" switch (a local preference, saved with the
+       * session, never synced). */
+      alarm: {
+        enabled: !!state.mobileTimelineAlarm
+      },
       layers: layers.map(layer => ({
         name: String((layer && layer.name) || ""),
         layerPct: finite(layer && layer.layerPct),

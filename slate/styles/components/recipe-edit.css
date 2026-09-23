@@ -657,3 +657,27 @@
 .slate-root[data-input="touch"] .slate-scan__item[aria-disabled="true"] {
   color: var(--slate-text-disabled);
 }
+
+/* ---- A phone: Bulk edit docked at the foot ----
+   The fill strip, what would change, Cancel and Apply stand at the foot
+   of the scrolling page, over the cells, where the thumb is - and above
+   the keyboard, which shortens the page on a phone (slate-host.js). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__bulk-foot {
+  position: sticky;
+  bottom: calc(-1 * var(--slate-space-3));
+  z-index: 2;
+  margin: var(--slate-space-3) calc(-1 * var(--slate-space-3)) calc(-1 * var(--slate-space-3));
+  padding: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__fill-field {
+  flex: 1 1 100%;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__fill-pct {
+  flex: 1 1 6em;
+  min-width: 0;
+}

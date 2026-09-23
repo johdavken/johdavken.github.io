@@ -32,6 +32,7 @@
   const SET = "Set";
   const CLEAR = "Clear";
   const CANCEL = "Cancel";
+  const CALCULATE = "Calculate";
   const CLOSE = "Close";
   const BAD_MINUTE = "Minutes must be 0 to 59.";
   const UNAVAILABLE = "The changeover cannot be set on this page.";
@@ -92,6 +93,8 @@
    * @param {function} [options.able]      () -> { ok, reason } for Set and Clear
    * @param {function} [options.onChange]  told (open) whenever it opens or closes
    * @param {Element} [options.anchor]     what opens it: a press there is not "outside", and focus returns to it
+   * @param {function} [options.calculate] opens the changeover's calculator: offered as a key on
+   *        a phone, whose card has no room for the calculator's own button (time-picker.css)
    * @param {object} [options.view]        the document, for a press outside
    */
   function create(doc, options) {
@@ -155,6 +158,11 @@
     const clearButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-time__clear", CLEAR, { type: "button", "data-time": "clear" });
     const cancelButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", CANCEL, { type: "button", "data-time": "cancel" });
     const setButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", SET, { type: "button", "data-time": "set" });
+    if (typeof settings.calculate === "function") {
+      const calcButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-time__calc", CALCULATE, { type: "button", "data-time-calc": "" });
+      calcButton.addEventListener("click", () => { close(); settings.calculate(); });
+      actions.appendChild(calcButton);
+    }
     actions.appendChild(clearButton);
     actions.appendChild(cancelButton);
     actions.appendChild(setButton);

@@ -1,7 +1,7 @@
 {
   "styles-base.css": {
-    "v": "0.77.0",
-    "hash": "e6c182a01b9b3394"
+    "v": "0.77.2",
+    "hash": "8bab7e10b5cd99c7"
   },
   "styles-hoppers.css": {
     "v": "0.76.1",
@@ -32,8 +32,8 @@
     "hash": "00e9473779ca552a"
   },
   "styles-shell.css": {
-    "v": "0.76.1",
-    "hash": "0f27125a7d4c6689"
+    "v": "0.76.2",
+    "hash": "2a011bbd1e50541a"
   },
   "styles-responsive.css": {
     "v": "0.76.0",

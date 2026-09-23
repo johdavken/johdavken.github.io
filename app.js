@@ -2150,6 +2150,23 @@
       }
     }
 
+    // What turning the alarm on asks of the browser, in the operator's own
+    // tap: the audio woken, one tick of vibration, the service worker, and
+    // the notification permission. Shared by the floor UI's toggle and the
+    // presentation layers' setTimelineAlarm command.
+    async function primeTimelineAlarm(){
+      try{
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass){
+          pumpOffAudioContext ||= new AudioContextClass();
+          await pumpOffAudioContext.resume();
+        }
+        navigator.vibrate?.(1);
+        if ("serviceWorker" in navigator) await navigator.serviceWorker.register("service-worker.js");
+        if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
+      }catch(_error){}
+    }
+
     // Sound/vibrate are only meaningful for the native full-screen alarm
     // (see syncNativeTimelineAlarms below) - the web-only in-page beep has no
     // sound choice, so the Change/Preview/Vibrate controls stay hidden there.
@@ -2206,6 +2223,14 @@
       playPumpOffAlarm();
       showPumpOffNotification(item);
       document.querySelector(".pumpOffAlarmBanner")?.remove();
+      // A presentation layer over the app (Slate) hides the floor UI and
+      // with it this banner: it is asked first, and shows its own when it
+      // cancels the event. Dismiss stops the vibration either way.
+      const asked = new CustomEvent("polyn:pump-off-alert", {
+        cancelable: true,
+        detail: { hopper: item.hopperLabel, resin: item.resinName || "", dismiss: () => navigator.vibrate?.(0) }
+      });
+      if (!document.dispatchEvent(asked)) return;
       const banner = document.createElement("div");
       banner.className = "pumpOffAlarmBanner";
       banner.setAttribute("role","alert");
@@ -10354,6 +10379,20 @@
         return done(true, persisted);
       },
 
+      /* The pump-off alarm: this device's preference, as the floor UI's
+       * "Alarm when pump-off is due" toggle flips it - applied, the alerts
+       * rescheduled by the compute's tail, saved, never synced. Turning it
+       * on asks the browser what the toggle asks (primeTimelineAlarm), and
+       * then the Android app's alarm permissions, after the change is
+       * made: the command's own answer never waits on a permission. */
+      setTimelineAlarm(args){
+        if (!!state.mobileTimelineAlarm === args.enabled) return unchanged();
+        applyMobileTimelineAlarm(args.enabled);
+        const persisted = commit({ sync: false, grid: false, hookups: false });
+        if (args.enabled) primeTimelineAlarm().then(() => requestNativeTimelineAlarmPermission()).catch(() => {});
+        return done(true, persisted);
+      },
+
       /* The two moves between the recipes, each the floor UI's own function
        * with its own tail (Load Next Recipe, Load Current Recipe): the plan
        * promoted over the running recipe - weights, tracking, pump-off and
@@ -11323,18 +11362,7 @@
 
     $("mobileTimelineAlarmToggle")?.addEventListener("change",async event=>{
       const enabled = !!event.target.checked;
-      if (enabled){
-        try{
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (AudioContextClass){
-            pumpOffAudioContext ||= new AudioContextClass();
-            await pumpOffAudioContext.resume();
-          }
-          navigator.vibrate?.(1);
-          if ("serviceWorker" in navigator) await navigator.serviceWorker.register("service-worker.js");
-          if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
-        }catch(_error){}
-      }
+      if (enabled) await primeTimelineAlarm();
       applyMobileTimelineAlarm(enabled);
       validateAndCompute({ sync:false });
       saveSession();

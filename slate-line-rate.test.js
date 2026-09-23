@@ -7,7 +7,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { makeDocument, click, key, makeCommands } = require("./tools/slate-test/fake-dom.js");
+const { makeDocument, makeEvent, click, key, makeCommands } = require("./tools/slate-test/fake-dom.js");
 const lineRate = require("./slate/slate-line-rate.js");
 const estimate = require("./line-rate-estimate.js");
 const cards = require("./slate/slate-stat-cards.js");
@@ -124,6 +124,45 @@ test("a refusal keeps the estimate open with the application's words; an unable 
  * -------------------------------------------------------------------- */
 
 const ALL = ["setChangeover", "setLineRate", "setProductionPounds", "setScrapPounds"];
+
+test("on a phone the sheets offer the calculators the tiles have no room for: the Line rate editor's Calculate and the picker's send nothing, close what was open and open the card's calculator", () => {
+  const doc = makeDocument();
+  const commands = makeCommands({ capabilities: ALL });
+  const view = cards.create(doc, {
+    commands: () => commands, now: () => Date.now(),
+    estimate: require("./changeover-estimate.js"), estimateStorage: storage(), lineRate: estimate, lineRateStorage: storage(), resins: () => CATALOG
+  });
+  doc.body.appendChild(view.element);
+  view.update(RESOLVED);
+  // The typed editor says what it edits, and its Calculate comes first.
+  const rate = view.card("rate");
+  assert.equal(rate.editor.querySelector(".slate-card__editor-title").textContent, "Line rate");
+  const calc = rate.editor.querySelector("[data-slate-card-action='calc']");
+  assert.equal(calc.textContent, "Calculate");
+  assert.ok(calc.parentNode.firstChild === calc);
+  // The draft left behind is not committed by the blur the press causes.
+  view.open("rate");
+  rate.input.value = "999";
+  const press = makeEvent("pointerdown", { pointerType: "touch" });
+  calc.dispatchEvent(press);
+  assert.equal(press._defaultPrevented, true, "the press would take the field's focus and commit its draft");
+  rate.input.dispatchEvent(makeEvent("blur"));
+  click(calc);
+  assert.equal(view.editing(), null);
+  assert.ok(view.calculator("rate").isOpen());
+  assert.deepEqual(commands.calls, []);
+  // Only the calculators' own cards carry one.
+  assert.equal(view.card("production").editor.querySelector("[data-slate-card-action='calc']"), null);
+  // The picker's Calculate closes it unsent and opens the changeover's calculator.
+  click(view.card("changeover").trigger);
+  const picker = view.picker();
+  assert.ok(picker.isOpen());
+  assert.ok(!view.calculator("rate").isOpen(), "two things stood open together");
+  click(picker.element.querySelector("[data-time-calc]"));
+  assert.ok(!picker.isOpen());
+  assert.ok(view.calculator("changeover").isOpen());
+  assert.deepEqual(commands.calls, [], "Calculate on the picker set the changeover");
+});
 
 test("the Line rate card carries its own calculator; the blend average comes from the live recipe and the catalog; Use sends one setLineRate; the two calculators, the picker and the editors never stand open together", () => {
   const doc = makeDocument();

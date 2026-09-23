@@ -21,7 +21,7 @@ const GOOD = { recipe: "current", layer: "A", index: 1, pct: 25, resin: "HX204",
 
 test("the approved command vocabulary, and nothing else", () => {
   assert.deepEqual([...contract.COMMANDS],
-    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"]);
+    ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "undo", "redo", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "setTimelineAlarm", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments"]);
   assert.ok(Object.isFrozen(contract.COMMANDS));
   assert.deepEqual([...contract.RECIPES], ["current", "next"]);
   assert.deepEqual([...contract.JOB_COMMANDS], ["setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds"]);
@@ -487,7 +487,10 @@ test("the bulk geometry list follows the weight list's rules: non-empty, capped,
 test("the circumference is the line's one value - no recipe, no position - and the switch is the device's preference, a boolean", () => {
   assert.deepEqual([...contract.ARGUMENTS.setHopperCircumference], ["circumference"]);
   assert.deepEqual([...contract.ARGUMENTS.setSmartHoppers], ["enabled"]);
-  assert.deepEqual([...contract.PREFERENCE_COMMANDS], ["setSmartHoppers"]);
+  assert.deepEqual([...contract.PREFERENCE_COMMANDS], ["setSmartHoppers", "setTimelineAlarm"]);
+  assert.deepEqual([...contract.ARGUMENTS.setTimelineAlarm], ["enabled"]);
+  assert.deepEqual(contract.normalizeArguments("setTimelineAlarm", { enabled: true, recipe: "current" }).args, { enabled: true });
+  assert.equal(contract.normalizeArguments("setTimelineAlarm", {}).field, "enabled");
   assert.ok(Object.isFrozen(contract.PREFERENCE_COMMANDS));
   assert.ok(contract.EQUIPMENT_COMMANDS.includes("setHopperCircumference"));
   assert.ok(!contract.EQUIPMENT_COMMANDS.includes("setSmartHoppers"));

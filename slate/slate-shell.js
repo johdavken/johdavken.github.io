@@ -19,7 +19,7 @@
 
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists. */
-  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside"]);
+  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside", "bar"]);
 
   const TOO_SMALL = "Slate needs a window at least 1100px wide. Use Resin.Tools (Legacy) on this screen.";
 
@@ -95,6 +95,8 @@
     shell.appendChild(element(doc, "section", "slate-stats", { "data-slate-mount": "stats", "aria-label": "Job" }));
     shell.appendChild(element(doc, "section", "slate-centre", { "data-slate-mount": "centre", "aria-label": "Workspace" }));
     shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline", id: "slate-aside" }));
+    // A phone's bar along the foot (slate-phone-bar.js): seen only there.
+    shell.appendChild(element(doc, "nav", "slate-bar", { "data-slate-mount": "bar", "aria-label": "Pages" }));
 
     root.appendChild(shell);
     // Behind the aside's drawer: a press on it closes the drawer.
@@ -106,6 +108,11 @@
     handle.appendChild(element(doc, "span", "slate-shell__grip", { "aria-hidden": "true" }));
     handle.appendChild(element(doc, "span", "slate-shell__handle-dot", { "aria-hidden": "true", hidden: "" }));
     root.appendChild(handle);
+    // The pump-off alarm's alert, in the floor UI's banner's place (slate.js).
+    const alert = element(doc, "div", "slate-alert", { "data-slate-alert": "", role: "alert", hidden: "" });
+    alert.appendChild(element(doc, "p", "slate-alert__text"));
+    alert.appendChild(text(doc, "button", "slate-alert__dismiss", "Dismiss", { type: "button" }));
+    root.appendChild(alert);
     return root;
   }
 

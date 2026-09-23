@@ -23,7 +23,7 @@ test("the shell is one detached slate-root carrying every mount exactly once, an
     assert.equal(root.querySelectorAll(`[data-slate-mount='${name}']`).length, 1, `mount ${name}`);
   }
   assert.equal(root.querySelectorAll("main").length, 0);
-  assert.deepEqual([...shell.MOUNTS], ["rail", "header", "notice", "sync", "stats", "centre", "aside"]);
+  assert.deepEqual([...shell.MOUNTS], ["rail", "header", "notice", "sync", "stats", "centre", "aside", "bar"]);
   // Landmarks: nav, header, two sections, an aside - each labelled.
   assert.equal(root.querySelector("[data-slate-mount='rail']").tagName, "NAV");
   assert.equal(root.querySelector("[data-slate-mount='header']").tagName, "HEADER");

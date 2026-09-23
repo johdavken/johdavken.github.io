@@ -783,6 +783,256 @@
   }
 }
 
+/* ---- A phone: the recipe as a grid of cells ----
+   On a phone (the phone tier under touch; the boot stands the layer heads
+   on top) every hopper of the line is on one screen: one column per
+   layer (the section writes --slate-layers), a short head over each, and
+   under it a cell per hopper - its id and blend on the first line, the
+   resin on two more, the weight at the foot. A tap on a cell is its Track
+   on Current (slate-recipe.js); a tracked cell wears the tracking tint.
+   The cells' own editors are left to Bulk edit, whose drafts stand in the
+   cells as values while the fill strip at the foot changes them. */
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__layers {
+  display: grid;
+  grid-template-columns: repeat(var(--slate-layers, 3), minmax(0, 1fr));
+  align-items: start;
+  gap: var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name menu"
+    "share share"
+    "other other"
+    "note note";
+  align-items: center;
+  gap: 0;
+  min-height: var(--slate-tap);
+  padding: var(--slate-space-1) 0 var(--slate-space-1) var(--slate-space-2);
+  border-radius: var(--slate-radius);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__name {
+  grid-area: name;
+  font-size: var(--slate-text-md);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__word,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__role {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__share {
+  grid-area: share;
+  justify-self: start;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu {
+  grid-area: menu;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__share-other {
+  grid-area: other;
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__note {
+  grid-area: note;
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: 0;
+}
+
+/* The attribute out-specifies the Top layout's and the container's rows. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "id pct"
+    "resin resin"
+    "weight weight";
+  align-content: start;
+  align-items: baseline;
+  column-gap: 2px;
+  row-gap: 0;
+  min-height: 56px;
+  padding: var(--slate-space-1) 5px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__id {
+  grid-area: id;
+  display: block;
+  min-width: 0;
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct {
+  grid-area: pct;
+  min-height: 0;
+  padding: 0;
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin {
+  grid-area: resin;
+  display: -webkit-box;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-sm);
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__weight {
+  grid-area: weight;
+  font-size: var(--slate-text-xs);
+  text-align: left;
+}
+
+/* Track is the cell itself; the run-down's words have no room in it (the
+   Timeline says them). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__controls,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__mark {
+  display: none;
+}
+
+/* ---- Compare on a phone: the cells turn over ----
+   Where the resin changes at the changeover the cell turns over, top to
+   bottom, to show the other recipe on its back, one cell after another
+   down the columns; the cells where nothing moves step back. The row
+   itself turns (is-turned, slate-recipe.js): the arrival's animation is
+   taken off each row when it ends, so it never holds the row's transform
+   against the turn. The back is the row's line for the other recipe,
+   laid over the face and turned away until the row turns. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__rows {
+  perspective: 800px;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
+  transform-style: preserve-3d;
+  transition: transform var(--slate-motion-flip) var(--slate-motion-ease), opacity var(--slate-motion-move) var(--slate-motion-ease);
+  transition-delay: calc(var(--slate-row-i, 0) * var(--slate-motion-lead));
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-turned {
+  transform: rotateX(180deg);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-quiet {
+  opacity: 0.45;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__id,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__weight,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__note {
+  backface-visibility: hidden;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__other:not([hidden]) {
+  position: absolute;
+  inset: calc(-1 * var(--slate-stroke));
+  display: flex;
+  align-items: center;
+  padding: var(--slate-space-1) 5px;
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  background: linear-gradient(var(--slate-accent-soft), var(--slate-accent-soft)), var(--slate-surface-raised);
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  transform: rotateX(180deg);
+  backface-visibility: hidden;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__note {
+  grid-column: 1 / -1;
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-empty {
+  border-style: dashed;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-tracked {
+  border-color: var(--slate-tracking);
+  background: color-mix(in srgb, var(--slate-tracking) 16%, var(--slate-surface-raised));
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-pump-off {
+  background: var(--slate-pump-off-soft);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-overdue {
+  border-color: var(--slate-overdue);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-picked {
+  border-color: var(--slate-accent);
+}
+
+/* Bulk edit: a draft is read in its cell, not typed there - a tap picks
+   the cell, and the fill strip at the foot changes what is picked. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft {
+  grid-area: resin;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-resin,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct {
+  --slate-field-padding: 0;
+  --slate-field-border: 0;
+  --slate-field-bg: transparent;
+  --slate-field-min-height: 0;
+  pointer-events: none;
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-h1 {
+  grid-area: pct;
+  width: 5ch;
+  font-weight: 700;
+}
+
 /* ---- Layers the other way round ----
    The Layer order preference (data-layer-order on the root): every card
    carries its index from the section, and reversed runs them backwards -
@@ -791,4 +1041,25 @@
 
 .slate-root[data-layer-order="reversed"] .slate-layer {
   order: calc(-1 * var(--slate-layer-i, 0));
+}
+
+/* A phone: the tabs and switches keep a finger's height and give up
+   width, so the whole row fits a phone's. */
+@media (prefers-reduced-motion: reduce) {
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
+    transition: none;
+  }
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-tabs__tab,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-switch,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__trigger {
+  padding: 0 var(--slate-space-3);
+}
+
+/* The dotted underline that says a cell edits is the touch tier's; a
+   phone's cell tracks instead. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin[data-able],
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct[data-able] {
+  text-decoration: none;
 }

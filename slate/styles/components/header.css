@@ -88,3 +88,23 @@
   line-height: var(--slate-line-tight);
   white-space: normal;
 }
+
+/* ---- A phone ----
+   A short header: the section's name, the way back and the RT Sync
+   trigger on one line; a notice, when there is one, on its own line
+   beneath them rather than squeezed between. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title {
+  /* No basis: the name takes what the way back and the sync trigger
+     leave on the first line, and ellipsises, rather than wrap them. */
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-lg);
+  text-overflow: ellipsis;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__notice {
+  order: 1;
+  flex: 1 0 100%;
+  margin-bottom: var(--slate-space-2);
+}

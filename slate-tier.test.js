@@ -24,25 +24,51 @@ test("the preference wins; automatic is touch on a coarse pointer or in the app;
   assert.equal(tier.tierFor(null).input, "pointer");
 });
 
+test("a phone is a screen whose shorter side is under PHONE_MAX_SHORT, or a window narrower than that, in either orientation", () => {
+  assert.equal(tier.PHONE_MAX_SHORT, 600);
+  const host = fs.readFileSync(path.join(__dirname, "slate-host.js"), "utf8");
+  assert.match(host, new RegExp(`const TABLET_MIN_SHORT = ${tier.PHONE_MAX_SHORT};`), "the host's tablet short side is the tier's phone line");
+  assert.deepEqual(tier.WIDTHS, ["wide", "narrow", "phone"]);
+  // Pixel-class portrait and landscape, the Z Fold's cover screen.
+  assert.deepEqual(tier.tierFor({ coarse: true, width: 412, screenShort: 412 }), { input: "touch", width: "phone" });
+  assert.deepEqual(tier.tierFor({ coarse: true, width: 915, screenShort: 412 }), { input: "touch", width: "phone" });
+  assert.equal(tier.tierFor({ coarse: true, width: 374, screenShort: 374 }).width, "phone");
+  // A tablet stays a tablet, whatever its browser's bars leave of the height.
+  assert.equal(tier.tierFor({ coarse: true, width: 960, screenShort: 600 }).width, "narrow");
+  assert.equal(tier.tierFor({ coarse: true, width: 600, screenShort: 800 }).width, "narrow");
+  assert.equal(tier.tierFor({ coarse: true, width: 933, screenShort: 704 }).width, "narrow", "the unfolded Fold");
+  assert.equal(tier.tierFor({ coarse: true, width: 1280, screenShort: 800 }).width, "wide");
+  // A tablet's window in split screen, narrower than a phone's short side.
+  assert.equal(tier.tierFor({ coarse: true, width: 500, screenShort: 800 }).width, "phone");
+  // A mouse is told the same word; the sheets style the phone only under touch.
+  assert.deepEqual(tier.tierFor({ coarse: false, width: 500 }), { input: "pointer", width: "phone" });
+  // Nothing to measure is never a phone.
+  assert.equal(tier.tierFor({ coarse: true, width: NaN, screenShort: NaN }).width, "wide");
+  assert.equal(tier.tierFor({ coarse: true, width: 1440, screenShort: 0 }).width, "wide");
+});
+
 test("probe reads the window it is handed and survives one that throws", () => {
-  assert.deepEqual(tier.probe(null), { coarse: false, native: false, width: NaN });
-  assert.deepEqual(tier.probe({ innerWidth: 900 }), { coarse: false, native: false, width: 900 });
-  const view = { matchMedia: query => ({ matches: query === "(pointer: coarse)" }), Capacitor: { isNativePlatform: () => true } };
-  assert.deepEqual(tier.probe(view), { coarse: true, native: true, width: 1099 });
-  const hostile = { matchMedia() { throw new Error("no"); }, get Capacitor() { throw new Error("no"); } };
-  assert.deepEqual(tier.probe(hostile), { coarse: false, native: false, width: NaN });
+  assert.deepEqual(tier.probe(null), { coarse: false, native: false, width: NaN, screenShort: NaN });
+  assert.deepEqual(tier.probe({ innerWidth: 900 }), { coarse: false, native: false, width: 900, screenShort: NaN });
+  const view = { matchMedia: query => ({ matches: query === "(pointer: coarse)" || query === "(min-width: 600px)" }), Capacitor: { isNativePlatform: () => true }, screen: { width: 800, height: 1280 } };
+  assert.deepEqual(tier.probe(view), { coarse: true, native: true, width: 1099, screenShort: 800 });
+  const phone = { matchMedia: query => ({ matches: query === "(pointer: coarse)" }), screen: { width: 412, height: 915 } };
+  assert.deepEqual(tier.probe(phone), { coarse: true, native: false, width: 599, screenShort: 412 });
+  assert.equal(tier.tierFor(tier.probe(phone)).width, "phone");
+  const hostile = { matchMedia() { throw new Error("no"); }, get Capacitor() { throw new Error("no"); }, get screen() { throw new Error("no"); } };
+  assert.deepEqual(tier.probe(hostile), { coarse: false, native: false, width: NaN, screenShort: NaN });
   assert.equal(tier.tierFor(tier.probe(hostile)).width, "wide", "a query that throws must not read as a narrow window");
   assert.equal(tier.probe({ matchMedia() { throw new Error("no"); }, innerWidth: 800 }).width, 800);
 });
 
-test("observe listens to both queries and its unsubscribe removes every listener", () => {
+test("observe listens to every query and its unsubscribe removes every listener", () => {
   const lists = [];
   const view = { matchMedia(query) { const set = new Set(); const list = { query, set, addEventListener: (t, fn) => set.add(fn), removeEventListener: (t, fn) => set.delete(fn) }; lists.push(list); return list; } };
   let heard = 0;
   const stop = tier.observe(view, () => { heard += 1; });
-  assert.deepEqual(lists.map(one => one.query), ["(pointer: coarse)", "(min-width: 1100px)"]);
+  assert.deepEqual(lists.map(one => one.query), ["(pointer: coarse)", "(min-width: 1100px)", "(min-width: 600px)"]);
   for (const list of lists) for (const fn of list.set) fn();
-  assert.equal(heard, 2);
+  assert.equal(heard, 3);
   stop();
   assert.ok(lists.every(list => list.set.size === 0));
   assert.equal(typeof tier.observe(null, () => {}), "function");
@@ -65,7 +91,7 @@ test("every tablet rule is scoped to the root's touch tier, and the pointer tier
     for (const match of sheet.css.matchAll(/([^{}]*)\{/g)) {
       for (const selector of match[1].split(",").map(one => one.trim()).filter(Boolean)) {
         if (!/data-(input|viewport)/.test(selector)) continue;
-        assert.match(selector, /^\.slate-root\[data-input="touch"\](\[data-viewport="narrow"\])? \.slate-[a-z_-]+/, `${sheet.name}: "${selector}" is not scoped to the root's touch tier`);
+        assert.match(selector, /^\.slate-root\[data-input="touch"\](\[data-viewport="(narrow|phone)"\])? \.slate-[a-z_-]+/, `${sheet.name}: "${selector}" is not scoped to the root's touch tier`);
       }
     }
     assert.doesNotMatch(sheet.css, /data-input="pointer"|data-viewport="wide"/, `${sheet.name} styles the pointer tier, which is the sheet itself`);

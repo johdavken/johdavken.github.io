@@ -25,7 +25,10 @@
  *
  *   1. the device's own choice (slate-display.js `host`), which the Android
  *      app needs since it has no address bar: `legacy` is the floor UI
- *      everywhere; `slate` is Slate anywhere but a phone's screen;
+ *      everywhere; `slate` is Slate everywhere, a phone's screen included
+ *      (the phone tier, slate/slate-tier.js) - a phone gets there only by
+ *      choosing it, from the floor UI's "Slate (Beta)" link and then
+ *      Slate's Settings;
  *   2. otherwise the device: Slate on a desktop's window (at least
  *      MIN_WIDTH wide, outside the app), on a tablet's screen with a touch
  *      pointer, and in the Android app on a tablet's screen; the floor UI
@@ -104,7 +107,8 @@
     "slate/styles/components/resin-balance.css",
     "slate/styles/components/admin.css",
     "slate/styles/components/pressure.css",
-    "slate/styles/components/winding-tension.css"
+    "slate/styles/components/winding-tension.css",
+    "slate/styles/components/phone.css"
   ];
 
   const SCRIPTS = [
@@ -154,6 +158,7 @@
     "slate/slate-winding-tension.js",
     "slate/slate-tier.js",
     "slate/slate-rail.js",
+    "slate/slate-phone-bar.js",
     "slate/slate-sections.js",
     "slate/slate-shell.js",
     "slate/slate.js"
@@ -162,7 +167,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.34.0";
+  const VERSION = "0.35.4";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a
@@ -206,6 +211,21 @@
     return Math.min(width, height) >= TABLET_MIN_SHORT && Math.max(width, height) >= TABLET_MIN_LONG;
   }
 
+  /* A phone, by slate/slate-tier.js's rule: a screen whose shorter side is
+   * under a tablet's (TABLET_MIN_SHORT), or a window narrower than that.
+   * Only for the provisional mark; nothing to measure is not a phone. */
+  function phoneViewport() {
+    const roomy = matches(`(min-width: ${TABLET_MIN_SHORT}px)`);
+    if (roomy === false) return true;
+    try {
+      const width = Number(root.screen && root.screen.width);
+      const height = Number(root.screen && root.screen.height);
+      return width > 0 && height > 0 && Math.min(width, height) < TABLET_MIN_SHORT;
+    } catch (error) {
+      return false;
+    }
+  }
+
   /* The device's own choice (slate-display.js), when it made one. */
   function hostChoice() {
     try {
@@ -222,9 +242,9 @@
   function slateDevice() {
     const choice = hostChoice();
     if (choice === "legacy") return false;
+    if (choice === "slate") return true;
     const native = nativeApp();
     const tablet = tabletScreen();
-    if (choice === "slate") return tablet || (!native && wideWindow());
     if (native) return tablet;
     if (wideWindow()) return true;
     return tablet && matches("(pointer: coarse)") === true;
@@ -305,7 +325,7 @@
      * first paint. */
     const touchDevice = nativeApp() || matches("(pointer: coarse)") === true;
     host.setAttribute("data-input", touchDevice ? "touch" : "pointer");
-    host.setAttribute("data-viewport", wideWindow() ? "wide" : "narrow");
+    host.setAttribute("data-viewport", phoneViewport() ? "phone" : (wideWindow() ? "wide" : "narrow"));
     doc.body.appendChild(host);
 
     // Set last: the moment this lands, host.css hides the application shell,
@@ -314,7 +334,25 @@
 
     STYLESHEETS.forEach(linkStylesheet);
     SCRIPTS.forEach(loadScript);
+    if (touchDevice && phoneViewport()) keyboardResizes();
     if (touchDevice) settleZoom();
+  }
+
+  /* THE KEYBOARD ON A PHONE
+   *
+   * A phone's editors are sheets at the foot of the screen
+   * (components/phone.css). By default a browser lays the keyboard over
+   * the page and leaves the page its full height, so a sheet at the foot
+   * would stand under the keyboard. Told `interactive-widget=
+   * resizes-content`, it shortens the page to what the keyboard leaves,
+   * and the sheet rises above it. Only on a phone, and only while Slate is
+   * the view: leaving Slate loads the page afresh with its own tag. */
+  function keyboardResizes() {
+    const meta = doc.querySelector ? doc.querySelector("meta[name='viewport']") : null;
+    if (!meta) return;
+    const content = meta.getAttribute("content") || "";
+    if (/interactive-widget/.test(content)) return;
+    meta.setAttribute("content", content ? `${content},interactive-widget=resizes-content` : "interactive-widget=resizes-content");
   }
 
   /* ZOOM

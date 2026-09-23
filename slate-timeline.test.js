@@ -64,7 +64,9 @@ function boot(options) {
     trackingMode: () => trackingMode,
     timelineView: () => timelineView,
     onCommitted: result => committed.push(result),
-    say: message => said.push(message)
+    say: message => said.push(message),
+    tier: settings.tier,
+    openWeights: settings.openWeights
   });
   doc.body.appendChild(view.element);
   const axis = view.element.querySelector(".slate-timeline__axis");
@@ -553,4 +555,49 @@ test("a hurried double tap on Pump off is one tap: a finger's second tap on the 
   click(pill, { timeStamp: 1000, pointerType: "mouse" });
   click(pill, { timeStamp: 1100, pointerType: "mouse" });
   assert.equal(mouse.commands.calls.length, 2, "a mouse's quick second click was swallowed");
+});
+
+test("on a phone a hopper's No weight chip opens Weights; elsewhere, and for any other reason, a chip is only words", () => {
+  const opened = [];
+  const noWeight = snap => { snap.layers[2].hoppers[1].effectiveWeight = 0; };
+  const phone = boot({ height: 700, tier: () => ({ input: "touch", width: "phone" }), openWeights: () => opened.push("weights") });
+  phone.view.update(withChangeover(NOW, 2, noWeight));
+  const chip = q(phone.view, ".slate-timeline__chip.is-unavailable");
+  assert.equal(chip.textContent, "C2 · No weight");
+  assert.ok(chip.hasAttribute("data-slate-weights"));
+  click(chip);
+  assert.deepEqual(opened, ["weights"]);
+  const tablet = boot({ height: 700, tier: () => ({ input: "touch", width: "narrow" }), openWeights: () => opened.push("tablet") });
+  tablet.view.update(withChangeover(NOW, 2, noWeight));
+  click(q(tablet.view, ".slate-timeline__chip.is-unavailable"));
+  assert.deepEqual(opened, ["weights"], "a chip off a phone opened Weights");
+  // Another reason names no page.
+  const other = boot({ height: 700, tier: () => ({ input: "touch", width: "phone" }), openWeights: () => opened.push("other") });
+  other.view.update(withChangeover(NOW, 2, snap => { snap.job.lineRate = 0; }));
+  const chips = qa(other.view, ".slate-timeline__chip.is-unavailable");
+  assert.ok(chips.length > 0);
+  assert.ok(chips.every(one => !one.hasAttribute("data-slate-weights")));
+});
+
+test("the pump-off alarm's switch is offered only where the application says how it stands and offers the command; a tap asks for the opposite, read-only or not", () => {
+  const commands = makeCommands({ capabilities: ["setPumpOff", "setHopperTracking", "resetTracking", "setTimelineAlarm"] });
+  const { view, committed } = boot({ height: 700, commands, readOnly: true });
+  const button = q(view, ".slate-timeline__alarm");
+  view.update(withChangeover(NOW, 2));
+  assert.ok(button.hasAttribute("hidden"), "offered with no word from the application");
+  view.update(withChangeover(NOW, 2, snap => { snap.alarm = { enabled: false }; }));
+  assert.ok(!button.hasAttribute("hidden"));
+  assert.equal(button.getAttribute("role"), "switch");
+  assert.equal(button.getAttribute("aria-checked"), "false");
+  click(button);
+  assert.deepEqual(commands.calls, [{ command: "setTimelineAlarm", args: { enabled: true } }], "read-only held back the device's own alarm");
+  assert.equal(committed.length, 1);
+  view.update(withChangeover(NOW, 2, snap => { snap.alarm = { enabled: true }; }));
+  assert.equal(button.getAttribute("aria-checked"), "true");
+  click(button);
+  assert.deepEqual(commands.calls[1], { command: "setTimelineAlarm", args: { enabled: false } });
+  // Without the command, no switch.
+  const old = boot({ height: 700 });
+  old.view.update(withChangeover(NOW, 2, snap => { snap.alarm = { enabled: true }; }));
+  assert.ok(q(old.view, ".slate-timeline__alarm").hasAttribute("hidden"));
 });

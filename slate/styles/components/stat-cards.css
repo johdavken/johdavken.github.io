@@ -177,3 +177,112 @@
 .slate-root[data-input="touch"][data-viewport="narrow"] .slate-cards {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* ---- A phone ----
+   The four cards as short tiles over every page, two by two: the name and
+   the value on one line, the line under them left out. Four across, a
+   phone's width cannot hold "12,400 lb". */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__trigger {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--slate-space-2);
+  min-height: 40px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-xs);
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__value {
+  flex: none;
+  font-size: var(--slate-text-md);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__sub {
+  display: none;
+}
+
+/* The tile keeps its value while its editor is up - the editor is a
+   sheet at the foot (components/phone.css), not in the tile's place. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__trigger {
+  display: flex;
+}
+
+/* The sheet says what it edits, and offers the card's calculator, which
+   has no room on the tile. */
+.slate-root .slate-card__editor-title,
+.slate-root .slate-card__action--calc {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor-title {
+  display: block;
+  flex: 1 0 100%;
+  margin-bottom: var(--slate-space-1);
+  font-weight: 600;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__action--calc {
+  display: inline-flex;
+  align-items: center;
+  margin-right: auto;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor {
+  flex-wrap: wrap;
+  gap: var(--slate-space-3);
+}
+
+/* ---- Under a finger: two cards in the strip ----
+   On a tablet and a phone, production and scrap leave the strip for Resin
+   Balance, where they are entered in place (slate-resin-balance.js, through
+   these cards' own entry). The strip keeps the changeover and the output.
+   The Scrap slot stays built but unseen, laid under the strip: a tool in
+   its place (the pressure conversion) still shows from it - a sheet on a
+   phone, a card over the page's top on a tablet. */
+.slate-root[data-input="touch"] .slate-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slate-root[data-input="touch"] .slate-cards__slot[data-slot="production"] {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-cards__slot[data-slot="scrap"] {
+  position: absolute;
+  top: 100%;
+  right: var(--slate-space-3);
+  z-index: 3;
+  width: min(400px, calc(100% - 2 * var(--slate-space-3)));
+  margin-top: var(--slate-space-2);
+  visibility: hidden;
+}
+
+.slate-root[data-input="touch"] .slate-pressure {
+  visibility: visible;
+}
+
+/* On a tablet it stands where the calculators do (wizard.css): centred
+   under the header, over the page. A phone makes it a sheet (phone.css). */
+.slate-root[data-input="touch"] .slate-pressure {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-header-height) + var(--slate-space-3));
+  right: 0;
+  left: 0;
+  width: min(400px, calc(100vw - 2 * var(--slate-space-4)));
+  margin: 0 auto;
+  box-shadow: var(--slate-shadow-pop);
+}

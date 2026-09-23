@@ -46,6 +46,7 @@
   // tracks a hopper once a plan changes its resin.
   const NONE_TRACKED_AUTOMATIC = "No hoppers tracked. Plan a Next Recipe; hoppers whose resin changes are tracked automatically.";
   const STALE_CHANGEOVER = "Changeover needs confirming";
+  const ALARM_LABEL = "Alarm when pump-off is due";
   const NO_LINE = "No line to project.";
 
   /* Geometry the stylesheet mirrors: the axis insets, the gap between
@@ -173,6 +174,16 @@
     rootEl.appendChild(changeoverLine);
     const counts = text(doc, "p", "slate-timeline__counts", "");
     rootEl.appendChild(counts);
+    // The pump-off alarm: this device's own sound, vibration and
+    // notifications (the application's), switched through the tracking
+    // seam. Offered under a finger (timeline.css), where the floor UI
+    // offers it too, and only when the application says how it stands.
+    const alarmButton = text(doc, "button", "slate-switch slate-timeline__alarm", ALARM_LABEL, { type: "button", role: "switch", "aria-checked": "false", hidden: "" });
+    rootEl.appendChild(alarmButton);
+    alarmButton.addEventListener("click", () => {
+      const on = alarmButton.getAttribute("aria-checked") === "true";
+      settle(trackingModule.setAlarm(commands(), !on));
+    });
     const notice = element(doc, "p", "slate-timeline__notice", { hidden: "" });
     rootEl.appendChild(notice);
 
@@ -204,6 +215,13 @@
     rootEl.appendChild(listEl);
 
     const chips = element(doc, "div", "slate-timeline__chips", { hidden: "" });
+    chips.addEventListener("click", event => {
+      const target = event && event.target;
+      const chip = target && typeof target.closest === "function" ? target.closest("[data-slate-weights]") : null;
+      if (!chip || typeof settings.openWeights !== "function") return;
+      const tier = typeof settings.tier === "function" ? settings.tier() : null;
+      if (tier && tier.input === "touch" && tier.width === "phone") settings.openWeights();
+    });
     rootEl.appendChild(chips);
     // The pumped-off foot: its rows alone, no heading.
     const done = element(doc, "div", "slate-timeline__done", { hidden: "" });
@@ -403,6 +421,7 @@
     // A preference moved: the pump toggles re-read their ability, the
     // idle line follows the tracking mode, and a changed view redraws.
     function refresh() {
+      paintAlarm();
       if (viewNow() !== state.view) { render(); return; }
       applyAbilities();
       paintNotice(state.inputs && state.inputs.model, state.entries.length);
@@ -610,7 +629,10 @@
         chips.appendChild(text(doc, "span", "slate-timeline__chip is-later", `${entry.id} → ${rundownModule.formatRemaining(entry.markAt - at)}`, { "data-key": entry.key, title: `${entry.id} ${entry.markKind === "empty" ? "empty at" : "pump off by"} ${rundownModule.formatClock(entry.markAt)}` }));
       }
       for (const entry of grouped.unavailable) {
-        chips.appendChild(text(doc, "span", "slate-timeline__chip is-unavailable", `${entry.id} · ${rundownModule.reasonLabel(entry.reason)}`, { "data-key": entry.key }));
+        // A hopper with no weight names the page that gives it one: on a
+        // phone a tap there opens Weights (the boot's openWeights).
+        const attributes = entry.reason === "no-weight" ? { "data-key": entry.key, "data-slate-weights": "" } : { "data-key": entry.key };
+        chips.appendChild(text(doc, "span", "slate-timeline__chip is-unavailable", `${entry.id} · ${rundownModule.reasonLabel(entry.reason)}`, attributes));
       }
       show(chips, grouped.later.length + grouped.unavailable.length > 0);
       // A row that stood in the list carries a title the card's head says instead.
@@ -699,7 +721,15 @@
     }
 
     /** New state: re-anchor, re-project, redraw. */
+    function paintAlarm() {
+      const alarm = state.alarm;
+      show(alarmButton, !!alarm && trackingModule.alarmAble(commands()));
+      alarmButton.setAttribute("aria-checked", alarm && alarm.enabled ? "true" : "false");
+    }
+
     function update(resolved) {
+      state.alarm = resolved && resolved.alarm ? resolved.alarm : null;
+      paintAlarm();
       const at = now();
       state.inputs = resolved && resolved.line
         ? { model: resolved.line, hopperState: resolved.hopperState || {}, layerState: resolved.layerState || {}, job: resolved.job || {} }

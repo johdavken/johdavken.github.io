@@ -779,3 +779,138 @@ test("the drawer's handle carries a dot while a hopper is overdue and running", 
   assert.equal(!dot.hasAttribute("hidden"), overdue, "the dot disagrees with the Timeline");
   assert.equal(handle.classList.contains("is-overdue"), overdue);
 });
+
+test("on a phone the layers stand on top whatever is chosen, the bar moves between pages, Menu raises the rail as a sheet, and Back walks back to the Recipe before it lets the app go", () => {
+  const media = fakeMedia({ coarse: true, width: 412 });
+  const { hostEl, executed } = bootHosted({ linked: false, env: media, stored: { layers: "left" } });
+  const doc = hostEl.ownerDocument;
+  assert.equal(hostEl.getAttribute("data-viewport"), "phone");
+  assert.equal(hostEl.getAttribute("data-layers"), "top", "a phone stood the layer heads at the left");
+  assert.equal(hostEl.slateDisplay.getLayerOrientation(), "left", "the operator's choice was overwritten");
+  const aside = hostEl.querySelector("[data-slate-mount='aside']");
+  const rail = hostEl.querySelector("[data-slate-mount='rail']");
+  const scrim = hostEl.querySelector("[data-slate-scrim]");
+  const title = () => hostEl.querySelector(".slate-header__title").textContent;
+  const keys = [...hostEl.querySelectorAll("[data-slate-mount='bar'] [data-bar-key]")];
+  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["recipe", "timeline", "weights", "recipe-book", "menu"]);
+  const bar = id => keys.find(one => one.getAttribute("data-bar-key") === id);
+  const active = () => keys.filter(one => one.classList.contains("is-active")).map(one => one.getAttribute("data-bar-key"));
+  const shown = () => hostEl.querySelector("[data-slate-mount='centre']").querySelectorAll(".slate-section").find(one => !one.hasAttribute("hidden"));
+  const back = () => {
+    const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+    for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
+    return event;
+  };
+  assert.deepEqual(active(), ["recipe"]);
+
+  // The Timeline is a page over the centre: no scrim, no drawer.
+  click(bar("timeline"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.ok(scrim.hasAttribute("hidden"), "the Timeline's page raised a scrim");
+  assert.deepEqual(active(), ["timeline"]);
+  assert.equal(title(), "Timeline");
+  click(bar("weights"));
+  assert.ok(!aside.classList.contains("is-open"));
+  assert.deepEqual(active(), ["weights"]);
+  assert.equal(shown().getAttribute("data-section"), "weights");
+  assert.notEqual(title(), "Timeline", "the header still names the Timeline's page");
+
+  // Menu raises the rail over a scrim; a choice lowers it and a page the bar has no key for lights Menu.
+  click(bar("menu"));
+  assert.ok(rail.classList.contains("is-open"));
+  assert.ok(!scrim.hasAttribute("hidden"));
+  assert.equal(bar("menu").getAttribute("aria-expanded"), "true");
+  click(hostEl.querySelector(".slate-rail__item[data-section='settings']"));
+  assert.ok(!rail.classList.contains("is-open"));
+  assert.ok(scrim.hasAttribute("hidden"));
+  assert.deepEqual(active(), ["menu"]);
+  assert.equal(title(), "Settings");
+  // An aside tool from the sheet takes the Timeline's page.
+  click(bar("menu"));
+  click(hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.deepEqual(active(), ["menu"]);
+  assert.equal(title(), "Resin Balance");
+  // The scrim lowers the sheet.
+  click(bar("menu"));
+  click(scrim);
+  assert.ok(!rail.classList.contains("is-open"));
+
+  // Back: the page, then the section, then the app.
+  let event = back();
+  assert.equal(event.detail.minimize, false);
+  assert.ok(!aside.classList.contains("is-open"), "Back left the page up");
+  assert.equal(shown().getAttribute("data-section"), "settings");
+  event = back();
+  assert.equal(event.detail.minimize, false);
+  assert.deepEqual(active(), ["recipe"], "Back did not come home to the Recipe");
+  event = back();
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(event.detail.minimize, true);
+  // The rail's sheet is on the stack too.
+  click(bar("menu"));
+  event = back();
+  assert.ok(!rail.classList.contains("is-open"));
+  assert.equal(event.detail.minimize, false);
+
+  // The drawer's handle does nothing on a phone.
+  click(hostEl.querySelector("[data-slate-aside-handle]"));
+  assert.ok(!aside.classList.contains("is-open"));
+
+  // Wider again: no page, no sheet, the operator's layout back.
+  click(bar("timeline"));
+  click(bar("menu"));
+  media.change({ width: 1280 });
+  assert.equal(hostEl.getAttribute("data-viewport"), "wide");
+  assert.equal(hostEl.getAttribute("data-layers"), "left");
+  assert.ok(!aside.classList.contains("is-open"));
+  assert.ok(!rail.classList.contains("is-open"));
+  assert.equal(executed.length, 0);
+});
+
+test("the application's pump-off alert is Slate's to show: the event is taken, the alert says which hopper, and Dismiss or Back closes it and stops the vibration", () => {
+  const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
+  const doc = hostEl.ownerDocument;
+  const alert = hostEl.querySelector("[data-slate-alert]");
+  assert.ok(alert.hasAttribute("hidden"));
+  assert.equal(alert.getAttribute("role"), "alert");
+  const fire = detail => {
+    const event = { type: "polyn:pump-off-alert", detail, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+    for (const handler of doc.listeners["polyn:pump-off-alert"] || []) handler(event);
+    return event;
+  };
+  let stopped = 0;
+  const event = fire({ hopper: "B2", resin: "HD622", dismiss: () => { stopped += 1; } });
+  assert.equal(event.defaultPrevented, true, "the floor UI's hidden banner would be the only one");
+  assert.ok(!alert.hasAttribute("hidden"));
+  assert.equal(alert.querySelector(".slate-alert__text").textContent, "Pump off B2: HD622 is due now.");
+  click(alert.querySelector(".slate-alert__dismiss"));
+  assert.ok(alert.hasAttribute("hidden"));
+  assert.equal(stopped, 1);
+  fire({ hopper: "A1", resin: "", dismiss: () => { stopped += 1; } });
+  assert.equal(alert.querySelector(".slate-alert__text").textContent, "Pump off A1: Tracked hopper is due now.");
+  const back = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+  for (const handler of doc.listeners["polyn:android-back"] || []) handler(back);
+  assert.ok(alert.hasAttribute("hidden"), "Back left the alert up");
+  assert.equal(back.detail.minimize, false);
+  assert.equal(stopped, 2);
+});
+
+test("Back closes a tool in the Scrap card's place on a phone, where it is a sheet; on a tablet Back leaves it and lets the app go, as before", () => {
+  const back = doc => {
+    const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+    for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
+    return event;
+  };
+  const shown = hostEl => hostEl.querySelector("[data-slate-mount='stats']").querySelectorAll(".slate-section").filter(one => !one.hasAttribute("hidden")).map(one => one.getAttribute("data-section"));
+  const phone = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
+  click(phone.hostEl.querySelector(".slate-rail__item[data-section='pressure']"));
+  assert.deepEqual(shown(phone.hostEl), ["pressure"]);
+  assert.equal(back(phone.hostEl.ownerDocument).detail.minimize, false);
+  assert.deepEqual(shown(phone.hostEl), ["scrap"]);
+  const tablet = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 800 }) });
+  click(tablet.hostEl.querySelector(".slate-rail__item[data-section='pressure']"));
+  assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
+  assert.equal(back(tablet.hostEl.ownerDocument).detail.minimize, true, "a tablet's Back changed");
+  assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
+});

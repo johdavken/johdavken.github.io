@@ -24,8 +24,10 @@ test("main menu keeps its primary grid while Sudo access lives under Workspace &
   // hidden on desktop by CSS, but it is still a real workspaceNavButton here -
   // and the Station (Beta) link is the desktop-only mirror image, hidden on
   // mobile with the whole rail foot (.workspaceNavFooter{display:none}), but
-  // likewise a real workspaceNavButton (an <a>) in the shared markup.
-  assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,10);
+  // likewise a real workspaceNavButton (an <a>) in the shared markup. 11 since
+  // the Slate (Beta) link joined Workspace & Support: touch only, hidden on
+  // desktop beside Notes, and an <a> like Station's.
+  assert.equal((nav.match(/class="workspaceNavButton/g) || []).length,11);
   assert.match(nav,/data-workspace-target="productionSummaryBlock"/, "Production Summary is a first-class section, between Timeline and RT Sync");
   assert.match(nav,/id="workspaceNavSudo"[^>]*data-workspace-target="sudoAccessBlock"/);
   assert.doesNotMatch(nav,/Appearance|Admin Login|Resin Database|Workspace Management/);

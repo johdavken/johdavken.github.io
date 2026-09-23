@@ -101,6 +101,7 @@
   const BULK_NO_BRIDGE = "The application stopped offering the bulk edit; it was closed and nothing was applied.";
   const BULK_SWITCH = "Apply or cancel the bulk edit before switching tabs.";
   const BULK_HINT = "Click a hopper id to select rows and fill them at once.";
+  const BULK_HINT_PHONE = "Tap hoppers to select them, then fill them at once.";
   const FILL_LABEL = "Fill";
   const FILL_NOTHING = "Enter a resin or a blend to fill into the selected hoppers.";
   const FILL_NONE = "Nothing to fill: the selected hoppers already hold that, or only hopper 1 was selected for a blend.";
@@ -208,6 +209,18 @@
     // pops the keyboard unasked.
     const touch = () => {
       try { return typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { return false; }
+    };
+    // A phone (the phone tier, under touch): the recipe is a grid of cells,
+    // one column per layer (components/recipe.css). A tap on a cell tracks
+    // it, and in Bulk edit picks it; the per-cell editors are left to the
+    // bulk form, which is the phone's one way to change the recipe.
+    const phone = () => {
+      try {
+        const tier = typeof settings.tier === "function" ? settings.tier() : null;
+        return !!tier && tier.input === "touch" && tier.width === "phone";
+      } catch (error) {
+        return false;
+      }
     };
     const view = doc.defaultView || null;
 
@@ -471,7 +484,12 @@
 
     function buildHead(body, layer, resolved, share) {
       const head = element(doc, "div", "slate-layer__head");
-      head.appendChild(text(doc, "span", "slate-layer__name", `Layer ${layer.id}`));
+      // "Layer A", the word apart from the letter: a phone's narrow column
+      // keeps the letter alone (components/recipe.css).
+      const name = element(doc, "span", "slate-layer__name");
+      name.appendChild(text(doc, "span", "slate-layer__word", "Layer "));
+      name.appendChild(doc.createTextNode(layer.id));
+      head.appendChild(name);
       head.appendChild(text(doc, "span", "slate-layer__role", layer.roleLabel));
       const shareButton = text(doc, "button", "slate-layer__share", formatPct(share), { type: "button", "data-slate-edit": "share", "data-layer": layer.id, "data-able": "false", "aria-label": `Share for layer ${layer.id}` });
       head.appendChild(shareButton);
@@ -510,6 +528,8 @@
       if (body.recipe === "next") show(planStrip, !!model && planned);
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);
+      // How many layers stand side by side on a phone (components/recipe.css).
+      body.layersEl.style.setProperty("--slate-layers", String(model.layers.length));
       let position = 0;
       model.layers.forEach((layer, i) => {
         const block = element(doc, "div", "slate-layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone, "data-recipe": body.recipe });
@@ -534,6 +554,13 @@
         block.appendChild(list);
         body.layersEl.appendChild(block);
       });
+    }
+
+    function rise(row) {
+      // Restart the arrival, as flash() restarts the highlight.
+      row.classList.remove("slate-row-enter");
+      void row.offsetWidth;
+      row.classList.add("slate-row-enter");
     }
 
     function flash(row) {
@@ -610,6 +637,13 @@
           const other = changes ? changes.hoppers[key] : null;
           const line = compare && other ? otherLine(tag, other) : null;
           entry.row.classList.toggle("is-differs", !!(other && other.resinDiffers));
+          // Under Compare a phone's cell turns over to the other recipe
+          // where the resin changes, and the cells where nothing moves
+          // step back (components/recipe.css); elsewhere the classes are
+          // unstyled.
+          const turned = compare && !!(other && other.resinDiffers);
+          entry.row.classList.toggle("is-turned", turned);
+          entry.row.classList.toggle("is-quiet", compare && !line);
           if (line) entry.other.textContent = line;
           show(entry.other, !!line);
           if (entry.toggles) {
@@ -1005,6 +1039,8 @@
         rootEl.setAttribute("data-recipe", recipe);
         for (const [key, tab] of tabButtons) tab.setAttribute("aria-selected", key === recipe ? "true" : "false");
         for (const key of RECIPES) show(bodies[key].el, key === recipe);
+        // On a phone the cells of the face turned to rise again, in turn.
+        if (phone()) for (const entry of bodies[recipe].rows.values()) rise(entry.row);
       }
       applyAbilities();
       paintCompare();
@@ -1349,6 +1385,7 @@
       });
       form = { recipe: body.recipe, body, view: formView, armTimer: null };
       resetFill(body);
+      body.bulk.hint.textContent = phone() ? BULK_HINT_PHONE : BULK_HINT;
       show(body.bulk.hint, true);
       show(body.foot, false);
       show(body.bulk.el, true);
@@ -1482,6 +1519,17 @@
 
     /* ---- Clicks inside a body: toggles and edit cells ---- */
 
+    function pressToggle(toggle) {
+      if (toggle.hasAttribute("disabled")) return;
+      const request = trackingModule.requestFrom(toggle);
+      if (!request) return;
+      if (!request.able) {
+        say(`${trackingModule.stateLabel(request.control, request.on)}: ${trackingModule.reason(commands(), request.control, guard())}`);
+        return;
+      }
+      settle(trackingModule.toggle(commands(), { control: request.control, layer: request.layer, index: request.index, next: !request.on }));
+    }
+
     for (const id of RECIPES) {
       const body = bodies[id];
       body.layersEl.addEventListener("click", event => {
@@ -1489,7 +1537,9 @@
         const target = event && event.target;
         if (!target || typeof target.closest !== "function") return;
         if (form && form.recipe === id) {
-          const idCell = target.closest(".slate-hopper__id");
+          // On a phone the whole cell is the pick target (its drafts stand
+          // in it as values, not as fields to type in: recipe.css).
+          const idCell = target.closest(".slate-hopper__id") || (phone() ? target.closest(".slate-hopper") : null);
           if (idCell && body.layersEl.contains(idCell)) {
             const picked = idCell.closest(".slate-hopper");
             form.view.pick(`${picked.getAttribute("data-layer")}:${picked.getAttribute("data-index")}`, { range: !!event.shiftKey });
@@ -1501,16 +1551,19 @@
             return;
           }
         }
+        // On a phone a tap on a hopper's cell is its Track: on Current,
+        // where Track is offered; the plan's cells track nothing. Only the
+        // layer's share keeps its own editor there.
+        if (phone() && !form && !target.closest("[data-slate-edit='share']")) {
+          const cell = target.closest(".slate-hopper");
+          if (!cell || !body.layersEl.contains(cell)) return;
+          const cellToggle = cell.querySelector("[data-slate-control]");
+          if (cellToggle && !cellToggle.hasAttribute("hidden")) pressToggle(cellToggle);
+          return;
+        }
         const toggle = target.closest("[data-slate-control]");
         if (toggle && body.layersEl.contains(toggle)) {
-          if (toggle.hasAttribute("disabled")) return;
-          const request = trackingModule.requestFrom(toggle);
-          if (!request) return;
-          if (!request.able) {
-            say(`${trackingModule.stateLabel(request.control, request.on)}: ${trackingModule.reason(commands(), request.control, guard())}`);
-            return;
-          }
-          settle(trackingModule.toggle(commands(), { control: request.control, layer: request.layer, index: request.index, next: !request.on }));
+          pressToggle(toggle);
           return;
         }
         const edit = target.closest("[data-slate-edit]");

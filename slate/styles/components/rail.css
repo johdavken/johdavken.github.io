@@ -293,3 +293,79 @@
 .slate-root[data-input="touch"] .slate-rail__label--menu {
   display: block;
 }
+
+/* ---- A phone: the rail as a sheet ----
+   Raised from the foot of the screen by the bar's Menu (slate.js marks it
+   is-open), over the scrim, above everything else; the names are back
+   beside the icons, and Tools opens in place rather than as a flyout. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  max-height: 80dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: var(--slate-inset-bottom);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-bottom: 0;
+  border-radius: var(--slate-radius-lg) var(--slate-radius-lg) 0 0;
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform var(--slate-motion-move) var(--slate-motion-ease), visibility 0s linear var(--slate-motion-move);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--slate-motion-move) var(--slate-motion-ease), visibility 0s linear 0s;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__inner {
+  position: static;
+  height: auto;
+  padding: var(--slate-space-3) var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__brand {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__item {
+  justify-content: flex-start;
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__label {
+  display: block;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__chevron {
+  display: block;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__menu {
+  position: static;
+  min-width: 0;
+  margin: var(--slate-space-1) 0 0 var(--slate-space-4);
+  padding: var(--slate-space-1) 0 var(--slate-space-1) var(--slate-space-5);
+  border: 0;
+  border-left: 2px solid var(--slate-border-subtle);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__foot {
+  margin-top: var(--slate-space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-open {
+    transition: none;
+  }
+}

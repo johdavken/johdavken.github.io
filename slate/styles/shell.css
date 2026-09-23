@@ -103,6 +103,7 @@
 }
 
 .slate-root[data-input="touch"] .slate-stats {
+  position: relative;
   padding: var(--slate-space-4) var(--slate-space-4) 0;
 }
 
@@ -114,10 +115,88 @@
   padding: var(--slate-space-4) var(--slate-space-4) var(--slate-space-4) 0;
 }
 
+/* ---- A phone (touch, data-viewport="phone") ----
+   One column: the header, the job's strip, the page, the bar. The page
+   row holds the centre and the aside in the same cell - the aside is a
+   page laid over the centre while the bar's Timeline is chosen
+   (components/panel.css) - and each scrolls on its own, so the header,
+   the strip and the bar stay where the thumb expects them. The rail is a
+   sheet raised from the bar's Menu (components/rail.css). */
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header"
+    "stats"
+    "page"
+    "bar";
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 0;
+  border-inline: 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header {
+  flex-wrap: wrap;
+  row-gap: 0;
+  min-height: var(--slate-header-height-phone);
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-stats {
+  position: relative;
+  z-index: 2;
+  padding: var(--slate-space-2) var(--slate-space-3) 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-centre {
+  grid-area: page;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--slate-space-3);
+}
+
 /* Behind the open drawer; hidden (slate.js) whenever the drawer is shut. */
 .slate-shell__scrim {
   position: fixed;
   inset: 0;
   z-index: 29;
   background: var(--slate-scrim);
+}
+
+/* The pump-off alarm's alert (slate.js): over everything, at the top of
+   the screen, until it is dismissed. */
+.slate-alert {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-space-3));
+  right: var(--slate-space-3);
+  left: var(--slate-space-3);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-overdue);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  color: var(--slate-text);
+  font-weight: 600;
+}
+
+.slate-alert__text {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.slate-root .slate-alert__dismiss {
+  flex: none;
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-overdue);
+  border-radius: var(--slate-radius);
+  color: var(--slate-overdue);
 }

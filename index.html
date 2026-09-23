@@ -43,7 +43,7 @@
        reads them as one stylesheet through css-source.js, which derives this
        list from these very tags, so a part with no link here is a part the
        suite cannot see either. -->
-  <link rel="stylesheet" href="styles-base.css?v=0.77.0">
+  <link rel="stylesheet" href="styles-base.css?v=0.77.2">
   <link rel="stylesheet" href="styles-hoppers.css?v=0.76.1">
   <link rel="stylesheet" href="styles-recipe-views.css?v=0.76.0">
   <link rel="stylesheet" href="styles-recipe-views-phone.css?v=0.76.6">
@@ -51,7 +51,7 @@
   <link rel="stylesheet" href="styles-controls.css?v=0.76.0">
   <link rel="stylesheet" href="styles-tools-notes.css?v=0.76.1">
   <link rel="stylesheet" href="styles-surfaces.css?v=0.76.0">
-  <link rel="stylesheet" href="styles-shell.css?v=0.76.1">
+  <link rel="stylesheet" href="styles-shell.css?v=0.76.2">
   <link rel="stylesheet" href="styles-responsive.css?v=0.76.0">
   <link rel="stylesheet" href="styles-recipe-grid.css?v=0.76.0">
   <link rel="stylesheet" href="theme.css?v=0.18.19">
@@ -67,7 +67,7 @@
 <script src="winding-tension.js?v=0.1.1" defer></script>
 <script src="pressure-conversion.js?v=0.1.0" defer></script>
 <script src="active-job.js?v=0.20.0" defer></script>
-<script src="station-state-bridge.js?v=0.7.0" defer></script>
+<script src="station-state-bridge.js?v=0.8.0" defer></script>
 <script src="station-connection-bridge.js?v=0.3.0" defer></script>
 <script src="station-recipes-bridge.js?v=0.3.0" defer></script>
 <script src="station-weight-profiles-bridge.js?v=0.1.0" defer></script>
@@ -77,11 +77,11 @@
 <script src="station-host.js?v=0.4.74" defer></script>
 <script src="slate-theme.js?v=0.4.0" defer></script>
 <script src="slate-display.js?v=0.5.0" defer></script>
-<script src="slate-host.js?v=0.34.0" defer></script>
+<script src="slate-host.js?v=0.35.4" defer></script>
 <script src="workspace-configuration-payloads.js?v=0.20.1" defer></script>
 <script src="next-recipe.js?v=0.2.0" defer></script>
 <script src="hookup-sources.js?v=0.1.0" defer></script>
-<script src="station-command-contract.js?v=0.11.0" defer></script>
+<script src="station-command-contract.js?v=0.12.0" defer></script>
 <script src="station-command-bridge.js?v=0.1.0" defer></script>
 <script src="notes-store.js?v=0.3.0" defer></script>
 <script src="notes-markdown.js?v=0.1.0" defer></script>
@@ -116,7 +116,7 @@
 <script src="bulk-density-measurement.js?v=0.1.0" defer></script>
 <script src="workspace-recovery.js?v=0.1.2" defer></script>
 <script src="beta-access.js?v=0.1.0" defer></script>
-<script src="app.js?v=0.33.10" defer></script>
+<script src="app.js?v=0.33.11" defer></script>
 <script src="resin-admin-ui.js?v=0.20.4" defer></script>
 <script src="line-configurations-ui.js?v=0.3.0" defer></script>
 <script src="database-health-ui.js?v=0.1.3" defer></script>
@@ -424,7 +424,7 @@
         type="button"
         id="workspaceNavMore"
         aria-expanded="false"
-        aria-controls="workspaceNavLineSync workspaceNavNotes workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSudo"
+        aria-controls="workspaceNavLineSync workspaceNavNotes workspaceNavTools helpBetaAccess workspaceNavChangelog workspaceNavSlate workspaceNavSudo"
       >
         <span class="desktopNavMoreIcons" aria-hidden="true">
           <i class="dMoreIconRt"><svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="23" r="3"/><path d="m10.7 14.7 10.6-4.4M10.7 17.3l10.6 4.4"/></svg></i>
@@ -497,6 +497,16 @@
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><g class="baseGlyph"><circle cx="7" cy="9" r="2.4"/><circle cx="7" cy="16" r="2.4"/><circle cx="7" cy="23" r="2.4"/><path d="M13 9h13M13 16h13M13 23h9"/><g class="gruvboxIconDetail"><rect x="4.6" y="6.6" width="4.8" height="4.8"/><rect x="4.6" y="13.6" width="4.8" height="4.8"/><rect x="4.6" y="20.6" width="4.8" height="4.8"/></g></g><g class="gruvboxSolidGlyph"><circle cx="7" cy="9" r="3.2"/><circle cx="7" cy="16" r="3.2"/><circle cx="7" cy="23" r="3.2"/><path d="M13 7.2h13v3.6H13zM13 14.2h13v3.6H13zM13 21.2h9v3.6H13z"/></g></svg>Changelog</span>
       <small>What&rsquo;s new</small>
     </button>
+    <!-- Slate is the same document with ?view=slate (slate-host.js); a plain
+         link is the whole route, the mirror of Slate's own "Legacy" link
+         back. Slate's Settings > This device opens makes the choice stick,
+         which the Android app needs, having no address bar. Touch only:
+         a desktop's window opens Slate on its own (styles-base.css hides
+         this row there, beside RT Notes). -->
+    <a class="workspaceNavButton workspaceNavExtra" id="workspaceNavSlate" href="?view=slate">
+      <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><rect x="6" y="4" width="20" height="24" rx="3"/><path d="M11 11h10M11 16h10M11 21h6"/></svg>Slate (Beta)</span>
+      <small>The new interface</small>
+    </a>
     <button class="workspaceNavButton workspaceNavExtra" id="workspaceNavSudo" type="button" data-workspace-target="sudoAccessBlock">
       <span><svg class="workspaceTileIcon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 8v7c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V8l11-5Z"/><path d="M16 12v8M12 16h8"/></svg>Sudo access</span>
       <small id="sudoAccessStatus">Administrator sign-in</small>

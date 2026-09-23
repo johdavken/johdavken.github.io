@@ -23,7 +23,7 @@ const STYLES = path.join(SLATE, "styles");
  * slate-host.js's SCRIPTS and slate.html. */
 const SLATE_FILES = [
   "slate.js", "slate-shell.js", "slate-logo.js", "slate-dismiss.js", "slate-drawer-drag.js", "slate-line.js", "slate-source.js", "slate-demo.js",
-  "slate-sections.js", "slate-tier.js", "slate-rail.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
+  "slate-sections.js", "slate-tier.js", "slate-rail.js", "slate-phone-bar.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-timeline.js", "slate-resin-balance.js",

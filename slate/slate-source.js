@@ -73,6 +73,14 @@
   /* Smart Hoppers as the bridge carries it; at rest when it carries none
    * (an older producer). `geometryMode` null means the application is not
    * on an identified line: no measure, no switch. */
+  /* This device's pump-off alarm, when the application says (alarm.enabled
+   * on the snapshot); null when it does not - a demo, or an application
+   * from before the switch crossed - and then the switch is not offered. */
+  function alarmFrom(snapshot) {
+    const raw = snapshot && snapshot.alarm && typeof snapshot.alarm === "object" ? snapshot.alarm : null;
+    return raw ? Object.freeze({ enabled: raw.enabled === true }) : null;
+  }
+
   function smartHoppersFrom(snapshot) {
     const raw = snapshot && snapshot.smartHoppers && typeof snapshot.smartHoppers === "object" ? snapshot.smartHoppers : {};
     return {
@@ -181,6 +189,7 @@
       hopperState: hopperStateFrom(snapshot),
       layerState: layerStateFrom(snapshot),
       smartHoppers: smartHoppersFrom(snapshot),
+      alarm: alarmFrom(snapshot),
       nextHopperState: nextHopperStateFrom(snapshot),
       nextLayerState: nextLayerStateFrom(snapshot),
       plan: planFrom(snapshot),
@@ -254,6 +263,7 @@
       hopperState: resolved.hopperState || {},
       layerState: resolved.layerState || {},
       smartHoppers: resolved.smartHoppers || null,
+      alarm: resolved.alarm || null,
       nextHopperState: resolved.nextHopperState || {},
       nextLayerState: resolved.nextLayerState || {},
       history: resolved.history || null,
@@ -268,7 +278,7 @@
   }
 
   return Object.freeze({
-    normalizeResin, sameResin, hopperStateFrom, smartWeightFrom, smartHoppersFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, historyFrom,
+    normalizeResin, sameResin, hopperStateFrom, smartWeightFrom, smartHoppersFrom, alarmFrom, layerStateFrom, nextHopperStateFrom, nextLayerStateFrom, planFrom, historyFrom,
     jobStateFrom, stateFor, compareFor, resolveSource, structureKey, valuesKey, classifyChange
   });
 });

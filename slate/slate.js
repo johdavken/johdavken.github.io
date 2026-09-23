@@ -58,6 +58,7 @@
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
   const drawerDragModule = root.PolynSlateDrawerDrag || null;
+  const phoneBarModule = root.PolynSlatePhoneBar || null;
 
   const shell = root.PolynSlateShell;
   const rail = root.PolynSlateRail;
@@ -101,6 +102,7 @@
    * Each has a home - what it shows when no tool is in it. */
   const panes = {};
   let railView = null;
+  let phoneBar = null;
   let stats = null;
   let summary = null;
   let sync = null;
@@ -168,13 +170,19 @@
     if (!container) return;
     const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "left";
     const order = displayController && typeof displayController.getLayerOrder === "function" ? displayController.getLayerOrder() : "forward";
-    container.setAttribute("data-layers", orientation);
-    container.setAttribute("data-layer-order", order);
     const tier = tierNow();
+    // A phone's column has no room for a layer's head beside its hoppers:
+    // there the head always stands on top. The operator's choice is kept
+    // (slate-display.js) and comes back on a wider screen.
+    container.setAttribute("data-layers", tier.input === "touch" && tier.width === "phone" ? "top" : orientation);
+    container.setAttribute("data-layer-order", order);
     container.setAttribute("data-input", tier.input);
     container.setAttribute("data-viewport", tier.width);
-    // Wide again, or a mouse: there is no drawer to hold open.
-    if (asideOpen && !drawer()) setAside(false);
+    // Wide again, or a mouse: there is no drawer or page to hold open,
+    // and no rail sheet to raise.
+    if (asideOpen && !drawer() && !page()) setAside(false);
+    if (railOpen && !page()) setRail(false);
+    paintBar();
   }
 
   /* SCANNING
@@ -215,22 +223,88 @@
     const tier = tierNow();
     return tier.input === "touch" && tier.width === "narrow";
   }
+  /* On a phone the aside is a page of its own in the centre's place
+   * (components/panel.css), opened from the bar; the rail is a sheet
+   * raised from the bar's Menu. */
+  function page() {
+    const tier = tierNow();
+    return tier.input === "touch" && tier.width === "phone";
+  }
+  function paintScrim() {
+    const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
+    if (!scrim) return;
+    if ((asideOpen && drawer()) || railOpen) scrim.removeAttribute("hidden");
+    else scrim.setAttribute("hidden", "");
+  }
   function setAside(open) {
-    asideOpen = !!open && drawer();
+    asideOpen = !!open && (drawer() || page());
     // On the Back key's stack while open (slate-dismiss.js).
     if (asideOpen && !asideOffStack && dismissModule) asideOffStack = dismissModule.register(() => setAside(false));
     if (!asideOpen && asideOffStack) { const off = asideOffStack; asideOffStack = null; off(); }
     if (mounts.aside) mounts.aside.classList.toggle("is-open", asideOpen);
-    const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
-    if (scrim) {
-      if (asideOpen) scrim.removeAttribute("hidden");
-      else scrim.setAttribute("hidden", "");
-    }
+    paintScrim();
+    paintBar();
     const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
     if (handle) {
       handle.setAttribute("aria-expanded", asideOpen ? "true" : "false");
       handle.classList.toggle("is-open", asideOpen);
     }
+  }
+
+  /* THE RAIL AS A SHEET (phone)
+   *
+   * The bar's Menu raises the rail from the foot of the screen over a
+   * scrim; a choice, the scrim, the Menu again or Back lowers it. */
+  let railOpen = false;
+  let railOffStack = null;
+  let statsOffStack = null;
+  function setRail(open) {
+    railOpen = !!open && page();
+    if (railOpen && !railOffStack && dismissModule) railOffStack = dismissModule.register(() => setRail(false));
+    if (!railOpen && railOffStack) { const off = railOffStack; railOffStack = null; off(); }
+    if (mounts.rail) mounts.rail.classList.toggle("is-open", railOpen);
+    if (phoneBar) phoneBar.setExpanded(railOpen);
+    paintScrim();
+  }
+
+  /* The bar's lit key: the Timeline while its page is up, the centre's
+   * section when the bar has a key for it, and Menu - the way to it -
+   * for anything else. */
+  function paintBar() {
+    paintTitle();
+    if (!phoneBar || !panes.aside || !sections) return;
+    if (asideOpen) {
+      const showing = panes.aside.swap.current();
+      phoneBar.setActive(showing && showing.id !== TIMELINE ? phoneBarModule.MENU : TIMELINE);
+      return;
+    }
+    const centre = sections.current();
+    const id = centre ? centre.id : DEFAULT_SECTION;
+    phoneBar.setActive(phoneBarModule.KEYS.some(key => key.id === id) ? id : phoneBarModule.MENU);
+  }
+
+  /* The header names the centre's section - or, on a phone, the page laid
+   * over it: the Timeline or the tool in its place. */
+  function paintTitle() {
+    const title = container ? container.querySelector(".slate-header__title") : null;
+    if (!title || !sections) return;
+    const over = asideOpen && page() && panes.aside ? panes.aside.swap.current() : null;
+    const showing = over || sections.current();
+    if (showing) title.textContent = showing.label;
+  }
+
+  /* A key on the phone's bar. */
+  function onBarKey(id) {
+    if (!phoneBarModule) return;
+    if (id === phoneBarModule.MENU) { setRail(!railOpen); return; }
+    setRail(false);
+    if (id === TIMELINE) {
+      panes.aside.swap.show(TIMELINE);
+      setAside(true);
+      return;
+    }
+    setAside(false);
+    sections.show(id);
   }
 
   /* A drag's position (px from open), or null when it ends: written on the
@@ -251,8 +325,9 @@
   function paintHandle() {
     const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
     const dot = handle ? handle.querySelector(".slate-shell__handle-dot") : null;
+    const overdue = !!(summary && typeof summary.entries === "function") && summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
+    if (phoneBar) phoneBar.setDot(TIMELINE, overdue);
     if (!dot || !summary || typeof summary.entries !== "function") return;
-    const overdue = summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
     if (overdue) dot.removeAttribute("hidden");
     else dot.setAttribute("hidden", "");
     handle.classList.toggle("is-overdue", overdue);
@@ -418,7 +493,9 @@
       lineRate: lineRateEstimate,
       lineRateStorage,
       tier: tierNow,
-      scan: scanner()
+      scan: scanner(),
+      // The Timeline's "No weight" on a phone: the Weights page, over it.
+      openWeights: () => { setAside(false); if (sections) sections.show("weights"); }
     });
 
     stats = statCards.create(doc, ctx);
@@ -434,7 +511,17 @@
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
       { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
-      { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, { totals: resinTotals, back: () => home("aside") })) },
+      { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, {
+        totals: resinTotals,
+        back: () => home("aside"),
+        // Under a finger production and scrap are entered from Resin
+        // Balance: the words and the entry are the job cards' own.
+        job: {
+          value: field => statCards.display(field, current ? current.job : null, Date.now()).value,
+          draft: field => (stats ? stats.draft(field) : ""),
+          enter: (field, raw) => (stats ? stats.enter(field, raw) : { ok: false, code: "unavailable", message: "The job's cards did not load." })
+        }
+      })) },
       // The administrator's three. Listed under Resin Balance and marked
       // `admin`, so the rail keeps them off an operator's rail until one
       // is signed in; they are built with the rest and read nothing until
@@ -459,9 +546,8 @@
 
     sections = sectionsModule.mountSections(doc, mounts.centre, inPane(rail.CENTRE), ctx, {
       onChange(definition) {
-        const title = container.querySelector(".slate-header__title");
-        if (title) title.textContent = definition.label;
         if (railView) railView.setActive(definition.id);
+        paintBar();
       }
     });
     panes[rail.CENTRE] = { swap: sections, home: DEFAULT_SECTION };
@@ -469,6 +555,13 @@
       const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
         onChange(definition) {
           if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
+          if (name === "aside") paintBar();
+          // A tool in the Scrap card's place is a sheet on a phone
+          // (components/phone.css): Back closes it, as its own close does.
+          if (name === "stats") {
+            if (definition.id !== homeId && page() && !statsOffStack && dismissModule) statsOffStack = dismissModule.register(() => home("stats"));
+            if (definition.id === homeId && statsOffStack) { const off = statsOffStack; statsOffStack = null; off(); }
+          }
           // The drawer's handle names what the drawer holds.
           const handle = name === "aside" ? container.querySelector("[data-slate-aside-handle]") : null;
           if (handle) { handle.setAttribute("aria-label", definition.label); handle.setAttribute("title", definition.label); }
@@ -487,6 +580,13 @@
         const definition = definitions.find(one => one.id === id);
         if (!definition) return;
         const name = paneOf(definition);
+        // On a phone the sheet is lowered by any choice, and a section
+        // takes the screen from the Timeline's page.
+        if (page()) {
+          setRail(false);
+          if (name === rail.CENTRE) { setAside(false); sections.show(id); return; }
+          if (name === "aside") { panes.aside.swap.show(id); setAside(true); return; }
+        }
         if (name === rail.CENTRE) { sections.show(id); return; }
         const showing = panes[name].swap.current();
         // A closed drawer opens on what was asked for, rather than the tool
@@ -501,6 +601,10 @@
       }
     });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
+    if (phoneBarModule && mounts.bar) {
+      phoneBar = phoneBarModule.create(doc, { onSelect: onBarKey });
+      mounts.bar.appendChild(phoneBar.element);
+    }
 
     // The administrator's sections appear and vanish with the one session,
     // wherever it was opened or ended - here, the floor UI or Station. A
@@ -540,9 +644,11 @@
       });
     }
     const scrim = container.querySelector("[data-slate-scrim]");
-    if (scrim) scrim.addEventListener("click", () => setAside(false));
+    if (scrim) scrim.addEventListener("click", () => { if (railOpen) setRail(false); else setAside(false); });
     container.addEventListener("keydown", event => {
-      if (event && event.key === "Escape" && asideOpen) setAside(false);
+      if (!event || event.key !== "Escape") return;
+      if (railOpen) setRail(false);
+      else if (asideOpen) setAside(false);
     });
 
     /* THE ANDROID BACK KEY
@@ -551,13 +657,52 @@
      * `polyn:android-back` on the document) and otherwise hands the key to
      * the application's own handler, which would act on the hidden floor
      * UI. Slate always answers: Back closes what is open on top - a
-     * popover, the drawer - and with nothing open lets the app go to the
-     * background, as Android expects. */
+     * popover, the drawer, a phone's Timeline page or its rail sheet - then
+     * on a phone takes a section other than the Recipe back to the Recipe,
+     * and with nothing left lets the app go to the background, as Android
+     * expects. */
     if (typeof doc.addEventListener === "function") {
       doc.addEventListener("polyn:android-back", event => {
         if (!event || typeof event.preventDefault !== "function") return;
-        const dismissed = dismissModule ? dismissModule.dismissTop() : false;
-        if (!dismissed && event.detail && typeof event.detail === "object") event.detail.minimize = true;
+        let handled = dismissModule ? dismissModule.dismissTop() : false;
+        if (!handled && page()) {
+          const showing = sections.current();
+          if (showing && showing.id !== DEFAULT_SECTION) { sections.show(DEFAULT_SECTION); handled = true; }
+        }
+        if (!handled && event.detail && typeof event.detail === "object") event.detail.minimize = true;
+        event.preventDefault();
+      });
+    }
+
+    /* THE PUMP-OFF ALARM
+     *
+     * The application sounds the alarm, vibrates and notifies whatever
+     * view is up; its banner is the floor UI's and hidden under Slate. It
+     * asks the page first (a cancelable `polyn:pump-off-alert` on the
+     * document): Slate takes it and shows its own, whose Dismiss is the
+     * banner's - the vibration stopped. Back closes it the same way. */
+    const alertEl = container.querySelector("[data-slate-alert]");
+    let alertDismiss = null;
+    let alertOffStack = null;
+    function closeAlert() {
+      if (!alertEl || alertEl.hasAttribute("hidden")) return;
+      alertEl.setAttribute("hidden", "");
+      if (alertOffStack) { const off = alertOffStack; alertOffStack = null; off(); }
+      const dismiss = alertDismiss;
+      alertDismiss = null;
+      if (typeof dismiss === "function") { try { dismiss(); } catch (error) { /* the vibration is the application's */ } }
+    }
+    if (alertEl && typeof doc.addEventListener === "function") {
+      const dismissButton = alertEl.querySelector(".slate-alert__dismiss");
+      if (dismissButton) dismissButton.addEventListener("click", closeAlert);
+      doc.addEventListener("polyn:pump-off-alert", event => {
+        if (!event || typeof event.preventDefault !== "function") return;
+        const detail = event.detail && typeof event.detail === "object" ? event.detail : {};
+        const words = alertEl.querySelector(".slate-alert__text");
+        if (words) words.textContent = `Pump off ${detail.hopper || "a hopper"}: ${detail.resin || "Tracked hopper"} is due now.`;
+        alertDismiss = typeof detail.dismiss === "function" ? detail.dismiss : null;
+        alertEl.removeAttribute("hidden");
+        if (!alertOffStack && dismissModule) alertOffStack = dismissModule.register(closeAlert);
         event.preventDefault();
       });
     }

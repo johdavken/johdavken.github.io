@@ -141,7 +141,9 @@
     rootEl.appendChild(safety);
 
     // Layout: where a layer's head stands on the Recipe and Weights pages.
-    const layout = element(doc, "section", "slate-settings__group", { "aria-label": "Layout" });
+    // Layout: which way the layers stand. A phone always stands them on
+    // top (slate.js), so there the group is withheld (settings.css).
+    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
     layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe changes."));
     const orientations = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layers" });
@@ -233,7 +235,7 @@
     const hostButtons = new Map();
     for (const [choice, label, note] of [
       ["auto", "Automatic", "Slate on a desktop and a tablet; the floor UI on a phone."],
-      ["slate", "Slate", "Always Slate, except on a phone's screen, which it was not drawn for."],
+      ["slate", "Slate", "Always Slate, a phone included."],
       ["legacy", "Legacy", "Always the floor UI. Slate stays one visit away at ?view=slate."]
     ]) {
       const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-host-choice": choice });

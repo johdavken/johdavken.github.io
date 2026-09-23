@@ -29,8 +29,21 @@ test("timeline computation reschedules sound, vibration, and notification alerts
 });
 
 test("notification permission is requested only from the explicit enable interaction",()=>{
+  // The browser's asks live in one helper...
+  const primeStart = app.indexOf("async function primeTimelineAlarm(){");
+  assert.ok(primeStart > -1);
+  const prime = app.slice(primeStart,app.indexOf("\n    }\n",primeStart));
+  assert.match(prime,/Notification\.requestPermission\(\)/);
+  assert.match(prime,/navigator\.serviceWorker\.register\("service-worker\.js"\)/);
+  assert.equal(app.split("Notification.requestPermission(").length - 1,1,"notification permission is asked somewhere else");
+  // ...called from exactly two explicit enables: the floor UI's toggle and
+  // a presentation layer's setTimelineAlarm, each only when turning it on.
+  const calls = [...app.matchAll(/primeTimelineAlarm\(\)/g)].map(match => match.index).filter(at => at !== primeStart + "async function ".length);
+  assert.equal(calls.length,2);
   const listenerStart = app.indexOf('$("mobileTimelineAlarmToggle")?.addEventListener');
   const listener = app.slice(listenerStart,app.indexOf('$("prodResinLb")',listenerStart));
-  assert.match(listener,/Notification\.requestPermission\(\)/);
-  assert.match(listener,/navigator\.serviceWorker\.register\("service-worker\.js"\)/);
+  assert.match(listener,/if \(enabled\) await primeTimelineAlarm\(\);/);
+  const commandStart = app.indexOf("setTimelineAlarm(args){");
+  const command = app.slice(commandStart,app.indexOf("\n      },",commandStart));
+  assert.match(command,/if \(args\.enabled\) primeTimelineAlarm\(\)/);
 });

@@ -58,7 +58,7 @@ function boot(options) {
     timers,
     print: printer,
     recipes: settings.recipes === undefined ? null : settings.recipes,
-    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined,
+    tier: settings.phone ? () => ({ input: "touch", width: "phone" }) : (settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined),
     scan: settings.scan
   });
   doc.body.appendChild(view.element);
@@ -1640,4 +1640,89 @@ test("the sheets give a finger Scan and a mouse Print: each hidden where the oth
   assert.match(css, /\n\.slate-scan \{\s*display: none;/);
   assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-print \{\s*display: none;/);
   assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-scan \{[^}]*display: block;/);
+});
+
+/* ----------------------------------------------------------------------
+ *   A phone: the recipe as a grid of cells
+ * -------------------------------------------------------------------- */
+
+test("on a phone a tap anywhere on a Current cell is its Track - one command, as its toggle's - and a cell whose Track is withheld, or on Next, sends nothing; no cell opens an editor", () => {
+  const { view, commands } = boot({ phone: true });
+  view.update(withPlan(), { kind: "structural" });
+  // The resin and the blend are the cell, not editors.
+  click(row(view, "A1").querySelector(".slate-hopper__resin"));
+  assert.deepEqual(commands.calls, [{ command: "setHopperTracking", args: { recipe: "current", layer: "A", index: 0, track: false } }]);
+  assert.equal(view.element.querySelectorAll(".slate-hopper__input, .slate-combobox__input").length, 0, "a cell opened an editor");
+  click(row(view, "B2").querySelector(".slate-hopper__pct"));
+  click(row(view, "B2"));
+  assert.equal(commands.calls.length, 3);
+  assert.ok(commands.calls.every(call => call.command === "setHopperTracking"));
+  // Track not offered there (Assisted, a plan that keeps the resin): the tap is nothing.
+  const kept = row(view, "C1");
+  assert.ok(kept.querySelector("[data-slate-control='tracking']").hasAttribute("hidden"));
+  click(kept);
+  assert.equal(commands.calls.length, 3);
+  // The plan's cells track nothing.
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
+  click(row(view, "A1", "next"));
+  click(row(view, "A1", "next").querySelector(".slate-hopper__resin"));
+  assert.equal(commands.calls.length, 3);
+  // The layer's share keeps its editor.
+  click(head(view, "B", "next").querySelector(".slate-layer__share"));
+  assert.ok(head(view, "B", "next").querySelector(".slate-layer__input"), "the share's editor did not open");
+});
+
+test("on a phone the layer's name keeps its letter apart from the word, and the section says how many layers stand side by side", () => {
+  const { view } = boot({ phone: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const name = head(view, "A").querySelector(".slate-layer__name");
+  assert.equal(name.textContent, "Layer A");
+  assert.equal(name.querySelector(".slate-layer__word").textContent, "Layer ");
+  assert.equal(view.body("current").querySelector(".slate-recipe__layers").style.getPropertyValue("--slate-layers"), "3");
+});
+
+test("on a phone Bulk edit picks a whole cell - its drafts are values there, not fields to tap - and says so in its hint; the layer's name still picks the layer", () => {
+  const { view, commands } = boot({ phone: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(view));
+  assert.match(bulkFoot(view).querySelector(".slate-recipe__bulk-hint").textContent, /^Tap hoppers/);
+  click(row(view, "A2"));
+  click(row(view, "B3").querySelector(".slate-hopper__weight"));
+  assert.deepEqual(view.bulk().picked.sort(), ["A:1", "B:2"]);
+  click(row(view, "A2"));
+  assert.deepEqual(view.bulk().picked, ["B:2"]);
+  click(head(view, "C").querySelector(".slate-layer__name"));
+  assert.equal(view.bulk().picked.filter(key => key.startsWith("C")).length, 6);
+  assert.equal(commands.calls.length, 0, "a pick tracked or dispatched");
+  // With a mouse the hint is the id's, as before.
+  const mouse = boot();
+  mouse.view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkButton(mouse.view));
+  assert.match(bulkFoot(mouse.view).querySelector(".slate-recipe__bulk-hint").textContent, /^Click a hopper id/);
+});
+
+test("under Compare a cell whose resin changes is turned and the cells where nothing moves step back; Compare off returns them all; a blend-only change is neither", () => {
+  const { view } = boot({ phone: true });
+  view.update(planWithChanges(), { kind: "structural" });
+  const classes = id => ["is-turned", "is-quiet"].filter(name => row(view, id).classList.contains(name));
+  assert.deepEqual(classes("A1"), []);
+  click(view.element.querySelector("[data-slate-compare]"));
+  assert.deepEqual(classes("A1"), ["is-turned"]);
+  assert.deepEqual(classes("A2"), ["is-quiet"]);
+  assert.deepEqual(classes("A3"), [], "a blend-only change turned or stepped back");
+  click(view.element.querySelector("[data-slate-compare]"));
+  for (const id of ["A1", "A2", "A3"]) assert.deepEqual(classes(id), []);
+});
+
+test("on a phone turning to the other tab lets its cells rise again; with a mouse nothing replays", () => {
+  const { view } = boot({ phone: true });
+  view.update(withPlan(), { kind: "structural" });
+  for (const one of view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
+  assert.ok(view.body("next").querySelectorAll(".slate-hopper").every(one => one.classList.contains("slate-row-enter")));
+  const mouse = boot();
+  mouse.view.update(withPlan(), { kind: "structural" });
+  for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
+  click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
+  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter")));
 });

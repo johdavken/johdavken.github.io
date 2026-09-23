@@ -69,7 +69,8 @@
   gap: var(--slate-space-4);
 }
 
-.slate-root[data-input="touch"][data-viewport="narrow"] .slate-modal__actions {
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-modal__actions,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-modal__actions {
   flex-direction: column;
   align-items: stretch;
 }

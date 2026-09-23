@@ -1305,3 +1305,7 @@
 body[data-shell="touch"] .changeoverWizardTrigger{display:grid}
 body[data-shell="touch"] .changeoverWizardDialog{position:fixed;inset:auto auto calc(var(--app-dock-height) + env(safe-area-inset-bottom) + 10px) 50%;transform:translateX(-50%);margin:0}
 
+
+/* Slate (Beta) in Workspace & Support is a link among buttons: it reads
+   as one of them. */
+#workspaceNavSlate{ text-decoration: none; }

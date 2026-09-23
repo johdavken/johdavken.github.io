@@ -96,6 +96,7 @@
                         //   hopper circumference, inches, for cylindrical
                         //   lines; 0 clears
     "setSmartHoppers",  // { enabled }  this device's Smart Hoppers switch
+    "setTimelineAlarm", // { enabled }  this device's pump-off alarm switch
     "promoteNextRecipe", // {}  the planned recipe becomes the running one -
                         //   the floor UI's Load Next Recipe; the plan is kept
     "copyCurrentToNext", // {}  the running recipe becomes the plan - the
@@ -165,8 +166,10 @@
    * application's applySharedActiveJob keeps it local on purpose). A
    * Station view asks THIS browser's application, which is that device,
    * so the switch it flips is its own. It names no recipe and no
-   * position. */
-  const PREFERENCE_COMMANDS = Object.freeze(["setSmartHoppers"]);
+   * position. The pump-off alarm ("Alarm when pump-off is due") is the
+   * same kind of switch: this device's, saved with its session, its
+   * sound, vibration and notifications the application's own. */
+  const PREFERENCE_COMMANDS = Object.freeze(["setSmartHoppers", "setTimelineAlarm"]);
 
   /* The two plan commands. Promotion and copying are the two moves between
    * the running recipe and the planned one, and each is a whole-recipe
@@ -221,6 +224,7 @@
     setHopperGeometries: Object.freeze(["recipe", "geometries"]),
     setHopperCircumference: Object.freeze(["circumference"]),
     setSmartHoppers: Object.freeze(["enabled"]),
+    setTimelineAlarm: Object.freeze(["enabled"]),
     promoteNextRecipe: Object.freeze([]),
     copyCurrentToNext: Object.freeze([]),
     copyLayer: Object.freeze(["recipe", "layer", "toLayer"]),
