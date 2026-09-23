@@ -631,6 +631,17 @@
       return null;
     }
 
+    /* The line in the row: its "Next: " (or "Current: ") apart from the
+     * value, so the Left layout's Compare column can trade the word for
+     * an arrow (components/recipe.css, by data-way). */
+    function paintOther(entry, id, tag, line) {
+      while (entry.other.firstChild) entry.other.removeChild(entry.other.firstChild);
+      const head = `${tag}: `;
+      entry.other.appendChild(text(doc, "span", "slate-hopper__other-tag", head));
+      entry.other.appendChild(doc.createTextNode(line.slice(head.length)));
+      entry.other.setAttribute("data-way", id === "next" ? "from" : "to");
+    }
+
     /* Compare's band on a phone and in the Grid layout: where the resin
      * changes, the resin the hopper becomes on Current, and the one it
      * replaces on Next (the arrow is the sheet's, data-way), with its
@@ -677,7 +688,7 @@
           paintChange(entry, id, compare && !drafting ? other : null);
           const empty = !String((mine && mine.resinName) || "").trim() && !(other && String(other.resin || "").trim());
           emptyAt.set(entry.index, (emptyAt.has(entry.index) ? emptyAt.get(entry.index) : true) && empty);
-          if (line) entry.other.textContent = line;
+          if (line) paintOther(entry, id, tag, line);
           // A resin change is also the band's, which the Grid layout shows in its stead.
           if (other && other.resinDiffers) entry.other.setAttribute("data-change", "resin");
           else entry.other.removeAttribute("data-change");

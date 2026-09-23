@@ -1744,6 +1744,10 @@ test("on a phone a cell holds the hopper, its blend and its resin; Compare adds 
   // The line under a row says a resin change too; the Grid layout leaves that to the band.
   assert.equal(row(view, "A1").querySelector(".slate-hopper__other").getAttribute("data-change"), "resin");
   assert.equal(row(view, "A3").querySelector(".slate-hopper__other").getAttribute("data-change"), null, "a blend-only line was marked a resin change");
+  // The line's word apart from its value, and which way it runs, for the Left layout's column to show an arrow.
+  const line = row(view, "A1").querySelector(".slate-hopper__other");
+  assert.equal(line.querySelector(".slate-hopper__other-tag").textContent, "Next: ");
+  assert.equal(line.getAttribute("data-way"), "to");
   // A cell that says what moves is marked, for the Grid layout to put it in the weight's place.
   assert.ok(row(view, "A1").classList.contains("is-comparing") && row(view, "A3").classList.contains("is-comparing"));
   assert.ok(!row(view, "A2").classList.contains("is-comparing"), "an agreeing hopper was marked");

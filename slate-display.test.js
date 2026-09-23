@@ -385,6 +385,26 @@ test("the Grid layout: a row per layer, the head a tile at its start and one cel
   assert.ok(css.indexOf('.slate-root[data-layers="grid"] .slate-recipe__layers {') < css.indexOf('.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__layers {'));
 });
 
+test("under Compare the Left layout's rows say the other recipe on the same line - a column after the resin, an arrow for the word - while Top, touch and Grid keep their own lines", () => {
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "recipe.css"), "utf8");
+  const rule = selector => {
+    const at = css.indexOf(`${selector} {`);
+    assert.ok(at > -1, `no rule for ${selector}`);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  assert.match(rule('.slate-recipe.is-comparing .slate-hopper[data-recipe="current"]'), /grid-template-columns: 56px minmax\(0, 1fr\) minmax\(0, 1\.6fr\) 72px 96px var\(--slate-controls-width\) 80px;/);
+  assert.match(rule('.slate-recipe.is-comparing .slate-hopper[data-recipe="next"]'), /grid-template-columns: 56px minmax\(0, 1fr\) minmax\(0, 1\.6fr\) 72px 80px;/);
+  assert.match(rule(".slate-recipe.is-comparing .slate-hopper__other"), /--slate-other-tag: none;[^}]*grid-row: 1;[^}]*grid-column: 3;/);
+  assert.match(rule(".slate-hopper__other-tag"), /display: var\(--slate-other-tag, inline\);/);
+  // The others put the line back under the row, word and all.
+  for (const selector of ['.slate-root[data-layers="top"] .slate-hopper__other', '  .slate-root[data-input="touch"] .slate-hopper__other']) {
+    assert.match(rule(selector), /--slate-other-tag: inline;[^}]*--slate-other-arrow: none;[^}]*grid-row: auto;[^}]*grid-column: 1 \/ -1;/, selector);
+  }
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper__other:not([hidden])'), /--slate-other-tag: inline;[^}]*--slate-other-arrow: none;/);
+  // Written before the layouts that override it, so they win on equal weight.
+  assert.ok(css.indexOf('.slate-recipe.is-comparing .slate-hopper[data-recipe="current"] {') < css.indexOf('.slate-root[data-layers="top"] .slate-hopper[data-recipe] {'));
+});
+
 /* ----------------------------------------------------------------------
  *   The boot: automatic against a linked line
  * -------------------------------------------------------------------- */
