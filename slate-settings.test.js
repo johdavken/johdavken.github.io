@@ -14,49 +14,109 @@ function storage() {
   return { getItem: key => (key in store ? store[key] : null), setItem(key, value) { store[key] = String(value); }, store };
 }
 
-/* aria-checked down the gallery with exactly one tile on. */
-const checkedOnly = id => theme.THEME_IDS.map(one => (one === id ? "true" : "false"));
+/* The families, in gallery order: each registered light/dark pair. */
+const FAMILIES = [...new Set(theme.THEME_IDS.map(id => id.replace(/-(light|dark)$/, "")))];
+/* aria-checked down the gallery with exactly one family's tile on. */
+const checkedOnly = family => FAMILIES.map(one => (one === family ? "true" : "false"));
+const labelOf = id => theme.THEMES.find(item => item.id === id).label;
 
-test("the picker offers every registered theme as a radio, marks the current one, and drives the controller", () => {
+test("the picker offers one tile per family as a radio, each showing one half, marks the current one, and drives the controller", () => {
   const doc = makeDocument();
   const root = doc.createElement("div");
   const saved = storage();
   const controller = theme.create(root, saved);
   const view = settings.create(doc, { theme: controller, themes: theme.THEMES });
+  assert.equal(FAMILIES.length * 2, theme.THEME_IDS.length, "every theme has its other half");
+  const boxes = view.element.querySelectorAll(".slate-theme-tile");
+  assert.deepEqual(boxes.map(box => box.getAttribute("data-theme-family")), FAMILIES);
   const tiles = view.element.querySelectorAll("[data-theme-choice]");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("data-theme-choice")), [...theme.THEME_IDS]);
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("role")), theme.THEME_IDS.map(() => "radio"));
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-dark"));
+  assert.equal(tiles.length, FAMILIES.length);
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("role")), FAMILIES.map(() => "radio"));
+  // The live theme is Yaru Dark: its family shows it, and every other family shows its dark half too.
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("data-theme-choice")), FAMILIES.map(family => `${family}-dark`));
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru"));
   assert.equal(view.element.querySelector("[role='radiogroup']").getAttribute("aria-label"), "Theme");
-  // The swatch draws in the tile's own theme, not the live one.
-  assert.equal(tiles[1].querySelector(".slate-theme-scope").getAttribute("data-theme"), "yaru-dark");
+  assert.equal(tiles[0].querySelector(".slate-theme-tile__name").textContent, "Yaru Dark");
+  // The swatch draws in the half the tile shows, not the live one.
+  assert.equal(tiles[1].querySelector(".slate-theme-scope").getAttribute("data-theme"), "rose-pine-dark");
   assert.equal(tiles[0].querySelector(".slate-theme-tile__selected-mark").textContent, "✓");
   assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-title"));
   assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-status"));
   assert.ok(tiles[0].querySelector(".slate-theme-tile__preview-action"));
 
-  click(tiles[0]);
-  assert.equal(controller.getTheme(), "yaru-light");
-  assert.equal(root.getAttribute("data-theme"), "yaru-light");
-  assert.equal(saved.store[theme.STORAGE_KEY], "yaru-light");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-light"));
-  assert.ok(tiles[0].classList.contains("is-selected"));
+  // A tile chooses the half it shows.
+  click(tiles[1]);
+  assert.equal(controller.getTheme(), "rose-pine-dark");
+  assert.equal(root.getAttribute("data-theme"), "rose-pine-dark");
+  assert.equal(saved.store[theme.STORAGE_KEY], "rose-pine-dark");
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("rose-pine"));
+  assert.ok(boxes[1].classList.contains("is-selected") && !boxes[0].classList.contains("is-selected"));
 
-  // A change from elsewhere (another Settings, the harness) is followed.
-  controller.setTheme("yaru-dark");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru-dark"));
+  // A change from elsewhere (another Settings, the harness) is followed, half and all.
+  controller.setTheme("yaru-light");
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), checkedOnly("yaru"));
+  assert.equal(tiles[0].getAttribute("data-theme-choice"), "yaru-light");
+  assert.equal(tiles[0].querySelector(".slate-theme-tile__name").textContent, "Yaru Light");
+});
+
+test("each tile's day / night switch turns it between its halves - the name, the description and the swatch with it - and the live family's switch changes the theme at once", () => {
+  const doc = makeDocument();
+  const root = doc.createElement("div");
+  const saved = storage();
+  saved.setItem(theme.STORAGE_KEY, "yaru-light");
+  const controller = theme.create(root, saved);
+  const view = settings.create(doc, { theme: controller, themes: theme.THEMES });
+  const yaru = view.themeSwitch("yaru");
+  assert.equal(yaru.getAttribute("role"), "switch");
+  assert.equal(yaru.getAttribute("aria-checked"), "false", "Yaru Light is day");
+  assert.equal(view.themeSwitch("yaru-dark"), yaru, "either half names the family");
+  assert.ok(yaru.closest(".slate-theme-tile") === view.tile("yaru").closest(".slate-theme-tile"));
+  assert.ok(!view.tile("yaru").contains(yaru), "the switch is not inside the choosing button");
+
+  // The live family: the theme turns with the switch, and the untouched families turn with it.
+  click(yaru);
+  assert.equal(controller.getTheme(), "yaru-dark");
+  assert.equal(view.tile("catppuccin").getAttribute("data-theme-choice"), "catppuccin-dark", "an untouched family did not follow the live scheme");
+  assert.equal(saved.store[theme.STORAGE_KEY], "yaru-dark");
+  assert.equal(yaru.getAttribute("aria-checked"), "true");
+  assert.equal(view.tile("yaru").querySelector(".slate-theme-tile__name").textContent, "Yaru Dark");
+  assert.equal(view.tile("yaru").querySelector(".slate-theme-scope").getAttribute("data-theme"), "yaru-dark");
+  assert.match(yaru.getAttribute("aria-label"), /^Night: Yaru Dark$/);
+  click(yaru);
+  assert.equal(controller.getTheme(), "yaru-light");
+
+  // Another family: the switch only turns the tile; choosing it then chooses that half.
+  const gruvbox = view.tile("gruvbox");
+  assert.equal(gruvbox.getAttribute("data-theme-choice"), "gruvbox-light", "a family starts on the live theme's scheme");
+  click(view.themeSwitch("gruvbox"));
+  assert.equal(controller.getTheme(), "yaru-light", "a switch on another family changed the theme");
+  assert.equal(gruvbox.getAttribute("data-theme-choice"), "gruvbox-dark");
+  assert.equal(gruvbox.querySelector(".slate-theme-tile__name").textContent, labelOf("gruvbox-dark"));
+  assert.equal(gruvbox.querySelector(".slate-theme-tile__description").textContent, theme.THEMES.find(item => item.id === "gruvbox-dark").description);
+  assert.equal(gruvbox.getAttribute("aria-checked"), "false");
+  // The turned tile keeps its half when the theme changes elsewhere.
+  controller.setTheme("tokyo-night-light");
+  assert.equal(gruvbox.getAttribute("data-theme-choice"), "gruvbox-dark");
+  click(gruvbox);
+  assert.equal(controller.getTheme(), "gruvbox-dark");
+  assert.equal(view.tile("yaru").getAttribute("data-theme-choice"), "yaru-dark", "Yaru, untouched, follows the live scheme");
+  assert.equal(gruvbox.getAttribute("data-theme-choice"), "gruvbox-dark");
 });
 
 test("with no controller the tiles are inert and the section says so; the later-preferences stub is present", () => {
   const doc = makeDocument();
   const view = settings.create(doc, { theme: null, themes: theme.THEMES });
   const tiles = view.element.querySelectorAll("[data-theme-choice]");
-  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), theme.THEME_IDS.map(() => "false"));
+  assert.deepEqual(tiles.map(tile => tile.getAttribute("aria-checked")), FAMILIES.map(() => "false"));
   assert.doesNotThrow(() => click(tiles[0]));
+  assert.doesNotThrow(() => click(view.themeSwitch("yaru")));
+  assert.equal(tiles[0].getAttribute("data-theme-choice"), "yaru-dark", "the switch still turns the tile");
   assert.match(view.element.querySelector(".slate-settings__note").textContent, /cannot be changed/);
   assert.match(view.element.querySelector(".slate-stub").textContent, /later phases/);
-  assert.equal(view.tile("yaru-dark"), tiles[1]);
+  assert.equal(view.tile("yaru-dark"), tiles[0]);
+  assert.equal(view.tile("rose-pine"), tiles[1]);
   assert.equal(view.tile("nope"), null);
+  assert.equal(view.themeSwitch("nope"), null);
 });
 
 /* ----------------------------------------------------------------------
