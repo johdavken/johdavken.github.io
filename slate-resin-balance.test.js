@@ -149,3 +149,55 @@ test("formatting: pounds are truncated and grouped, shares to one place, a dash 
   assert.equal(balance.formatShare(1, 3), "33.3%");
   assert.equal(balance.formatShare(5, 0), "");
 });
+
+test("handed the job, the panel carries production and scrap as two rows in the cards' words; a tap opens a field with the card's draft, Save sends it through the cards' entry, a refusal stays with its words, Cancel sends nothing; under a finger its empty state points at them", () => {
+  const { key } = require("./tools/slate-test/fake-dom.js");
+  const doc = makeDocument();
+  const entered = [];
+  let answer = { ok: true, changed: true };
+  let tier = { input: "touch", width: "narrow" };
+  const view = balance.create(doc, {
+    totals, back: () => {}, tier: () => tier,
+    job: {
+      value: field => (field === "production" ? "12,400 lb" : "—"),
+      draft: field => (field === "production" ? "12400" : ""),
+      enter: (field, raw) => { entered.push([field, raw]); return answer; }
+    }
+  });
+  view.update(resolvedFrom(snap => { snap.job.prodResinLb = 0; snap.job.scrapResinLb = ""; }));
+  const box = field => view.element.querySelector(`[data-balance-field='${field}']`);
+  const q = (field, selector) => box(field).querySelector(selector);
+  assert.equal(q("production", ".slate-balance__entry-value").textContent, "12,400 lb");
+  assert.equal(q("scrap", ".slate-balance__entry-value").textContent, "—");
+  assert.equal(view.element.querySelector(".slate-balance__empty").textContent, balance.NO_POUNDS_TOUCH);
+
+  click(q("production", ".slate-balance__entry"));
+  assert.ok(!q("production", ".slate-balance__editor").hasAttribute("hidden"));
+  assert.ok(q("production", ".slate-balance__entry").hasAttribute("hidden"));
+  assert.equal(q("production", ".slate-balance__input").value, "12400");
+  q("production", ".slate-balance__input").value = "13000";
+  // A publish while typing leaves the field alone.
+  view.update(resolvedFrom(snap => { snap.job.prodResinLb = 0; snap.job.scrapResinLb = ""; }));
+  assert.equal(q("production", ".slate-balance__input").value, "13000");
+  click(q("production", "[data-balance-do='save']"));
+  assert.deepEqual(entered, [["production", "13000"]]);
+  assert.ok(q("production", ".slate-balance__editor").hasAttribute("hidden"), "an accepted entry left the field open");
+
+  // One field at a time; a refusal keeps the field and says why; Enter saves; Cancel sends nothing.
+  click(q("scrap", ".slate-balance__entry"));
+  answer = { ok: false, code: "bad_argument", message: "Enter a number of pounds." };
+  q("scrap", ".slate-balance__input").value = "abc";
+  key(q("scrap", ".slate-balance__input"), "Enter");
+  assert.deepEqual(entered[1], ["scrap", "abc"]);
+  assert.ok(!q("scrap", ".slate-balance__editor").hasAttribute("hidden"));
+  assert.equal(q("scrap", ".slate-balance__note").textContent, "Enter a number of pounds.");
+  click(q("production", ".slate-balance__entry"));
+  assert.ok(q("scrap", ".slate-balance__editor").hasAttribute("hidden"), "two fields stood open");
+  click(q("production", "[data-balance-do='cancel']"));
+  assert.equal(entered.length, 2);
+  assert.ok(q("production", ".slate-balance__editor").hasAttribute("hidden"));
+
+  tier = { input: "pointer", width: "wide" };
+  view.update(resolvedFrom(snap => { snap.job.prodResinLb = 0; snap.job.scrapResinLb = ""; }));
+  assert.equal(view.element.querySelector(".slate-balance__empty").textContent, balance.NO_POUNDS);
+});

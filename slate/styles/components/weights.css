@@ -389,3 +389,132 @@
     padding-left: calc(40px + var(--slate-space-2));
   }
 }
+
+/* ---- A phone: one line per hopper ----
+   The layers stack with a short bar for a head; each hopper is one line -
+   its id, its resin, the weight field, with Smart Hoppers the geometry
+   field and the computed weight - so a line's weights fit a screen or two.
+   A hopper empty in both recipes is left out (slate-weights.js marks it
+   is-vacant), and "Show empty hoppers" brings them back. The explanation
+   under the switch is left out too; the switch says its state. */
+.slate-weights__show-empty {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__smart-text {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layers {
+  gap: var(--slate-space-2);
+  margin-bottom: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer {
+  display: block;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__head {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border-left-width: 3px;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer-name {
+  font-size: var(--slate-text-md);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer-role {
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__rows {
+  gap: 1px;
+  padding: var(--slate-space-1);
+}
+
+/* The attribute out-specifies the container's two-line rows. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row[data-key] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--slate-space-2);
+  row-gap: 2px;
+  padding: 2px var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row.is-vacant {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__id {
+  flex: 0 0 26px;
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__resin {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--slate-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__wrap {
+  flex: none;
+  gap: 2px;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="weight"] {
+  --slate-field-width: 4.4em;
+  --slate-field-padding: 2px var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="geometry"] {
+  --slate-field-width: 3.4em;
+  --slate-field-padding: 2px var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__unit {
+  font-size: var(--slate-text-xs);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__computed {
+  flex: none;
+  min-width: 3.4em;
+  font-size: var(--slate-text-xs);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row-note {
+  flex: 1 0 100%;
+  padding-left: calc(26px + var(--slate-space-2));
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__revert:not([hidden]) {
+  min-width: 0;
+  min-height: var(--slate-tap-cell);
+  padding: 0 var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__show-empty:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--slate-tap);
+  margin-bottom: var(--slate-space-4);
+  padding: 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* The circumference and the switch share the bar's line on a phone. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__shared {
+  display: none;
+}

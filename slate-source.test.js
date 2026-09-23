@@ -204,3 +204,16 @@ test("a Next-only edit, a history flip and a plan appearing are all changes Slat
   assert.equal(source.classifyChange(unplanned, before), "structural", "a plan appearing did not rebuild");
   assert.equal(source.classifyChange(before, unplanned), "structural");
 });
+
+test("the pump-off alarm reads as the application says it - on or off - and as nothing when it says nothing; a flip is a values change", () => {
+  assert.equal(source.alarmFrom(null), null);
+  assert.equal(source.alarmFrom({}), null);
+  assert.deepEqual(source.alarmFrom({ alarm: { enabled: true } }), { enabled: true });
+  assert.deepEqual(source.alarmFrom({ alarm: { enabled: "yes" } }), { enabled: false }, "only a true is on");
+  const snap = on => Object.assign(demo.snapshot(1000), { revision: 1, alarm: { enabled: on } });
+  const before = source.resolveSource({ snapshot: snap(false) });
+  const after = source.resolveSource({ snapshot: snap(true) });
+  assert.deepEqual(after.alarm, { enabled: true });
+  assert.equal(source.classifyChange(before, after), "values");
+  assert.equal(source.resolveSource({ demo, now: 1000 }).alarm, null);
+});

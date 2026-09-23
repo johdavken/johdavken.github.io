@@ -103,6 +103,7 @@
 }
 
 .slate-root[data-input="touch"] .slate-stats {
+  position: relative;
   padding: var(--slate-space-4) var(--slate-space-4) 0;
 }
 
@@ -114,10 +115,186 @@
   padding: var(--slate-space-4) var(--slate-space-4) var(--slate-space-4) 0;
 }
 
+/* ---- A phone (touch, data-viewport="phone") ----
+   One column: the header, the job's strip, the page, the bar. The page
+   row holds the centre and the aside in the same cell - the aside is a
+   page laid over the centre while the bar's Timeline is chosen
+   (components/panel.css) - and each scrolls on its own, so the header,
+   the strip and the bar stay where the thumb expects them. The rail is a
+   sheet raised from the bar's Menu (components/rail.css). */
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header"
+    "stats"
+    "page"
+    "bar";
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 0;
+  border-inline: 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header {
+  flex-wrap: wrap;
+  row-gap: 0;
+  min-height: var(--slate-header-height-phone);
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-stats {
+  position: relative;
+  z-index: 2;
+  padding: var(--slate-space-2) var(--slate-space-3) 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-centre {
+  grid-area: page;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--slate-space-3) var(--slate-space-2);
+}
+
 /* Behind the open drawer; hidden (slate.js) whenever the drawer is shut. */
 .slate-shell__scrim {
   position: fixed;
   inset: 0;
   z-index: 29;
   background: var(--slate-scrim);
+}
+
+/* The pump-off alarm's alert (slate.js): over everything, at the top of
+   the screen, until it is dismissed. */
+.slate-alert {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-space-3));
+  right: var(--slate-space-3);
+  left: var(--slate-space-3);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-overdue);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+  color: var(--slate-text);
+  font-weight: 600;
+}
+
+.slate-alert__text {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.slate-root .slate-alert__dismiss {
+  flex: none;
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-overdue);
+  border-radius: var(--slate-radius);
+  color: var(--slate-overdue);
+}
+
+/* The offer to open Slate every time (slate.js): a quiet strip at the foot,
+   over the page, until it is answered. On a phone it stands above the bar. */
+.slate-offer {
+  position: fixed;
+  right: var(--slate-space-3);
+  bottom: calc(var(--slate-inset-bottom) + var(--slate-space-3));
+  left: var(--slate-space-3);
+  z-index: 35;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-offer {
+  bottom: calc(var(--slate-inset-bottom) + var(--slate-bar-height) + var(--slate-space-3));
+}
+
+.slate-offer__text {
+  flex: 1 1 12em;
+  margin: 0;
+  font-weight: 600;
+}
+
+.slate-root .slate-offer__action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+  font-weight: 600;
+}
+
+.slate-root .slate-offer__action--quiet {
+  border-color: var(--slate-border);
+  background: none;
+  color: var(--slate-text);
+}
+
+/* ---- A phone on its side (data-orientation="landscape") ----
+   The page is short, so the chrome gives up height: the bar stands as a
+   column at the left, the header and the job's strip share one row, and
+   the page takes everything under them. A notice rides at the foot as a
+   toast rather than a row; the quiet one ("no line is linked") is left
+   out. */
+.slate-root[data-input="touch"][data-viewport="phone"][data-orientation="landscape"] .slate-shell {
+  grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "bar header stats"
+    "bar page page";
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"][data-orientation="landscape"] .slate-header {
+  flex-wrap: nowrap;
+  border-bottom: 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"][data-orientation="landscape"] .slate-header__notice {
+  position: fixed;
+  right: var(--slate-space-3);
+  bottom: calc(var(--slate-inset-bottom) + var(--slate-space-3));
+  z-index: 36;
+  max-width: 50vw;
+  margin: 0;
+  border: var(--slate-stroke) solid var(--slate-border);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"][data-orientation="landscape"] .slate-header__notice.is-quiet {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"][data-orientation="landscape"] .slate-stats {
+  align-self: center;
+  padding: 0 var(--slate-space-3) 0 0;
+}
+
+/* A phone's job figures are Home's (components/home.css): the strip
+   steps out of every page, but stays built and unseen, so the editors and
+   the picker Home opens still rise from it as sheets (phone.css). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-stats {
+  position: absolute;
+  height: 0;
+  padding: 0;
+  overflow: visible;
+  visibility: hidden;
 }

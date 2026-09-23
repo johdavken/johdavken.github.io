@@ -80,3 +80,14 @@ test("trackMany without a bridge refuses every request the same way and throws n
   }
   assert.deepEqual(tracking.trackMany(null, undefined), []);
 });
+
+test("the pump-off alarm is the device's switch: offered when the application declares it, one setTimelineAlarm stating the switch wanted, never held back by read-only", () => {
+  const { makeCommands } = require("./tools/slate-test/fake-dom.js");
+  const commands = makeCommands({ capabilities: ["setTimelineAlarm"] });
+  assert.equal(tracking.alarmAble(commands), true);
+  assert.equal(tracking.alarmAble(makeCommands({ capabilities: ["setPumpOff"] })), false);
+  assert.equal(tracking.alarmAble(null), false);
+  tracking.setAlarm(commands, 1);
+  assert.deepEqual(commands.calls, [{ command: "setTimelineAlarm", args: { enabled: true } }]);
+  assert.equal(tracking.setAlarm(null, true).code, "unavailable");
+});

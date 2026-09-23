@@ -79,3 +79,117 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Under a finger: production and scrap are entered here ----
+   The job's strip keeps the changeover and the output (stat-cards.css);
+   each of these rows turns into a field in place (slate-resin-balance.js),
+   sent through the job cards' own entry. */
+.slate-balance__job {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-balance__job:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-2);
+}
+
+.slate-balance__entry-box {
+  min-width: 0;
+}
+
+/* A field open takes the pair's whole width. */
+.slate-balance__entry-box:has(.slate-balance__editor:not([hidden])) {
+  grid-column: 1 / -1;
+}
+
+.slate-root .slate-balance__entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--slate-tap);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-balance__entry-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.slate-balance__entry-value {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.slate-balance__editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
+}
+
+.slate-balance__editor .slate-balance__entry-label {
+  flex: 1 0 100%;
+}
+
+.slate-balance__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-2) var(--slate-space-3);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface-raised);
+  --slate-field-min-height: var(--slate-tap);
+  flex: 1 1 6em;
+  min-width: 0;
+  font-size: var(--slate-text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-balance__unit {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-balance__editor-actions {
+  display: flex;
+  flex: 1 0 100%;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-balance__action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-root .slate-balance__action--save {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-balance__note {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+}

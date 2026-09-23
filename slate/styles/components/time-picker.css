@@ -162,3 +162,15 @@
 .slate-root[data-input="touch"] .slate-time__actions {
   gap: var(--slate-space-3);
 }
+
+/* The calculator's key: only on a phone, where the card is a tile with no
+   room for the calculator's own button (components/wizard.css). */
+.slate-root .slate-time__calc {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-time__calc {
+  display: inline-flex;
+  align-items: center;
+  margin-right: auto;
+}

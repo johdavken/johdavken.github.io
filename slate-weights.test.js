@@ -626,3 +626,26 @@ test("a locked weight says why on a tap, since its title never shows under a fin
   click(input);
   assert.match(said[said.length - 1], /^Cannot be changed here: /);
 });
+
+test("a hopper empty in both recipes is marked vacant (a phone leaves it out), unless one is being typed in; Show empty hoppers brings them back and says how many", () => {
+  const { view } = boot();
+  const plan = resolvedFrom(snap => {
+    snap.nextRecipe = { layers: snap.layers.map(layer => ({ name: layer.name, layerPct: layer.layerPct, hoppers: layer.hoppers.map(h => ({ index: h.index, pct: h.pct, resinName: h.resinName })) })) };
+    snap.nextRecipe.layers[0].hoppers[5].resinName = "FILL1";
+  });
+  view.update(plan, { kind: "structural" });
+  const button = view.element.querySelector(".slate-weights__show-empty");
+  const vacant = () => view.element.querySelectorAll(".slate-weights__row.is-vacant").map(row => row.getAttribute("data-key")).sort();
+  const before = vacant();
+  assert.ok(before.length > 0, "the demo line has no empty hopper");
+  assert.ok(!before.includes("A:5"), "a hopper the plan fills was left out");
+  for (const key of before) assert.equal(rowOf(view, key).querySelector(".slate-weights__resin").textContent, "—");
+  assert.ok(!button.hasAttribute("hidden"));
+  assert.equal(button.textContent, `Show empty hoppers (${before.length})`);
+  click(button);
+  assert.deepEqual(vacant(), []);
+  assert.equal(button.textContent, "Hide empty hoppers");
+  assert.equal(button.getAttribute("aria-pressed"), "true");
+  click(button);
+  assert.deepEqual(vacant(), before);
+});

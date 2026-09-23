@@ -1,0 +1,163 @@
+/* Home (slate-home.js): a phone's first page. The mark, large and
+   turning; the line's name; the changeover and the output as the floor
+   UI's home shows them; and three numbered steps, each with how it
+   stands. Seen only on a phone (slate.js lists it there alone). */
+
+.slate-home {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--slate-space-4);
+  padding: var(--slate-space-3) var(--slate-space-1) var(--slate-space-5);
+}
+
+/* The mark: the letterforms in the text colour, the streams in the
+   theme's (slate-logo.js), turning on rail.css's keyframes. */
+.slate-home__brand {
+  display: flex;
+  justify-content: center;
+  color: var(--slate-text);
+}
+
+.slate-home__brand .slate-logo {
+  width: min(72%, 300px);
+}
+
+.slate-home__line {
+  margin: calc(-1 * var(--slate-space-2)) 0 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* The two figures, side by side, a finger's target each. */
+.slate-home__readouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-home__readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--slate-space-3) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  text-align: left;
+}
+
+.slate-root .slate-home__readout:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.slate-home__readout-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.slate-home__readout-value {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--slate-text);
+  font-size: var(--slate-text-2xl);
+  font-weight: 700;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-home__readout-sub {
+  min-height: 1.2em;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* The steps: a numbered line each, joined down their left like the floor
+   UI's home. */
+.slate-home__steps {
+  display: flex;
+  flex-direction: column;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  overflow: hidden;
+}
+
+.slate-root .slate-home__step {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  min-height: 64px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
+  text-align: left;
+}
+
+.slate-root .slate-home__step:last-child {
+  border-bottom: 0;
+}
+
+.slate-root .slate-home__step:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-home__step-number {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+}
+
+.slate-home__step-words {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slate-home__step-label {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-home__step-line {
+  overflow: hidden;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-home__step-chevron {
+  flex: none;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xl);
+}
+
+@media (hover: hover) {
+  .slate-root .slate-home__step:hover,
+  .slate-root .slate-home__readout:hover {
+    background: var(--slate-surface-hover);
+  }
+}

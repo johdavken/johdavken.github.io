@@ -228,6 +228,10 @@ test("a snapshot taken before a change does not see the change", () => {
  * -------------------------------------------------------------------- */
 
 test("preferences, identity and transport state never cross the bridge", () => {
+  // Two device switches are the exceptions, each by name and each only as
+  // on or off: Smart Hoppers (smartHoppers.enabled) and the pump-off alarm
+  // (alarm.enabled), since a presentation layer flips them with a
+  // preference command. The alarm's sound and vibration never cross.
   const { bridge, handle } = connected(appState());
   const serialized = JSON.stringify(bridge.getSnapshot());
   for (const leaked of ["theme", "density", "timeFormat", "surfaceStyle", "mobileTimelineAlarm",
@@ -262,7 +266,7 @@ test("the job's production and scrap pounds and the scanned lots cross - Resin T
 test("the snapshot's top level is exactly the documented blocks", () => {
   const { bridge, handle } = connected(appState());
   assert.deepEqual(Object.keys(bridge.getSnapshot()).sort(),
-    ["history", "job", "layers", "line", "lots", "nextRecipe", "revision", "smartHoppers", "sources"]);
+    ["alarm", "history", "job", "layers", "line", "lots", "nextRecipe", "revision", "smartHoppers", "sources"]);
   handle.disconnect();
 });
 
@@ -668,6 +672,14 @@ test("every projected value is JSON-safe, so the clone is complete rather than l
 /* ----------------------------------------------------------------------
  *   Smart Hoppers
  * -------------------------------------------------------------------- */
+
+test("the alarm block carries this device's pump-off alarm switch, a boolean, off at rest", () => {
+  const unset = appState();
+  delete unset.mobileTimelineAlarm;
+  assert.deepEqual(bridgeModule.project(unset, {}).alarm, { enabled: false });
+  assert.deepEqual(bridgeModule.project(appState({ mobileTimelineAlarm: false }), {}).alarm, { enabled: false });
+  assert.deepEqual(bridgeModule.project(appState({ mobileTimelineAlarm: true }), {}).alarm, { enabled: true });
+});
 
 test("the smartHoppers block carries this device's switch, the line's geometry mode as the application resolves it, and the shared circumference - at rest when nothing is handed in", () => {
   const rest = bridgeModule.project(appState(), {});

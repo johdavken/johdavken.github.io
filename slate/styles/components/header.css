@@ -88,3 +88,21 @@
   line-height: var(--slate-line-tight);
   white-space: normal;
 }
+
+/* ---- A phone ----
+   A short header: the section's name, the way back and the RT Sync
+   trigger on one line; a notice, when there is one, on its own line
+   beneath them rather than squeezed between. */
+/* A phone's pages are named by the bar and by what they show: the header
+   keeps the RT Sync trigger alone (the way back is at the foot of
+   Settings). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__legacy {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__notice {
+  order: 1;
+  flex: 1 0 100%;
+  margin-bottom: var(--slate-space-2);
+}

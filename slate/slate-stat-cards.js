@@ -198,7 +198,7 @@
       const trigger = element(doc, "button", "slate-card__trigger", { type: "button", "aria-expanded": "false" });
       trigger.appendChild(text(doc, "span", "slate-card__label", LABEL[field]));
       const value = text(doc, "span", "slate-card__value", EMPTY);
-      const sub = text(doc, "span", "slate-card__sub", "");
+      const sub = text(doc, "span", `slate-card__sub slate-card__sub--${field}`, "");
       trigger.appendChild(value);
       trigger.appendChild(sub);
       card.appendChild(trigger);
@@ -210,6 +210,9 @@
       let input = null;
       if (typed) {
         editor = element(doc, "div", "slate-card__editor", { hidden: "" });
+        // What it edits, said only where the editor is a sheet away from
+        // its card: on a phone (components/stat-cards.css).
+        editor.appendChild(text(doc, "span", "slate-card__editor-title", LABEL[field]));
         input = element(doc, "input", "slate-card__input", {
           type: field === "changeover" ? "time" : "text",
           inputmode: field === "changeover" ? "numeric" : "decimal",
@@ -249,6 +252,8 @@
         },
         anchor: c.trigger,
         view: doc,
+        // On a phone the calculator is offered from here (time-picker.css).
+        calculate: changeoverModule && settings.estimate ? () => { if (calculators.changeover && !calculators.changeover.isOpen()) calculators.changeover.toggle(); } : undefined,
         onChange: on => {
           c.card.classList.toggle("is-picking", on);
           c.trigger.setAttribute("aria-expanded", on ? "true" : "false");
@@ -273,6 +278,24 @@
       c.card.appendChild(popover.element);
       c.calc = button;
       calculators[field] = popover;
+      // On a phone the card is a tile with no room for the button, and the
+      // typed editor's sheet offers the calculator instead
+      // (components/stat-cards.css). Its press keeps the field's focus, so
+      // the blur does not commit the draft it leaves.
+      const actions = c.editor ? c.editor.querySelector(".slate-card__actions") : null;
+      if (actions) {
+        const calcAction = text(doc, "button", "slate-card__action slate-card__action--calc", "Calculate", { type: "button", "data-slate-card-action": "calc" });
+        const hold = event => { cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+        calcAction.addEventListener("pointerdown", hold);
+        calcAction.addEventListener("mousedown", hold);
+        calcAction.addEventListener("click", () => {
+          if (editing === field) close();
+          if (picker) picker.close();
+          for (const other of Object.keys(calculators)) if (other !== field) calculators[other].close();
+          if (!popover.isOpen()) popover.toggle();
+        });
+        actions.insertBefore(calcAction, actions.firstChild);
+      }
       button.addEventListener("click", () => {
         // A refused draft stays with its words: the blur that came before
         // this tap already tried it, and closing would lose both.
@@ -449,6 +472,18 @@
       saveButton.addEventListener("click", () => { if (editing === field) commit(); });
     }
 
+    /* Production or scrap typed somewhere else - under a finger, Resin
+     * Balance, where those two are entered - read and sent exactly as the
+     * card's own editor reads and sends it: one command, the card's words
+     * for a refusal. */
+    function enter(field, raw) {
+      if (field !== "production" && field !== "scrap") return { ok: false, code: "bad_argument", message: `${String(field)} is not entered here.` };
+      if (!able(commandsFor(), field, guard())) return { ok: false, code: "unavailable", message: `${LABEL[field]} cannot be changed here: ${reason(commandsFor(), field, guard())}` };
+      const request = requestFor(field, raw, now());
+      if (request.error) return { ok: false, code: "bad_argument", message: request.error };
+      return apply(field, request) || { ok: false, code: "unavailable", message: "The application refused the change." };
+    }
+
     /** New job state. A card being edited keeps its draft - and the
      * picker its choice; if the change came from elsewhere it is told so. */
     function update(resolved, meta) {
@@ -472,6 +507,8 @@
       open,
       close,
       commit,
+      enter,
+      draft: field => draftFor(field, job, now()),
       editing: () => editing,
       card: field => cards[field] || null,
       slot: field => slots[field] || null,

@@ -239,3 +239,10 @@
 .slate-root[data-input="touch"] .slate-wizard__actions {
   gap: var(--slate-space-3);
 }
+
+/* A phone: the card is a small tile in the job's strip, with no room for
+   the calculator beside its name; the tile's editor offers it there
+   instead (components/stat-cards.css). */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-card__calc {
+  display: none;
+}

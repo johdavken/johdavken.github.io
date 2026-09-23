@@ -66,6 +66,10 @@
      inward swipe that starts on the edge itself. */
   --slate-drawer-w: min(var(--slate-drawer-width), calc(100vw - var(--slate-rail-width-compact)));
   --slate-handle-inset: 12px;
+  /* A phone (data-viewport="phone"): the bar along the foot and the
+     header over the page, both kept short so the recipe has the screen. */
+  --slate-bar-height: 56px;
+  --slate-header-height-phone: 48px;
   /* The system bars over an edge-to-edge app (Android): the browser's own
      inset, or the one the Capacitor shell writes for a WebView without it.
      Zero on a desktop; spent only under the touch tier. */
@@ -95,6 +99,8 @@
   --slate-motion-move: 220ms;
   --slate-motion-lead: 30ms;
   --slate-motion-flash: 600ms;
+  /* Compare's band dropping in on a phone (components/recipe.css). */
+  --slate-motion-band: 360ms;
   --slate-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -109,6 +115,7 @@
     --slate-motion-move: 0ms;
     --slate-motion-lead: 0ms;
     --slate-motion-flash: 0ms;
+    --slate-motion-band: 0ms;
   }
 }
 

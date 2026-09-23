@@ -308,3 +308,22 @@ test("a Cancel press abandoned before its click does not leave the editor unable
   rate.input.dispatchEvent({ type: "blur" });
   assert.equal(commands.calls.length, 1, "the editor stayed unable to commit");
 });
+
+test("production and scrap typed elsewhere (Resin Balance, under a finger) go through the cards' own reading: one command as the editor sends it, the card's words for a refusal, nothing for another field or under read-only", () => {
+  const { makeDocument, makeCommands } = require("./tools/slate-test/fake-dom.js");
+  const doc = makeDocument();
+  const commands = makeCommands({ capabilities: ["setChangeover", "setLineRate", "setProductionPounds", "setScrapPounds"], answer: (command, args) => (args.pounds === "abc" ? { ok: false, code: "bad_argument", message: "Enter a number of pounds." } : undefined) });
+  let readOnly = false;
+  const view = cards.create(doc, { commands: () => commands, now: () => Date.now(), readOnly: () => readOnly });
+  view.update({ job: { prodResinLb: 12400, scrapResinLb: "" } });
+  assert.equal(view.draft("production"), "12400");
+  assert.equal(view.enter("production", "13,000").ok, true);
+  assert.deepEqual(commands.calls, [{ command: "setProductionPounds", args: cards.requestFor("production", "13,000", Date.now()).args }]);
+  const bad = view.enter("scrap", "abc");
+  assert.equal(bad.ok, false);
+  assert.equal(bad.message, "Enter a number of pounds.");
+  assert.equal(view.enter("rate", "900").ok, false);
+  readOnly = true;
+  assert.equal(view.enter("scrap", "5").code, "unavailable");
+  assert.equal(commands.calls.length, 2, "another field or read-only was sent");
+});

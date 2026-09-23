@@ -114,6 +114,11 @@ function boot(options) {
       state.layers.forEach(layer=>layer.hoppers.forEach(hopper=>{ hopper.circumference = state.hopperCircumference; }));
       log.circumferenceSets = (log.circumferenceSets || 0) + 1;
     }
+    /* The pump-off alarm's three, as app.js has them: the switch applied,
+     * the browser's permissions asked, then the Android app's. */
+    function applyMobileTimelineAlarm(enabled){ state.mobileTimelineAlarm = !!enabled; (log.alarms = log.alarms || []).push(!!enabled); }
+    function primeTimelineAlarm(){ log.primed = (log.primed || 0) + 1; return Promise.resolve(); }
+    function requestNativeTimelineAlarmPermission(){ log.nativeAsks = (log.nativeAsks || 0) + 1; return Promise.resolve(); }
     function syncMobileLineRateReadout(){ log.lineRateReadouts = (log.lineRateReadouts || 0) + 1; }
     function syncChangeoverTimeDisplay(){ log.changeoverDisplays = (log.changeoverDisplays || 0) + 1; }
     const isChangeoverStale = env.scheduling.isChangeoverStale;
@@ -190,7 +195,7 @@ test("unavailable until the application connects; available with exactly the imp
   const handle = h.commands.connect({ execute: h.executor.execute, capabilities: h.executor.capabilities });
   assert.equal(h.commands.isAvailable(), true);
   assert.deepEqual([...h.commands.capabilities()].sort(), [...contract.COMMANDS].sort());
-  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments", "undo", "redo"]);
+  assert.deepEqual(h.executor.capabilities, ["setHopperResin", "setHopperBlend", "setLayerShare", "clearHopper", "setSource", "moveHopper", "setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setChangeover", "setProductionPounds", "setScrapPounds", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers", "setTimelineAlarm", "promoteNextRecipe", "copyCurrentToNext", "copyLayer", "clearLayer", "setHopperResins", "setHopperAssignments", "undo", "redo"]);
   assert.throws(() => h.commands.connect({ execute: () => {}, capabilities: [] }), /already connected/);
   assert.equal(handle.disconnect(), true);
   assert.equal(h.commands.isAvailable(), false);
@@ -1904,4 +1909,29 @@ test("the layer commands are refused while rearranging or applying a remote chan
     assert.equal(h.stateJson(), json);
     assert.equal(h.log.saves, 0);
   }
+});
+
+test("setTimelineAlarm flips this device's alarm as the floor UI's toggle does - applied, saved unsynced, published - asks the permissions only when turning it on, and a repeat changes nothing", async () => {
+  const h = boot();
+  const saves = h.log.saves;
+  const on = h.dispatch("setTimelineAlarm", { enabled: true });
+  assert.equal(on.ok, true);
+  assert.equal(on.changed, true);
+  assert.equal(h.state.mobileTimelineAlarm, true);
+  assert.equal(on.snapshot.alarm.enabled, true);
+  assert.deepEqual(h.log.validates.at(-1), { sync: false, immediate: false, kind: "edit" }, "the alarm was synced to the line");
+  assert.ok(h.log.saves > saves);
+  assert.equal(h.log.primed, 1);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.log.nativeAsks, 1, "the Android app's permissions were not asked after the browser's");
+  const saved = h.log.saves;
+  const again = h.dispatch("setTimelineAlarm", { enabled: true });
+  assert.equal(again.ok, true);
+  assert.equal(again.changed, false);
+  assert.equal(h.log.saves, saved);
+  const off = h.dispatch("setTimelineAlarm", { enabled: false });
+  assert.equal(off.changed, true);
+  assert.equal(h.state.mobileTimelineAlarm, false);
+  assert.equal(h.log.primed, 1, "turning it off asked for permissions");
+  assert.deepEqual(h.log.alarms, [true, false]);
 });

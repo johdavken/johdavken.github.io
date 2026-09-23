@@ -27,6 +27,20 @@
   white-space: nowrap;
 }
 
+/* A phone: the switches wrap under one another rather than run off the
+   screen's edge. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-section__bar {
+  flex-wrap: wrap;
+  gap: var(--slate-space-1);
+  margin-bottom: var(--slate-space-3);
+}
+
+/* The line's name is in the RT Sync trigger over it; the switches have
+   the row. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-section__subtitle {
+  display: none;
+}
+
 /* A line saying a piece of the section is still to come. */
 .slate-stub {
   margin-bottom: var(--slate-space-4);

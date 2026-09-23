@@ -25,6 +25,9 @@
   const CONTROLS = Object.freeze(["tracking", "pump"]);
   const COMMAND = Object.freeze({ tracking: "setHopperTracking", pump: "setPumpOff" });
   const RESET_COMMAND = "resetTracking";
+  /* The pump-off alarm: this device's switch, not the job's, so Slate's
+   * read-only promise does not hold it back. */
+  const ALARM_COMMAND = "setTimelineAlarm";
   const FLAG = Object.freeze({ tracking: "track", pump: "pumpOff" });
   const LABEL = Object.freeze({ tracking: "tracking", pump: "pump-off" });
 
@@ -172,6 +175,19 @@
     return list.map(r => commands.dispatch(COMMAND.tracking, { recipe: "current", layer: r.layer, index: r.index, track: true }));
   }
 
+  /** Whether the application offers the alarm switch. */
+  function alarmAble(commands) {
+    return offered(commands).includes(ALARM_COMMAND);
+  }
+
+  /** One setTimelineAlarm, stating the switch wanted. */
+  function setAlarm(commands, on) {
+    if (!commands || typeof commands.dispatch !== "function") {
+      return unavailable("No application is connected to Slate commands.");
+    }
+    return commands.dispatch(ALARM_COMMAND, { enabled: !!on });
+  }
+
   /** One resetTracking, addressed to Current. */
   function resetTracking(commands) {
     if (!commands || typeof commands.dispatch !== "function") {
@@ -181,8 +197,8 @@
   }
 
   return Object.freeze({
-    CONTROLS, COMMAND, RESET_COMMAND, FLAG, LABEL, STATE, READ_ONLY_REASON, MODES, DEFAULT_MODE,
+    CONTROLS, COMMAND, RESET_COMMAND, ALARM_COMMAND, FLAG, LABEL, STATE, READ_ONLY_REASON, MODES, DEFAULT_MODE,
     stateLabel, actionLabel, abilities, reason, requestFrom, toggle, resetTracking,
-    modeOf, offersToggle, wantsTracking, trackMany
+    modeOf, offersToggle, wantsTracking, trackMany, alarmAble, setAlarm
   });
 });

@@ -460,3 +460,59 @@
   position: absolute;
   inset: -5px -8px;
 }
+
+/* A phone: a hopper with no weight opens Weights from its chip - said by
+   the underline, and a finger's height to find it. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__chip[data-slate-weights] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--slate-space-3);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The pump-off alarm's switch: under a finger only, where the floor UI
+   offers it too (slate-timeline.js hides it where the application does
+   not say how it stands). */
+.slate-root .slate-timeline__alarm {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-timeline__alarm:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--slate-tap);
+}
+
+.slate-root .slate-timeline__alarm[aria-checked="true"] {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+}
+
+/* What goes into a hopper next, where the plan changes it (under touch). */
+.slate-timeline__member-next {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-timeline__member-next:not([hidden]) {
+  display: inline;
+  flex: 0 0 auto;
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* A phone: the header names the page and the job's strip carries the
+   changeover, so the panel's own title and changeover line step aside. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__title,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__changeover-line {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__alarm:not([hidden]) {
+  margin-top: var(--slate-space-3);
+}
