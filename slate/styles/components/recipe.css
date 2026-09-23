@@ -169,9 +169,10 @@
   max-width: 48ch;
 }
 
-/* ---- Columns ---- */
+/* ---- Columns ----
+   A hopper row's grid. There is no heading row over it: the values say
+   what they are. */
 
-.slate-recipe__columns,
 .slate-hopper {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 72px 96px var(--slate-controls-width) 80px;
@@ -180,24 +181,8 @@
 }
 
 /* The plan's rows: no weight, no toggles. */
-.slate-recipe__body[data-recipe="next"] .slate-recipe__columns,
 .slate-recipe__body[data-recipe="next"] .slate-hopper {
   grid-template-columns: 56px minmax(0, 1fr) 72px 80px;
-}
-
-.slate-recipe__columns {
-  margin-left: calc(var(--slate-layer-head-width) + var(--slate-space-4));
-  padding: 0 var(--slate-space-3) var(--slate-space-2);
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-xs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.slate-recipe__column--pct,
-.slate-recipe__column--weight {
-  text-align: right;
 }
 
 /* ---- Layers ---- */
@@ -599,12 +584,7 @@
    across the centre, a fourth and fifth wrapping below; each card puts
    its head across the top and its hoppers under it as two-line rows -
    id, resin and blend, then the weight under the resin with Track at
-   the right. The one heading row above the cards cannot span three of
-   them, so it goes; the values carry their units. */
-
-.slate-root[data-layers="top"] .slate-recipe__columns {
-  display: none;
-}
+   the right. The values carry their units. */
 
 .slate-root[data-layers="top"] .slate-recipe__layers {
   display: grid;
@@ -764,10 +744,6 @@
 /* A narrow recipe under a finger (below the width a one-line row needs
    beside the layer's head): the two-line rows of the Top layout. */
 @container slate-recipe (max-width: 779px) {
-  .slate-root[data-input="touch"] .slate-recipe__columns {
-    display: none;
-  }
-
   .slate-root[data-input="touch"] .slate-hopper[data-recipe] {
     grid-template-columns: 40px minmax(0, 1fr) 72px;
     column-gap: var(--slate-space-2);

@@ -71,6 +71,23 @@ app, gloved/hurried operators. Mouse/desktop Slate must not change by a pixel.
   connected line; the menu re-checks as it opens. The capture/review dialogs are the app's own
   (light, legacy-styled) `:modal` dialogs over Slate - a Slate-styled scan flow is not built.
   Heat sheet is not offered (not asked for).
+- 2026-09-22, user request (branch `slate/timeline-handle`, uncommitted): the narrow-touch drawer is
+  opened by a floating handle instead of the header's Timeline button. `slate/slate-drawer-drag.js`:
+  a tap toggles; a pull from the handle drags the drawer out (it follows the finger); a sideways
+  push to the right on the open drawer closes it (its taps and vertical scroll untouched; the
+  click a push releases is spent). A release settles the other way after 40% of the width
+  travelled from where it started, or on a flick (0.4 px/ms). The handle floats 12px in from the
+  right edge (`--slate-handle-inset`, clear of Android's edge Back gesture - the user asked to
+  start with the inset; the native gesture-exclusion API is the fallback), a quarter of the
+  screen up from the gesture bar, rides the drawer's edge, and shows a red dot while a hopper is
+  overdue and running. The drawer now slides: the box stays on screen, clipped from its left by
+  `--slate-drawer-shift`, while its panel is moved right by the same amount (a box moved past
+  the edge would widen the page on Android). The centre keeps clear of the handle's column.
+  Tested on the Fold by the user: works ("gotta be a little careful with it"); the inset holds.
+- 2026-09-22, user request (desktop and tablet): the heading rows over the layers - Hopper /
+  Resin / Blend / Weight / Tracking on Current and Next, and Hopper / Resin / Weight (lb) /
+  geometry / Computed on Weights - are removed: the values say what they are. Each Weights field
+  keeps its unit beside it and its full name as its label.
 
 ## 0. Findings that correct the brief
 

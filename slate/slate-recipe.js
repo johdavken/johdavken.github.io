@@ -301,16 +301,13 @@
     /* ---- The bodies ---- */
 
     function makeBody(id) {
+      // No heading row over the layers: the values say what they are
+      // (a code, a percentage, pounds, a Track pill), and a row of labels
+      // over them only repeated it.
       const el = element(doc, "div", "slate-recipe__body", { "data-recipe": id });
-      const columns = element(doc, "div", "slate-recipe__columns", { "aria-hidden": "true" });
-      const headings = id === "current"
-        ? [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["weight", "Weight"], ["controls", "Tracking"], ["mark", ""]]
-        : [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["mark", ""]];
-      for (const [className, label] of headings) columns.appendChild(text(doc, "span", `slate-recipe__column slate-recipe__column--${className}`, label));
-      el.appendChild(columns);
       const layersEl = element(doc, "div", "slate-recipe__layers");
       el.appendChild(layersEl);
-      const body = { recipe: id, el, columns, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null, foot: null, bulk: null };
+      const body = { recipe: id, el, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null, foot: null, bulk: null };
       // "Save as recipe" leads each foot: the quiet way out to the Book.
       body.save = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__save", SAVE_LABEL, { type: "button", "data-slate-save": id, "data-able": "false" });
       if (id === "next") {
@@ -511,7 +508,6 @@
       const planned = body.recipe !== "next" || !!(resolved && resolved.plan && resolved.plan.planned);
       if (body.empty) show(body.empty, !!model && !planned);
       if (body.recipe === "next") show(planStrip, !!model && planned);
-      show(body.columns, !!model && planned);
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);
       let position = 0;

@@ -61,6 +61,11 @@
   /* The compact icon rail, and the aside's drawer on a narrow screen. */
   --slate-rail-width-compact: 64px;
   --slate-drawer-width: 360px;
+  /* The drawer's width as it stands, and how far in from the screen's edge
+     its handle floats: clear of Android's Back gesture, which takes an
+     inward swipe that starts on the edge itself. */
+  --slate-drawer-w: min(var(--slate-drawer-width), calc(100vw - var(--slate-rail-width-compact)));
+  --slate-handle-inset: 12px;
   /* The system bars over an edge-to-edge app (Android): the browser's own
      inset, or the one the Capacitor shell writes for a WebView without it.
      Zero on a desktop; spent only under the touch tier. */

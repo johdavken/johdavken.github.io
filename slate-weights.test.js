@@ -170,7 +170,9 @@ test("off: every hopper has a weight field and nothing else; the switch is withh
   assert.ok(rowOf(view, "A:3").classList.contains("is-empty"));
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__resin").textContent, "HX204");
   assert.equal(rowOf(view, "A:0").getAttribute("data-hopper"), "A1");
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent), ["Hopper", "Resin", "Weight (lb)"]);
+  // No heading row: each field carries its unit, and its name as its label.
+  assert.equal(view.element.querySelectorAll(".slate-weights__columns, .slate-weights__column").length, 0);
+  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__unit").textContent, "lb");
   assert.deepEqual(view.element.querySelectorAll(".slate-weights__layer").map(node => node.getAttribute("data-layer")), ["A", "B", "C"]);
   assert.equal(view.element.querySelector(".slate-section__subtitle").textContent, "Line 5 (demo) · 16 hoppers · Smart Hoppers unavailable · Live");
   assert.equal(view.element.querySelector(".slate-weights__smart-text").textContent, actions.SMART_UNAVAILABLE_TEXT);
@@ -189,7 +191,8 @@ test("smart:cylindrical: a height field and a computed readout per row, the circ
   view.update(resolvedFrom(snap => smartLine(snap)), { kind: "structural" });
   assert.equal(view.element.getAttribute("data-shape"), "smart:cylindrical");
   assert.equal(view.element.querySelectorAll(".slate-weights__field[data-kind='geometry']").length, 16);
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent), ["Hopper", "Resin", "Weight (lb)", "Usable height (in)", "Computed"]);
+  assert.equal(view.element.querySelectorAll(".slate-weights__column").length, 0);
+  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "in");
   assert.equal(field(view, "A:0", "geometry").value, "48");
   assert.equal(field(view, "A:0", "geometry").getAttribute("aria-label"), "A1 usable height, inches");
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "in");
@@ -216,7 +219,7 @@ test("smart:cylindrical: a height field and a computed readout per row, the circ
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "gal");
   assert.equal(rowOf(view, "A:1").querySelector(".slate-weights__computed").textContent, "no volume");
   assert.ok(circumference.hasAttribute("hidden"), "a volume line has no shared circumference");
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent).slice(3), ["Usable volume (gal)", "Computed"]);
+  assert.match(field(view, "A:0", "geometry").getAttribute("aria-label"), /usable volume, gallons/i, "the geometry field lost its name");
 });
 
 test("a shape change rebuilds the rows; a values change patches the same field in place", () => {

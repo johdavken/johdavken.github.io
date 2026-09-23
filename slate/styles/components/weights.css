@@ -54,9 +54,10 @@
   font-size: var(--slate-text-sm);
 }
 
-/* ---- Columns and rows: one grid for both ---- */
+/* ---- Rows ----
+   A hopper row's grid. There is no heading row over it: each field
+   carries its unit. */
 
-.slate-weights__columns,
 .slate-weights__row {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 128px;
@@ -65,23 +66,8 @@
 }
 
 /* With Smart Hoppers on: the geometry field and the computed weight. */
-.slate-weights[data-shape^="smart"] .slate-weights__columns,
 .slate-weights[data-shape^="smart"] .slate-weights__row {
   grid-template-columns: 56px minmax(0, 1fr) 128px 128px 160px;
-}
-
-.slate-weights__columns {
-  margin-left: calc(var(--slate-layer-head-width) + var(--slate-space-4));
-  padding: 0 var(--slate-space-3) var(--slate-space-2);
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-xs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.slate-weights__column--field {
-  text-align: right;
 }
 
 /* ---- Layers ---- */
@@ -274,12 +260,7 @@
    The same Layout preference the Recipe follows (recipe.css): cards side
    by side, the head across the top, and each row its id and resin with
    the field - and, with Smart Hoppers, the geometry and the computed
-   weight - stacked under the resin. The heading row goes with it; the
-   unit stands beside every field. */
-
-.slate-root[data-layers="top"] .slate-weights__columns {
-  display: none;
-}
+   weight - stacked under the resin; the unit stands beside every field. */
 
 .slate-root[data-layers="top"] .slate-weights__layers {
   display: grid;
@@ -382,10 +363,6 @@
 }
 
 @container slate-weights (max-width: 699px) {
-  .slate-root[data-input="touch"] .slate-weights__columns {
-    display: none;
-  }
-
   .slate-root[data-input="touch"] .slate-weights__row[data-key] {
     grid-template-columns: 40px minmax(0, 1fr);
     column-gap: var(--slate-space-2);

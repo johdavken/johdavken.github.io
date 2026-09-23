@@ -215,7 +215,8 @@ test("the bar offers Current | Next; Next's rows carry no weight or toggles, no 
   assert.equal(b1.querySelector(".slate-hopper__resin").textContent, "LL318");
   assert.equal(b1.querySelector(".slate-hopper__weight"), null);
   assert.equal(b1.querySelector("[data-slate-control]"), null);
-  assert.equal(view.body("next").querySelectorAll(".slate-recipe__column").length, 4);
+  // No heading row over either tab's layers: the values say what they are.
+  assert.equal(view.element.querySelectorAll(".slate-recipe__columns, .slate-recipe__column").length, 0);
   assert.equal(view.setRecipe("nonsense"), "next");
   assert.equal(view.setRecipe("current"), "current");
 });

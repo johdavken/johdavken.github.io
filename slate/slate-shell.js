@@ -89,9 +89,6 @@
     header.appendChild(element(doc, "p", "slate-header__notice", { "data-slate-mount": "notice", role: "status", hidden: "" }));
     // Read-only, when Slate is: a badge that opens Settings, where the mode is chosen.
     header.appendChild(text(doc, "button", "slate-header__readonly", "Read-only", { type: "button", "data-slate-readonly": "", hidden: "", title: "Slate is read-only on this line. Open Settings to change." }));
-    // The aside's way in on a narrow touch screen, where the aside is a
-    // drawer over the page (components/panel.css); shown only there.
-    header.appendChild(text(doc, "button", "slate-header__aside", "Timeline", { type: "button", "data-slate-aside-toggle": "", "aria-expanded": "false", "aria-controls": "slate-aside" }));
     header.appendChild(element(doc, "div", "slate-header__sync", { "data-slate-mount": "sync" }));
     shell.appendChild(header);
 
@@ -102,6 +99,13 @@
     root.appendChild(shell);
     // Behind the aside's drawer: a press on it closes the drawer.
     root.appendChild(element(doc, "div", "slate-shell__scrim", { "data-slate-scrim": "", hidden: "" }));
+    // The drawer's handle, floating low on the right edge of a narrow touch
+    // screen (components/panel.css; slate-drawer-drag.js pulls it). A dot
+    // on it says a hopper is overdue before the drawer is opened.
+    const handle = element(doc, "button", "slate-shell__handle", { type: "button", "data-slate-aside-handle": "", "aria-expanded": "false", "aria-controls": "slate-aside", "aria-label": "Timeline", title: "Timeline" });
+    handle.appendChild(element(doc, "span", "slate-shell__grip", { "aria-hidden": "true" }));
+    handle.appendChild(element(doc, "span", "slate-shell__handle-dot", { "aria-hidden": "true", hidden: "" }));
+    root.appendChild(handle);
     return root;
   }
 

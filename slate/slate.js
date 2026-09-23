@@ -57,6 +57,7 @@
   const displayModule = root.PolynSlateDisplay || null;
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
+  const drawerDragModule = root.PolynSlateDrawerDrag || null;
 
   const shell = root.PolynSlateShell;
   const rail = root.PolynSlateRail;
@@ -225,8 +226,36 @@
       if (asideOpen) scrim.removeAttribute("hidden");
       else scrim.setAttribute("hidden", "");
     }
-    const toggle = container ? container.querySelector("[data-slate-aside-toggle]") : null;
-    if (toggle) toggle.setAttribute("aria-expanded", asideOpen ? "true" : "false");
+    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
+    if (handle) {
+      handle.setAttribute("aria-expanded", asideOpen ? "true" : "false");
+      handle.classList.toggle("is-open", asideOpen);
+    }
+  }
+
+  /* A drag's position (px from open), or null when it ends: written on the
+   * root for the drawer, its panel and the handle to read together
+   * (components/panel.css). */
+  function followDrawer(shift) {
+    if (!container || !container.style || typeof container.style.setProperty !== "function") return;
+    const aside = mounts.aside;
+    const handle = container.querySelector("[data-slate-aside-handle]");
+    const dragging = shift !== null && shift !== undefined;
+    if (dragging) container.style.setProperty("--slate-drawer-shift", `${Math.round(shift)}px`);
+    else if (typeof container.style.removeProperty === "function") container.style.removeProperty("--slate-drawer-shift");
+    if (aside) aside.classList.toggle("is-dragging", dragging);
+    if (handle) handle.classList.toggle("is-dragging", dragging);
+  }
+
+  /* The handle's dot: a hopper past its mark and still running. */
+  function paintHandle() {
+    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
+    const dot = handle ? handle.querySelector(".slate-shell__handle-dot") : null;
+    if (!dot || !summary || typeof summary.entries !== "function") return;
+    const overdue = summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
+    if (overdue) dot.removeAttribute("hidden");
+    else dot.setAttribute("hidden", "");
+    handle.classList.toggle("is-overdue", overdue);
   }
 
   /* TIER
@@ -308,6 +337,7 @@
     // swap; the marks the Timeline then holds go to the recipe's rows.
     for (const pane of Object.values(panes)) pane.swap.update(resolved, { kind, own });
     if (summary) applyMarks(summary.marks());
+    paintHandle();
     renderNotice(resolved);
     renderReadOnly();
   }
@@ -325,6 +355,7 @@
   function onTick(marks) {
     if (stats) stats.refresh();
     applyMarks(marks);
+    paintHandle();
   }
 
   /* ---- Mount ---- */
@@ -438,9 +469,9 @@
       const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
         onChange(definition) {
           if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
-          // The drawer's button names what the drawer holds.
-          const toggle = name === "aside" ? container.querySelector("[data-slate-aside-toggle]") : null;
-          if (toggle) toggle.textContent = definition.label;
+          // The drawer's handle names what the drawer holds.
+          const handle = name === "aside" ? container.querySelector("[data-slate-aside-handle]") : null;
+          if (handle) { handle.setAttribute("aria-label", definition.label); handle.setAttribute("title", definition.label); }
         }
       });
       panes[name] = { swap, home: homeId };
@@ -496,8 +527,18 @@
     if (badge) badge.addEventListener("click", () => sections.show("settings"));
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
-    const asideToggle = container.querySelector("[data-slate-aside-toggle]");
-    if (asideToggle) asideToggle.addEventListener("click", () => setAside(!asideOpen));
+    const asideHandle = container.querySelector("[data-slate-aside-handle]");
+    if (asideHandle && drawerDragModule && mounts.aside) {
+      drawerDragModule.create(doc, {
+        handle: asideHandle,
+        drawer: mounts.aside,
+        enabled: drawer,
+        isOpen: () => asideOpen,
+        width: () => (typeof mounts.aside.getBoundingClientRect === "function" ? mounts.aside.getBoundingClientRect().width : 0),
+        follow: followDrawer,
+        settle: open => setAside(open)
+      });
+    }
     const scrim = container.querySelector("[data-slate-scrim]");
     if (scrim) scrim.addEventListener("click", () => setAside(false));
     container.addEventListener("keydown", event => {

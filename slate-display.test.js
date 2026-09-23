@@ -302,7 +302,7 @@ test("Settings offers Left / Top layers as radios after Tracking, marks the curr
  *   The sheets: the orientation is one attribute on the root
  * -------------------------------------------------------------------- */
 
-test("every Top-orientation rule is scoped to the root's data-layers attribute, left has no rule of its own, and the layers become a wrapping grid without the heading row", () => {
+test("every Top-orientation rule is scoped to the root's data-layers attribute, left has no rule of its own, and the layers become a wrapping grid", () => {
   const sheets = ["recipe.css", "recipe-edit.css", "weights.css"].map(name => ({ name, css: fs.readFileSync(path.join(__dirname, "slate", "styles", "components", name), "utf8") }));
   for (const sheet of sheets) {
     for (const match of sheet.css.matchAll(/^[^\n{]*data-layers[^\n{]*\{/gm)) {
@@ -310,11 +310,13 @@ test("every Top-orientation rule is scoped to the root's data-layers attribute, 
     }
     assert.doesNotMatch(sheet.css, /data-layers="left"/, `${sheet.name} styles the left orientation, which is the sheet itself`);
   }
+  // Neither page has a heading row over its layers any more.
+  for (const [name, block] of [["recipe.css", "slate-recipe"], ["weights.css", "slate-weights"]]) {
+    assert.doesNotMatch(sheets.find(sheet => sheet.name === name).css, new RegExp(`${block}__columns`), `${name} still styles a heading row the page no longer has`);
+  }
   for (const [name, block] of [["recipe.css", "slate-recipe"], ["weights.css", "slate-weights"]]) {
     const css = sheets.find(sheet => sheet.name === name).css;
     assert.match(css, new RegExp(`\\.slate-root\\[data-layers="top"\\] \\.${block}__layers \\{[^}]*grid-template-columns: repeat\\(auto-fill, minmax\\(260px, 1fr\\)\\)`), `${name}: the layers do not wrap`);
-    // The rule may be shared with the touch tier (a comma list), which drops the heading row too.
-    assert.match(css, new RegExp(`\\.slate-root\\[data-layers="top"\\] \\.${block}__columns(,\\s*[^{]+)? \\{\\s*display: none;`), `${name}: the heading row stays over side-by-side cards`);
   }
   // Both sections' sheets stay free of any width breakpoint: the wrap is the grid's own.
   for (const sheet of sheets) assert.doesNotMatch(sheet.css, /@media \(m(in|ax)-width/, `${sheet.name} gained a breakpoint`);
@@ -710,14 +712,14 @@ test("hosted, the root carries the tier: a desktop is pointer and wide; a coarse
   assert.equal(bare.hostEl.getAttribute("data-viewport"), "wide");
 });
 
-test("on a narrow touch screen the aside is a drawer: its header button and a rail item open it, the scrim and Escape close it, widening shuts it - and a mouse never has one", () => {
+test("on a narrow touch screen the aside is a drawer: its handle and a rail item open it, the scrim and Escape close it, widening shuts it - and a mouse never has one", () => {
   const media = fakeMedia({ coarse: true, width: 800 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media });
   const aside = hostEl.querySelector("[data-slate-mount='aside']");
-  const toggle = hostEl.querySelector("[data-slate-aside-toggle]");
+  const toggle = hostEl.querySelector("[data-slate-aside-handle]");
   const scrim = hostEl.querySelector("[data-slate-scrim]");
-  assert.ok(toggle && scrim, "the shell has no drawer button or scrim");
-  assert.equal(toggle.textContent, "Timeline");
+  assert.ok(toggle && scrim, "the shell has no drawer handle or scrim");
+  assert.equal(toggle.getAttribute("aria-label"), "Timeline");
   assert.ok(!aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"));
   click(toggle);
@@ -731,7 +733,8 @@ test("on a narrow touch screen the aside is a drawer: its header button and a ra
   // A rail item for an aside section opens the drawer on that section, and names it on the button.
   click(hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
   assert.ok(aside.classList.contains("is-open"));
-  assert.equal(toggle.textContent, "Resin Balance");
+  assert.equal(toggle.getAttribute("aria-label"), "Resin Balance");
+  assert.ok(toggle.classList.contains("is-open"), "the handle does not ride the open drawer");
   hostEl.dispatchEvent({ type: "keydown", key: "Escape", target: hostEl, stopPropagation() {} });
   assert.ok(!aside.classList.contains("is-open"), "Escape left the drawer open");
 
@@ -741,7 +744,7 @@ test("on a narrow touch screen the aside is a drawer: its header button and a ra
   assert.equal(executed.length, 0);
 
   const desk = bootHosted({ linked: false, env: fakeMedia({ coarse: false, width: 800 }) });
-  click(desk.hostEl.querySelector("[data-slate-aside-toggle]"));
+  click(desk.hostEl.querySelector("[data-slate-aside-handle]"));
   assert.ok(!desk.hostEl.querySelector("[data-slate-mount='aside']").classList.contains("is-open"), "a mouse window opened a drawer");
 });
 
@@ -755,7 +758,7 @@ test("the Android Back key, asked first, closes the drawer; with nothing open it
     for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  click(hostEl.querySelector("[data-slate-aside-toggle]"));
+  click(hostEl.querySelector("[data-slate-aside-handle]"));
   assert.ok(aside.classList.contains("is-open"));
   const first = back();
   assert.equal(first.defaultPrevented, true);
@@ -764,4 +767,15 @@ test("the Android Back key, asked first, closes the drawer; with nothing open it
   const second = back();
   assert.equal(second.defaultPrevented, true, "Slate let the hidden floor UI take the key");
   assert.equal(second.detail.minimize, true);
+});
+
+test("the drawer's handle carries a dot while a hopper is overdue and running", () => {
+  const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 800 }) });
+  const handle = hostEl.querySelector("[data-slate-aside-handle]");
+  const dot = handle.querySelector(".slate-shell__handle-dot");
+  assert.ok(dot, "the handle has no dot");
+  const timeline = hostEl.querySelector(".slate-timeline");
+  const overdue = timeline.classList.contains("is-overdue");
+  assert.equal(!dot.hasAttribute("hidden"), overdue, "the dot disagrees with the Timeline");
+  assert.equal(handle.classList.contains("is-overdue"), overdue);
 });

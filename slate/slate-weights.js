@@ -240,8 +240,8 @@
     const note = element(doc, "p", "slate-weights__note", { role: "status", hidden: "" });
     rootEl.appendChild(note);
 
-    const columns = element(doc, "div", "slate-weights__columns", { "aria-hidden": "true" });
-    rootEl.appendChild(columns);
+    // No heading row over the layers: each field carries its unit and its
+    // full name as its label, and the row of labels only repeated them.
     const layersEl = element(doc, "div", "slate-weights__layers");
     rootEl.appendChild(layersEl);
     const emptyLine = text(doc, "p", "slate-weights__empty", NO_LINE, { hidden: "" });
@@ -510,18 +510,6 @@
 
     /* ---- Building the rows ---- */
 
-    function buildColumns() {
-      clear(columns);
-      const m = smartMeasure();
-      columns.appendChild(text(doc, "span", "slate-weights__column", "Hopper"));
-      columns.appendChild(text(doc, "span", "slate-weights__column", "Resin"));
-      columns.appendChild(text(doc, "span", "slate-weights__column slate-weights__column--field", "Weight (lb)"));
-      if (m) {
-        columns.appendChild(text(doc, "span", "slate-weights__column slate-weights__column--field", `${capitalize(m.noun)} (${m.unit})`));
-        columns.appendChild(text(doc, "span", "slate-weights__column", "Computed"));
-      }
-    }
-
     function buildRow(layer, hopper) {
       const key = `${layer.id}:${hopper.index}`;
       const m = smartMeasure();
@@ -564,10 +552,8 @@
     function buildLayers() {
       clear(layersEl);
       state.rows.clear();
-      buildColumns();
       const model = state.resolved && state.resolved.line;
       show(emptyLine, !model);
-      show(columns, !!model);
       if (!model) return;
       model.layers.forEach((layer, i) => {
         const card = element(doc, "div", "slate-weights__layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });

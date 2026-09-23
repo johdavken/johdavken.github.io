@@ -88,21 +88,3 @@
   line-height: var(--slate-line-tight);
   white-space: normal;
 }
-
-/* The aside's drawer button: only on a narrow touch screen (shell.css). */
-.slate-header__aside {
-  display: none;
-}
-
-.slate-root[data-input="touch"][data-viewport="narrow"] .slate-header__aside {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  min-height: var(--slate-tap);
-  padding: 0 var(--slate-space-4);
-  border: var(--slate-stroke) solid var(--slate-border);
-  border-radius: 999px;
-  color: var(--slate-text);
-  font-size: var(--slate-text-sm);
-  font-weight: 500;
-}
