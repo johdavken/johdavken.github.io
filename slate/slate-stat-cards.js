@@ -217,6 +217,13 @@
         });
         editor.appendChild(input);
         if (UNIT[field]) editor.appendChild(text(doc, "span", "slate-card__unit", UNIT[field]));
+        // Save and Cancel, shown only under a finger (components/stat-cards.css):
+        // there Escape is out of reach and a blur commits, so the way out
+        // without a change has to be a button that wins over the blur.
+        const actions = element(doc, "div", "slate-card__actions");
+        actions.appendChild(text(doc, "button", "slate-card__action slate-card__action--cancel", "Cancel", { type: "button", "data-slate-card-action": "cancel" }));
+        actions.appendChild(text(doc, "button", "slate-card__action slate-card__action--save", "Save", { type: "button", "data-slate-card-action": "save" }));
+        editor.appendChild(actions);
         card.appendChild(editor);
       }
       const note = element(doc, "p", "slate-card__note", { role: "status", hidden: "" });
@@ -267,6 +274,9 @@
       c.calc = button;
       calculators[field] = popover;
       button.addEventListener("click", () => {
+        // A refused draft stays with its words: the blur that came before
+        // this tap already tried it, and closing would lose both.
+        if (editing && refused === editing) return;
         if (editing) close();
         if (picker) picker.close();
         for (const other of Object.keys(calculators)) if (other !== field) calculators[other].close();
@@ -329,6 +339,11 @@
       }
     }
 
+    // The field whose last commit was refused, while its editor stays open.
+    let refused = null;
+    // Cancel was pressed: the blur its press causes must not commit.
+    let cancelling = false;
+
     function open(field) {
       if (editing === field) return;
       if (editing) close();
@@ -360,6 +375,8 @@
       const field = editing;
       if (!field) return;
       editing = null;
+      refused = null;
+      cancelling = false;
       const c = cards[field];
       c.card.classList.remove("is-editing");
       c.trigger.setAttribute("aria-expanded", "false");
@@ -378,12 +395,13 @@
       }
       const request = requestFor(field, c.input.value, now());
       if (request.error) {
+        refused = field;
         say(field, request.error, true);
         return { ok: false, code: "bad_argument", message: request.error };
       }
       const result = apply(field, request);
       if (result && result.ok) close({ refocus: true });
-      else say(field, (result && result.message) || "The application refused the change.", true);
+      else { refused = field; say(field, (result && result.message) || "The application refused the change.", true); }
       return result;
     }
 
@@ -413,7 +431,22 @@
           close({ refocus: true });
         }
       });
-      c.input.addEventListener("blur", () => { if (editing === field) commit(); });
+      c.input.addEventListener("blur", () => { if (editing === field && !cancelling) commit(); });
+      // A Cancel press abandoned before its click (the finger slid off)
+      // must not leave the blur unable to commit: the field taken again
+      // clears it.
+      c.input.addEventListener("focus", () => { cancelling = false; });
+      const cancelButton = c.editor.querySelector("[data-slate-card-action='cancel']");
+      const saveButton = c.editor.querySelector("[data-slate-card-action='save']");
+      const hold = event => { cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+      cancelButton.addEventListener("pointerdown", hold);
+      cancelButton.addEventListener("mousedown", hold);
+      cancelButton.addEventListener("click", () => { if (editing === field) close({ refocus: true }); });
+      // Save's press keeps the field's focus too, so its click is the one commit.
+      const keep = event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+      saveButton.addEventListener("pointerdown", keep);
+      saveButton.addEventListener("mousedown", keep);
+      saveButton.addEventListener("click", () => { if (editing === field) commit(); });
     }
 
     /** New job state. A card being edited keeps its draft - and the

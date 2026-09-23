@@ -35,12 +35,12 @@ function node() {
 test("the preference is three-valued, defaults to automatic, and persists under its own key", () => {
   assert.equal(display.STORAGE_KEY, "polyn.slate.display.v1");
   assert.notEqual(display.STORAGE_KEY, theme.STORAGE_KEY);
-  assert.deepEqual(display.normalize(null), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ readOnly: "yes", other: 1 }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ readOnly: false }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize(null), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ readOnly: "yes", other: 1 }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ readOnly: false }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   // A stored null is the automatic choice and is kept; only a missing key reads the default (off).
-  assert.deepEqual(display.normalize({ readOnly: null }), { readOnly: null, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ readOnly: true }), { readOnly: true, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize({ readOnly: null }), { readOnly: null, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ readOnly: true }), { readOnly: true, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   assert.equal(display.modeOf(null), "auto");
   assert.equal(display.modeOf(true), "on");
   assert.equal(display.modeOf(false), "off");
@@ -76,8 +76,8 @@ test("the preference is three-valued, defaults to automatic, and persists under 
 test("the tracking mode is one of three words, defaults to automatic, persists beside read-only, and an old record without it reads automatic", () => {
   assert.deepEqual(display.TRACKING_MODES, ["automatic", "assisted", "manual"]);
   assert.equal(display.DEFAULTS.tracking, "automatic");
-  assert.deepEqual(display.normalize({ tracking: "manual" }), { readOnly: false, tracking: "manual", layers: "left", layerOrder: "forward", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ tracking: "nope" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize({ tracking: "manual" }), { readOnly: false, tracking: "manual", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ tracking: "nope" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   assert.equal(display.trackingModeOf("assisted"), "assisted");
   assert.equal(display.trackingModeOf("AUTOMATIC"), "automatic");
   assert.equal(display.trackingModeOf(undefined), "automatic");
@@ -88,13 +88,13 @@ test("the tracking mode is one of three words, defaults to automatic, persists b
   const heard = [];
   controller.subscribe(value => heard.push(`${value.tracking}/${value.readOnly}`));
   assert.equal(controller.setTrackingMode("manual"), "manual");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "manual", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "manual", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   controller.setTrackingMode("manual");
   assert.equal(controller.setTrackingMode("nonsense"), "automatic");
   controller.setReadOnly("on");
   assert.equal(controller.getTrackingMode(), "automatic", "read-only moved the tracking mode");
   assert.deepEqual(heard, ["manual/false", "automatic/false", "automatic/true"]);
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: true, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: true, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
 
   // The record a browser saved before the mode existed.
   const older = display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ readOnly: false }) }));
@@ -212,7 +212,7 @@ test("Settings offers Automatic / Assisted / Manual tracking as radios after Saf
   const doc = makeDocument();
   const controller = display.create(node(), storage());
   const view = settings.create(doc, { theme: null, themes: [], display: controller });
-  assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")), ["Appearance", "Tracking", "Safety", "Layout", "Layer order", "Timeline", "More settings", "Administrator access"]);
+  assert.deepEqual(view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")), ["Appearance", "Tracking", "Safety", "Layout", "Layer order", "Timeline", "Input", "This device opens", "More settings", "Administrator access"]);
   const group = view.element.querySelector("[role='radiogroup'][aria-label='Tracking']");
   assert.ok(group, "no Tracking radiogroup");
   const modes = view.element.querySelectorAll("[data-tracking-mode]");
@@ -240,8 +240,8 @@ test("Settings offers Automatic / Assisted / Manual tracking as radios after Saf
 test("the layer orientation is left or top, defaults to left, persists beside the others, and an old record without it reads left", () => {
   assert.deepEqual(display.LAYER_ORIENTATIONS, ["left", "top"]);
   assert.equal(display.DEFAULTS.layers, "left");
-  assert.deepEqual(display.normalize({ layers: "top" }), { readOnly: false, tracking: "automatic", layers: "top", layerOrder: "forward", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ layers: "sideways" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize({ layers: "top" }), { readOnly: false, tracking: "automatic", layers: "top", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ layers: "sideways" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   assert.equal(display.layerOrientationOf("top"), "top");
   assert.equal(display.layerOrientationOf("TOP"), "left");
   assert.equal(display.layerOrientationOf(undefined), "left");
@@ -252,7 +252,7 @@ test("the layer orientation is left or top, defaults to left, persists beside th
   const heard = [];
   controller.subscribe(value => heard.push(`${value.layers}/${value.tracking}/${value.readOnly}`));
   assert.equal(controller.setLayerOrientation("top"), "top");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "top", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "top", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   controller.setLayerOrientation("top");
   assert.equal(controller.setLayerOrientation("nonsense"), "left");
   controller.setLayerOrientation("top");
@@ -302,7 +302,7 @@ test("Settings offers Left / Top layers as radios after Tracking, marks the curr
  *   The sheets: the orientation is one attribute on the root
  * -------------------------------------------------------------------- */
 
-test("every Top-orientation rule is scoped to the root's data-layers attribute, left has no rule of its own, and the layers become a wrapping grid without the heading row", () => {
+test("every Top-orientation rule is scoped to the root's data-layers attribute, left has no rule of its own, and the layers become a wrapping grid", () => {
   const sheets = ["recipe.css", "recipe-edit.css", "weights.css"].map(name => ({ name, css: fs.readFileSync(path.join(__dirname, "slate", "styles", "components", name), "utf8") }));
   for (const sheet of sheets) {
     for (const match of sheet.css.matchAll(/^[^\n{]*data-layers[^\n{]*\{/gm)) {
@@ -310,10 +310,13 @@ test("every Top-orientation rule is scoped to the root's data-layers attribute, 
     }
     assert.doesNotMatch(sheet.css, /data-layers="left"/, `${sheet.name} styles the left orientation, which is the sheet itself`);
   }
+  // Neither page has a heading row over its layers any more.
+  for (const [name, block] of [["recipe.css", "slate-recipe"], ["weights.css", "slate-weights"]]) {
+    assert.doesNotMatch(sheets.find(sheet => sheet.name === name).css, new RegExp(`${block}__columns`), `${name} still styles a heading row the page no longer has`);
+  }
   for (const [name, block] of [["recipe.css", "slate-recipe"], ["weights.css", "slate-weights"]]) {
     const css = sheets.find(sheet => sheet.name === name).css;
     assert.match(css, new RegExp(`\\.slate-root\\[data-layers="top"\\] \\.${block}__layers \\{[^}]*grid-template-columns: repeat\\(auto-fill, minmax\\(260px, 1fr\\)\\)`), `${name}: the layers do not wrap`);
-    assert.match(css, new RegExp(`\\.slate-root\\[data-layers="top"\\] \\.${block}__columns \\{\\s*display: none;`), `${name}: the heading row stays over side-by-side cards`);
   }
   // Both sections' sheets stay free of any width breakpoint: the wrap is the grid's own.
   for (const sheet of sheets) assert.doesNotMatch(sheet.css, /@media \(m(in|ax)-width/, `${sheet.name} gained a breakpoint`);
@@ -345,6 +348,8 @@ function bootHosted(options) {
     clearTimeout: id => { const at = queued.findIndex(one => one.handle === id); if (at > -1) queued.splice(at, 1); }
   };
   const flush = () => { const due = queued.filter(one => one.ms === 0); for (const one of due) { queued.splice(queued.indexOf(one), 1); one.fn(); } return due.length; };
+  // The window's own facts (matchMedia, Capacitor), for the tier.
+  Object.assign(root, settings2.env || {});
   root.globalThis = root;
   vm.createContext(root);
   const load = file => new vm.Script(read(file), { filename: file }).runInContext(root);
@@ -467,8 +472,8 @@ test("hosted, the root carries the layer orientation; the switch flips the attri
 test("the layer order is forward or reversed, defaults to forward, persists beside the others, and an old record without it reads forward", () => {
   assert.deepEqual(display.LAYER_ORDERS, ["forward", "reversed"]);
   assert.equal(display.DEFAULTS.layerOrder, "forward");
-  assert.deepEqual(display.normalize({ layerOrder: "reversed", timeline: "realtime" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "reversed", timeline: "realtime" });
-  assert.deepEqual(display.normalize({ layerOrder: "backwards" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize({ layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ layerOrder: "backwards" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   assert.equal(display.layerOrderOf("reversed"), "reversed");
   assert.equal(display.layerOrderOf("REVERSED"), "forward");
   assert.equal(display.layerOrderOf(undefined), "forward");
@@ -479,7 +484,7 @@ test("the layer order is forward or reversed, defaults to forward, persists besi
   const heard = [];
   controller.subscribe(value => heard.push(`${value.layerOrder}/${value.layers}`));
   assert.equal(controller.setLayerOrder("reversed"), "reversed");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "reversed", timeline: "realtime" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" });
   controller.setLayerOrder("reversed");
   assert.equal(controller.setLayerOrder("nonsense"), "forward");
   controller.setLayerOrder("reversed");
@@ -487,7 +492,7 @@ test("the layer order is forward or reversed, defaults to forward, persists besi
   assert.equal(controller.getLayerOrder(), "reversed", "the orientation moved the order");
   assert.deepEqual(heard, ["reversed/left", "forward/left", "reversed/left", "reversed/top"]);
   assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ layers: "top" }) })).getLayerOrder(), "forward");
-  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ layerOrder: "reversed", timeline: "realtime" }) })).getLayerOrder(), "reversed");
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" }) })).getLayerOrder(), "reversed");
 });
 
 test("Settings offers A → E / E → A as radios after Layout, marks the current one, and drives the controller", () => {
@@ -535,7 +540,7 @@ test("every layer card carries its index for the sheets, and the reversed rule t
   // The Weights cards carry the same index.
   const weights = hostEl.querySelectorAll(".slate-weights__layer");
   assert.deepEqual(weights.map(card => card.style.getPropertyValue("--slate-layer-i")), ["0", "1", "2"]);
-  const stored = bootHosted({ linked: false, stored: { layerOrder: "reversed", timeline: "realtime" } });
+  const stored = bootHosted({ linked: false, stored: { layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" } });
   assert.equal(stored.hostEl.getAttribute("data-layer-order"), "reversed");
 });
 
@@ -546,8 +551,8 @@ test("every layer card carries its index for the sheets, and the reversed rule t
 test("the timeline view is realtime or list, defaults to realtime, persists beside the others, and an old record without it reads realtime", () => {
   assert.deepEqual(display.TIMELINE_VIEWS, ["realtime", "list"]);
   assert.equal(display.DEFAULTS.timeline, "realtime");
-  assert.deepEqual(display.normalize({ timeline: "list" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "list" });
-  assert.deepEqual(display.normalize({ timeline: "table" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime" });
+  assert.deepEqual(display.normalize({ timeline: "list", input: "auto", host: "auto" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "list", input: "auto", host: "auto" });
+  assert.deepEqual(display.normalize({ timeline: "table" }), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   assert.equal(display.timelineViewOf("list"), "list");
   assert.equal(display.timelineViewOf("LIST"), "realtime");
   const saved = storage();
@@ -556,13 +561,13 @@ test("the timeline view is realtime or list, defaults to realtime, persists besi
   const heard = [];
   controller.subscribe(value => heard.push(value.timeline));
   assert.equal(controller.setTimelineView("list"), "list");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "list" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { readOnly: false, tracking: "automatic", layers: "left", layerOrder: "forward", timeline: "list", input: "auto", host: "auto" });
   controller.setTimelineView("list");
   assert.equal(controller.setTimelineView("nonsense"), "realtime");
   controller.setLayerOrder("reversed");
   assert.deepEqual(heard, ["list", "realtime", "realtime"]);
   assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ layers: "top" }) })).getTimelineView(), "realtime");
-  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ timeline: "list" }) })).getTimelineView(), "list");
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ timeline: "list", input: "auto", host: "auto" }) })).getTimelineView(), "list");
 });
 
 test("Settings offers Realtime / List as radios after Layer order, marks the current one, and drives the controller", () => {
@@ -606,7 +611,171 @@ test("hosted, the Timeline follows the controller's view: List hides the axis an
   assert.equal(timeline.getAttribute("data-view"), "realtime");
   assert.ok(timeline.querySelectorAll(".slate-timeline__event").length > 0);
   for (const row of timeline.querySelectorAll(".slate-timeline__member")) assert.ok(before.get(row.getAttribute("data-key")) === row, "a row was rebuilt");
-  const stored = bootHosted({ linked: false, stored: { timeline: "list" } });
+  const stored = bootHosted({ linked: false, stored: { timeline: "list", input: "auto", host: "auto" } });
   assert.equal(stored.hostEl.querySelector(".slate-timeline").getAttribute("data-view"), "list");
   assert.equal(stored.hostEl.querySelector("[data-timeline-view='list']").getAttribute("aria-checked"), "true");
+});
+
+/* ----------------------------------------------------------------------
+ *   Input: touch or pointer
+ * -------------------------------------------------------------------- */
+
+/* A window whose media queries answer from `state` and tell their
+ * listeners when `change()` moves it - a rotation, a mouse plugged in. */
+function fakeMedia(state) {
+  const lists = [];
+  function answer(query) {
+    if (query === "(pointer: coarse)") return !!state.coarse;
+    const min = query.match(/\(min-width: (\d+)px\)/);
+    return min ? state.width >= Number(min[1]) : false;
+  }
+  return {
+    matchMedia(query) {
+      const listeners = new Set();
+      const list = { query, get matches() { return answer(query); }, addEventListener: (type, fn) => listeners.add(fn), removeEventListener: (type, fn) => listeners.delete(fn), listeners };
+      lists.push(list);
+      return list;
+    },
+    change(next) {
+      Object.assign(state, next);
+      for (const list of lists) for (const fn of [...list.listeners]) fn({ matches: list.matches });
+    }
+  };
+}
+
+test("the input mode is auto, touch or pointer, defaults to auto, persists beside the others, and an old record without it reads auto", () => {
+  assert.deepEqual(display.INPUT_MODES, ["auto", "touch", "pointer"]);
+  assert.equal(display.DEFAULTS.input, "auto");
+  assert.equal(display.normalize({ input: "touch" }).input, "touch");
+  assert.equal(display.normalize({ input: "finger" }).input, "auto");
+  assert.equal(display.inputModeOf("pointer"), "pointer");
+  assert.equal(display.inputModeOf("POINTER"), "auto");
+  const saved = storage();
+  const controller = display.create(node(), saved);
+  assert.equal(controller.getInputMode(), "auto");
+  const heard = [];
+  controller.subscribe(value => heard.push(value.input));
+  assert.equal(controller.setInputMode("touch"), "touch");
+  assert.equal(JSON.parse(saved.store[display.STORAGE_KEY]).input, "touch");
+  controller.setInputMode("touch");
+  assert.equal(controller.setInputMode("nonsense"), "auto");
+  assert.deepEqual(heard, ["touch", "auto"]);
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ layers: "top" }) })).getInputMode(), "auto");
+});
+
+test("Settings offers Automatic / Touch / Mouse input as radios after Timeline, marks the current one, and drives the controller", () => {
+  const doc = makeDocument();
+  const controller = display.create(node(), storage());
+  const view = settings.create(doc, { theme: null, themes: [], display: controller });
+  const labels = view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label"));
+  assert.equal(labels.indexOf("Input"), labels.indexOf("Timeline") + 1);
+  const modes = view.element.querySelectorAll("[data-input-mode]");
+  assert.deepEqual(modes.map(one => one.getAttribute("data-input-mode")), ["auto", "touch", "pointer"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("role")), ["radio", "radio", "radio"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false"]);
+  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Automatic", "Touch", "Mouse"]);
+  click(view.inputMode("touch"));
+  assert.equal(controller.getInputMode(), "touch");
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "true", "false"]);
+  const inert = settings.create(doc, { theme: null, themes: [], display: null });
+  assert.match(inert.element.querySelectorAll(".slate-settings__note").map(one => one.textContent).join(" "), /input cannot be changed/);
+  click(inert.inputMode("touch"));
+});
+
+test("hosted, the root carries the tier: a desktop is pointer and wide; a coarse or native window is touch; the width follows a rotation; the Settings choice wins - and nothing is rebuilt or dispatched", () => {
+  const desk = bootHosted({ linked: false, env: fakeMedia({ coarse: false, width: 1440 }) });
+  assert.equal(desk.hostEl.getAttribute("data-input"), "pointer");
+  assert.equal(desk.hostEl.getAttribute("data-viewport"), "wide");
+
+  const native = bootHosted({ linked: false, env: Object.assign(fakeMedia({ coarse: false, width: 1280 }), { Capacitor: { isNativePlatform: () => true } }) });
+  assert.equal(native.hostEl.getAttribute("data-input"), "touch");
+
+  const media = fakeMedia({ coarse: true, width: 1280 });
+  const { hostEl, executed, controller } = bootHosted({ linked: false, env: media });
+  assert.equal(hostEl.getAttribute("data-input"), "touch");
+  assert.equal(hostEl.getAttribute("data-viewport"), "wide");
+  const rows = hostEl.querySelectorAll(".slate-hopper");
+  assert.ok(rows.length > 0);
+  media.change({ width: 800 });
+  assert.equal(hostEl.getAttribute("data-viewport"), "narrow", "a rotation to portrait did not reach the root");
+  controller.setInputMode("pointer");
+  assert.equal(hostEl.getAttribute("data-input"), "pointer");
+  controller.setInputMode("auto");
+  assert.equal(hostEl.getAttribute("data-input"), "touch");
+  const after = hostEl.querySelectorAll(".slate-hopper");
+  assert.equal(after.length, rows.length);
+  for (let i = 0; i < rows.length; i += 1) assert.ok(rows[i] === after[i], `row ${i} was rebuilt by a tier change`);
+  assert.equal(executed.length, 0);
+
+  const bare = bootHosted({ linked: false });
+  assert.equal(bare.hostEl.getAttribute("data-input"), "pointer", "a window with nothing to measure is not a touch screen");
+  assert.equal(bare.hostEl.getAttribute("data-viewport"), "wide");
+});
+
+test("on a narrow touch screen the aside is a drawer: its handle and a rail item open it, the scrim and Escape close it, widening shuts it - and a mouse never has one", () => {
+  const media = fakeMedia({ coarse: true, width: 800 });
+  const { hostEl, executed } = bootHosted({ linked: false, env: media });
+  const aside = hostEl.querySelector("[data-slate-mount='aside']");
+  const toggle = hostEl.querySelector("[data-slate-aside-handle]");
+  const scrim = hostEl.querySelector("[data-slate-scrim]");
+  assert.ok(toggle && scrim, "the shell has no drawer handle or scrim");
+  assert.equal(toggle.getAttribute("aria-label"), "Timeline");
+  assert.ok(!aside.classList.contains("is-open"));
+  assert.ok(scrim.hasAttribute("hidden"));
+  click(toggle);
+  assert.ok(aside.classList.contains("is-open"));
+  assert.ok(!scrim.hasAttribute("hidden"));
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  click(scrim);
+  assert.ok(!aside.classList.contains("is-open"));
+  assert.ok(scrim.hasAttribute("hidden"));
+
+  // A rail item for an aside section opens the drawer on that section, and names it on the button.
+  click(hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.equal(toggle.getAttribute("aria-label"), "Resin Balance");
+  assert.ok(toggle.classList.contains("is-open"), "the handle does not ride the open drawer");
+  hostEl.dispatchEvent({ type: "keydown", key: "Escape", target: hostEl, stopPropagation() {} });
+  assert.ok(!aside.classList.contains("is-open"), "Escape left the drawer open");
+
+  click(toggle);
+  media.change({ width: 1280 });
+  assert.ok(!aside.classList.contains("is-open"), "a drawer stayed open once the aside had room again");
+  assert.equal(executed.length, 0);
+
+  const desk = bootHosted({ linked: false, env: fakeMedia({ coarse: false, width: 800 }) });
+  click(desk.hostEl.querySelector("[data-slate-aside-handle]"));
+  assert.ok(!desk.hostEl.querySelector("[data-slate-mount='aside']").classList.contains("is-open"), "a mouse window opened a drawer");
+});
+
+test("the Android Back key, asked first, closes the drawer; with nothing open it lets the app go to the background", () => {
+  const media = fakeMedia({ coarse: true, width: 800 });
+  const { hostEl } = bootHosted({ linked: false, env: media });
+  const doc = hostEl.ownerDocument;
+  const aside = hostEl.querySelector("[data-slate-mount='aside']");
+  const back = () => {
+    const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+    for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
+    return event;
+  };
+  click(hostEl.querySelector("[data-slate-aside-handle]"));
+  assert.ok(aside.classList.contains("is-open"));
+  const first = back();
+  assert.equal(first.defaultPrevented, true);
+  assert.equal(first.detail.minimize, false);
+  assert.ok(!aside.classList.contains("is-open"), "Back left the drawer open");
+  const second = back();
+  assert.equal(second.defaultPrevented, true, "Slate let the hidden floor UI take the key");
+  assert.equal(second.detail.minimize, true);
+});
+
+test("the drawer's handle carries a dot while a hopper is overdue and running", () => {
+  const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 800 }) });
+  const handle = hostEl.querySelector("[data-slate-aside-handle]");
+  const dot = handle.querySelector(".slate-shell__handle-dot");
+  assert.ok(dot, "the handle has no dot");
+  const timeline = hostEl.querySelector(".slate-timeline");
+  const overdue = timeline.classList.contains("is-overdue");
+  assert.equal(!dot.hasAttribute("hidden"), overdue, "the dot disagrees with the Timeline");
+  assert.equal(handle.classList.contains("is-overdue"), overdue);
 });

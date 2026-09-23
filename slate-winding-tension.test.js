@@ -132,3 +132,16 @@ test("the close hands the aside back; showing the panel focuses thickness; nothi
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate-winding-tension.js"), "utf8");
   assert.doesNotMatch(source, /\.dispatch\s*\(|localStorage|TENSION_BANDS|0\.15|0\.80|Surface Wind/, "the panel computes or stores on its own");
 });
+
+test("under a finger the tool never pops the keyboard: neither showing it nor Clear focuses a field", () => {
+  const doc = makeDocument();
+  const view = tool.create(doc, { winding, back: () => {}, tier: () => ({ input: "touch", width: "wide" }) });
+  doc.body.appendChild(view.element);
+  const inputs = view.element.querySelectorAll(".slate-winding__input");
+  view.onShow();
+  view.reset();
+  assert.ok(inputs.every(one => one.focused !== true), "a field took the focus under a finger");
+  const mouse = boot();
+  mouse.view.onShow();
+  assert.equal(mouse.view.element.querySelectorAll(".slate-winding__input")[0].focused, true);
+});

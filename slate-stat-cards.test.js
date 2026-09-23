@@ -231,3 +231,80 @@ test("refresh walks the changeover's remaining time as the clock moves", () => {
   view.refresh();
   assert.equal(view.card("changeover").sub.textContent, "in 23h 30m");
 });
+
+/* ----------------------------------------------------------------------
+ *   Under a finger (the touch tier)
+ * -------------------------------------------------------------------- */
+
+test("the typed editor carries Save and Cancel: Cancel's press wins over the blur it causes - nothing is sent - and Save sends once", () => {
+  const { view, commands, committed } = boot();
+  view.update({ job: jobAt() }, {});
+  const rate = view.card("rate");
+  const cancel = rate.editor.querySelector("[data-slate-card-action='cancel']");
+  const save = rate.editor.querySelector("[data-slate-card-action='save']");
+  assert.ok(cancel && save, "the editor has no Save and Cancel");
+  click(rate.trigger);
+  rate.input.value = "900";
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of cancel.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true, "Cancel's press would take the field's focus");
+  rate.input.dispatchEvent({ type: "blur" });
+  click(cancel);
+  assert.equal(view.editing(), null);
+  assert.deepEqual(commands.calls, [], "Cancel sent the draft");
+
+  click(rate.trigger);
+  rate.input.value = "900";
+  const hold = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of save.listeners.pointerdown) handler(hold);
+  assert.equal(hold._defaultPrevented, true, "Save's press would blur the field and commit twice");
+  click(save);
+  assert.equal(commands.calls.length, 1);
+  assert.deepEqual(commands.calls[0], { command: "setLineRate", args: { lineRate: "900" } });
+  assert.equal(committed.length, 1);
+  assert.equal(view.editing(), null);
+
+  // A blur without Cancel still commits, as it always has.
+  click(rate.trigger);
+  rate.input.value = "950";
+  rate.input.dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 2);
+});
+
+test("a draft the application refused is not thrown away by a tap on the calculator: the editor and its words stay", () => {
+  const lineRate = require("./line-rate-estimate.js");
+  const doc = makeDocument();
+  const commands = makeCommands({ capabilities: ALL, answer: () => ({ ok: false, code: "out_of_range", field: "lineRate", message: "The line rate cannot be negative." }) });
+  const view = cards.create(doc, { commands: () => commands, onCommitted: () => {}, now: () => NOW, lineRate, lineRateStorage: null });
+  doc.body.appendChild(view.element);
+  view.update({ job: jobAt() }, {});
+  const rate = view.card("rate");
+  assert.ok(rate.calc, "the rate card has no calculator in this harness");
+  click(rate.trigger);
+  rate.input.value = "-5";
+  rate.input.dispatchEvent({ type: "blur" });
+  assert.equal(rate.note.textContent, "The line rate cannot be negative.");
+  click(rate.calc);
+  assert.equal(view.editing(), "rate", "the calculator tap closed the refused draft");
+  assert.equal(rate.note.textContent, "The line rate cannot be negative.");
+  assert.equal(view.calculator("rate").isOpen(), false);
+  // Cancelled, the calculator opens as before.
+  click(rate.editor.querySelector("[data-slate-card-action='cancel']"));
+  click(rate.calc);
+  assert.equal(view.calculator("rate").isOpen(), true);
+});
+
+test("a Cancel press abandoned before its click does not leave the editor unable to commit: taking the field again restores the blur's commit", () => {
+  const { view, commands } = boot();
+  view.update({ job: jobAt() }, {});
+  const rate = view.card("rate");
+  click(rate.trigger);
+  rate.input.value = "900";
+  const cancel = rate.editor.querySelector("[data-slate-card-action='cancel']");
+  for (const handler of cancel.listeners.pointerdown) handler({ type: "pointerdown", pointerType: "touch", preventDefault() {} });
+  rate.input.dispatchEvent({ type: "blur" });
+  assert.deepEqual(commands.calls, [], "the abandoned Cancel's blur committed");
+  rate.input.dispatchEvent({ type: "focus" });
+  rate.input.dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 1, "the editor stayed unable to commit");
+});

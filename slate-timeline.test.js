@@ -536,3 +536,21 @@ test("in the list view Pump off dispatches from a row as it does from a card, th
   assert.notEqual(q(view, ".slate-timeline__list .slate-timeline__member[data-key='B:0'] .slate-timeline__member-at").textContent, wasAt);
   assert.ok(doc.activeElement === focusMe);
 });
+
+test("a hurried double tap on Pump off is one tap: a finger's second tap on the same pill within 400 ms is spent, a later one goes - and a mouse's second click always goes", () => {
+  const { view, commands } = boot({ height: 700 });
+  view.update(withChangeover(NOW, 4));
+  const first = q(view, ".slate-timeline__member[data-key='A:0'] [data-slate-control='pump']");
+  click(first, { timeStamp: 1000, pointerType: "touch" });
+  click(first, { timeStamp: 1200, pointerType: "touch" });
+  assert.equal(commands.calls.length, 1, "the double tap sent off and on again");
+  click(first, { timeStamp: 1700, pointerType: "touch" });
+  assert.equal(commands.calls.length, 2, "a deliberate second tap was swallowed");
+
+  const mouse = boot({ height: 700 });
+  mouse.view.update(withChangeover(NOW, 4));
+  const pill = q(mouse.view, ".slate-timeline__member[data-key='A:0'] [data-slate-control='pump']");
+  click(pill, { timeStamp: 1000, pointerType: "mouse" });
+  click(pill, { timeStamp: 1100, pointerType: "mouse" });
+  assert.equal(mouse.commands.calls.length, 2, "a mouse's quick second click was swallowed");
+});

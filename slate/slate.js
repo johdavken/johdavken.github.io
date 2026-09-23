@@ -55,6 +55,9 @@
   const catalog = root.PolynResinCatalog || null;
   const themeModule = root.PolynSlateTheme || null;
   const displayModule = root.PolynSlateDisplay || null;
+  const tierModule = root.PolynSlateTier || null;
+  const dismissModule = root.PolynSlateDismiss || null;
+  const drawerDragModule = root.PolynSlateDrawerDrag || null;
 
   const shell = root.PolynSlateShell;
   const rail = root.PolynSlateRail;
@@ -167,6 +170,104 @@
     const order = displayController && typeof displayController.getLayerOrder === "function" ? displayController.getLayerOrder() : "forward";
     container.setAttribute("data-layers", orientation);
     container.setAttribute("data-layer-order", order);
+    const tier = tierNow();
+    container.setAttribute("data-input", tier.input);
+    container.setAttribute("data-viewport", tier.width);
+    // Wide again, or a mouse: there is no drawer to hold open.
+    if (asideOpen && !drawer()) setAside(false);
+  }
+
+  /* SCANNING
+   *
+   * The application's recipe scan (recipe-scan-ui.js): photograph a job
+   * traveler or a dosing screen, read it, review it, apply it. Slate starts
+   * it for the recipe tab on screen and draws none of it - the capture and
+   * review are the application's own dialogs, which the host lets through
+   * over Slate. The application reads the photo only for a connected line.
+   * Read at boot: index.html loads the scan modules before Slate's. */
+  function scanner() {
+    const ui = root.PolynRecipeScanUI || null;
+    const service = root.PolynRecipeScanBridge || null;
+    if (!ui || typeof ui.startScan !== "function") return null;
+    return Object.freeze({
+      able() {
+        let workspace = "";
+        try { workspace = service && typeof service.getWorkspaceId === "function" ? service.getWorkspaceId() : ""; } catch (error) { workspace = ""; }
+        return workspace ? { ok: true } : { ok: false, reason: "connect this device to a line (RT Sync) to scan" };
+      },
+      start(kind, recipe) {
+        ui.startScan(kind, { destination: recipe === "next" ? "next" : "current" });
+      }
+    });
+  }
+
+  /* THE ASIDE AS A DRAWER
+   *
+   * On a narrow touch screen the aside - the Timeline, or a tool in its
+   * place - is a drawer over the page's right edge (components/panel.css).
+   * Its open state is the boot's: the header's button and a rail item for
+   * an aside section open it; that button, the scrim behind it and Escape
+   * close it. Nothing is re-parented and nothing rebuilt: the drawer is the
+   * same aside, moved by the sheet. */
+  let asideOpen = false;
+  let asideOffStack = null;
+  function drawer() {
+    const tier = tierNow();
+    return tier.input === "touch" && tier.width === "narrow";
+  }
+  function setAside(open) {
+    asideOpen = !!open && drawer();
+    // On the Back key's stack while open (slate-dismiss.js).
+    if (asideOpen && !asideOffStack && dismissModule) asideOffStack = dismissModule.register(() => setAside(false));
+    if (!asideOpen && asideOffStack) { const off = asideOffStack; asideOffStack = null; off(); }
+    if (mounts.aside) mounts.aside.classList.toggle("is-open", asideOpen);
+    const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
+    if (scrim) {
+      if (asideOpen) scrim.removeAttribute("hidden");
+      else scrim.setAttribute("hidden", "");
+    }
+    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
+    if (handle) {
+      handle.setAttribute("aria-expanded", asideOpen ? "true" : "false");
+      handle.classList.toggle("is-open", asideOpen);
+    }
+  }
+
+  /* A drag's position (px from open), or null when it ends: written on the
+   * root for the drawer, its panel and the handle to read together
+   * (components/panel.css). */
+  function followDrawer(shift) {
+    if (!container || !container.style || typeof container.style.setProperty !== "function") return;
+    const aside = mounts.aside;
+    const handle = container.querySelector("[data-slate-aside-handle]");
+    const dragging = shift !== null && shift !== undefined;
+    if (dragging) container.style.setProperty("--slate-drawer-shift", `${Math.round(shift)}px`);
+    else if (typeof container.style.removeProperty === "function") container.style.removeProperty("--slate-drawer-shift");
+    if (aside) aside.classList.toggle("is-dragging", dragging);
+    if (handle) handle.classList.toggle("is-dragging", dragging);
+  }
+
+  /* The handle's dot: a hopper past its mark and still running. */
+  function paintHandle() {
+    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
+    const dot = handle ? handle.querySelector(".slate-shell__handle-dot") : null;
+    if (!dot || !summary || typeof summary.entries !== "function") return;
+    const overdue = summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
+    if (overdue) dot.removeAttribute("hidden");
+    else dot.setAttribute("hidden", "");
+    handle.classList.toggle("is-overdue", overdue);
+  }
+
+  /* TIER
+   *
+   * For a finger or a mouse, wide or narrow (slate/slate-tier.js): the
+   * operator's Settings choice resolved against the window. Written onto
+   * the root with the layer words, and followed live - a rotation or a
+   * keyboard plugged in re-renders the attributes, never the sections. */
+  function tierNow() {
+    const preference = displayController && typeof displayController.getInputMode === "function" ? displayController.getInputMode() : "auto";
+    if (!tierModule) return { input: "pointer", width: "wide" };
+    return tierModule.tierFor(Object.assign(tierModule.probe(root), { preference }));
   }
 
   /* A preference moved: the root's attributes follow, and every control
@@ -236,6 +337,7 @@
     // swap; the marks the Timeline then holds go to the recipe's rows.
     for (const pane of Object.values(panes)) pane.swap.update(resolved, { kind, own });
     if (summary) applyMarks(summary.marks());
+    paintHandle();
     renderNotice(resolved);
     renderReadOnly();
   }
@@ -253,6 +355,7 @@
   function onTick(marks) {
     if (stats) stats.refresh();
     applyMarks(marks);
+    paintHandle();
   }
 
   /* ---- Mount ---- */
@@ -313,7 +416,9 @@
       estimate: changeoverEstimate,
       estimateStorage: changeoverStorage,
       lineRate: lineRateEstimate,
-      lineRateStorage
+      lineRateStorage,
+      tier: tierNow,
+      scan: scanner()
     });
 
     stats = statCards.create(doc, ctx);
@@ -364,6 +469,9 @@
       const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
         onChange(definition) {
           if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
+          // The drawer's handle names what the drawer holds.
+          const handle = name === "aside" ? container.querySelector("[data-slate-aside-handle]") : null;
+          if (handle) { handle.setAttribute("aria-label", definition.label); handle.setAttribute("title", definition.label); }
         }
       });
       panes[name] = { swap, home: homeId };
@@ -374,12 +482,20 @@
     // home comes back, as the tool's own close brings it.
     railView = rail.create(doc, {
       sections: definitions,
+      flyout: () => tierNow().input === "touch",
       onSelect: id => {
         const definition = definitions.find(one => one.id === id);
         if (!definition) return;
         const name = paneOf(definition);
         if (name === rail.CENTRE) { sections.show(id); return; }
         const showing = panes[name].swap.current();
+        // A closed drawer opens on what was asked for, rather than the tool
+        // being closed behind it.
+        if (name === "aside" && drawer() && !asideOpen) {
+          if (!showing || showing.id !== id) panes[name].swap.show(id);
+          setAside(true);
+          return;
+        }
         if (showing && showing.id === id) home(name);
         else panes[name].swap.show(id);
       }
@@ -411,7 +527,43 @@
     if (badge) badge.addEventListener("click", () => sections.show("settings"));
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
+    const asideHandle = container.querySelector("[data-slate-aside-handle]");
+    if (asideHandle && drawerDragModule && mounts.aside) {
+      drawerDragModule.create(doc, {
+        handle: asideHandle,
+        drawer: mounts.aside,
+        enabled: drawer,
+        isOpen: () => asideOpen,
+        width: () => (typeof mounts.aside.getBoundingClientRect === "function" ? mounts.aside.getBoundingClientRect().width : 0),
+        follow: followDrawer,
+        settle: open => setAside(open)
+      });
+    }
+    const scrim = container.querySelector("[data-slate-scrim]");
+    if (scrim) scrim.addEventListener("click", () => setAside(false));
+    container.addEventListener("keydown", event => {
+      if (event && event.key === "Escape" && asideOpen) setAside(false);
+    });
+
+    /* THE ANDROID BACK KEY
+     *
+     * android-back-button.js asks the page first (a cancelable
+     * `polyn:android-back` on the document) and otherwise hands the key to
+     * the application's own handler, which would act on the hidden floor
+     * UI. Slate always answers: Back closes what is open on top - a
+     * popover, the drawer - and with nothing open lets the app go to the
+     * background, as Android expects. */
+    if (typeof doc.addEventListener === "function") {
+      doc.addEventListener("polyn:android-back", event => {
+        if (!event || typeof event.preventDefault !== "function") return;
+        const dismissed = dismissModule ? dismissModule.dismissTop() : false;
+        if (!dismissed && event.detail && typeof event.detail === "object") event.detail.minimize = true;
+        event.preventDefault();
+      });
+    }
+
     renderLayout();
+    if (tierModule) tierModule.observe(root, renderLayout);
     for (const name of Object.keys(panes)) home(name);
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());

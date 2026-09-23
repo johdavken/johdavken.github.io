@@ -56,9 +56,24 @@ function run(href, options) {
   // A vm context starts with no web globals, so URL has to be handed in.
   const root = { document: doc, location: { href }, URL };
   // A desktop's window, when the test says so: the media query or the width, and no native shell.
-  if (settings.wide !== undefined) root.matchMedia = query => ({ matches: settings.wide && query === "(min-width: 1100px)" });
+  if (settings.wide !== undefined) root.matchMedia = query => ({ matches: query === "(pointer: coarse)" ? !!settings.coarse : (settings.wide && query === "(min-width: 1100px)") });
+  // The screen, for a tablet's: [width, height] in CSS px.
+  if (settings.screen) root.screen = { width: settings.screen[0], height: settings.screen[1] };
+  // The device's stored choice of what it opens (slate-display.js `host`).
+  if (settings.host) root.PolynSlateDisplay = { readFrom: () => ({ host: settings.host }) };
   if (settings.innerWidth !== undefined) root.innerWidth = settings.innerWidth;
   if (settings.native) root.Capacitor = { isNativePlatform: () => true };
+  // The page's viewport tag and a clock, for the zoom reset.
+  const timers = [];
+  let meta = null;
+  if (settings.viewport !== undefined) {
+    meta = makeNode("meta");
+    meta.setAttribute("name", "viewport");
+    meta.setAttribute("content", settings.viewport);
+    doc.querySelector = selector => (selector === "meta[name='viewport']" ? meta : null);
+    root.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+    root.addEventListener = () => {};
+  }
   if (settings.theme) root.PolynSlateTheme = settings.theme;
   if (settings.display) root.PolynSlateDisplay = settings.display;
   root.globalThis = root;
@@ -66,7 +81,8 @@ function run(href, options) {
   new vm.Script(SOURCE).runInContext(root);
 
   return {
-    doc, head, body, created, listeners, root,
+    doc, head, body, created, listeners, root, meta, timers,
+    flushTimers() { while (timers.length) timers.shift().fn(); },
     fire(type) { for (const handler of listeners[type] || []) handler(); },
     stylesheets: () => head.children.filter(node => node.nodeName === "LINK").map(node => node.href),
     scripts: () => head.children.filter(node => node.nodeName === "SCRIPT").map(node => node.src)
@@ -103,7 +119,7 @@ test("a URL naming another view - legacy, station, a partial match, an empty vie
   }
 });
 
-test("a URL naming no view boots Slate on a desktop window and the floor UI on a phone or in the native app; with nothing to measure, never assume a desktop", () => {
+test("a URL naming no view boots Slate on a desktop window and the floor UI on a phone, or in the native app on a phone's screen; with nothing to measure, never assume a desktop", () => {
   for (const href of ["https://resin.tools/", "https://resin.tools/?other=1", "https://resin.tools/?slate", "https://resin.tools/?viewer=slate", "https://resin.tools/#view=slate", "https://resin.tools/index.html"]) {
     const desktop = run(href, { wide: true });
     assert.equal(desktop.body.getAttribute("data-slate-view"), "slate", `${href} did not boot Slate on a desktop`);
@@ -328,4 +344,69 @@ test("the harness really can activate - so the negative tests above mean somethi
   assert.ok(active.created.length > 0);
   const inactive = run("https://resin.tools/");
   assert.equal(inactive.created.length, 0);
+});
+
+/* ----------------------------------------------------------------------
+ *   Tablets
+ * -------------------------------------------------------------------- */
+
+const TABLET = [800, 1280];
+const PHONE = [412, 915];
+const view = result => result.body.getAttribute("data-slate-view");
+
+test("a tablet's screen boots Slate with a touch pointer in the browser and in the Android app, in either orientation; a phone never does", () => {
+  // The unfolded Galaxy Z Fold, as its WebView reports it: 933x704, and turned.
+  for (const screen of [TABLET, [1280, 800], [1200, 1920], [960, 600], [933, 704], [704, 933]]) {
+    assert.equal(view(run("https://resin.tools/", { wide: false, coarse: true, screen })), "slate", `browser tablet ${screen}`);
+    assert.equal(view(run("https://resin.tools/", { wide: false, native: true, screen })), "slate", `app tablet ${screen}`);
+  }
+  // Phones, and the Fold's folded cover screen, in either orientation.
+  for (const screen of [PHONE, [915, 412], [390, 844], [599, 1000], [700, 880], [412, 968], [968, 412]]) {
+    assert.equal(view(run("https://resin.tools/", { wide: false, coarse: true, screen })), null, `browser phone ${screen}`);
+    assert.equal(view(run("https://resin.tools/", { wide: true, native: true, screen })), null, `app phone ${screen}`);
+  }
+  // A narrow desktop window on a big screen, with a mouse, keeps the floor UI as before.
+  assert.equal(view(run("https://resin.tools/", { wide: false, coarse: false, screen: [1920, 1080] })), null);
+  // The app with no screen to measure keeps the floor UI.
+  assert.equal(view(run("https://resin.tools/", { wide: true, native: true })), null);
+});
+
+test("the device's own choice decides first: legacy is the floor UI everywhere; slate is Slate anywhere but a phone's screen; ?view= still wins", () => {
+  assert.equal(view(run("https://resin.tools/", { wide: true, host: "legacy" })), null, "a desktop that chose legacy got Slate");
+  assert.equal(view(run("https://resin.tools/", { wide: false, native: true, screen: TABLET, host: "legacy" })), null);
+  assert.equal(view(run("https://resin.tools/", { wide: false, coarse: false, screen: [1920, 1080], host: "slate" })), "slate", "a narrow desktop window that chose Slate");
+  assert.equal(view(run("https://resin.tools/", { wide: false, native: true, screen: TABLET, host: "slate" })), "slate");
+  assert.equal(view(run("https://resin.tools/", { wide: false, coarse: true, screen: PHONE, host: "slate" })), null, "a phone was given Slate");
+  assert.equal(view(run("https://resin.tools/", { wide: true, native: true, screen: PHONE, host: "slate" })), null);
+  assert.equal(view(run("https://resin.tools/?view=slate", { wide: true, host: "legacy" })), "slate");
+  assert.equal(view(run("https://resin.tools/?view=legacy", { wide: true, host: "slate" })), null);
+  assert.equal(view(run("https://resin.tools/", { wide: true, host: "nonsense" })), "slate", "an unknown choice is automatic");
+});
+
+test("the host marks a provisional tier before any Slate sheet loads, so a touch screen never paints the 1440px frame", () => {
+  const app = run(ACTIVE, { wide: false, native: true });
+  const hostEl = app.body.children.find(node => node.hasAttribute("data-slate-host"));
+  assert.equal(hostEl.getAttribute("data-input"), "touch");
+  assert.equal(hostEl.getAttribute("data-viewport"), "narrow");
+  const tablet = run(ACTIVE, { wide: true, coarse: true });
+  assert.equal(tablet.body.children.find(node => node.hasAttribute("data-slate-host")).getAttribute("data-input"), "touch");
+  const desk = run(ACTIVE, { wide: true });
+  const deskEl = desk.body.children.find(node => node.hasAttribute("data-slate-host"));
+  assert.equal(deskEl.getAttribute("data-input"), "pointer");
+  assert.equal(deskEl.getAttribute("data-viewport"), "wide");
+});
+
+test("on a touch device the host brings back a zoom the page never asked for - capped at 1 for a moment, then the viewport as it was; a desktop is left alone", () => {
+  const VIEWPORT = "width=device-width,initial-scale=1,viewport-fit=cover";
+  const app = run(ACTIVE, { wide: false, native: true, viewport: VIEWPORT });
+  assert.equal(app.meta.getAttribute("content"), VIEWPORT, "the viewport changed before the page had loaded");
+  app.timers.shift().fn();
+  assert.equal(app.meta.getAttribute("content"), `${VIEWPORT},maximum-scale=1`);
+  app.flushTimers();
+  assert.equal(app.meta.getAttribute("content"), VIEWPORT, "the viewport was not restored, so a pinch could never zoom again");
+  const desk = run(ACTIVE, { wide: true, viewport: VIEWPORT });
+  assert.equal(desk.timers.length, 0, "a desktop's zoom was touched");
+  const capped = run(ACTIVE, { native: true, viewport: "width=device-width,maximum-scale=2" });
+  capped.flushTimers();
+  assert.equal(capped.meta.getAttribute("content"), "width=device-width,maximum-scale=2", "a page's own maximum-scale was overridden");
 });

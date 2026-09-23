@@ -71,3 +71,53 @@
   color: var(--slate-text-muted);
   text-align: center;
 }
+
+/* ---- Touch (data-input="touch" on the root, slate/slate-tier.js) ----
+   The sheet is the screen's width, up to its own: the rail a column of
+   icons, the aside beside the centre while there is room for it. Below
+   1100px (data-viewport="narrow") the aside leaves the grid and becomes a
+   drawer over the page's right edge (components/panel.css). */
+
+.slate-root[data-input="touch"] .slate-shell {
+  grid-template-columns: var(--slate-rail-width-compact) minmax(0, 1fr) var(--slate-aside-width);
+  width: 100%;
+  min-width: 0;
+  max-width: var(--slate-frame-width);
+  min-height: 100dvh;
+  /* Clear of the status bar and the gesture bar of an edge-to-edge app. */
+  padding-top: var(--slate-inset-top);
+  padding-bottom: var(--slate-inset-bottom);
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-shell {
+  grid-template-columns: var(--slate-rail-width-compact) minmax(0, 1fr);
+  grid-template-areas:
+    "rail header"
+    "rail stats"
+    "rail centre";
+}
+
+.slate-root[data-input="touch"] .slate-header {
+  gap: var(--slate-space-3);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-stats {
+  padding: var(--slate-space-4) var(--slate-space-4) 0;
+}
+
+.slate-root[data-input="touch"] .slate-centre {
+  padding: var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-aside {
+  padding: var(--slate-space-4) var(--slate-space-4) var(--slate-space-4) 0;
+}
+
+/* Behind the open drawer; hidden (slate.js) whenever the drawer is shut. */
+.slate-shell__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: var(--slate-scrim);
+}

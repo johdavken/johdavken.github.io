@@ -134,7 +134,7 @@ test("applyReview submits pendingPayload directly via the bridge's applyPayload 
   const body = ui.slice(fnStart, fnEnd);
   // pendingLotByResin rides alongside, whatever a Heat Sheet scan read (or
   // null, for every other source).
-  assert.match(body, /serviceApi\.applyPayload\(pendingPayload, pendingLotByResin\)/);
+  assert.match(body, /serviceApi\.applyPayload\(pendingPayload, pendingLotByResin, pendingDestination\)/);
 });
 
 test("submitFile passes the bridge's current hopper naming mode into the mapping call, so the applied payload matches this line's naming convention", () => {
@@ -186,7 +186,7 @@ test("the review screen warns before overwriting an existing non-empty recipe", 
   const fnStart = ui.indexOf("function renderReview(");
   const fnEnd = ui.indexOf("\n  }", fnStart);
   const body = ui.slice(fnStart, fnEnd);
-  assert.match(body, /serviceApi\.hasNonEmptyRecipe\?\.\(\)/);
+  assert.match(body, /serviceApi\.hasNonEmptyRecipe\?\.\(pendingDestination\)/);
   // The warning names the page being overwritten, since a scan lands on
   // whichever recipe page is selected.
   assert.match(body, /This will overwrite the \$\{destination\.toLowerCase\(\)\} assignments\./);
@@ -195,7 +195,7 @@ test("the review screen warns before overwriting an existing non-empty recipe", 
 test("the review screen states which recipe page the scan will be applied to", () => {
   const fnStart = ui.indexOf("function renderReview(");
   const body = ui.slice(fnStart, ui.indexOf("\n  }", fnStart));
-  assert.match(body, /const destination = serviceApi\.getRecipePageLabel\?\.\(\) \|\| "Current Recipe";/);
+  assert.match(body, /const destination = serviceApi\.getRecipePageLabel\?\.\(pendingDestination\) \|\| "Current Recipe";/);
   assert.match(body, /applyButton\.textContent = `Apply to \$\{destination\}`/);
   assert.match(body, /title\.textContent = `Review Scanned Recipe — \$\{destination\}`/);
 });
@@ -272,4 +272,15 @@ test("recipe-scan-ui.js loads after app.js, so window.PolynRecipeScanBridge alre
 
 test("startScan is exported so other entry points (Recipe Setup's own Scan Recipe shortcut) can trigger the same flow without duplicating its orientation/dialog logic", () => {
   assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan \};/);
+});
+
+test("a scan started for a named recipe carries it to the review and the apply; an unnamed or unknown one leaves the page on screen to decide", () => {
+  const start = ui.slice(ui.indexOf("function startScan("), ui.indexOf("// --- orientation fallback"));
+  assert.match(start, /resetPendingScan\(\);\s*pendingSourceType = sourceType;\s*const named = options && options\.destination;\s*pendingDestination = named === "current" \|\| named === "next" \? named : null;/);
+  assert.match(ui, /function resetPendingScan\(\)\{[\s\S]*?pendingDestination = null;/);
+  // Survives the native camera handing the process back.
+  assert.match(ui, /JSON\.stringify\(\{ sourceType: pendingSourceType, orientation: pendingOrientation, destination: pendingDestination \}\)/);
+  // The app's bridge names the page from it.
+  const appSource = require("node:fs").readFileSync("app.js", "utf8");
+  assert.match(appSource, /getRecipePageLabel: destination => recipePageLabel\(destination==="current" \|\| destination==="next" \? destination : null\)/);
 });

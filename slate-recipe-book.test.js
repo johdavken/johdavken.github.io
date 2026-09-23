@@ -533,3 +533,15 @@ test("a delete answered after the operator selected another recipe leaves that s
   assert.equal(noteOf(view).textContent, actions.WORDING.deleted("Blue film"));
   assert.equal(q(view, ".slate-book__confirm"), null);
 });
+
+test("the name entry wraps rather than squeezing its field: a long label (the Workspaces entry) takes its own line", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "slate/styles/components/recipe-book.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const entry = css.match(/\n\.slate-book__entry \{([^}]*)\}/)[1];
+  assert.match(entry, /flex-wrap: wrap;/);
+  const label = css.match(/\n\.slate-book__entry-label \{([^}]*)\}/)[1];
+  assert.doesNotMatch(label, /white-space:\s*nowrap/);
+  const name = css.match(/\n\.slate-book__name \{([^}]*)\}/)[1];
+  assert.match(name, /flex: 1 1 12em;/, "the field needs a basis so it wraps to its own line instead of collapsing");
+});

@@ -485,7 +485,9 @@
       // operator's focus back.
       if (focused && state.rows.has(focused)) {
         const button = state.rows.get(focused).button;
-        if (doc.activeElement !== button && typeof button.focus === "function") button.focus();
+        // preventScroll: a panned tablet must not be yanked to the aside on
+        // every tick while a pill keeps the focus it was tapped into.
+        if (doc.activeElement !== button && typeof button.focus === "function") button.focus({ preventScroll: true });
       }
       return state.placed;
     }
@@ -624,6 +626,14 @@
       return result;
     }
 
+    // A hurried double tap on Pump off would send off and then on again: a
+    // second tap on the same control within DOUBLE_TAP_MS of the first is
+    // spent. A finger's or a pen's only (a click reports its pointerType):
+    // a mouse's deliberate second click goes as it always has. Measured on
+    // the events' own clock.
+    const DOUBLE_TAP_MS = 400;
+    let lastToggle = null;
+
     rootEl.addEventListener("click", event => {
       const target = event && event.target;
       if (!target || typeof target.closest !== "function") return;
@@ -636,6 +646,12 @@
       if (!request.able) {
         say(`${trackingModule.stateLabel(request.control, request.on)}: ${trackingModule.reason(commands(), request.control, guard())}`);
         return;
+      }
+      const stamp = Number(event.timeStamp);
+      const finger = !!event.pointerType && event.pointerType !== "mouse";
+      if (finger && Number.isFinite(stamp) && stamp > 0) {
+        if (lastToggle && lastToggle.toggle === toggle && stamp - lastToggle.at < DOUBLE_TAP_MS) return;
+        lastToggle = { toggle, at: stamp };
       }
       settle(trackingModule.toggle(commands(), { control: request.control, layer: request.layer, index: request.index, next: !request.on }));
     });

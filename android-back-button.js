@@ -35,6 +35,16 @@
     if (!App?.addListener) return;
 
     App.addListener("backButton", () => {
+      // A presentation layer over the app (Slate) is asked first: it
+      // cancels the event when it takes the key, and sets detail.minimize
+      // when it has nothing open and the app should go to the background.
+      // Nothing listening - the floor UI - leaves the event as it was.
+      const detail = { minimize: false };
+      const asked = new CustomEvent("polyn:android-back", { cancelable: true, detail });
+      if (!document.dispatchEvent(asked)) {
+        if (detail.minimize) App.minimizeApp();
+        return;
+      }
       if (window.handleAndroidBack?.()) return;
       App.minimizeApp();
     });

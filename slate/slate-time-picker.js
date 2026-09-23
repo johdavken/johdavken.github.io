@@ -20,6 +20,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const TITLE = "Changeover time";
   const SET = "Set";
   const CLEAR = "Clear";
@@ -144,7 +152,7 @@
     const errorLine = element(doc, "p", "slate-time__error", { role: "alert", hidden: "" });
     rootEl.appendChild(errorLine);
     const actions = element(doc, "div", "slate-time__actions");
-    const clearButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", CLEAR, { type: "button", "data-time": "clear" });
+    const clearButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-time__clear", CLEAR, { type: "button", "data-time": "clear" });
     const cancelButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", CANCEL, { type: "button", "data-time": "cancel" });
     const setButton = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", SET, { type: "button", "data-time": "set" });
     actions.appendChild(clearButton);
@@ -200,10 +208,7 @@
       return result;
     }
 
-    function outside(event) {
-      if (event && event.target && (rootEl.contains(event.target) || (settings.anchor && settings.anchor.contains(event.target)))) return;
-      close();
-    }
+    const outsideCloser = dismissal(view, node => rootEl.contains(node) || !!(settings.anchor && settings.anchor.contains(node)), () => close());
 
     /** Open marked with "HH:MM", or the next five minutes for anything else. */
     function open(current) {
@@ -217,7 +222,7 @@
       note("");
       show(rootEl, true);
       paint();
-      if (typeof view.addEventListener === "function") view.addEventListener("pointerdown", outside, true);
+      outsideCloser.start();
       onChange(true);
       const focused = hourTiles.get(state.hour12);
       if (focused && typeof focused.focus === "function") focused.focus();
@@ -228,7 +233,7 @@
       state.open = false;
       show(rootEl, false);
       note("");
-      if (typeof view.removeEventListener === "function") view.removeEventListener("pointerdown", outside, true);
+      outsideCloser.stop();
       onChange(false);
       if (settings.anchor && typeof settings.anchor.focus === "function") settings.anchor.focus();
     }

@@ -116,3 +116,51 @@ test("the Tools menu opens and closes on its own item and on Escape", () => {
   view.element.dispatchEvent({ type: "keydown", key: "Escape", target: view.element, stopPropagation() {} });
   assert.equal(view.isToolsOpen(), false);
 });
+
+test("every item carries its name as its accessible label, so it survives a compact rail that hides the words", () => {
+  const { makeDocument } = require("./tools/slate-test/fake-dom.js");
+  const railModule = require("./slate/slate-rail.js");
+  const doc = makeDocument();
+  const view = railModule.create(doc, { sections: [{ id: "recipe", label: "Recipe", group: "sections", icon: "recipe" }, { id: "winding", label: "Winding Tension", group: "tools", pane: "aside", icon: "winding" }, { id: "settings", label: "Settings", group: "foot", icon: "settings" }], onSelect: () => {} });
+  const items = view.element.querySelectorAll("[data-section]");
+  assert.ok(items.length === 3);
+  for (const item of items) assert.equal(item.getAttribute("aria-label"), item.getAttribute("title"));
+});
+
+test("as a flyout the Tools menu closes on a press outside it and on a selection; as the sidebar it stays, as before", () => {
+  const { makeDocument, click, pointer } = require("./tools/slate-test/fake-dom.js");
+  const railModule = require("./slate/slate-rail.js");
+  const defs = [{ id: "recipe", label: "Recipe", group: "sections", icon: "recipe" }, { id: "winding", label: "Winding Tension", group: "tools", pane: "aside", icon: "winding" }, { id: "settings", label: "Settings", group: "foot", icon: "settings" }];
+  for (const compact of [true, false]) {
+    const doc = makeDocument();
+    const selected = [];
+    const view = railModule.create(doc, { sections: defs, onSelect: id => selected.push(id), flyout: () => compact });
+    doc.body.appendChild(view.element);
+    const label = view.element.querySelector(".slate-rail__menu .slate-rail__label");
+    assert.ok(label.classList.contains("slate-rail__label--menu"), "a tool's name is not marked to show in the flyout");
+    view.openTools();
+    pointer("pointerdown", doc.body);
+    assert.equal(view.isToolsOpen(), !compact, compact ? "the flyout stayed open through a press outside" : "the sidebar menu closed on a press elsewhere");
+    view.openTools();
+    click(view.element.querySelector("[data-section='winding']"));
+    assert.deepEqual(selected, ["winding"]);
+    assert.equal(view.isToolsOpen(), !compact);
+  }
+});
+
+test("the flyout is placed beside the Tools item each time it opens, so it can stand outside the rail's scrolling box; the sidebar's menu is not placed", () => {
+  const { makeDocument, click } = require("./tools/slate-test/fake-dom.js");
+  const railModule = require("./slate/slate-rail.js");
+  const defs = [{ id: "recipe", label: "Recipe", group: "sections", icon: "recipe" }, { id: "winding", label: "Winding Tension", group: "tools", pane: "aside", icon: "winding" }];
+  for (const compact of [true, false]) {
+    const doc = makeDocument();
+    const view = railModule.create(doc, { sections: defs, onSelect: () => {}, flyout: () => compact });
+    doc.body.appendChild(view.element);
+    const button = view.element.querySelector(".slate-rail__item--tools");
+    const menu = view.element.querySelector(".slate-rail__menu");
+    button._rect = { left: 8, top: 412.4, width: 48, height: 48 };
+    click(button);
+    assert.equal(menu.style.getPropertyValue("--slate-flyout-top"), compact ? "412px" : "");
+    assert.equal(menu.style.getPropertyValue("--slate-flyout-left"), compact ? "56px" : "");
+  }
+});

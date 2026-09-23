@@ -94,9 +94,18 @@
 
     shell.appendChild(element(doc, "section", "slate-stats", { "data-slate-mount": "stats", "aria-label": "Job" }));
     shell.appendChild(element(doc, "section", "slate-centre", { "data-slate-mount": "centre", "aria-label": "Workspace" }));
-    shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline" }));
+    shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline", id: "slate-aside" }));
 
     root.appendChild(shell);
+    // Behind the aside's drawer: a press on it closes the drawer.
+    root.appendChild(element(doc, "div", "slate-shell__scrim", { "data-slate-scrim": "", hidden: "" }));
+    // The drawer's handle, floating low on the right edge of a narrow touch
+    // screen (components/panel.css; slate-drawer-drag.js pulls it). A dot
+    // on it says a hopper is overdue before the drawer is opened.
+    const handle = element(doc, "button", "slate-shell__handle", { type: "button", "data-slate-aside-handle": "", "aria-expanded": "false", "aria-controls": "slate-aside", "aria-label": "Timeline", title: "Timeline" });
+    handle.appendChild(element(doc, "span", "slate-shell__grip", { "aria-hidden": "true" }));
+    handle.appendChild(element(doc, "span", "slate-shell__handle-dot", { "aria-hidden": "true", hidden: "" }));
+    root.appendChild(handle);
     return root;
   }
 

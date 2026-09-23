@@ -27,8 +27,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-tabs__tab:hover {
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-tabs__tab:hover {
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-tabs__tab:active {
@@ -57,9 +59,11 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-switch:not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-switch:not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-switch:not([data-able="false"]):active {
@@ -101,8 +105,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-recipe__plan-action:not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-recipe__plan-action:not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-recipe__plan-action:not([data-able="false"]):active {
@@ -121,8 +127,10 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):hover {
-  background: var(--slate-accent-hover);
+@media (hover: hover) {
+  .slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):hover {
+    background: var(--slate-accent-hover);
+  }
 }
 
 .slate-root .slate-recipe__plan-action--promote:not([data-able="false"]):active {
@@ -161,9 +169,10 @@
   max-width: 48ch;
 }
 
-/* ---- Columns ---- */
+/* ---- Columns ----
+   A hopper row's grid. There is no heading row over it: the values say
+   what they are. */
 
-.slate-recipe__columns,
 .slate-hopper {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 72px 96px var(--slate-controls-width) 80px;
@@ -172,24 +181,8 @@
 }
 
 /* The plan's rows: no weight, no toggles. */
-.slate-recipe__body[data-recipe="next"] .slate-recipe__columns,
 .slate-recipe__body[data-recipe="next"] .slate-hopper {
   grid-template-columns: 56px minmax(0, 1fr) 72px 80px;
-}
-
-.slate-recipe__columns {
-  margin-left: calc(var(--slate-layer-head-width) + var(--slate-space-4));
-  padding: 0 var(--slate-space-3) var(--slate-space-2);
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-xs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.slate-recipe__column--pct,
-.slate-recipe__column--weight {
-  text-align: right;
 }
 
 /* ---- Layers ---- */
@@ -208,7 +201,9 @@
   border-radius: var(--slate-radius-lg);
   background: var(--slate-surface-raised);
   box-shadow: var(--slate-shadow-card);
-  overflow: hidden;
+  /* Not clipped: the layer menu and the resin search drop past the card's
+     edge. The head rounds its own left corners instead. */
+  overflow: visible;
 }
 
 .slate-layer__head {
@@ -217,6 +212,8 @@
   gap: var(--slate-space-1);
   padding: var(--slate-space-3) var(--slate-space-4);
   border-left: 4px solid var(--slate-layer-single);
+  border-top-left-radius: var(--slate-radius-lg);
+  border-bottom-left-radius: var(--slate-radius-lg);
   background: var(--slate-surface-sunken);
 }
 
@@ -390,9 +387,11 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-toggle:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-toggle:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-toggle:not(:disabled):not([data-able="false"]):active {
@@ -520,9 +519,11 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-recipe__reset:not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-recipe__reset:not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-recipe__reset:not([data-able="false"]):active {
@@ -583,12 +584,7 @@
    across the centre, a fourth and fifth wrapping below; each card puts
    its head across the top and its hoppers under it as two-line rows -
    id, resin and blend, then the weight under the resin with Track at
-   the right. The one heading row above the cards cannot span three of
-   them, so it goes; the values carry their units. */
-
-.slate-root[data-layers="top"] .slate-recipe__columns {
-  display: none;
-}
+   the right. The values carry their units. */
 
 .slate-root[data-layers="top"] .slate-recipe__layers {
   display: grid;
@@ -612,6 +608,7 @@
   padding: var(--slate-space-2) var(--slate-space-3);
   border-top-left-radius: var(--slate-radius-lg);
   border-top-right-radius: var(--slate-radius-lg);
+  border-bottom-left-radius: 0;
 }
 
 .slate-root[data-layers="top"] .slate-layer__share {
@@ -663,6 +660,127 @@
 
 .slate-root[data-layers="top"] .slate-hopper__other {
   padding-left: calc(40px + var(--slate-space-2));
+}
+
+/* ---- Touch ----
+   The touch tier (data-input="touch" on the root, slate/slate-tier.js):
+   every control grows to a gloved finger, and a hopper row stays one line
+   while the recipe has the room - its cells stretch to the row's height,
+   so the row's whole height is the target. Where the recipe is narrow
+   (the container query below) the rows take the Top layout's two-line
+   format. Nothing here applies to a mouse: the pointer tier is the sheet
+   itself. */
+
+/* The recipe's width, not the screen's, decides the row format: an open
+   drawer, a narrow window and a phone-sized tablet are the same case. */
+.slate-root[data-input="touch"] .slate-recipe__body {
+  container: slate-recipe / inline-size;
+}
+
+.slate-root[data-input="touch"] .slate-hopper[data-recipe] {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.slate-root[data-input="touch"] .slate-tabs__tab {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-switch {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-recipe__plan-action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"] .slate-recipe__reset {
+  min-height: var(--slate-tap);
+}
+
+/* The id runs the row's full height: it is the drag handle and the bulk
+   edit's pick target, so the whole left edge answers a finger. */
+.slate-root[data-input="touch"] .slate-hopper__id {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.slate-root[data-input="touch"] .slate-hopper__resin {
+  align-self: stretch;
+  min-height: var(--slate-tap-cell);
+}
+
+.slate-root[data-input="touch"] .slate-hopper__pct {
+  align-self: stretch;
+  min-height: var(--slate-tap-cell);
+}
+
+/* A cell that edits says so without a hover to find it. */
+.slate-root[data-input="touch"] .slate-hopper__resin[data-able="true"],
+.slate-root[data-input="touch"] .slate-hopper__pct[data-able="true"]:not([data-derived]),
+.slate-root[data-input="touch"] .slate-layer__share[data-able="true"] {
+  text-decoration: underline dotted var(--slate-text-faint);
+  text-underline-offset: 4px;
+}
+
+.slate-root[data-input="touch"] .slate-layer__share {
+  min-height: var(--slate-tap);
+  padding: var(--slate-space-1) 0;
+}
+
+.slate-root[data-input="touch"] .slate-toggle--tracking {
+  min-height: 36px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-recipe__save-name {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+/* A narrow recipe under a finger (below the width a one-line row needs
+   beside the layer's head): the two-line rows of the Top layout. */
+@container slate-recipe (max-width: 779px) {
+  .slate-root[data-input="touch"] .slate-hopper[data-recipe] {
+    grid-template-columns: 40px minmax(0, 1fr) 72px;
+    column-gap: var(--slate-space-2);
+    row-gap: 0;
+    padding: var(--slate-space-1) var(--slate-space-2);
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__id {
+    grid-row: span 2;
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__weight {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__controls {
+    grid-column: 3;
+    justify-content: flex-end;
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__mark {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__mark:empty {
+    display: none;
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__other {
+    padding-left: calc(40px + var(--slate-space-2));
+  }
+
+  .slate-root[data-input="touch"] .slate-hopper__note {
+    padding-left: calc(40px + var(--slate-space-2));
+  }
 }
 
 /* ---- Layers the other way round ----

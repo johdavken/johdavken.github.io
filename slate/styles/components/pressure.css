@@ -50,10 +50,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-pressure__unit:hover {
-  border-color: var(--slate-accent);
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-pressure__unit:hover {
+    border-color: var(--slate-accent);
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 /* The answer: the same pressure in the other unit. */
@@ -75,4 +77,17 @@
 /* The card's note sits flush here: the card carries its own padding. */
 .slate-pressure .slate-card__note {
   padding: 0;
+}
+
+/* ---- Touch (data-input="touch" on the root): the unit chip is the only
+   way to read the figure the other way, so it is a real target. */
+
+.slate-root[data-input="touch"] .slate-pressure__unit {
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"] .slate-pressure__input {
+  --slate-field-min-height: var(--slate-tap);
 }

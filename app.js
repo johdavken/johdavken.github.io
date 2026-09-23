@@ -963,8 +963,8 @@
   function recipePageLabel(destination=null){ return (destination ? destination==="next" : isNextRecipePage()) ? "Next Recipe" : "Current Recipe"; }
   // "Would applying a scan overwrite something?" - asked of whichever page the
   // scan is about to land on, not always the live recipe.
-  function hasNonEmptyRecipe(){
-    if(isNextRecipePage()) return !!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
+  function hasNonEmptyRecipe(destination=null){
+    if(destination ? destination==="next" : isNextRecipePage()) return !!window.PolynNextRecipe?.isMeaningful(state.nextRecipe);
     return state.layers.some(layer=>layer.hoppers.some(hopper=>hopper.resinName && hopper.resinName.trim()));
   }
   // Applies an already-built recipe payload (see recipe-scan-mapping.js,
@@ -974,10 +974,13 @@
   // recipe. Deliberately payload-in, not scan-in - this function doesn't
   // know or care where the payload came from, so review-screen edits are
   // submitted as-is rather than being silently recomputed from the raw scan.
-  function applyScannedRecipePayload(payload, lotByResin){
-    // Destination-neutral until here: the parser and review screen never know
-    // which page they are feeding, only that the operator confirmed it.
-    const result = applyRecipeToActivePage(payload, { kind:"apply-recipe-scan", lotByResin });
+  function applyScannedRecipePayload(payload, lotByResin, destination){
+    // Destination-neutral until here: the parser never knows which page it
+    // is feeding. A scan started for a named recipe ("current" | "next" -
+    // another view's tab, where this app's own page is not on screen) lands
+    // there; otherwise on the page the floor UI shows.
+    const named = destination==="current" || destination==="next" ? destination : undefined;
+    const result = applyRecipeToActivePage(payload, { kind:"apply-recipe-scan", lotByResin, destination: named });
     return result.ok ? { ok:true } : { ok:false, message: result.message || "This scan could not be applied." };
   }
   function openWorkspaceConfigurationDialog(mode,item=null){
@@ -11049,7 +11052,7 @@
       getLineConfiguration: () => derivedLineConfiguration(),
       // Which recipe page the review screen is about to write to. The scan
       // itself stays destination-neutral; only the confirmation names a target.
-      getRecipePageLabel: () => recipePageLabel(),
+      getRecipePageLabel: destination => recipePageLabel(destination==="current" || destination==="next" ? destination : null),
       hasNonEmptyRecipe,
       applyPayload: applyScannedRecipePayload
     };

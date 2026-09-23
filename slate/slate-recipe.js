@@ -67,7 +67,18 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule) {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const RECIPES = Object.freeze(["current", "next"]);
+  /* What the Scan menu offers, in the application's own words for them
+   * (recipe-scan-ui.js source types). */
+  const SCAN_KINDS = Object.freeze([["job_traveler", "Job traveler"], ["dosing_screen", "Dosing screen"]]);
   const RECIPE_LABEL = Object.freeze({ current: "Current", next: "Next" });
   const RESET_LABEL = "Reset tracking";
   const RESET_ARMED_LABEL = "Confirm reset";
@@ -192,6 +203,13 @@
     const commands = () => commandsFor(current);
     const recipesFor = typeof settings.recipes === "function" ? settings.recipes : () => settings.recipes || null;
     const validate = typeof settings.validate === "function" ? settings.validate : null;
+    // Drawn for a finger (slate/slate-tier.js, via the boot): editors keep
+    // the keyboard's hide key from cancelling or committing, and nothing
+    // pops the keyboard unasked.
+    const touch = () => {
+      try { return typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { return false; }
+    };
+    const view = doc.defaultView || null;
 
     const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current" });
 
@@ -236,6 +254,22 @@
     printBox.appendChild(printTrigger);
     printBox.appendChild(printMenu);
     bar.appendChild(printBox);
+
+    // Scan: in Print's place under a finger (recipe-edit.css shows one or
+    // the other). A job traveler or a dosing screen photographed into the
+    // tab on screen, through the application's own scan flow.
+    const scanBox = element(doc, "div", "slate-scan");
+    const scanTrigger = text(doc, "button", "slate-scan__trigger", "Scan", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
+    const scanMenu = element(doc, "div", "slate-scan__menu", { role: "menu", hidden: "" });
+    const scanItems = new Map();
+    for (const [kind, label] of SCAN_KINDS) {
+      const item = text(doc, "button", "slate-scan__item", label, { type: "button", role: "menuitem", "data-scan": kind, "aria-disabled": "true" });
+      scanItems.set(kind, item);
+      scanMenu.appendChild(item);
+    }
+    scanBox.appendChild(scanTrigger);
+    scanBox.appendChild(scanMenu);
+    bar.appendChild(scanBox);
     rootEl.appendChild(bar);
 
     let recipe = "current";
@@ -267,16 +301,13 @@
     /* ---- The bodies ---- */
 
     function makeBody(id) {
+      // No heading row over the layers: the values say what they are
+      // (a code, a percentage, pounds, a Track pill), and a row of labels
+      // over them only repeated it.
       const el = element(doc, "div", "slate-recipe__body", { "data-recipe": id });
-      const columns = element(doc, "div", "slate-recipe__columns", { "aria-hidden": "true" });
-      const headings = id === "current"
-        ? [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["weight", "Weight"], ["controls", "Tracking"], ["mark", ""]]
-        : [["id", "Hopper"], ["resin", "Resin"], ["pct", "Blend"], ["mark", ""]];
-      for (const [className, label] of headings) columns.appendChild(text(doc, "span", `slate-recipe__column slate-recipe__column--${className}`, label));
-      el.appendChild(columns);
       const layersEl = element(doc, "div", "slate-recipe__layers");
       el.appendChild(layersEl);
-      const body = { recipe: id, el, columns, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null, foot: null, bulk: null };
+      const body = { recipe: id, el, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null, foot: null, bulk: null };
       // "Save as recipe" leads each foot: the quiet way out to the Book.
       body.save = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__save", SAVE_LABEL, { type: "button", "data-slate-save": id, "data-able": "false" });
       if (id === "next") {
@@ -305,9 +336,9 @@
       const fill = element(doc, "div", "slate-recipe__fill", { hidden: "" });
       const fillCount = text(doc, "span", "slate-recipe__fill-count", "");
       const fillBox = element(doc, "div", "slate-recipe__fill-field");
-      const fillResin = element(doc, "input", "slate-recipe__fill-resin", { type: "text", autocomplete: "off", spellcheck: "false", maxlength: String(searchModule.CODE_MAX), "aria-label": "Resin to fill into the selected hoppers", placeholder: "Resin (no change)", "data-slate-fill-field": "resin" });
+      const fillResin = element(doc, "input", "slate-recipe__fill-resin", { type: "text", autocomplete: "off", spellcheck: "false", autocapitalize: "characters", enterkeyhint: "done", maxlength: String(searchModule.CODE_MAX), "aria-label": "Resin to fill into the selected hoppers", placeholder: "Resin (no change)", "data-slate-fill-field": "resin" });
       fillBox.appendChild(fillResin);
-      const fillPct = element(doc, "input", "slate-recipe__fill-pct", { type: "text", inputmode: "decimal", autocomplete: "off", "aria-label": "Blend to fill into the selected hoppers", placeholder: "Blend (no change)", "data-slate-fill-field": "pct" });
+      const fillPct = element(doc, "input", "slate-recipe__fill-pct", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Blend to fill into the selected hoppers", placeholder: "Blend (no change)", "data-slate-fill-field": "pct" });
       const fillButton = text(doc, "button", "slate-recipe__plan-action", FILL_LABEL, { type: "button", "data-slate-fill": "fill" });
       const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Clear selection", { type: "button", "data-slate-fill": "clear" });
       for (const node of [fillCount, fillBox, fillPct, fillButton, fillClear]) fill.appendChild(node);
@@ -325,7 +356,7 @@
       // takes the operator's typing.
       const entry = element(doc, "div", "slate-recipe__save-entry", { hidden: "" });
       const label = text(doc, "span", "slate-recipe__save-label", SAVE_ENTRY_LABEL[id]);
-      const name = element(doc, "input", "slate-recipe__save-name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off" });
+      const name = element(doc, "input", "slate-recipe__save-name", { type: "text", "aria-label": "Recipe name", maxlength: "120", autocomplete: "off", enterkeyhint: "done" });
       const confirm = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", "Save", { type: "button", "data-slate-save-do": "save" });
       const replace = text(doc, "button", "slate-recipe__plan-action", "Replace existing", { type: "button", "data-slate-save-do": "replace", hidden: "" });
       const cancel = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Cancel", { type: "button", "data-slate-save-do": "cancel" });
@@ -344,7 +375,8 @@
             const last = entry && entry.last ? entry.last : {};
             return { id: row.getAttribute("data-hopper") || "", resin: last.resin || "", pct: last.pct || "" };
           },
-          onDrop: ({ from, to }) => settle(actionsModule.move(commands(), id, from, to))
+          onDrop: ({ from, to }) => settle(actionsModule.move(commands(), id, from, to)),
+          timers
         });
       }
       rootEl.appendChild(el);
@@ -354,6 +386,8 @@
     const bodies = { current: makeBody("current"), next: makeBody("next") };
     show(bodies.next.el, false);
 
+    // The application's scanner, handed in by the boot: { able(), start(kind, recipe) }.
+    const scanner = settings.scan && typeof settings.scan.start === "function" ? settings.scan : null;
     const printer = settings.print && typeof settings.print.print === "function"
       ? settings.print
       : (printModule && typeof printModule.create === "function" ? printModule.create(doc, { mount: rootEl }) : null);
@@ -381,7 +415,7 @@
       row.appendChild(id);
       row.appendChild(resin);
       row.appendChild(pct);
-      const entry = { row, cells: { resin, pct }, toggles: null, mark: null, other: null, note: null, last: null, layer: layer.id, index: hopper.index, hopper: hopper.id };
+      const entry = { row, idCell: id, cells: { resin, pct }, toggles: null, mark: null, other: null, note: null, last: null, layer: layer.id, index: hopper.index, hopper: hopper.id };
       if (body.recipe === "current") {
         const weight = text(doc, "span", "slate-hopper__weight", cells.weight);
         const controls = element(doc, "div", "slate-hopper__controls");
@@ -474,7 +508,6 @@
       const planned = body.recipe !== "next" || !!(resolved && resolved.plan && resolved.plan.planned);
       if (body.empty) show(body.empty, !!model && !planned);
       if (body.recipe === "next") show(planStrip, !!model && planned);
-      show(body.columns, !!model && planned);
       if (!model || !planned) return;
       const state = sourceModule.stateFor(resolved, body.recipe);
       let position = 0;
@@ -627,7 +660,11 @@
           const derived = entry.index === 0;
           entry.cells.pct.setAttribute("data-able", able.blend && !derived && !busy ? "true" : "false");
           if (!derived) entry.cells.pct.setAttribute("title", able.blend && !busy ? "Change the blend" : `Cannot change here: ${held("blend")}`);
-          entry.row.classList.toggle("is-movable", able.move && !busy && !entry.row.classList.contains("is-empty"));
+          const movable = able.move && !busy && !entry.row.classList.contains("is-empty");
+          entry.row.classList.toggle("is-movable", movable);
+          // The badge a finger may lift (recipe-edit.css holds the page still under it).
+          if (movable) entry.idCell.setAttribute("data-movable", "");
+          else entry.idCell.removeAttribute("data-movable");
           if (entry.toggles) {
             entry.toggles.tracking.setAttribute("data-able", track.tracking ? "true" : "false");
             for (const control of Object.keys(entry.toggles)) {
@@ -686,6 +723,8 @@
         item.setAttribute("aria-disabled", can ? "false" : "true");
         item.setAttribute("title", can ? "" : (which === "current" ? "Nothing is assigned to print" : "Nothing is planned to print"));
       }
+
+      paintScan(able, bridge, options);
     }
 
     /* ---- Automatic tracking (Current only) ---- */
@@ -790,6 +829,7 @@
       editing = null;
       if (target.search && typeof target.search.close === "function") target.search.close();
       if (target.input && target.input.parentNode) target.input.parentNode.removeChild(target.input);
+      if (target.wrap && target.wrap.parentNode) target.wrap.parentNode.removeChild(target.wrap);
       show(target.button, true);
       const host = target.entry ? target.entry.row : target.head.head;
       host.classList.remove("is-editing", "is-changed-underneath");
@@ -848,6 +888,8 @@
         label: `Resin for ${target.entry.hopper}`,
         // The search stands in the resin cell, not at the row's end.
         before: target.button.nextSibling,
+        touch: touch(),
+        view,
         onChoose: code => {
           if (!editing || editing !== target) return;
           target.search = null;
@@ -903,8 +945,27 @@
         if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); commit(); }
         else if (event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeEditor(); }
       });
-      input.addEventListener("blur", () => { if (editing === target) commit(); });
+      input.addEventListener("blur", () => { if (editing === target && !target.cancelling) commit(); });
+      // An abandoned Cancel press (no click followed) is forgotten when the
+      // field is taken again, so its blur commits as before.
+      input.addEventListener("focus", () => { target.cancelling = false; });
       host.insertBefore(input, target.button.nextSibling);
+      // Under a finger Escape is out of reach, and a blur commits: Cancel is
+      // a button whose press keeps the field's focus, so it wins over the blur.
+      // The field and its Cancel stand together, before the field has focus
+      // (moving a focused field would blur it, and the blur commits).
+      if (touch()) {
+        const wrap = element(doc, "div", "slate-editor-field");
+        const cancel = text(doc, "button", "slate-editor-cancel", "×", { type: "button", "aria-label": "Cancel", title: "Cancel", "data-slate-cancel": "" });
+        const hold = event => { target.cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
+        cancel.addEventListener("pointerdown", hold);
+        cancel.addEventListener("mousedown", hold);
+        cancel.addEventListener("click", () => { if (editing === target) closeEditor(); });
+        host.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        wrap.appendChild(cancel);
+        target.wrap = wrap;
+      }
       if (typeof input.focus === "function") input.focus();
       if (typeof input.select === "function") input.select();
       return target;
@@ -926,6 +987,7 @@
     function closeMenus() {
       for (const id of RECIPES) for (const menu of bodies[id].menus) menu.close();
       closePrint();
+      closeScan();
     }
 
     function setRecipe(id) {
@@ -1104,17 +1166,14 @@
       });
     }
 
-    function outsidePrint(event) {
-      if (event && event.target && printBox.contains(event.target)) return;
-      closePrint();
-    }
+    const printCloser = dismissal(doc, node => printBox.contains(node), () => closePrint());
     function openPrint() {
       if (printOpen) return;
       printOpen = true;
       show(printMenu, true);
       printTrigger.setAttribute("aria-expanded", "true");
       printBox.classList.add("is-open");
-      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outsidePrint, true);
+      printCloser.start();
     }
     function closePrint() {
       if (!printOpen) return;
@@ -1122,7 +1181,7 @@
       show(printMenu, false);
       printTrigger.setAttribute("aria-expanded", "false");
       printBox.classList.remove("is-open");
-      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outsidePrint, true);
+      printCloser.stop();
     }
     printTrigger.addEventListener("click", () => { if (printOpen) closePrint(); else openPrint(); });
     printMenu.addEventListener("click", event => {
@@ -1135,6 +1194,65 @@
       if (!printer) { say("Printing is not available on this page."); return; }
       const result = printer.print(which, current);
       if (!result || !result.ok) say((result && result.message) || "The sheet could not be printed.");
+    });
+
+    /* ---- Scan ---- */
+
+    // Why a scan cannot start now, or "" when it can: the scan writes the
+    // recipe, so it needs what an edit needs, and the application needs a
+    // connected line to read the photo.
+    function scanReason(able, bridge, options) {
+      if (!scanner) return "not on this page";
+      if (!able.assign) return actionsModule.reason(bridge, "assign", options);
+      let ready = null;
+      try { ready = typeof scanner.able === "function" ? scanner.able() : { ok: true }; } catch (error) { ready = { ok: false, reason: "the scanner did not answer" }; }
+      return ready && ready.ok ? "" : ((ready && ready.reason) || "not available");
+    }
+
+    // The items say whether a scan can start. Painted with the other
+    // abilities and again as the menu opens - a line connected since the
+    // last publish is known at once.
+    function paintScan(able, bridge, options) {
+      const commandsNow = bridge === undefined ? commands() : bridge;
+      const guardNow = options === undefined ? guard() : options;
+      const ableNow = able === undefined ? actionsModule.abilities(commandsNow, guardNow) : able;
+      const why = scanReason(ableNow, commandsNow, guardNow);
+      for (const item of scanItems.values()) {
+        item.setAttribute("aria-disabled", why ? "true" : "false");
+        item.setAttribute("title", why ? `Scanning is unavailable: ${why}` : `Into the ${recipe === "next" ? "Next" : "Current"} recipe`);
+      }
+    }
+
+    let scanOpen = false;
+    const scanCloser = dismissal(doc, node => scanBox.contains(node), () => closeScan());
+    function openScan() {
+      if (scanOpen) return;
+      scanOpen = true;
+      paintScan();
+      show(scanMenu, true);
+      scanTrigger.setAttribute("aria-expanded", "true");
+      scanBox.classList.add("is-open");
+      scanCloser.start();
+    }
+    function closeScan() {
+      if (!scanOpen) return;
+      scanOpen = false;
+      show(scanMenu, false);
+      scanTrigger.setAttribute("aria-expanded", "false");
+      scanBox.classList.remove("is-open");
+      scanCloser.stop();
+    }
+    scanTrigger.addEventListener("click", () => { if (scanOpen) closeScan(); else openScan(); });
+    scanMenu.addEventListener("click", event => {
+      const target = event && event.target;
+      const item = target && typeof target.closest === "function" ? target.closest("[data-scan]") : null;
+      if (!item) return;
+      if (item.getAttribute("aria-disabled") === "true") { say(item.getAttribute("title") || "Scanning is unavailable."); return; }
+      closeScan();
+      // The tab on screen is the recipe the scan is for; the application
+      // asks for the photo, reads it, and shows its review before anything
+      // changes.
+      scanner.start(item.getAttribute("data-scan"), recipe);
     });
 
     /* ---- Bulk edit ---- */
@@ -1217,7 +1335,7 @@
       disarmPromote();
       closeMenus();
       const state = sourceModule.stateFor(current, body.recipe);
-      const view = formModule.create(doc, body, {
+      const formView = formModule.create(doc, body, {
         base: draftModule.baseFrom(state, model),
         model,
         resins,
@@ -1225,16 +1343,20 @@
         validate,
         onChange: () => paintForm(),
         onLast: () => { if (typeof body.bulk.apply.focus === "function") body.bulk.apply.focus(); },
-        onPick: () => paintFill()
+        onPick: () => paintFill(),
+        touch: touch(),
+        view
       });
-      form = { recipe: body.recipe, body, view, armTimer: null };
+      form = { recipe: body.recipe, body, view: formView, armTimer: null };
       resetFill(body);
       show(body.bulk.hint, true);
       show(body.foot, false);
       show(body.bulk.el, true);
       setBulkNote("");
       applyAbilities();
-      view.focusFirst();
+      // A finger taps the field it wants; focusing one would pop the
+      // keyboard over the form's own foot.
+      if (!touch()) formView.focusFirst();
     }
 
     // The form goes; the cells show the canonical value again, as

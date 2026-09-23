@@ -77,6 +77,10 @@
    */
   function create(doc, ctx) {
     const settings = ctx || {};
+    // Under a finger nothing pops the keyboard unasked (slate/slate-tier.js).
+    const touch = () => {
+      try { return typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { return false; }
+    };
     const pressure = settings.pressure || null;
     const back = typeof settings.back === "function" ? settings.back : () => {};
 
@@ -133,7 +137,7 @@
       from = otherOf(from);
       paintUnit();
       compute();
-      if (typeof input.focus === "function") input.focus();
+      if (!touch() && typeof input.focus === "function") input.focus();
     }
 
     input.addEventListener("input", compute);
@@ -146,7 +150,7 @@
 
     return Object.freeze({
       element: rootEl,
-      onShow() { if (pressure && typeof input.focus === "function") input.focus(); },
+      onShow() { if (pressure && !touch() && typeof input.focus === "function") input.focus(); },
       flip,
       from: () => from,
       entry: () => input.value,

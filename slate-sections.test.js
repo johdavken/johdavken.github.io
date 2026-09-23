@@ -257,3 +257,23 @@ test("an aside definition is a valid section the rail lists nowhere: the Timelin
   assert.equal(view.element.querySelector("[data-section='timeline']"), null, "the rail lists the Timeline");
   assert.ok(view.element.querySelector(".slate-rail__menu [data-section='totals']"));
 });
+
+test("a section left behind lets go of the focus, so a field in it does not keep a tablet's keyboard up over the next", () => {
+  const doc = makeDocument();
+  const mount = doc.createElement("div");
+  doc.body.appendChild(mount);
+  const fieldOf = {};
+  const make = id => ({ id, label: id, group: "sections", icon: id, create(d) { const element = d.createElement("div"); const input = d.createElement("input"); element.appendChild(input); fieldOf[id] = input; return { element }; } });
+  const view = sections.mountSections(doc, mount, [make("one"), make("two")], {}, {});
+  view.show("one");
+  let blurred = false;
+  fieldOf.one.blur = () => { blurred = true; };
+  fieldOf.one.focus();
+  view.show("two");
+  assert.equal(blurred, true, "the hidden section kept its field focused");
+  let other = false;
+  fieldOf.two.blur = () => { other = true; };
+  doc.activeElement = null;
+  view.show("one");
+  assert.equal(other, false, "a field that had no focus was blurred");
+});

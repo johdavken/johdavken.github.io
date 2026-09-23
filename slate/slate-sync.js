@@ -19,6 +19,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  /* A press outside, by the shared rule - a finger closes on a still
+   * release, a mouse on the press - and the Back key's stack
+   * (slate-dismiss.js). */
+  function dismissal(target, inside, close) {
+    const shared = typeof require === "function" ? require("./slate-dismiss.js") : (typeof globalThis !== "undefined" ? globalThis.PolynSlateDismiss : null);
+    return shared && typeof shared.outside === "function" ? shared.outside(target, inside, close) : Object.freeze({ start() {}, stop() {}, isOn: () => false });
+  }
+
   const ACTIONS = Object.freeze(["refresh", "reconnect", "generateJoinCode", "renderJoinQr", "joinWorkspace", "selectWorkspace", "leaveWorkspace", "relabelDevice"]);
   const CODE_PATTERN = /^[A-Z0-9]{4}$/;
   const LABEL_MAX = 80;
@@ -306,8 +314,8 @@
       if (!status.assigned || state.joining) {
         joinSection.appendChild(text(doc, "h3", "slate-sync__heading", status.assigned ? "Join another line" : "Join a line"));
         const form = element(doc, "div", "slate-sync__form");
-        const codeInput = element(doc, "input", "slate-sync__input slate-sync__input--code", { type: "text", maxlength: "4", autocapitalize: "characters", "aria-label": "Join code", placeholder: "CODE" });
-        const labelInput = element(doc, "input", "slate-sync__input", { type: "text", maxlength: String(LABEL_MAX), "aria-label": "Device label (optional)", placeholder: "Device label (optional)" });
+        const codeInput = element(doc, "input", "slate-sync__input slate-sync__input--code", { type: "text", maxlength: "4", autocapitalize: "characters", autocorrect: "off", spellcheck: "false", enterkeyhint: "go", "aria-label": "Join code", placeholder: "CODE" });
+        const labelInput = element(doc, "input", "slate-sync__input", { type: "text", maxlength: String(LABEL_MAX), enterkeyhint: "go", "aria-label": "Device label (optional)", placeholder: "Device label (optional)" });
         form.appendChild(codeInput);
         form.appendChild(labelInput);
         form.appendChild(button("Join", "slate-sync__button--primary", () => join(codeInput.value, labelInput.value), { enabled: !!can.join && !busy, action: "joinWorkspace" }));
@@ -363,10 +371,7 @@
 
     /* ---- Open / close ---- */
 
-    function outside(event) {
-      if (event && event.target && typeof rootEl.contains === "function" && rootEl.contains(event.target)) return;
-      close(false);
-    }
+    const outsideCloser = dismissal(doc, node => typeof rootEl.contains === "function" && rootEl.contains(node), () => close(false));
 
     function open() {
       if (state.open) return;
@@ -376,7 +381,7 @@
       trigger.setAttribute("aria-expanded", "true");
       rootEl.classList.add("is-open");
       renderPanel();
-      if (typeof doc.addEventListener === "function") doc.addEventListener("pointerdown", outside, true);
+      outsideCloser.start();
     }
 
     function close(refocus) {
@@ -388,7 +393,7 @@
       show(panel, false);
       trigger.setAttribute("aria-expanded", "false");
       rootEl.classList.remove("is-open");
-      if (typeof doc.removeEventListener === "function") doc.removeEventListener("pointerdown", outside, true);
+      outsideCloser.stop();
       if (refocus && typeof trigger.focus === "function") trigger.focus();
     }
 

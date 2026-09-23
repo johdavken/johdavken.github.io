@@ -203,6 +203,50 @@
     if (!display) timeline.appendChild(text(doc, "p", "slate-settings__note", "The timeline's view cannot be changed on this page."));
     rootEl.appendChild(timeline);
 
+    // Input: drawn for a finger or a mouse.
+    const input = element(doc, "section", "slate-settings__group", { "aria-label": "Input" });
+    input.appendChild(text(doc, "h2", "slate-settings__heading", "Input"));
+    input.appendChild(text(doc, "p", "slate-settings__lead", "Whether Slate is drawn for a finger or a mouse. Touch gives larger targets and a compact rail, and keeps the keyboard down until a field is tapped. Nothing about the job changes."));
+    const inputs = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Input" });
+    const inputButtons = new Map();
+    for (const [mode, label, note] of [
+      ["auto", "Automatic", "Touch on a touch screen and in the Android app; mouse otherwise."],
+      ["touch", "Touch", "Always drawn for a finger, gloved or not."],
+      ["pointer", "Mouse", "Always the desktop sheet, even on a touch screen."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-input-mode": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setInputMode === "function") display.setInputMode(mode); });
+      inputButtons.set(mode, button);
+      inputs.appendChild(button);
+    }
+    input.appendChild(inputs);
+    if (!display) input.appendChild(text(doc, "p", "slate-settings__note", "The input cannot be changed on this page."));
+    rootEl.appendChild(input);
+
+    // What this device opens when the address names no view (slate-host.js).
+    const opening = element(doc, "section", "slate-settings__group", { "aria-label": "This device opens" });
+    opening.appendChild(text(doc, "h2", "slate-settings__heading", "This device opens"));
+    opening.appendChild(text(doc, "p", "slate-settings__lead", "What Resin.Tools shows when it starts on this device - in the Android app, which has no address bar, this is the way to choose. It takes effect the next time the page or the app opens."));
+    const hosts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "This device opens" });
+    const hostButtons = new Map();
+    for (const [choice, label, note] of [
+      ["auto", "Automatic", "Slate on a desktop and a tablet; the floor UI on a phone."],
+      ["slate", "Slate", "Always Slate, except on a phone's screen, which it was not drawn for."],
+      ["legacy", "Legacy", "Always the floor UI. Slate stays one visit away at ?view=slate."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-host-choice": choice });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setHostChoice === "function") display.setHostChoice(choice); });
+      hostButtons.set(choice, button);
+      hosts.appendChild(button);
+    }
+    opening.appendChild(hosts);
+    if (!display) opening.appendChild(text(doc, "p", "slate-settings__note", "What this device opens cannot be changed on this page."));
+    rootEl.appendChild(opening);
+
     // What comes next.
     const later = element(doc, "section", "slate-settings__group", { "aria-label": "More settings" });
     later.appendChild(text(doc, "h2", "slate-settings__heading", "More"));
@@ -225,10 +269,10 @@
     // Signed out: the two fields and the way in.
     const adminForm = element(doc, "div", "slate-settings__admin-form");
     const emailField = element(doc, "input", "slate-settings__admin-field", {
-      type: "email", autocomplete: "username", spellcheck: "false", "aria-label": "Administrator email", placeholder: "Email", "data-slate-admin": "email"
+      type: "email", autocomplete: "username", spellcheck: "false", autocapitalize: "none", enterkeyhint: "next", "aria-label": "Administrator email", placeholder: "Email", "data-slate-admin": "email"
     });
     const passwordField = element(doc, "input", "slate-settings__admin-field", {
-      type: "password", autocomplete: "current-password", "aria-label": "Administrator password", placeholder: "Password", "data-slate-admin": "password"
+      type: "password", autocomplete: "current-password", enterkeyhint: "go", "aria-label": "Administrator password", placeholder: "Password", "data-slate-admin": "password"
     });
     const signInButton = text(doc, "button", "slate-settings__admin-action slate-settings__admin-action--primary", "Sign in", { type: "button", "data-slate-admin": "sign-in" });
     for (const node of [emailField, passwordField, signInButton]) adminForm.appendChild(node);
@@ -386,6 +430,18 @@
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
+      const inputMode = display && typeof display.getInputMode === "function" ? display.getInputMode() : null;
+      for (const [id, button] of inputButtons) {
+        const on = id === inputMode;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
+      const hostChoice = display && typeof display.getHostChoice === "function" ? display.getHostChoice() : null;
+      for (const [id, button] of hostButtons) {
+        const on = id === hostChoice;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
       paintAdmin();
     }
 
@@ -403,6 +459,8 @@
       layerOrientation: id => orientationButtons.get(id) || null,
       layerOrder: id => orderButtons.get(id) || null,
       timelineView: id => viewButtons.get(id) || null,
+      inputMode: id => inputButtons.get(id) || null,
+      hostChoice: id => hostButtons.get(id) || null,
       admin: () => ({ open: adminOpen, pending: adminPending, note: adminNote.textContent, signedIn: adminGroup.classList.contains("is-signed-in") }),
       // Left behind, the block closes and the password goes with it.
       onHide() { openAdmin(false); }

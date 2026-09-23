@@ -98,16 +98,24 @@ test("the host is the only thing that sets the view attribute", () => {
   assert.doesNotMatch(stationHost, /slate/i, "station-host.js knows Slate exists");
 });
 
-test("the flag is read from the URL and matched exactly; a URL naming no view falls to the desktop test, never to yes", () => {
+test("the flag is read from the URL and matched exactly; a URL naming no view falls to the device test, never to yes", () => {
   assert.match(host, /const FLAG = "view";/);
   assert.match(host, /const VALUE = "slate";/);
-  assert.match(host, /const view = new URL\(root\.location\.href\)\.searchParams\.get\(FLAG\);\s*if \(view === VALUE\) return true;\s*if \(view !== null\) return false;\s*return desktop\(\);/);
+  assert.match(host, /const view = new URL\(root\.location\.href\)\.searchParams\.get\(FLAG\);\s*if \(view === VALUE\) return true;\s*if \(view !== null\) return false;\s*return slateDevice\(\);/);
   assert.match(host, /catch \(error\) \{\s*return false;\s*\}/);
-  // The desktop test: the native shell says no; the media query decides; the width is the fallback; nothing to measure says no.
+  // The device test: the stored choice first (legacy says no everywhere);
+  // in the app only a tablet's screen says yes; in the browser a desktop's
+  // window, or a tablet's screen with a touch pointer; nothing to measure says no.
   assert.match(host, /const MIN_WIDTH = 1100;/);
-  assert.match(host, /capacitor\.isNativePlatform\(\)\) return false;/);
-  assert.match(host, /root\.matchMedia\(`\(min-width: \$\{MIN_WIDTH\}px\)`\)\.matches/);
+  assert.match(host, /const TABLET_MIN_SHORT = 600;/);
+  assert.match(host, /const TABLET_MIN_LONG = 900;/);
+  assert.match(host, /if \(choice === "legacy"\) return false;/);
+  assert.match(host, /if \(native\) return tablet;/);
+  assert.match(host, /return tablet && matches\("\(pointer: coarse\)"\) === true;/);
+  assert.match(host, /root\.matchMedia\(query\)\.matches/);
   assert.match(host, /return Number\(root\.innerWidth\) >= MIN_WIDTH;/);
+  // A throwing native bridge reads as the app: never a desktop by accident.
+  assert.match(host, /function nativeApp\(\) \{[\s\S]*?catch \(error\) \{\s*return true;\s*\}/);
 });
 
 /* ----------------------------------------------------------------------

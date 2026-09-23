@@ -61,3 +61,15 @@
     animation: none;
   }
 }
+
+/* ---- Touch (data-input="touch" on the root): the answers further apart,
+   and on a narrow screen one above another, never two side by side. */
+
+.slate-root[data-input="touch"] .slate-modal__actions {
+  gap: var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"][data-viewport="narrow"] .slate-modal__actions {
+  flex-direction: column;
+  align-items: stretch;
+}

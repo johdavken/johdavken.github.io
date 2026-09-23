@@ -57,7 +57,9 @@ function boot(options) {
     resins: () => CATALOG,
     timers,
     print: printer,
-    recipes: settings.recipes === undefined ? null : settings.recipes
+    recipes: settings.recipes === undefined ? null : settings.recipes,
+    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined,
+    scan: settings.scan
   });
   doc.body.appendChild(view.element);
   return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
@@ -213,7 +215,8 @@ test("the bar offers Current | Next; Next's rows carry no weight or toggles, no 
   assert.equal(b1.querySelector(".slate-hopper__resin").textContent, "LL318");
   assert.equal(b1.querySelector(".slate-hopper__weight"), null);
   assert.equal(b1.querySelector("[data-slate-control]"), null);
-  assert.equal(view.body("next").querySelectorAll(".slate-recipe__column").length, 4);
+  // No heading row over either tab's layers: the values say what they are.
+  assert.equal(view.element.querySelectorAll(".slate-recipe__columns, .slate-recipe__column").length, 0);
   assert.equal(view.setRecipe("nonsense"), "next");
   assert.equal(view.setRecipe("current"), "current");
 });
@@ -1478,4 +1481,163 @@ test("Fill writes one resin and/or one blend into every picked row's fields - bl
     { layer: "A", index: 4, resin: "LL318", pct: 20 }
   ]);
   assert.equal(view.bulk(), null);
+});
+
+/* ----------------------------------------------------------------------
+ *   Under a finger (the touch tier)
+ * -------------------------------------------------------------------- */
+
+test("under a finger the blend field carries a Cancel that wins over the blur: pressed, then blurred, then clicked - nothing is sent", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  const input = a2.querySelector(".slate-hopper__input");
+  const wrap = a2.querySelector(".slate-editor-field");
+  assert.ok(wrap && input.parentNode === wrap, "the field and its Cancel do not stand together");
+  const cancel = wrap.querySelector("[data-slate-cancel]");
+  assert.ok(cancel);
+  input.value = "45";
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of cancel.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true);
+  input.dispatchEvent({ type: "blur" });
+  click(cancel);
+  assert.deepEqual(commands.calls, [], "Cancel under a finger dispatched the draft");
+  assert.equal(view.editing(), null);
+  assert.equal(a2.querySelector(".slate-editor-field"), null, "the field's wrapper was left behind");
+
+  // A blur without Cancel still commits, as with a mouse.
+  click(a2.querySelector(".slate-hopper__pct"));
+  a2.querySelector(".slate-hopper__input").value = "45";
+  a2.querySelector(".slate-hopper__input").dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperBlend");
+});
+
+test("with a mouse the blend field stands alone, as before: no wrapper, no Cancel", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  assert.equal(a2.querySelector(".slate-editor-field"), null);
+  assert.equal(a2.querySelector("[data-slate-cancel]"), null);
+  assert.ok(a2.querySelector(".slate-hopper__input").parentNode === a2);
+});
+
+test("under a finger the resin search opens with the touch rules, and a blur leaves the edit open", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__resin"));
+  const input = a2.querySelector(".slate-combobox__input");
+  assert.ok(input);
+  assert.ok(a2.querySelector(".slate-combobox [data-slate-cancel]"), "the touch search has no Cancel");
+  input.dispatchEvent({ type: "blur", relatedTarget: null });
+  assert.ok(view.editing(), "the keyboard's hide key ended the edit");
+  click(a2.querySelector(".slate-combobox [data-slate-cancel]"));
+  assert.equal(view.editing(), null);
+  assert.deepEqual(commands.calls, []);
+});
+
+test("Bulk edit focuses its first field with a mouse, and none under a finger - the keyboard would cover the form's foot", () => {
+  const mouse = boot();
+  mouse.view.update(withPlan(), { kind: "structural" });
+  click(bulkButton(mouse.view));
+  const firstMouse = mouse.view.element.querySelector(".slate-recipe__body[data-recipe='current'] [data-slate-draft='resin']");
+  assert.equal(firstMouse.focused, true, "the mouse form lost its first-field focus");
+
+  const finger = boot({ touch: true });
+  finger.view.update(withPlan(), { kind: "structural" });
+  click(bulkButton(finger.view));
+  assert.ok(finger.view.bulk(), "the form did not open under a finger");
+  const drafts = finger.view.element.querySelectorAll("[data-slate-draft]");
+  assert.ok(drafts.length > 0);
+  assert.ok(drafts.every(one => !one.focused), "a touch form focused a field on open");
+  assert.equal(drafts.find(one => one.getAttribute("data-slate-draft") === "resin").getAttribute("enterkeyhint"), "next");
+});
+
+test("an abandoned Cancel press under a finger is forgotten once the blend field is taken again", () => {
+  const { view, commands } = boot({ touch: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a2 = row(view, "A2");
+  click(a2.querySelector(".slate-hopper__pct"));
+  const input = a2.querySelector(".slate-hopper__input");
+  const cancel = a2.querySelector("[data-slate-cancel]");
+  input.value = "45";
+  for (const handler of cancel.listeners.pointerdown) handler({ type: "pointerdown", pointerType: "touch", preventDefault() {} });
+  input.dispatchEvent({ type: "blur" });
+  assert.deepEqual(commands.calls, []);
+  input.dispatchEvent({ type: "focus" });
+  input.dispatchEvent({ type: "blur" });
+  assert.equal(commands.calls.length, 1);
+});
+
+test("a badge carries data-movable exactly while its row may be dragged, so only those hold the page still under a finger", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a1 = row(view, "A1").querySelector(".slate-hopper__id");
+  assert.equal(row(view, "A1").classList.contains("is-movable"), a1.hasAttribute("data-movable"));
+  assert.ok(a1.hasAttribute("data-movable"), "an assigned row's badge is not movable");
+  const readOnly = boot({ readOnly: true });
+  readOnly.view.update(resolvedFrom(), { kind: "structural" });
+  assert.ok(!row(readOnly.view, "A1").querySelector(".slate-hopper__id").hasAttribute("data-movable"), "a read-only badge would still hold the page");
+});
+
+/* ----------------------------------------------------------------------
+ *   Scan (Print's place under a finger)
+ * -------------------------------------------------------------------- */
+
+function makeScanner(ready) {
+  const started = [];
+  return { started, able: () => (ready === false ? { ok: false, reason: "connect this device to a line (RT Sync) to scan" } : { ok: true }), start: (kind, recipe) => started.push([kind, recipe]) };
+}
+const scanItem = (view, kind) => view.element.querySelector(`.slate-scan__menu [data-scan='${kind}']`);
+
+test("Scan offers the job traveler and the dosing screen, and starts the application's scan for the tab on screen", () => {
+  const scanner = makeScanner(true);
+  const { view } = boot({ scan: scanner });
+  view.update(withPlan(), { kind: "structural" });
+  const kinds = view.element.querySelectorAll(".slate-scan__menu [data-scan]").map(one => [one.getAttribute("data-scan"), one.textContent]);
+  assert.deepEqual(kinds, [["job_traveler", "Job traveler"], ["dosing_screen", "Dosing screen"]]);
+  click(view.element.querySelector(".slate-scan__trigger"));
+  assert.ok(!view.element.querySelector(".slate-scan__menu").hasAttribute("hidden"));
+  click(scanItem(view, "dosing_screen"));
+  assert.deepEqual(scanner.started, [["dosing_screen", "current"]]);
+  assert.ok(view.element.querySelector(".slate-scan__menu").hasAttribute("hidden"), "the menu stayed open over the scan");
+  click(view.element.querySelectorAll(".slate-tabs__tab")[1]);
+  click(view.element.querySelector(".slate-scan__trigger"));
+  assert.match(scanItem(view, "job_traveler").getAttribute("title"), /Next/);
+  click(scanItem(view, "job_traveler"));
+  assert.deepEqual(scanner.started[1], ["job_traveler", "next"]);
+});
+
+test("Scan is unavailable - and says why on a tap - without a connected line, while read-only, or with no scanner on the page", () => {
+  const offline = makeScanner(false);
+  const one = boot({ scan: offline });
+  one.view.update(resolvedFrom(), { kind: "structural" });
+  const item = scanItem(one.view, "job_traveler");
+  assert.equal(item.getAttribute("aria-disabled"), "true");
+  click(item);
+  assert.deepEqual(offline.started, []);
+  assert.match(one.said[one.said.length - 1], /RT Sync/);
+
+  const locked = makeScanner(true);
+  const two = boot({ scan: locked, readOnly: true });
+  two.view.update(resolvedFrom(), { kind: "structural" });
+  click(scanItem(two.view, "dosing_screen"));
+  assert.deepEqual(locked.started, [], "a read-only Slate started a scan that writes the recipe");
+  assert.equal(scanItem(two.view, "dosing_screen").getAttribute("aria-disabled"), "true");
+
+  const none = boot();
+  none.view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(scanItem(none.view, "job_traveler").getAttribute("aria-disabled"), "true");
+  assert.match(scanItem(none.view, "job_traveler").getAttribute("title"), /not on this page/);
+});
+
+test("the sheets give a finger Scan and a mouse Print: each hidden where the other stands", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe-edit.css"), "utf8");
+  assert.match(css, /\n\.slate-scan \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-print \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-scan \{[^}]*display: block;/);
 });

@@ -137,7 +137,7 @@
       const slot = { entry, resin: null, pct: null, preview: null, search: null, foreign: false };
       const wrapper = element(doc, "div", "slate-combobox slate-hopper__draft");
       const resin = element(doc, "input", "slate-hopper__draft-resin", {
-        type: "text", autocomplete: "off", spellcheck: "false", maxlength: String(searchModule.CODE_MAX),
+        type: "text", autocomplete: "off", spellcheck: "false", autocapitalize: "characters", enterkeyhint: "next", maxlength: String(searchModule.CODE_MAX),
         "aria-label": `Resin for ${entry.hopper}`, "data-slate-draft": "resin", placeholder: "No resin"
       });
       resin.value = start.resin;
@@ -146,7 +146,7 @@
       entry.row.insertBefore(wrapper, entry.cells.resin.nextSibling);
       slot.resin = resin;
       slot.search = searchModule.attach(doc, resin, {
-        resins, host: wrapper, id: `slate-draft-${body.recipe}-${entry.layer}-${entry.index}`,
+        resins, host: wrapper, id: `slate-draft-${body.recipe}-${entry.layer}-${entry.index}`, touch: !!settings.touch, view: settings.view || null,
         onChoose: code => { draft[key].resin = code; if (code === "" && slot.pct) { slot.pct.value = ""; draft[key].pct = ""; } refresh(); advanceFrom(resin); }
       });
       fields.push({ key, kind: "resin", input: resin, entry });
@@ -163,7 +163,7 @@
         slot.preview = preview;
       } else {
         const pct = element(doc, "input", "slate-hopper__draft-pct", {
-          type: "text", inputmode: "decimal", autocomplete: "off", "aria-label": `Blend for ${entry.hopper}`, "data-slate-draft": "pct"
+          type: "text", inputmode: "decimal", enterkeyhint: "next", autocomplete: "off", "aria-label": `Blend for ${entry.hopper}`, "data-slate-draft": "pct"
         });
         pct.value = start.pct;
         entry.row.insertBefore(pct, entry.cells.pct.nextSibling);

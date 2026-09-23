@@ -20,8 +20,10 @@
   transition: color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-card__calc:hover {
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-card__calc:hover {
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-card__calc[aria-expanded="true"] {
@@ -141,8 +143,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-wizard__choice:hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-wizard__choice:hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-wizard__choice.is-selected {
@@ -199,4 +203,39 @@
   .slate-wizard {
     animation: none;
   }
+}
+
+/* ---- Touch (data-input="touch" on the root) ----
+   The calculator keeps its small glyph; an invisible ::after is the
+   finger's target. The popover becomes a sheet centred under the header,
+   whatever card opened it: anchored to a card it could run off a
+   narrow screen, and under the keyboard its Next and Use would sink. */
+
+.slate-root[data-input="touch"] .slate-card__calc::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.slate-root[data-input="touch"] .slate-wizard {
+  position: fixed;
+  top: calc(var(--slate-inset-top) + var(--slate-header-height) + var(--slate-space-3));
+  right: 0;
+  left: 0;
+  width: min(400px, calc(100vw - 2 * var(--slate-space-4)));
+  max-height: calc(100dvh - var(--slate-inset-top) - var(--slate-inset-bottom) - var(--slate-header-height) - 2 * var(--slate-space-3));
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.slate-root[data-input="touch"] .slate-wizard__choice {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-wizard__input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-wizard__actions {
+  gap: var(--slate-space-3);
 }

@@ -109,9 +109,11 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-rail__item:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-rail__item:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-rail__item:active {
@@ -217,4 +219,77 @@
   height: var(--slate-stroke);
   margin: var(--slate-space-2) var(--slate-space-2);
   background: var(--slate-border-subtle);
+}
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-rail__item {
+  min-height: 48px;
+}
+
+.slate-root[data-input="touch"] .slate-rail__sections {
+  gap: var(--slate-space-2);
+}
+
+/* ---- The compact rail (touch) ----
+   Icons alone, each item a finger's square; the names stay on the items
+   as their accessible labels and in the Tools flyout, which floats beside
+   the rail over the page (slate-rail.js closes it on a press outside). */
+
+/* The rail stands above the page so its Tools flyout, which floats over
+   the page, is not painted under it: the sticky inner box is a stacking
+   context of its own, so the flyout's z-index counts only inside the rail.
+   Below the drawer's scrim (29), which must still cover it. */
+.slate-root[data-input="touch"] .slate-rail {
+  z-index: 28;
+}
+
+.slate-root[data-input="touch"] .slate-rail__inner {
+  top: var(--slate-inset-top);
+  height: calc(100dvh - var(--slate-inset-top) - var(--slate-inset-bottom));
+  padding: var(--slate-space-3) var(--slate-space-2);
+  overscroll-behavior: contain;
+}
+
+.slate-root[data-input="touch"] .slate-rail__brand {
+  padding: 0;
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-rail__label {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-rail__chevron {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-rail__item {
+  justify-content: center;
+  padding: 0;
+}
+
+.slate-root[data-input="touch"] .slate-rail__menu {
+  /* Fixed, not absolute: the rail scrolls, and its clip would hide a menu
+     that leaves it sideways. slate-rail.js places it from the Tools item. */
+  position: fixed;
+  top: var(--slate-flyout-top, 0px);
+  left: calc(var(--slate-flyout-left, var(--slate-rail-width-compact)) + var(--slate-space-2));
+  z-index: 30;
+  min-width: 220px;
+  margin: 0;
+  padding: var(--slate-space-1);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"] .slate-rail__item--menu {
+  justify-content: flex-start;
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-rail__label--menu {
+  display: block;
 }

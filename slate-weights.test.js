@@ -170,7 +170,9 @@ test("off: every hopper has a weight field and nothing else; the switch is withh
   assert.ok(rowOf(view, "A:3").classList.contains("is-empty"));
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__resin").textContent, "HX204");
   assert.equal(rowOf(view, "A:0").getAttribute("data-hopper"), "A1");
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent), ["Hopper", "Resin", "Weight (lb)"]);
+  // No heading row: each field carries its unit, and its name as its label.
+  assert.equal(view.element.querySelectorAll(".slate-weights__columns, .slate-weights__column").length, 0);
+  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__unit").textContent, "lb");
   assert.deepEqual(view.element.querySelectorAll(".slate-weights__layer").map(node => node.getAttribute("data-layer")), ["A", "B", "C"]);
   assert.equal(view.element.querySelector(".slate-section__subtitle").textContent, "Line 5 (demo) · 16 hoppers · Smart Hoppers unavailable · Live");
   assert.equal(view.element.querySelector(".slate-weights__smart-text").textContent, actions.SMART_UNAVAILABLE_TEXT);
@@ -189,7 +191,8 @@ test("smart:cylindrical: a height field and a computed readout per row, the circ
   view.update(resolvedFrom(snap => smartLine(snap)), { kind: "structural" });
   assert.equal(view.element.getAttribute("data-shape"), "smart:cylindrical");
   assert.equal(view.element.querySelectorAll(".slate-weights__field[data-kind='geometry']").length, 16);
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent), ["Hopper", "Resin", "Weight (lb)", "Usable height (in)", "Computed"]);
+  assert.equal(view.element.querySelectorAll(".slate-weights__column").length, 0);
+  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "in");
   assert.equal(field(view, "A:0", "geometry").value, "48");
   assert.equal(field(view, "A:0", "geometry").getAttribute("aria-label"), "A1 usable height, inches");
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "in");
@@ -216,7 +219,7 @@ test("smart:cylindrical: a height field and a computed readout per row, the circ
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "gal");
   assert.equal(rowOf(view, "A:1").querySelector(".slate-weights__computed").textContent, "no volume");
   assert.ok(circumference.hasAttribute("hidden"), "a volume line has no shared circumference");
-  assert.deepEqual(view.element.querySelectorAll(".slate-weights__column").map(node => node.textContent).slice(3), ["Usable volume (gal)", "Computed"]);
+  assert.match(field(view, "A:0", "geometry").getAttribute("aria-label"), /usable volume, gallons/i, "the geometry field lost its name");
 });
 
 test("a shape change rebuilds the rows; a values change patches the same field in place", () => {
@@ -588,4 +591,38 @@ test("read-only keeps only Refresh among the profile actions and says why; Refre
   without.view.update(resolvedFrom(), { kind: "structural" });
   assert.equal(without.view.element.querySelector(".slate-book__empty").textContent, weights.emptyText(null, false));
   assert.equal(without.view.element.querySelector(".slate-weights__profiles .slate-section__subtitle").textContent, "Not connected");
+});
+
+test("a weight being edited carries Revert: its press wins over the blur it causes - the draft goes back and nothing is sent", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const input = field(view, "A:1");
+  const revert = input.parentNode.querySelector("[data-slate-revert]");
+  assert.ok(revert, "the field has no Revert");
+  assert.ok(revert.hasAttribute("hidden"), "Revert shows before the field is edited");
+  const resting = input.value;
+  type(input, "999");
+  assert.ok(!revert.hasAttribute("hidden"), "Revert is not offered while the field is edited");
+  const press = { type: "pointerdown", pointerType: "touch", _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } };
+  for (const handler of revert.listeners.pointerdown) handler(press);
+  assert.equal(press._defaultPrevented, true);
+  blur(input);
+  click(revert);
+  assert.deepEqual(commands.calls, [], "Revert sent the draft");
+  assert.equal(input.value, resting);
+  assert.ok(revert.hasAttribute("hidden"));
+
+  // Without Revert, a blur commits as it always has.
+  type(input, "999");
+  blur(input);
+  assert.equal(commands.calls.length, 1);
+});
+
+test("a locked weight says why on a tap, since its title never shows under a finger", () => {
+  const { view, said } = boot({ readOnly: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const input = field(view, "A:1");
+  assert.ok(input.hasAttribute("readonly"));
+  click(input);
+  assert.match(said[said.length - 1], /^Cannot be changed here: /);
 });

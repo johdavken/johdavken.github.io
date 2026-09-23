@@ -67,13 +67,37 @@ function manifestIconReferences(manifestRelativePath) {
   return [...refs];
 }
 
+// A presentation host (slate-host.js) is the other file that names more
+// files: it loads its stylesheets and modules dynamically, by design never
+// linked in index.html (slate-host-isolation.test.js), so the parser above
+// cannot see them either and the Android shell would boot the host into a
+// page of 404s. Follow exactly this one level too - the host's own
+// STYLESHEETS and SCRIPTS arrays - so the allowlist is still what the app
+// actually declares. Only a host index.html itself loads is followed.
+const FOLLOWED_HOSTS = ["slate-host.js"];
+
+function hostAssetReferences(hostRelativePath) {
+  const source = fs.readFileSync(path.join(ROOT, hostRelativePath), "utf8");
+  const refs = [];
+  for (const name of ["STYLESHEETS", "SCRIPTS"]) {
+    const block = source.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`));
+    if (!block) throw new Error(`build-www: ${hostRelativePath} has no ${name} list to follow.`);
+    const body = block[1].replace(/\/\/.*$/gm, "");
+    for (const match of body.matchAll(/"([^"]+)"/g)) refs.push(match[1]);
+  }
+  return refs;
+}
+
 function buildWww() {
   const html = fs.readFileSync(path.join(ROOT, INDEX_HTML_RELATIVE), "utf8");
   const htmlRefs = localRuntimeReferences(html);
   const manifestRefs = htmlRefs
     .filter(ref => ref.endsWith(".webmanifest"))
     .flatMap(manifestIconReferences);
-  const files = [...new Set([INDEX_HTML_RELATIVE, ...htmlRefs, ...manifestRefs])];
+  const hostRefs = FOLLOWED_HOSTS
+    .filter(host => htmlRefs.includes(host))
+    .flatMap(hostAssetReferences);
+  const files = [...new Set([INDEX_HTML_RELATIVE, ...htmlRefs, ...manifestRefs, ...hostRefs])];
 
   fs.rmSync(OUT, { recursive: true, force: true });
 
@@ -97,4 +121,4 @@ if (require.main === module) {
   console.log(`build-www: copied ${count} files referenced by index.html into ${path.relative(ROOT, OUT)}/`);
 }
 
-module.exports = { buildWww, localRuntimeReferences, ROOT, OUT };
+module.exports = { buildWww, localRuntimeReferences, hostAssetReferences, FOLLOWED_HOSTS, ROOT, OUT };

@@ -620,9 +620,13 @@ test("Station is not bundled into the Android shell", () => {
       else files.push(path.relative(www, full));
     }
   })(www);
-  // The bridge is part of index.html's own runtime, so it ships with it. The
-  // Station UI is not, and must not.
-  const leaked = files.filter(file => /(^|\/)station/.test(file) && !INDEX_STATION_ASSETS.includes(file));
+  // The bridge is part of index.html's own runtime, so it ships with it. So
+  // do the pure Station modules Slate's host loads (the run-down arithmetic,
+  // the print sheet), which carry no Station UI. The Station UI must not.
+  const slateHost = fs.readFileSync(path.join(ROOT, "slate-host.js"), "utf8");
+  const sharedWithSlate = [...slateHost.matchAll(/"(station\/[^"]+)"/g)].map(match => match[1]);
+  const leaked = files.map(file => file.split(path.sep).join("/"))
+    .filter(file => /(^|\/)station/.test(file) && !INDEX_STATION_ASSETS.includes(file) && !sharedWithSlate.includes(file));
   assert.deepEqual(leaked, [], "Station UI files reached the Capacitor webDir");
 });
 

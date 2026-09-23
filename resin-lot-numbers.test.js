@@ -70,8 +70,8 @@ test("a Saved Recipe carries no lot data, so loading one clears any previously s
 
 test("Scan Recipe threads lotByResin from the scan straight through, for either page", () => {
   const body = functionBody("applyScannedRecipePayload");
-  assert.match(body, /function applyScannedRecipePayload\(payload, lotByResin\)\{/);
-  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin \}\)/);
+  assert.match(body, /function applyScannedRecipePayload\(payload, lotByResin, destination\)\{/);
+  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin, destination: named \}\)/);
 });
 
 /* ============================================================

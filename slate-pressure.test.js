@@ -132,3 +132,17 @@ test("the close hands the slot back; showing the card focuses the entry; nothing
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate-pressure.js"), "utf8");
   assert.doesNotMatch(source, /\.dispatch\s*\(|localStorage|PSI_PER_BAR|6894|14\.50/, "the card computes or stores on its own");
 });
+
+test("under a finger the tool never pops the keyboard: showing it or flipping the unit leaves the field unfocused", () => {
+  const doc = makeDocument();
+  const view = tool.create(doc, { pressure, back: () => {}, tier: () => ({ input: "touch", width: "wide" }) });
+  doc.body.appendChild(view.element);
+  const input = view.element.querySelector(".slate-pressure__input");
+  view.onShow();
+  assert.notEqual(input.focused, true, "showing the tool focused the field");
+  view.flip();
+  assert.notEqual(input.focused, true, "flipping the unit focused the field");
+  const mouse = boot();
+  mouse.view.onShow();
+  assert.equal(mouse.input.focused, true, "a mouse lost the field's focus on show");
+});
