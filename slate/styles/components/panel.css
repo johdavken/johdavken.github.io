@@ -50,9 +50,11 @@
   line-height: 1;
 }
 
-.slate-root .slate-panel__close:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-panel__close:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 /* ---- Touch (data-input="touch" on the root): the close keeps its size

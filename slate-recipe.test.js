@@ -58,7 +58,8 @@ function boot(options) {
     timers,
     print: printer,
     recipes: settings.recipes === undefined ? null : settings.recipes,
-    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined
+    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined,
+    scan: settings.scan
   });
   doc.body.appendChild(view.element);
   return { doc, timers, commands, committed, said, printed, view, setReadOnly: value => { readOnly = value; }, setTrackingMode: value => { trackingMode = value; } };
@@ -1569,4 +1570,73 @@ test("an abandoned Cancel press under a finger is forgotten once the blend field
   input.dispatchEvent({ type: "focus" });
   input.dispatchEvent({ type: "blur" });
   assert.equal(commands.calls.length, 1);
+});
+
+test("a badge carries data-movable exactly while its row may be dragged, so only those hold the page still under a finger", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const a1 = row(view, "A1").querySelector(".slate-hopper__id");
+  assert.equal(row(view, "A1").classList.contains("is-movable"), a1.hasAttribute("data-movable"));
+  assert.ok(a1.hasAttribute("data-movable"), "an assigned row's badge is not movable");
+  const readOnly = boot({ readOnly: true });
+  readOnly.view.update(resolvedFrom(), { kind: "structural" });
+  assert.ok(!row(readOnly.view, "A1").querySelector(".slate-hopper__id").hasAttribute("data-movable"), "a read-only badge would still hold the page");
+});
+
+/* ----------------------------------------------------------------------
+ *   Scan (Print's place under a finger)
+ * -------------------------------------------------------------------- */
+
+function makeScanner(ready) {
+  const started = [];
+  return { started, able: () => (ready === false ? { ok: false, reason: "connect this device to a line (RT Sync) to scan" } : { ok: true }), start: (kind, recipe) => started.push([kind, recipe]) };
+}
+const scanItem = (view, kind) => view.element.querySelector(`.slate-scan__menu [data-scan='${kind}']`);
+
+test("Scan offers the job traveler and the dosing screen, and starts the application's scan for the tab on screen", () => {
+  const scanner = makeScanner(true);
+  const { view } = boot({ scan: scanner });
+  view.update(withPlan(), { kind: "structural" });
+  const kinds = view.element.querySelectorAll(".slate-scan__menu [data-scan]").map(one => [one.getAttribute("data-scan"), one.textContent]);
+  assert.deepEqual(kinds, [["job_traveler", "Job traveler"], ["dosing_screen", "Dosing screen"]]);
+  click(view.element.querySelector(".slate-scan__trigger"));
+  assert.ok(!view.element.querySelector(".slate-scan__menu").hasAttribute("hidden"));
+  click(scanItem(view, "dosing_screen"));
+  assert.deepEqual(scanner.started, [["dosing_screen", "current"]]);
+  assert.ok(view.element.querySelector(".slate-scan__menu").hasAttribute("hidden"), "the menu stayed open over the scan");
+  click(view.element.querySelectorAll(".slate-tabs__tab")[1]);
+  click(view.element.querySelector(".slate-scan__trigger"));
+  assert.match(scanItem(view, "job_traveler").getAttribute("title"), /Next/);
+  click(scanItem(view, "job_traveler"));
+  assert.deepEqual(scanner.started[1], ["job_traveler", "next"]);
+});
+
+test("Scan is unavailable - and says why on a tap - without a connected line, while read-only, or with no scanner on the page", () => {
+  const offline = makeScanner(false);
+  const one = boot({ scan: offline });
+  one.view.update(resolvedFrom(), { kind: "structural" });
+  const item = scanItem(one.view, "job_traveler");
+  assert.equal(item.getAttribute("aria-disabled"), "true");
+  click(item);
+  assert.deepEqual(offline.started, []);
+  assert.match(one.said[one.said.length - 1], /RT Sync/);
+
+  const locked = makeScanner(true);
+  const two = boot({ scan: locked, readOnly: true });
+  two.view.update(resolvedFrom(), { kind: "structural" });
+  click(scanItem(two.view, "dosing_screen"));
+  assert.deepEqual(locked.started, [], "a read-only Slate started a scan that writes the recipe");
+  assert.equal(scanItem(two.view, "dosing_screen").getAttribute("aria-disabled"), "true");
+
+  const none = boot();
+  none.view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(scanItem(none.view, "job_traveler").getAttribute("aria-disabled"), "true");
+  assert.match(scanItem(none.view, "job_traveler").getAttribute("title"), /not on this page/);
+});
+
+test("the sheets give a finger Scan and a mouse Print: each hidden where the other stands", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe-edit.css"), "utf8");
+  assert.match(css, /\n\.slate-scan \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-print \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-scan \{[^}]*display: block;/);
 });

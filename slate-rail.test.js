@@ -147,3 +147,20 @@ test("as a flyout the Tools menu closes on a press outside it and on a selection
     assert.equal(view.isToolsOpen(), !compact);
   }
 });
+
+test("the flyout is placed beside the Tools item each time it opens, so it can stand outside the rail's scrolling box; the sidebar's menu is not placed", () => {
+  const { makeDocument, click } = require("./tools/slate-test/fake-dom.js");
+  const railModule = require("./slate/slate-rail.js");
+  const defs = [{ id: "recipe", label: "Recipe", group: "sections", icon: "recipe" }, { id: "winding", label: "Winding Tension", group: "tools", pane: "aside", icon: "winding" }];
+  for (const compact of [true, false]) {
+    const doc = makeDocument();
+    const view = railModule.create(doc, { sections: defs, onSelect: () => {}, flyout: () => compact });
+    doc.body.appendChild(view.element);
+    const button = view.element.querySelector(".slate-rail__item--tools");
+    const menu = view.element.querySelector(".slate-rail__menu");
+    button._rect = { left: 8, top: 412.4, width: 48, height: 48 };
+    click(button);
+    assert.equal(menu.style.getPropertyValue("--slate-flyout-top"), compact ? "412px" : "");
+    assert.equal(menu.style.getPropertyValue("--slate-flyout-left"), compact ? "56px" : "");
+  }
+});

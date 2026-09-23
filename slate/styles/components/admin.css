@@ -151,9 +151,11 @@
   color: var(--slate-text-muted);
 }
 
-.slate-root .slate-admin__fold:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-admin__fold:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-admin__fold-title {
@@ -222,9 +224,11 @@
   font-size: var(--slate-text-sm);
 }
 
-.slate-root .slate-admin__chip:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-admin__chip:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-admin__chip[aria-checked="true"] {

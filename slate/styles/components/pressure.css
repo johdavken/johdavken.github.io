@@ -50,10 +50,12 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-pressure__unit:hover {
-  border-color: var(--slate-accent);
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-pressure__unit:hover {
+    border-color: var(--slate-accent);
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 /* The answer: the same pressure in the other unit. */

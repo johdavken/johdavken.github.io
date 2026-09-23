@@ -178,6 +178,18 @@
        side by side, and the list is the way to them. */
     let toolsOpen = false;
     const outsideCloser = dismissal(doc, node => typeof tools.contains === "function" && tools.contains(node), () => closeTools());
+    /* The flyout stands beside the Tools item, fixed to the screen: the
+     * rail scrolls, and a scrolling box clips whatever leaves it sideways,
+     * so a menu anchored inside the rail could open and never be seen or
+     * tapped. It is placed from the item each time it opens (rail.css
+     * reads the two properties). */
+    function placeFlyout() {
+      if (typeof toolsButton.getBoundingClientRect !== "function" || !menu.style || typeof menu.style.setProperty !== "function") return;
+      const rect = toolsButton.getBoundingClientRect();
+      menu.style.setProperty("--slate-flyout-top", `${Math.round(rect.top)}px`);
+      menu.style.setProperty("--slate-flyout-left", `${Math.round(rect.right)}px`);
+    }
+
     function openTools() {
       if (toolsOpen) return;
       toolsOpen = true;
@@ -185,7 +197,10 @@
       toolsButton.setAttribute("aria-expanded", "true");
       tools.classList.add("is-open");
       // Only the flyout closes on a press outside; the sidebar's menu stays.
-      if (flyout()) outsideCloser.start();
+      if (flyout()) {
+        placeFlyout();
+        outsideCloser.start();
+      }
     }
     function closeTools() {
       if (!toolsOpen) return;

@@ -174,8 +174,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-winding__clear:hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-winding__clear:hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 /* ---- Touch (data-input="touch" on the root) ---- */

@@ -84,6 +84,25 @@
     return options;
   }
 
+  /* The click a finger's release produces, after the release itself has
+   * acted and taken its target away: spent once at the document, in the
+   * capture phase, so nothing beneath acts on it. The next press forgets
+   * it, so a click that never came cannot eat a later one. */
+  function spendNextClick(doc) {
+    if (!doc || typeof doc.addEventListener !== "function") return;
+    function spend(event) {
+      forget();
+      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+    }
+    function forget() {
+      doc.removeEventListener("click", spend, true);
+      doc.removeEventListener("pointerdown", forget, true);
+    }
+    doc.addEventListener("click", spend, true);
+    doc.addEventListener("pointerdown", forget, true);
+  }
+
   /* The list's items for a query's options, the active one marked and
    * named on the input; the empty line when there are none. Shared by
    * the inline combobox and the attached list. Returns the active index
@@ -108,11 +127,15 @@
       item.addEventListener("mousedown", event => { if (event && typeof event.preventDefault === "function") event.preventDefault(); });
       // A finger or a pen chooses on release, so the choice never depends
       // on the compatibility mouse events a touch may not produce. The
-      // click that follows is then spent, not a second choice.
+      // click that follows is then spent, not a second choice - and since
+      // the list is gone by then, that click would land on whatever stood
+      // under it (the next row's cell, opening its editor): it is spent at
+      // the document, once, and forgotten at the next press.
       let taken = false;
       item.addEventListener("pointerup", event => {
         if (!event || !event.pointerType || event.pointerType === "mouse") return;
         taken = true;
+        spendNextClick(doc);
         choose(option.code);
       });
       item.addEventListener("click", () => {

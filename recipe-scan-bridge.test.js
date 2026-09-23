@@ -25,7 +25,10 @@ test("applyScannedRecipePayload applies whatever payload it's given via applyRec
   // Routed through the one destination-aware entry point, which is what keeps
   // "a scan lands on the page you are viewing" implemented in a single place.
   // lotByResin threads through too - present only for a Heat Sheet scan.
-  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin \}\)/);
+  // A scan started for a named recipe ("current" | "next") carries it; any
+  // other value is dropped, so the page on screen decides as before.
+  assert.match(body, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin, destination: named \}\)/);
+  assert.match(body, /const named = destination==="current" \|\| destination==="next" \? destination : undefined;/);
   // Deliberately payload-in: no reference to PolynRecipeScanMapping, so a
   // review-screen edit to the payload is submitted as-is, not recomputed
   // from the raw scan and silently discarded.
@@ -53,5 +56,5 @@ test("a failed apply (e.g. layer percentages don't total 100%) returns ok:false 
 });
 
 test("hasNonEmptyRecipe asks about the page a scan will land on, not always the live recipe", () => {
-  assert.match(app, /function hasNonEmptyRecipe\(\)\{[\s\S]*?if\(isNextRecipePage\(\)\) return !!window\.PolynNextRecipe\?\.isMeaningful\(state\.nextRecipe\);[\s\S]*?return state\.layers\.some\(layer=>layer\.hoppers\.some\(hopper=>hopper\.resinName && hopper\.resinName\.trim\(\)\)\);/);
+  assert.match(app, /function hasNonEmptyRecipe\(destination=null\)\{[\s\S]*?if\(destination \? destination==="next" : isNextRecipePage\(\)\) return !!window\.PolynNextRecipe\?\.isMeaningful\(state\.nextRecipe\);[\s\S]*?return state\.layers\.some\(layer=>layer\.hoppers\.some\(hopper=>hopper\.resinName && hopper\.resinName\.trim\(\)\)\);/);
 });

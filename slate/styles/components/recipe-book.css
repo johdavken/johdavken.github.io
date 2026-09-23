@@ -16,8 +16,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-book__action:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-book__action:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-book__action:not(:disabled):not([data-able="false"]):active {
@@ -40,8 +42,10 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-book__action--primary:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-accent-hover);
+@media (hover: hover) {
+  .slate-root .slate-book__action--primary:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-accent-hover);
+  }
 }
 
 .slate-root .slate-book__action--primary:not(:disabled):not([data-able="false"]):active {
@@ -53,8 +57,10 @@
   color: var(--slate-danger);
 }
 
-.slate-root .slate-book__action--danger:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-danger-soft);
+@media (hover: hover) {
+  .slate-root .slate-book__action--danger:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-danger-soft);
+  }
 }
 
 .slate-root .slate-book__action--danger:not(:disabled):not([data-able="false"]):active {
@@ -167,8 +173,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-book__row:hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-book__row:hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-book__row[aria-pressed="true"] {

@@ -64,8 +64,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-time__tile:hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-time__tile:hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-time__tile.is-selected {

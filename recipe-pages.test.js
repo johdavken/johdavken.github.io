@@ -361,8 +361,8 @@ test("one destination-aware entry point serves both Recipe Book and Scan", () =>
   assert.match(saved, /applyRecipeToActivePage\(item\.payload,\{kind:"load-workspace-configuration",destination\}\)/);
   // ...and so does Scan, threading through whatever a Heat Sheet scan read.
   const scan = app.slice(app.indexOf("function applyScannedRecipePayload("), app.indexOf("function openWorkspaceConfigurationDialog("));
-  assert.match(scan, /function applyScannedRecipePayload\(payload, lotByResin\)\{/);
-  assert.match(scan, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin \}\)/);
+  assert.match(scan, /function applyScannedRecipePayload\(payload, lotByResin, destination\)\{/);
+  assert.match(scan, /applyRecipeToActivePage\(payload, \{ kind:"apply-recipe-scan", lotByResin, destination: named \}\)/);
 });
 
 test("writing a plan never publishes an active job or re-runs readiness", () => {

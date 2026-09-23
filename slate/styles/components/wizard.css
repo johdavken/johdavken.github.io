@@ -20,8 +20,10 @@
   transition: color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-card__calc:hover {
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-card__calc:hover {
+    color: var(--slate-text);
+  }
 }
 
 .slate-root .slate-card__calc[aria-expanded="true"] {
@@ -141,8 +143,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-wizard__choice:hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-wizard__choice:hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-wizard__choice.is-selected {

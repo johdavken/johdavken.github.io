@@ -36,8 +36,10 @@
   transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-theme-tile:hover {
-  border-color: var(--slate-border);
+@media (hover: hover) {
+  .slate-root .slate-theme-tile:hover {
+    border-color: var(--slate-border);
+  }
 }
 
 .slate-root .slate-theme-tile:active {
@@ -211,8 +213,10 @@
   transition: border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-settings__mode:hover {
-  border-color: var(--slate-border);
+@media (hover: hover) {
+  .slate-root .slate-settings__mode:hover {
+    border-color: var(--slate-border);
+  }
 }
 
 .slate-root .slate-settings__mode:active {
@@ -256,9 +260,11 @@
   text-align: left;
 }
 
-.slate-root .slate-settings__admin-toggle:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-settings__admin-toggle:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 .slate-settings__admin-mark {
@@ -315,8 +321,10 @@
   font-weight: 500;
 }
 
-.slate-root .slate-settings__admin-action:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-settings__admin-action:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-settings__admin-action[data-able="false"] {
@@ -335,8 +343,10 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-settings__admin-action--primary:not(:disabled):not([data-able="false"]):hover {
-  background: var(--slate-accent-hover);
+@media (hover: hover) {
+  .slate-root .slate-settings__admin-action--primary:not(:disabled):not([data-able="false"]):hover {
+    background: var(--slate-accent-hover);
+  }
 }
 
 .slate-settings__admin-email {

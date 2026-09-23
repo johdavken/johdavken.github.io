@@ -176,6 +176,30 @@
     if (asideOpen && !drawer()) setAside(false);
   }
 
+  /* SCANNING
+   *
+   * The application's recipe scan (recipe-scan-ui.js): photograph a job
+   * traveler or a dosing screen, read it, review it, apply it. Slate starts
+   * it for the recipe tab on screen and draws none of it - the capture and
+   * review are the application's own dialogs, which the host lets through
+   * over Slate. The application reads the photo only for a connected line.
+   * Read at boot: index.html loads the scan modules before Slate's. */
+  function scanner() {
+    const ui = root.PolynRecipeScanUI || null;
+    const service = root.PolynRecipeScanBridge || null;
+    if (!ui || typeof ui.startScan !== "function") return null;
+    return Object.freeze({
+      able() {
+        let workspace = "";
+        try { workspace = service && typeof service.getWorkspaceId === "function" ? service.getWorkspaceId() : ""; } catch (error) { workspace = ""; }
+        return workspace ? { ok: true } : { ok: false, reason: "connect this device to a line (RT Sync) to scan" };
+      },
+      start(kind, recipe) {
+        ui.startScan(kind, { destination: recipe === "next" ? "next" : "current" });
+      }
+    });
+  }
+
   /* THE ASIDE AS A DRAWER
    *
    * On a narrow touch screen the aside - the Timeline, or a tool in its
@@ -362,7 +386,8 @@
       estimateStorage: changeoverStorage,
       lineRate: lineRateEstimate,
       lineRateStorage,
-      tier: tierNow
+      tier: tierNow,
+      scan: scanner()
     });
 
     stats = statCards.create(doc, ctx);

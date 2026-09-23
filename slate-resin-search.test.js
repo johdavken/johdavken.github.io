@@ -230,3 +230,25 @@ test("under a finger a list with no room below its field stands above it, measur
   assert.equal(listeners.size, 0, "a mouse search listens to the viewport");
   mouse.box.close();
 });
+
+test("the click after a finger's choice is spent at the document, so it cannot open the cell that now stands under the finger; the next press forgets it", () => {
+  const finger = open({ value: "", touch: true });
+  const doc = finger.doc;
+  const beneath = doc.createElement("button");
+  doc.body.appendChild(beneath);
+  let opened = 0;
+  beneath.addEventListener("click", () => { opened += 1; });
+  const option = finger.box.list.querySelectorAll("[role='option']")[0];
+  option.dispatchEvent({ type: "pointerup", pointerType: "touch" });
+  assert.equal(finger.chosen.length, 1);
+  const ghost = { type: "click", target: beneath, _stopped: false, stopPropagation() { this._stopped = true; }, preventDefault() {} };
+  for (const fn of [...(doc.listeners.click || [])]) fn(ghost);
+  assert.equal(ghost._stopped, true, "the ghost click was not spent");
+  assert.equal((doc.listeners.click || []).length, 0, "the spender outlived its one click");
+  // A choice whose click never comes is forgotten at the next press.
+  const again = open({ value: "", touch: true });
+  again.box.list.querySelectorAll("[role='option']")[0].dispatchEvent({ type: "pointerup", pointerType: "touch" });
+  for (const fn of [...(again.doc.listeners.pointerdown || [])]) fn({ type: "pointerdown" });
+  assert.equal((again.doc.listeners.click || []).length, 0, "a later tap's click would be eaten");
+  assert.equal(opened, 0);
+});

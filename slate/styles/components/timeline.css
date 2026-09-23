@@ -37,9 +37,11 @@
   font-weight: 600;
 }
 
-.slate-root .slate-timeline__range:hover {
-  background: var(--slate-surface-hover);
-  color: var(--slate-text);
+@media (hover: hover) {
+  .slate-root .slate-timeline__range:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
 }
 
 /* The scale clips its rounded corners, so draw keyboard focus inward. */

@@ -55,7 +55,7 @@
   const NATIVE_CAPTURE_CONTEXT_KEY = "resinTools.nativeCaptureContext.v1";
   function persistNativeCaptureContext(){
     try {
-      sessionStorage.setItem(NATIVE_CAPTURE_CONTEXT_KEY, JSON.stringify({ sourceType: pendingSourceType, orientation: pendingOrientation }));
+      sessionStorage.setItem(NATIVE_CAPTURE_CONTEXT_KEY, JSON.stringify({ sourceType: pendingSourceType, orientation: pendingOrientation, destination: pendingDestination }));
     } catch { /* best-effort only - worst case, a killed-process capture can't resume */ }
   }
   function readNativeCaptureContext(){
@@ -89,6 +89,7 @@
   let pendingPayload = null;     // built via PolynRecipeScanMapping's mapping functions, for review + apply
   let pendingLotByResin = null;  // resin code -> scanned lot number (Heat Sheet only; {} for every other source)
   let scanInFlight = false;      // guards against a second submission while one request is already in flight
+  let pendingDestination = null; // "current" | "next" when the scan was started for a named recipe (a view whose tabs are not this page), else null = the page on screen
 
   function setStatus(id, text, isError){
     const el = $(id);
@@ -108,18 +109,24 @@
     pendingScan = null;
     pendingPayload = null;
     pendingLotByResin = null;
+    pendingDestination = null;
     scanInFlight = false;
   }
 
   // --- entry point -----------------------------------------------------
 
-  function startScan(sourceType){
+  // options.destination ("current" | "next") names the recipe the scan is
+  // for, when the caller shows its own Current/Next tabs (Slate). Without
+  // it the scan lands on the page this app has on screen, as before.
+  function startScan(sourceType, options){
     if (!serviceApi.getWorkspaceId()){
       alert("Connect to an RT Sync workspace before scanning.");
       return;
     }
     resetPendingScan();
     pendingSourceType = sourceType;
+    const named = options && options.destination;
+    pendingDestination = named === "current" || named === "next" ? named : null;
     // Dosing Screen never needs orientation - the controller already prints
     // each row in physical layer order, unlike Job Traveler's column order
     // and Heat Sheet's block order, which are ambiguous without it.
@@ -400,6 +407,7 @@
       if (data.success === false || !data.data) return;
       pendingSourceType = context.sourceType;
       pendingOrientation = context.orientation;
+      pendingDestination = context.destination === "current" || context.destination === "next" ? context.destination : null;
       openCaptureDialog();
       await submitCapturedMedia(data.data);
     });
@@ -472,14 +480,14 @@
 
     // The scan is destination-neutral right up to this screen; the review is
     // where the operator is told which recipe page it will land on.
-    const destination = serviceApi.getRecipePageLabel?.() || "Current Recipe";
+    const destination = serviceApi.getRecipePageLabel?.(pendingDestination) || "Current Recipe";
     const applyButton = $("recipeScanReviewApplyBtn");
     if (applyButton) applyButton.textContent = `Apply to ${destination}`;
     const title = $("recipeScanReviewTitle");
     if (title) title.textContent = `Review Scanned Recipe — ${destination}`;
 
     const messages = [];
-    if (serviceApi.hasNonEmptyRecipe?.()) messages.push(`This will overwrite the ${destination.toLowerCase()} assignments.`);
+    if (serviceApi.hasNonEmptyRecipe?.(pendingDestination)) messages.push(`This will overwrite the ${destination.toLowerCase()} assignments.`);
     if (pendingScan?.layer_percentage_total_status && pendingScan.layer_percentage_total_status !== "ok"){
       messages.push("The scanned layer percentages don't total 100% — review carefully before applying.");
     }
@@ -546,7 +554,7 @@
 
   function applyReview(){
     if (!pendingPayload){ closeReviewDialog(); return; }
-    const result = serviceApi.applyPayload(pendingPayload, pendingLotByResin);
+    const result = serviceApi.applyPayload(pendingPayload, pendingLotByResin, pendingDestination);
     if (!result?.ok){
       setStatus("recipeScanReviewStatus", result?.message || "This scan could not be applied.", true);
       return;

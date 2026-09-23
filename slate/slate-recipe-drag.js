@@ -1,9 +1,12 @@
 /* Rearranging by drag: a hopper's id badge lifted onto another row.
  *
- * Pointer Events, desktop only: a left mouse press on the badge, a few
- * pixels of movement, then a floating proxy of the assignment follows the
- * pointer while the origin row dims and the row under the pointer is
- * marked. Release on another row hands the caller ONE drop; release
+ * Pointer Events. A mouse or a pen: a press on the badge and a few pixels
+ * of movement. A finger: a press held still on the badge for HOLD_MS -
+ * moving first abandons it, so a hurried swipe is never a move - and the
+ * badge carries touch-action: none (recipe-edit.css) so the page does not
+ * scroll away under the drag. Then a floating proxy of the assignment
+ * follows the pointer while the origin row dims and the row under the
+ * pointer is marked. Release on another row hands the caller ONE drop; release
  * anywhere else, Escape, a lost capture or a cancel from outside end the
  * drag with nothing sent. The click a release produces is swallowed once
  * so the badge's row does not also act on it.
@@ -19,6 +22,9 @@
   "use strict";
 
   const THRESHOLD = 6;
+  /* A finger: held this long, this still, before the badge lifts. */
+  const HOLD_MS = 300;
+  const THRESHOLD_TOUCH = 10;
   const ROW = ".slate-hopper";
   const HANDLE = "[data-slate-handle]";
 
@@ -50,6 +56,7 @@
    * @param {function} options.values    (row) => { id, resin, pct } for the proxy
    * @param {function} options.onDrop    ({ from, to }) - each a { layer, index, key }
    * @param {object} [options.view]      { addEventListener, removeEventListener } for the Escape key (the document)
+   * @param {object} [options.timers]    { setTimeout, clearTimeout } for a finger's hold
    */
   function create(doc, options) {
     const settings = options || {};
@@ -59,6 +66,7 @@
     const values = typeof settings.values === "function" ? settings.values : () => ({ id: "", resin: "", pct: "" });
     const onDrop = typeof settings.onDrop === "function" ? settings.onDrop : () => {};
     const view = settings.view || doc;
+    const timers = settings.timers || { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: id => clearTimeout(id) };
 
     let press = null;
     let drag = null;
@@ -114,7 +122,15 @@
       mark(row && row !== drag.origin ? row : null);
     }
 
+    function releaseHold() {
+      if (press && press.timer !== null && press.timer !== undefined) {
+        timers.clearTimeout(press.timer);
+        press.timer = null;
+      }
+    }
+
     function finish(dropped) {
+      releaseHold();
       const active = drag;
       const pressed = press;
       press = null;
@@ -147,7 +163,7 @@
       // owed to a click, it is not owed to this one.
       swallow = false;
       if (!event || drag || press) return;
-      if (event.pointerType && event.pointerType !== "mouse") return;
+      const finger = event.pointerType === "touch";
       if (event.button !== undefined && event.button !== 0) return;
       const target = event.target;
       const handle = target && typeof target.closest === "function" ? target.closest(HANDLE) : null;
@@ -155,8 +171,18 @@
       const row = handle.closest(ROW);
       if (!row || row.classList.contains("is-empty") || !positionOf(row)) return;
       if (!able()) return;
-      press = { pointerId: event.pointerId, x: Number(event.clientX) || 0, y: Number(event.clientY) || 0, row, handle };
+      press = { pointerId: event.pointerId, x: Number(event.clientX) || 0, y: Number(event.clientY) || 0, row, handle, finger, timer: null };
       if (typeof event.preventDefault === "function") event.preventDefault();
+      // A finger lifts the badge once it has been held still long enough.
+      if (finger) {
+        const held = press;
+        held.timer = timers.setTimeout(() => {
+          held.timer = null;
+          if (press !== held || drag) return;
+          if (!able() || !held.row.isConnected) { press = null; return; }
+          begin({ clientX: held.x, clientY: held.y });
+        }, HOLD_MS);
+      }
     }
 
     function onMove(event) {
@@ -164,7 +190,13 @@
       if (!drag) {
         const dx = (Number(event.clientX) || 0) - press.x;
         const dy = (Number(event.clientY) || 0) - press.y;
-        if (Math.sqrt(dx * dx + dy * dy) < THRESHOLD) return;
+        const moved = Math.sqrt(dx * dx + dy * dy);
+        // A finger that moves before its hold is up is not lifting the badge.
+        if (press.finger) {
+          if (moved >= THRESHOLD_TOUCH) { releaseHold(); press = null; }
+          return;
+        }
+        if (moved < THRESHOLD) return;
         begin(event);
         return;
       }
@@ -174,7 +206,7 @@
     function onUp(event) {
       if (!event || !press || event.pointerId !== press.pointerId) return;
       if (drag) finish(true);
-      else press = null;
+      else { releaseHold(); press = null; }
     }
 
     function onCancel(event) {
@@ -186,11 +218,13 @@
     list.addEventListener("pointermove", onMove);
     list.addEventListener("pointerup", onUp);
     list.addEventListener("pointercancel", onCancel);
+    // A finger's long press would open the system's menu over the drag.
+    list.addEventListener("contextmenu", event => { if ((press || drag) && event && typeof event.preventDefault === "function") event.preventDefault(); });
     // The row was replaced under the pointer (a structural render).
     list.addEventListener("lostpointercapture", event => { if (drag && event && event.pointerId === drag.pointerId && !drag.origin.isConnected) finish(false); });
 
     return Object.freeze({
-      cancel: () => finish(false),
+      cancel: () => { if (drag) finish(false); else { releaseHold(); press = null; } },
       active: () => !!drag,
       /* True once, right after a drag: the click the release produced. */
       consumeClick() { const was = swallow; swallow = false; return was; },
@@ -198,5 +232,5 @@
     });
   }
 
-  return Object.freeze({ THRESHOLD, ROW, HANDLE, positionOf, create });
+  return Object.freeze({ THRESHOLD, HOLD_MS, THRESHOLD_TOUCH, ROW, HANDLE, positionOf, create });
 });

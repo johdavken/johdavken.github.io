@@ -36,8 +36,10 @@
   transition: box-shadow var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-card:not(.is-readonly):hover {
-  border-color: var(--slate-border);
+@media (hover: hover) {
+  .slate-card:not(.is-readonly):hover {
+    border-color: var(--slate-border);
+  }
 }
 
 .slate-card.is-editing,

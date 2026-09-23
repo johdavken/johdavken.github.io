@@ -19,9 +19,11 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-sync__trigger:hover {
-  border-color: var(--slate-border);
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-sync__trigger:hover {
+    border-color: var(--slate-border);
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-sync.is-open .slate-sync__trigger {
@@ -238,8 +240,10 @@
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
-.slate-root .slate-sync__button:not(:disabled):hover {
-  background: var(--slate-surface-hover);
+@media (hover: hover) {
+  .slate-root .slate-sync__button:not(:disabled):hover {
+    background: var(--slate-surface-hover);
+  }
 }
 
 .slate-root .slate-sync__button:not(:disabled):active {
@@ -257,8 +261,10 @@
   color: var(--slate-text-on-accent);
 }
 
-.slate-root .slate-sync__button--primary:not(:disabled):hover {
-  background: var(--slate-accent-hover);
+@media (hover: hover) {
+  .slate-root .slate-sync__button--primary:not(:disabled):hover {
+    background: var(--slate-accent-hover);
+  }
 }
 
 .slate-root .slate-sync__button--primary:not(:disabled):active {

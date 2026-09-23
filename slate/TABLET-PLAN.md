@@ -50,6 +50,27 @@ app, gloved/hurried operators. Mouse/desktop Slate must not change by a pixel.
   the recipe body is narrower than 780px (weights: 700px), via two named container queries
   (`@container slate-recipe` / `slate-weights`, pinned in slate-tier.test.js). Top layout keeps
   its two-line cards. Halted before Step 9 at the user's request.
+- 2026-09-22, Step 9 done (uncommitted): (1) the Tools flyout is `position: fixed`, placed from
+  the Tools item on open (`--slate-flyout-top/left`), and the rail is lifted to z-index 28 under
+  touch (the sticky rail is its own stacking context) - verified a menu item receives the tap at
+  its own centre, and a tap opens the tool. (2) Touch drag: a pen drags as a mouse; a finger
+  lifts the badge after HOLD_MS 300 held within THRESHOLD_TOUCH 10 (moving first abandons it),
+  the system context menu is suppressed while pressed, only badges with `data-movable` carry
+  `touch-action: none`. Verified with raw CDP touch events on the hosted page (A1 onto empty A2).
+  (3) Found on the way: a finger's choice in the resin list left its click to land on the cell
+  beneath (opening that row's editor); the click is now spent once at the document.
+- 2026-09-22, Step 10 done (uncommitted): all 36 hover rules wrapped in place in
+  `@media (hover: hover)` (in place, so the cascade order against is-active/selected rules is
+  unchanged); slate-isolation allows exactly that one condition and pins every `:hover` inside it.
+- 2026-09-22, user request: under touch, Print is replaced by **Scan** (Job traveler / Dosing
+  screen), which starts the application's own scan flow (`PolynRecipeScanUI.startScan`, handed in
+  by slate.js as `ctx.scan`) for the Slate tab on screen. `recipe-scan-ui.js` and app.js's scan
+  bridge now carry an optional destination ("current" | "next") to the review label, the
+  overwrite warning and the apply (`applyRecipeToActivePage`'s existing `destination`); without
+  one the floor UI's page decides, as before. Unavailable with a reason while read-only or with no
+  connected line; the menu re-checks as it opens. The capture/review dialogs are the app's own
+  (light, legacy-styled) `:modal` dialogs over Slate - a Slate-styled scan flow is not built.
+  Heat sheet is not offered (not asked for).
 
 ## 0. Findings that correct the brief
 

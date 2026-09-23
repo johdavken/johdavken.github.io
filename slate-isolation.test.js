@@ -33,7 +33,7 @@ const SLATE_FILES = [
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];
 const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"], admin: ["slate-admin-actions.js"] };
 const INNER_HTML = ["slate-sync.js"];
-const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js"];
+const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js", "slate-recipe-drag.js"];
 /* The pure Station modules Slate shares: the run-down arithmetic and the
  * floor UI's print sheet. Both draw into whatever they are handed and
  * spend no Station token. */
@@ -185,6 +185,9 @@ test("Slate has no width breakpoint, so narrowing the browser cannot replace or 
     for (const match of sheet.css.matchAll(/@media([^{]+)\{/g)) {
       const condition = match[1].replace(/\s+/g, " ").trim();
       if (/^\(prefers-[a-z-]+:/.test(condition)) continue;
+      // The one capability query: a hover effect only where there is a
+      // pointer that hovers (a finger's tap would leave it stuck on).
+      if (condition === "(hover: hover)") continue;
       conditions.add(condition);
     }
   }
@@ -357,4 +360,27 @@ test("the Android shell carries exactly the Slate assets the host loads, and not
   const loaded = new Set([...host.matchAll(/"(slate\/[^"]+)"/g)].map(match => match[1]));
   const extra = files.filter(file => file.startsWith("slate/") && !loaded.has(file));
   assert.deepEqual(extra, [], "www/ carries Slate files the host never loads");
+});
+
+test("every hover effect stands inside (hover: hover), so a tap never leaves one stuck on a touch screen", () => {
+  for (const sheet of componentSheets()) {
+    const css = sheet.css.replace(/\/\*[\s\S]*?\*\//g, "");
+    // The text with every (hover: hover) block cut out, by brace depth,
+    // so a block holding several rules is cut whole.
+    let outside = "";
+    for (let at = 0; at < css.length;) {
+      const start = css.indexOf("@media (hover: hover)", at);
+      if (start === -1) { outside += css.slice(at); break; }
+      outside += css.slice(at, start);
+      let depth = 0;
+      let end = css.indexOf("{", start);
+      do {
+        if (css[end] === "{") depth += 1;
+        else if (css[end] === "}") depth -= 1;
+        end += 1;
+      } while (depth > 0 && end < css.length);
+      at = end;
+    }
+    assert.doesNotMatch(outside, /:hover/, `${sheet.name} has a hover rule outside (hover: hover)`);
+  }
 });

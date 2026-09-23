@@ -5,7 +5,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { makeDocument, pointer, click } = require("./tools/slate-test/fake-dom.js");
+const { makeDocument, pointer, click, makeTimers } = require("./tools/slate-test/fake-dom.js");
 const drag = require("./slate/slate-recipe-drag.js");
 
 function row(doc, layer, index, options) {
@@ -45,7 +45,8 @@ function boot(options) {
     list, mount, view: doc,
     able: () => able,
     values: el => ({ id: el.getAttribute("data-hopper"), resin: "HX204", pct: "60%" }),
-    onDrop: request => drops.push(request)
+    onDrop: request => drops.push(request),
+    timers: settings.timers
   });
   return { doc, mount, list, rows, drops, handle, setAble: value => { able = value; } };
 }
@@ -127,7 +128,7 @@ test("release off any row, on the origin, or after Escape drops nothing", () => 
   assert.deepEqual(escaped.drops, []);
 });
 
-test("no press from the right button, a touch, an empty row, an unable state, a second pointer, or a control inside the row", () => {
+test("no press from the right button, a touch that swipes before its hold, an empty row, an unable state, a second pointer, or a control inside the row", () => {
   const { rows, handle, setAble } = boot();
   pointer("pointerdown", handleOf(rows[0]), { clientX: 10, clientY: 10, button: 2 });
   pointer("pointermove", handleOf(rows[0]), { clientX: 10, clientY: 50 });
@@ -201,4 +202,86 @@ test("the click after a drag is the section's to swallow: a plain click is not",
   assert.equal(handle.consumeClick(), false, "a stale swallow ate the next click");
   assert.deepEqual(drag.positionOf(rows[3]), { layer: "B", index: 0, key: "B:0" });
   assert.equal(drag.THRESHOLD, 6);
+});
+
+/* ----------------------------------------------------------------------
+ *   A finger and a pen
+ * -------------------------------------------------------------------- */
+
+const TOUCH = { pointerType: "touch" };
+
+test("a pen drags as a mouse does: past the threshold it lifts, and release drops once", () => {
+  const { rows, drops, handle } = boot();
+  pointer("pointerdown", handleOf(rows[0]), { clientX: 10, clientY: 10, pointerType: "pen" });
+  pointer("pointermove", handleOf(rows[0]), { clientX: 10, clientY: 50, pointerType: "pen" });
+  assert.equal(handle.active(), true, "a pen did not lift the badge");
+  pointer("pointerup", handleOf(rows[0]), { clientX: 10, clientY: 50, pointerType: "pen" });
+  assert.equal(drops.length, 1);
+  assert.deepEqual(drops[0].to, { layer: "A", index: 1, key: "A:1" });
+});
+
+test("a finger lifts the badge only after holding it still: then it follows, and release drops once", () => {
+  const timers = makeTimers();
+  const { rows, drops, handle, mount } = boot({ timers });
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  pointer("pointermove", handleOf(rows[0]), Object.assign({ clientX: 13, clientY: 14 }, TOUCH));
+  assert.equal(handle.active(), false, "the badge lifted before the hold was up");
+  timers.advance(drag.HOLD_MS - 1);
+  assert.equal(handle.active(), false);
+  timers.advance(1);
+  assert.equal(handle.active(), true, "a held badge did not lift");
+  assert.ok(mount.querySelector(".slate-drag-proxy"));
+  pointer("pointermove", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 210 }, TOUCH));
+  pointer("pointerup", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 210 }, TOUCH));
+  assert.equal(drops.length, 1);
+  assert.deepEqual(drops[0].to, { layer: "B", index: 0, key: "B:0" });
+  assert.equal(timers.pending(), 0);
+});
+
+test("a finger that moves before the hold is up, lifts early, or is cancelled lifts nothing - and no timer is left behind", () => {
+  const timers = makeTimers();
+  const { rows, drops, handle } = boot({ timers });
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  pointer("pointermove", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 + drag.THRESHOLD_TOUCH }, TOUCH));
+  timers.advance(drag.HOLD_MS);
+  assert.equal(handle.active(), false, "a swipe lifted the badge");
+  assert.equal(timers.pending(), 0);
+
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  pointer("pointerup", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  timers.advance(drag.HOLD_MS);
+  assert.equal(handle.active(), false, "a tap lifted the badge after it ended");
+
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  pointer("pointercancel", handleOf(rows[0]), TOUCH);
+  timers.advance(drag.HOLD_MS);
+  assert.equal(handle.active(), false, "a cancelled press lifted the badge");
+
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  handle.cancel();
+  timers.advance(drag.HOLD_MS);
+  assert.equal(handle.active(), false, "cancel() left the hold running");
+  assert.deepEqual(drops, []);
+  assert.equal(timers.pending(), 0);
+});
+
+test("the long press never opens the system's menu while a badge is pressed or lifted; elsewhere it is left alone", () => {
+  const timers = makeTimers();
+  const { rows, list } = boot({ timers });
+  const menu = () => { const event = { type: "contextmenu", target: rows[0], _defaultPrevented: false, preventDefault() { this._defaultPrevented = true; } }; for (const fn of list.listeners.contextmenu || []) fn(event); return event._defaultPrevented; };
+  assert.equal(menu(), false, "the menu was blocked with nothing pressed");
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  assert.equal(menu(), true);
+  timers.advance(drag.HOLD_MS);
+  assert.equal(menu(), true);
+});
+
+test("a hold that outlives its row - rebuilt under the finger - lifts nothing", () => {
+  const timers = makeTimers();
+  const { rows, handle, list } = boot({ timers });
+  pointer("pointerdown", handleOf(rows[0]), Object.assign({ clientX: 10, clientY: 10 }, TOUCH));
+  list.removeChild(rows[0]);
+  timers.advance(drag.HOLD_MS);
+  assert.equal(handle.active(), false, "a badge lifted from a row no longer on the page");
+  assert.equal(timers.pending(), 0);
 });
