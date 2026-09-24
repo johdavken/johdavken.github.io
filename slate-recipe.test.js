@@ -58,7 +58,7 @@ function boot(options) {
     timers,
     print: printer,
     recipes: settings.recipes === undefined ? null : settings.recipes,
-    tier: settings.phone ? () => ({ input: "touch", width: "phone" }) : (settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined),
+    tier: settings.tier || (settings.phone ? () => ({ input: "touch", width: "phone" }) : (settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined)),
     scan: settings.scan
   });
   doc.body.appendChild(view.element);
@@ -959,16 +959,18 @@ test("with no bridge every control is unable and explains; nothing is dispatched
  *   Save as recipe
  * -------------------------------------------------------------------- */
 
-test("Save as recipe leads both foots; Current's saves the running recipe, Next's the plan, each as one request, and the section says so", async () => {
+test("under a finger Save as recipe leads both foots (after the desktop's Recipe Book, which the sheet hides there); Current's saves the running recipe, Next's the plan, each as one request, and the section says so", async () => {
   const recipes = makeRecipes();
-  const { view, said } = boot({ recipes });
+  const { view, said } = boot({ recipes, touch: true });
   view.update(withPlan(), { kind: "structural" });
   const currentFoot = view.element.querySelector(".slate-recipe__body[data-recipe='current'] .slate-recipe__foot");
-  assert.equal(currentFoot.children[0].getAttribute("data-slate-save"), "current", "Save does not lead Current's foot");
-  assert.equal(currentFoot.children[1].classList.contains("slate-recipe__reset"), true);
+  assert.equal(currentFoot.children[0].getAttribute("data-slate-book"), "current", "Recipe Book does not lead Current's foot");
+  assert.equal(currentFoot.children[1].getAttribute("data-slate-save"), "current", "Save does not follow it");
+  assert.equal(currentFoot.children[2].classList.contains("slate-recipe__reset"), true);
   const nextFoot = view.element.querySelector(".slate-recipe__body[data-recipe='next'] .slate-recipe__plan");
-  assert.equal(nextFoot.children[0].getAttribute("data-slate-save"), "next", "Save does not lead Next's foot");
-  assert.equal(nextFoot.children[1].getAttribute("data-slate-plan"), "copy");
+  assert.equal(nextFoot.children[0].getAttribute("data-slate-book"), "next", "Recipe Book does not lead Next's foot");
+  assert.equal(nextFoot.children[1].getAttribute("data-slate-save"), "next", "Save does not follow it");
+  assert.equal(nextFoot.children[2].getAttribute("data-slate-plan"), "copy");
   assert.equal(saveButton(view, "current").textContent, recipe.SAVE_LABEL);
   assert.equal(saveButton(view, "current").getAttribute("data-able"), "true");
   assert.equal(saveButton(view, "next").getAttribute("data-able"), "true");
@@ -1052,7 +1054,7 @@ test("a colliding Save Current offers Replace, which asks replaceRecipe; a colli
 
 test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; without a recipes bridge or a plan Save is withheld with the reason", () => {
   const recipes = makeRecipes();
-  const { view, said, setReadOnly } = boot({ recipes });
+  const { view, said, setReadOnly } = boot({ recipes, touch: true });
   view.update(withPlan(), { kind: "structural" });
   const entry = saveEntry(view, "current");
   click(saveButton(view, "current"));
@@ -1091,7 +1093,7 @@ test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; wi
   // A device off any line: withheld until the Book says a line is joined,
   // which arrives on the recipes bridge's own publish.
   const unassigned = makeRecipes({ assigned: false });
-  const joined = boot({ recipes: unassigned });
+  const joined = boot({ recipes: unassigned, touch: true });
   joined.view.update(resolvedFrom(), { kind: "structural" });
   assert.equal(saveButton(joined.view, "current").getAttribute("data-able"), "false");
   assert.match(saveButton(joined.view, "current").getAttribute("title"), /not on a production line/);
@@ -1099,7 +1101,7 @@ test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; wi
   assert.equal(saveButton(joined.view, "current").getAttribute("data-able"), "true", "a join did not reach the foot");
 
   // No recipes bridge at all.
-  const none = boot();
+  const none = boot({ touch: true });
   none.view.update(withPlan(), { kind: "structural" });
   for (const which of ["current", "next"]) {
     assert.equal(saveButton(none.view, which).getAttribute("data-able"), "false");
@@ -1111,10 +1113,110 @@ test("the entry closes on Cancel, Escape, a tab switch, a hide and read-only; wi
 });
 
 /* ----------------------------------------------------------------------
+ *   The Recipe Book under the tabs (a desktop's)
+ * -------------------------------------------------------------------- */
+
+const bookToggle = (view, which) => view.element.querySelector(`.slate-recipe__book-toggle[data-slate-book='${which}']`);
+const bookPanel = view => view.element.querySelector(".slate-recipe__book");
+const bulkButton = view => view.element.querySelector(".slate-recipe__bulk");
+
+test("with a mouse Recipe Book opens the line's Book under the tab - Save Current and Save Next first, then the list - one Book for both tabs, and closes on a second press", async () => {
+  const recipes = makeRecipes();
+  const { view, commands } = boot({ recipes });
+  view.update(withPlan(), { kind: "structural" });
+  const panel = bookPanel(view);
+  assert.ok(panel.hasAttribute("hidden"));
+  assert.equal(view.book(), null);
+  for (const which of ["current", "next"]) {
+    assert.equal(bookToggle(view, which).textContent, recipe.BOOK_LABEL);
+    assert.equal(bookToggle(view, which).getAttribute("aria-expanded"), "false");
+    assert.equal(bookToggle(view, which).getAttribute("data-able"), "true");
+  }
+
+  click(bookToggle(view, "current"));
+  assert.ok(!panel.hasAttribute("hidden"));
+  assert.ok(view.book(), "the section does not say the Book is open");
+  assert.equal(bookToggle(view, "current").getAttribute("aria-expanded"), "true");
+  assert.equal(bookToggle(view, "next").getAttribute("aria-expanded"), "true", "the other tab's toggle does not say the Book is open");
+  const bar = panel.querySelector(".slate-section__bar");
+  assert.ok(bar.querySelector("[data-book-action='save-current']") && bar.querySelector("[data-book-action='save-next']"), "the Book's saves are not in its bar");
+  assert.equal(panel.querySelectorAll(".slate-book__row").length, 1, "the list is not there");
+
+  // Save Current through the Book: its name entry, one request.
+  click(bar.querySelector("[data-book-action='save-current']"));
+  const name = panel.querySelector(".slate-book__name");
+  name.value = "Blue film 3";
+  key(name, "Enter");
+  await tick();
+  assert.deepEqual(recipes.requests, [{ action: "saveCurrentRecipe", args: { name: "Blue film 3" } }]);
+
+  // Selecting shows the blend and changes nothing; Load's preview reads the line shown.
+  click(panel.querySelector(".slate-book__row[data-recipe='r1']"));
+  assert.equal(panel.querySelector(".slate-book__detail-name").textContent, "Blue film");
+  click(panel.querySelector("[data-book-action='load']"));
+  assert.match(panel.querySelector(".slate-book__preview[data-destination='current']").textContent, /Into Current: \d+ of 16 hoppers change/);
+  assert.equal(commands.calls.length, 0, "the Book dispatched a line command");
+  assert.equal(recipes.requests.length, 1, "selecting or opening a preview sent a request");
+
+  // One Book: a tab switch keeps it open, and either toggle closes it.
+  view.setRecipe("next");
+  assert.ok(!panel.hasAttribute("hidden"));
+  click(bookToggle(view, "next"));
+  assert.ok(panel.hasAttribute("hidden"));
+  assert.equal(bookToggle(view, "current").getAttribute("aria-expanded"), "false");
+  assert.equal(view.book(), null);
+  // Closing put the confirm away.
+  click(bookToggle(view, "next"));
+  assert.equal(panel.querySelector(".slate-book__confirm"), null, "a closed Book kept its confirm");
+});
+
+test("the Book closes on a hide, on Escape inside it, on Bulk edit (which withholds it) and on a move to the touch tier", () => {
+  let input = "pointer";
+  const { view, said } = boot({ recipes: makeRecipes(), tier: () => ({ input, width: "wide" }) });
+  view.update(withPlan(), { kind: "structural" });
+  const panel = bookPanel(view);
+  const toggle = bookToggle(view, "current");
+
+  click(toggle);
+  view.onHide();
+  assert.ok(panel.hasAttribute("hidden"), "a hide left the Book open");
+
+  click(toggle);
+  const escape = key(panel.querySelector(".slate-book__row"), "Escape");
+  assert.ok(panel.hasAttribute("hidden"), "Escape left the Book open");
+  assert.equal(escape._stopped, true);
+  assert.equal(toggle.focused, true, "focus did not go back to the toggle");
+
+  click(toggle);
+  click(bulkButton(view));
+  assert.ok(view.bulk(), "Bulk edit did not open");
+  assert.ok(panel.hasAttribute("hidden"), "Bulk edit left the Book open");
+  assert.equal(toggle.getAttribute("data-able"), "false");
+  assert.match(toggle.getAttribute("title"), /bulk edit/i);
+  click(toggle);
+  assert.ok(panel.hasAttribute("hidden"));
+  assert.match(said[said.length - 1], /bulk edit/i);
+  view.onHide();
+
+  click(toggle);
+  assert.ok(!panel.hasAttribute("hidden"));
+  input = "touch";
+  view.refresh();
+  assert.ok(panel.hasAttribute("hidden"), "the touch tier kept the desktop's Book open");
+});
+
+test("the sheets give a mouse Recipe Book and a finger Save as recipe - each hidden where the other stands - with no rule of the pointer tier's own", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
+  assert.match(css, /\.slate-root \.slate-recipe__save \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-recipe__save \{\s*display: inline-block;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-recipe__book-toggle,\s*\.slate-root\[data-input="touch"\] \.slate-recipe__book \{\s*display: none;/);
+});
+
+/* ----------------------------------------------------------------------
  *   Bulk edit
  * -------------------------------------------------------------------- */
 
-const bulkButton = view => view.element.querySelector(".slate-recipe__bulk");
+
 const bulkFoot = (view, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which || "current"}'] .slate-recipe__bulk-foot`);
 const field = (view, id, kind, which) => row(view, id, which).querySelector(`.slate-hopper__draft-${kind}`);
 const typedInto = (input, value) => { input.value = value; input.dispatchEvent({ type: "input" }); };

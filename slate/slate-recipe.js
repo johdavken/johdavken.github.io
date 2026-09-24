@@ -34,6 +34,13 @@
  * arms while there are changes. Another device's value under a drafted row
  * marks it and rebases its diff; a structural publish abandons the form.
  *
+ * On a desktop (the pointer tier) each foot leads with Recipe Book in
+ * Save as recipe's place: the Book (slate-recipe-book.js, the same view
+ * the rail lists under a finger) opens under the tab, its Save Current /
+ * Save Next first, then the list and the selected recipe's preview. One
+ * Book serves both tabs; it closes with the section, a bulk edit or a
+ * move to the touch tier, where the inline Save as recipe stands again.
+ *
  * The section dispatches nothing itself. Its seams - slate-tracking.js,
  * slate-recipe-actions.js, slate-plan-actions.js - are handed the command
  * bridge the boot gives this section, and the boot is told of every
@@ -60,11 +67,12 @@
     pick("PolynSlatePrint", "./slate-print.js"),
     pick("PolynSlateBookActions", "./slate-book-actions.js"),
     pick("PolynSlateRecipeDraft", "./slate-recipe-draft.js"),
-    pick("PolynSlateRecipeForm", "./slate-recipe-form.js")
+    pick("PolynSlateRecipeForm", "./slate-recipe-form.js"),
+    pick("PolynSlateRecipeBook", "./slate-recipe-book.js")
   );
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateRecipe = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule, bookViewModule) {
   "use strict";
 
   /* A press outside, by the shared rule - a finger closes on a still
@@ -86,6 +94,7 @@
   const PROMOTE_ARMED_LABEL = "Confirm promote";
   const SAVE_LABEL = "Save as recipe\u2026";
   const SAVE_ENTRY_LABEL = Object.freeze({ current: "Save the running recipe as", next: "Save the planned recipe as" });
+  const BOOK_LABEL = "Recipe Book";
   const EMPTY = "—";
   const NO_PLAN = "Nothing is planned yet. Start from the running recipe, then change what the changeover needs.";
   const CHANGED_UNDERNEATH = "changed in the application while you were editing; what you are entering here has not been applied.";
@@ -320,9 +329,12 @@
       const el = element(doc, "div", "slate-recipe__body", { "data-recipe": id });
       const layersEl = element(doc, "div", "slate-recipe__layers");
       el.appendChild(layersEl);
-      const body = { recipe: id, el, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, entry: null, foot: null, bulk: null };
+      const body = { recipe: id, el, layersEl, rows: new Map(), heads: new Map(), menus: [], drag: null, empty: null, reset: null, save: null, book: null, entry: null, foot: null, bulk: null };
       // "Save as recipe" leads each foot: the quiet way out to the Book.
       body.save = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__save", SAVE_LABEL, { type: "button", "data-slate-save": id, "data-able": "false" });
+      // On a desktop the Book itself stands there instead (recipe.css
+      // shows the one the tier asks for).
+      body.book = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__book-toggle", BOOK_LABEL, { type: "button", "data-slate-book": id, "aria-expanded": "false", "aria-controls": "slate-recipe-book", "data-able": "false" });
       if (id === "next") {
         const empty = element(doc, "div", "slate-recipe__empty", { hidden: "" });
         empty.appendChild(text(doc, "p", "slate-recipe__empty-text", NO_PLAN));
@@ -330,11 +342,13 @@
         el.appendChild(empty);
         body.empty = empty;
         planStrip.insertBefore(body.save, planStrip.firstChild);
+        planStrip.insertBefore(body.book, planStrip.firstChild);
         el.appendChild(planStrip);
         body.foot = planStrip;
       } else {
         const foot = element(doc, "div", "slate-recipe__foot");
         const reset = text(doc, "button", "slate-recipe__reset", RESET_LABEL, { type: "button", "data-able": "false" });
+        foot.appendChild(body.book);
         foot.appendChild(body.save);
         foot.appendChild(reset);
         el.appendChild(foot);
@@ -398,6 +412,15 @@
 
     const bodies = { current: makeBody("current"), next: makeBody("next") };
     show(bodies.next.el, false);
+
+    // The desktop's Recipe Book, under whichever tab is shown.
+    const bookPanel = element(doc, "div", "slate-recipe__book", { id: "slate-recipe-book", role: "region", "aria-label": BOOK_LABEL, hidden: "" });
+    const bookView = bookViewModule && typeof bookViewModule.create === "function"
+      ? bookViewModule.create(doc, { recipes: recipesFor(), readOnly, say })
+      : null;
+    if (bookView) bookPanel.appendChild(bookView.element);
+    rootEl.appendChild(bookPanel);
+    let bookOpen = false;
 
     // The application's scanner, handed in by the boot: { able(), start(kind, recipe) }.
     const scanner = settings.scan && typeof settings.scan.start === "function" ? settings.scan : null;
@@ -782,6 +805,12 @@
         button.setAttribute("title", book[control] && !busy ? "Save this recipe to the line's Recipe Book" : `Save as recipe is unavailable: ${busy ? BULK_BUSY : (bookModule ? bookModule.reason(recipesFor(), control, { readOnly: options.readOnly, planned }) : "no application is connected to Slate's saved recipes.")}`);
       }
       if (saving && !book[saving.recipe === "next" ? "saveNext" : "saveCurrent"]) closeSave();
+      for (const id of RECIPES) {
+        const toggle = bodies[id].book;
+        const can = !!bookView && !busy;
+        toggle.setAttribute("data-able", can ? "true" : "false");
+        toggle.setAttribute("title", can ? (bookOpen ? "Close the Recipe Book" : "Save, load and manage the line's saved recipes") : `The Recipe Book is unavailable: ${busy ? BULK_BUSY : "it did not load."}`);
+      }
 
       const planButtons = [copyButton, promoteButton].concat(bodies.next.empty ? Array.from(bodies.next.empty.querySelectorAll("[data-slate-plan]")) : []);
       for (const button of planButtons) {
@@ -1132,6 +1161,36 @@
       settle(planModule.promote(commands()));
     }
 
+    /* ---- The Recipe Book (a desktop's) ---- */
+
+    function setBook(on) {
+      const open = !!on && !!bookView;
+      if (open === bookOpen) return;
+      bookOpen = open;
+      show(bookPanel, open);
+      for (const id of RECIPES) {
+        bodies[id].book.setAttribute("aria-expanded", open ? "true" : "false");
+        bodies[id].book.classList.toggle("is-open", open);
+      }
+      if (!open && bookView) bookView.onHide();
+      applyAbilities();
+      if (open && typeof bookPanel.scrollIntoView === "function") {
+        try { bookPanel.scrollIntoView({ block: "nearest" }); } catch (error) { /* an old engine */ }
+      }
+    }
+
+    function toggleBook(id) {
+      const button = bodies[id].book;
+      if (!bookOpen && button.getAttribute("data-able") !== "true") { say(button.getAttribute("title") || "The Recipe Book is unavailable."); return; }
+      if (!bookOpen) {
+        closeEditor();
+        closeSave();
+        disarm();
+        disarmPromote();
+      }
+      setBook(!bookOpen);
+    }
+
     /* ---- Save as recipe ---- */
 
     function setSaveNote(body, message, kind) {
@@ -1230,6 +1289,7 @@
     for (const id of RECIPES) {
       const body = bodies[id];
       body.save.addEventListener("click", () => openSave(id));
+      body.book.addEventListener("click", () => toggleBook(id));
       body.entry.el.addEventListener("click", event => {
         const target = event && event.target;
         const button = target && typeof target.closest === "function" ? target.closest("[data-slate-save-do]") : null;
@@ -1419,6 +1479,7 @@
       if (!model || !body.rows.size) { say(BULK_NO_ROWS); return; }
       closeEditor();
       closeSave();
+      setBook(false);
       if (body.drag) body.drag.cancel();
       disarm();
       disarmPromote();
@@ -1636,6 +1697,13 @@
       if (form) { discardOrArm(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (editing) { closeEditor(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (saving) { closeSave(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
+      if (bookOpen && event.target && typeof bookPanel.contains === "function" && bookPanel.contains(event.target)) {
+        setBook(false);
+        const toggle = bodies[recipe].book;
+        if (typeof toggle.focus === "function") toggle.focus();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        return;
+      }
       if (bodies.current.reset.hasAttribute("data-armed") || promoteButton.hasAttribute("data-armed")) {
         disarm();
         disarmPromote();
@@ -1665,6 +1733,7 @@
       applyAbilities();
       paintCompare();
       applyMarks(marks);
+      if (bookView) bookView.update(resolved);
       scheduleAutoTrack();
     }
 
@@ -1675,6 +1744,10 @@
     // moment to ask again.
     function refresh() {
       declined.clear();
+      // The tier moved: each keeps only its own way to the Book.
+      if (touch()) setBook(false);
+      else closeSave();
+      if (bookView) bookView.refresh();
       applyAbilities();
       paintCompare();
       scheduleAutoTrack();
@@ -1684,6 +1757,7 @@
       discardForm();
       closeEditor();
       closeSave();
+      setBook(false);
       for (const id of RECIPES) if (bodies[id].drag) bodies[id].drag.cancel();
       disarm();
       disarmPromote();
@@ -1703,13 +1777,14 @@
       rowCount: id => bodies[id || recipe].rows.size,
       editing: () => (editing ? { slot: editing.slot, recipe: editing.recipe, layer: editing.layer, index: editing.index } : null),
       saving: () => (saving ? { recipe: saving.recipe, existing: saving.existing, busy: saving.busy } : null),
+      book: () => (bookOpen && bookView ? bookView : null),
       bulk: () => (form ? { recipe: form.recipe, changes: form.view.changes().length, armed: form.body.bulk.cancel.hasAttribute("data-armed"), picked: form.view.picked() } : null),
       onHide
     });
   }
 
   return Object.freeze({
-    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
+    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, BOOK_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
     BULK_LABEL, BULK_BUSY, BULK_NO_ROWS, BULK_ABANDONED, BULK_READ_ONLY, BULK_NO_BRIDGE, BULK_SWITCH, BULK_HINT, FILL_NOTHING, FILL_NONE, discardLabel, discardedNote, selectedLabel,
     formatPct, formatWeight, cellsFor, subtitleFor, create
   });

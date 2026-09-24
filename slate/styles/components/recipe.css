@@ -534,9 +534,75 @@
 }
 
 /* "Save as recipe" leads each foot, quiet, and pushes the rest right
-   (the base layer zeroes every button's margin, hence the scope). */
-.slate-root .slate-recipe__save {
+   (the base layer zeroes every button's margin, hence the scope). On a
+   desktop (the pointer tier) Recipe Book stands in its place; under a
+   finger the Book is the rail's, and Save as recipe stays. */
+.slate-root .slate-recipe__save,
+.slate-root .slate-recipe__book-toggle {
   margin-right: auto;
+}
+
+.slate-root .slate-recipe__save {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-recipe__save {
+  display: inline-block;
+}
+
+.slate-root[data-input="touch"] .slate-recipe__book-toggle,
+.slate-root[data-input="touch"] .slate-recipe__book {
+  display: none;
+}
+
+/* The toggle's caret turns while the Book is open under it. */
+.slate-root .slate-recipe__book-toggle::after {
+  content: "";
+  display: inline-block;
+  width: 0.4em;
+  height: 0.4em;
+  margin-left: var(--slate-space-2);
+  border-right: var(--slate-stroke) solid currentColor;
+  border-bottom: var(--slate-stroke) solid currentColor;
+  transform: translateY(-0.15em) rotate(45deg);
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-recipe__book-toggle.is-open {
+  color: var(--slate-text);
+}
+
+.slate-root .slate-recipe__book-toggle.is-open::after {
+  transform: translateY(0.1em) rotate(-135deg);
+}
+
+/* The Book under the tab: the section's own view, set on a raised panel.
+   Save Current and Save Next lead its bar; the line's name and Refresh
+   follow. */
+.slate-recipe__book {
+  margin-top: var(--slate-space-3);
+  padding: var(--slate-space-3) var(--slate-space-4) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+}
+
+.slate-recipe__book[hidden] {
+  display: none;
+}
+
+.slate-recipe__book .slate-section__bar {
+  gap: var(--slate-space-2);
+  margin-bottom: var(--slate-space-3);
+}
+
+.slate-recipe__book .slate-book__action[data-book-action="save-current"],
+.slate-recipe__book .slate-book__action[data-book-action="save-next"] {
+  order: -1;
+}
+
+.slate-recipe__book .slate-section__subtitle {
+  margin-left: var(--slate-space-2);
 }
 
 /* The name entry under the foot: a full-width row with the field and

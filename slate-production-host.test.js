@@ -221,13 +221,14 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
   const railItems = hostEl.querySelectorAll(".slate-rail__sections [data-section]");
   const listed = railItems.filter(item => !item.hasAttribute("hidden")).map(item => item.getAttribute("data-section"));
-  assert.deepEqual(listed, ["recipe", "recipe-book", "weights", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Recipe Book, Weights, Resin Balance, with the two calculators in the Tools menu after");
+  // With a mouse the Recipe Book opens under the Recipe's tabs, not from the rail.
+  assert.deepEqual(listed, ["recipe", "weights", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Weights, Resin Balance, with the two calculators in the Tools menu after");
   // The administrator's three are built with the rest and stand unlisted:
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is
   // not drawn.
   // A phone's Home is built and unlisted too, on a screen that is not one.
-  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "workspaces", "line-config", "resins"]);
+  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "recipe-book", "workspaces", "line-config", "resins"]);
   assert.ok(hostEl.querySelector(".slate-rail__divider").hasAttribute("hidden"), "the administrator's rule is drawn with nobody signed in");
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);
@@ -346,6 +347,11 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.equal(bookRow.querySelector(".slate-book__row-name").textContent, "Blue film");
   assert.match(hostEl.querySelector(".slate-book .slate-section__subtitle").textContent, /^Line 5 /);
   assert.equal(hostEl.querySelector(".slate-recipe__save[data-slate-save='current']").getAttribute("data-able"), "false", "Save is offered although the application declared no save action");
+  // The desktop's Book under the Recipe's tabs reads the same bridge.
+  const bookToggle = hostEl.querySelector(".slate-recipe__book-toggle[data-slate-book='current']");
+  bookToggle.dispatchEvent({ type: "click", target: bookToggle, stopPropagation() {} });
+  assert.ok(!hostEl.querySelector(".slate-recipe__book").hasAttribute("hidden"), "Recipe Book did not open under the tabs");
+  assert.ok(hostEl.querySelector(".slate-recipe__book .slate-book__row[data-recipe='r1']"), "the Book under the tabs did not list the line's recipe");
 });
 
 test("with no producer inside the host, the boot names the stale application; on the harness it names itself", () => {

@@ -924,6 +924,8 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   click(bar("menu"));
   assert.ok(rail.classList.contains("is-open"));
   assert.ok(!scrim.hasAttribute("hidden"));
+  // Under a finger the rail lists the Book; a desktop opens it under the Recipe's tabs.
+  assert.ok(!hostEl.querySelector(".slate-rail__item[data-section='recipe-book']").hasAttribute("hidden"), "the phone's rail does not list the Recipe Book");
   click(hostEl.querySelector(".slate-rail__item[data-section='recipe-book']"));
   assert.ok(!rail.classList.contains("is-open"));
   assert.ok(!aside.classList.contains("is-open"));
