@@ -183,7 +183,11 @@
     // A phone's column has no room for a layer's head beside its hoppers:
     // there the head always stands on top. The operator's choice is kept
     // (slate-display.js) and comes back on a wider screen.
-    container.setAttribute("data-layers", tier.input === "touch" && tier.width === "phone" ? "top" : orientation);
+    const phoneTier = tier.input === "touch" && tier.width === "phone";
+    container.setAttribute("data-layers", phoneTier ? "top" : orientation);
+    // The Weights page's own choice, kept the same way on a phone.
+    const weightsLayout = displayController && typeof displayController.getWeightsLayout === "function" ? displayController.getWeightsLayout() : "grid";
+    container.setAttribute("data-weights-layers", phoneTier ? "top" : weightsLayout);
     container.setAttribute("data-layer-order", order);
     container.setAttribute("data-input", tier.input);
     container.setAttribute("data-viewport", tier.width);

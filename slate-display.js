@@ -30,16 +30,21 @@
  * LAYERS
  *
  * Where a layer's head - its name, role and share - stands on the Recipe
- * and Weights pages. `grid`, the default, makes every layer a row of
- * self-contained cells, one per hopper, the positions lined up down the
- * page (the Weights page reads it as `top`); `left` keeps the head in a
- * column beside the layer's hoppers, one layer under another; `top` puts
- * it above them and lays the layers side by side, wrapping when there
- * are more than fit. A record saved without a layout reads `grid`; an
- * operator's Left or Top is kept.
+ * page. `grid`, the default, makes every layer a row of self-contained
+ * cells, one per hopper, the positions lined up down the page; `left`
+ * keeps the head in a column beside the layer's hoppers, one layer under
+ * another; `top` puts it above them and lays the layers side by side,
+ * wrapping when there are more than fit. A record saved without a layout
+ * reads `grid`; an operator's Left or Top is kept.
  * The boot writes the word onto the Slate root as data-layers and the
  * sheets do the rest: nothing is rebuilt, so an open editor or a drag in
  * flight outlives the switch.
+ *
+ * WEIGHTS LAYOUT
+ *
+ * The same three words for the Weights page, chosen apart from the
+ * Recipe's: `grid`, the default, `left` or `top`. Written onto the root
+ * as data-weights-layers; nothing is rebuilt either.
  *
  * LAYER ORDER
  *
@@ -82,7 +87,7 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "grid", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "grid", weightsLayers: "grid", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const READ_ONLY_MODES = Object.freeze(["auto", "on", "off"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
@@ -101,6 +106,7 @@
       readOnly: typeof source.readOnly === "boolean" ? source.readOnly : (source.readOnly === null && "readOnly" in source ? null : DEFAULTS.readOnly),
       tracking: TRACKING_MODES.includes(source.tracking) ? source.tracking : DEFAULTS.tracking,
       layers: LAYER_ORIENTATIONS.includes(source.layers) ? source.layers : DEFAULTS.layers,
+      weightsLayers: LAYER_ORIENTATIONS.includes(source.weightsLayers) ? source.weightsLayers : DEFAULTS.weightsLayers,
       layerOrder: LAYER_ORDERS.includes(source.layerOrder) ? source.layerOrder : DEFAULTS.layerOrder,
       timeline: TIMELINE_VIEWS.includes(source.timeline) ? source.timeline : DEFAULTS.timeline,
       input: INPUT_MODES.includes(source.input) ? source.input : DEFAULTS.input,
@@ -149,6 +155,11 @@
   /* A layer orientation, or the default for anything that is not one. */
   function layerOrientationOf(value) {
     return LAYER_ORIENTATIONS.includes(value) ? value : DEFAULTS.layers;
+  }
+
+  /* The Weights page's layout, or its default for anything that is not one. */
+  function weightsLayoutOf(value) {
+    return LAYER_ORIENTATIONS.includes(value) ? value : DEFAULTS.weightsLayers;
   }
 
   /* A layer order, or the default for anything that is not one. */
@@ -203,6 +214,8 @@
       setTrackingMode: value => apply({ tracking: trackingModeOf(value) }).tracking,
       getLayerOrientation: () => current.layers,
       setLayerOrientation: value => apply({ layers: layerOrientationOf(value) }).layers,
+      getWeightsLayout: () => current.weightsLayers,
+      setWeightsLayout: value => apply({ weightsLayers: weightsLayoutOf(value) }).weightsLayers,
       getLayerOrder: () => current.layerOrder,
       setLayerOrder: value => apply({ layerOrder: layerOrderOf(value) }).layerOrder,
       getTimelineView: () => current.timeline,
@@ -234,5 +247,5 @@
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, LAYER_ORIENTATIONS, LAYER_ORDERS, TIMELINE_VIEWS, INPUT_MODES, HOST_CHOICES, normalize, read, modeOf, readOnlyOf, trackingModeOf, layerOrientationOf, layerOrderOf, timelineViewOf, inputModeOf, hostChoiceOf, effectiveReadOnly, create, readFrom, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, LAYER_ORIENTATIONS, LAYER_ORDERS, TIMELINE_VIEWS, INPUT_MODES, HOST_CHOICES, normalize, read, modeOf, readOnlyOf, trackingModeOf, layerOrientationOf, weightsLayoutOf, layerOrderOf, timelineViewOf, inputModeOf, hostChoiceOf, effectiveReadOnly, create, readFrom, initialize });
 });
