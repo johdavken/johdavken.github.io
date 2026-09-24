@@ -95,6 +95,8 @@
   const TIMELINE = "timeline";
   /* A phone's first page (slate-home.js), listed only there. */
   const HOME = "home";
+  /* Listed on the rail under a finger; a desktop opens it in the Recipe. */
+  const BOOK = "recipe-book";
   const SCRAP = "scrap";
 
   const mounts = {};
@@ -195,6 +197,10 @@
     // when the screen stops being one.
     if (railView) railView.setListed(HOME, page());
     if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
+    // A desktop opens the Recipe Book under the Recipe's tabs
+    // (slate-recipe.js); the rail lists it under a finger only.
+    if (railView) railView.setListed(BOOK, tier.input === "touch");
+    if (tier.input !== "touch" && sections && sections.current() && sections.current().id === BOOK) sections.show(DEFAULT_SECTION);
     paintBar();
   }
 
@@ -596,7 +602,7 @@
     sectionDefinitions.push(
       ...(homeModule ? [{ id: HOME, label: homeModule.TITLE, group: "sections", phone: true, icon: "home", create: (d, c) => homeModule.create(d, Object.assign({}, c, { home: homeHooks })) }] : []),
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
-      { id: "recipe-book", label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
+      { id: BOOK, label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, {
         totals: resinTotals,
