@@ -519,6 +519,8 @@
       const key = `${layer.id}:${hopper.index}`;
       const m = smartMeasure();
       const row = element(doc, "div", "slate-weights__row", { "data-layer": layer.id, "data-index": String(hopper.index), "data-hopper": hopper.id, "data-key": key });
+      // Its position in the layer: its column in the Grid layout.
+      row.style.setProperty("--slate-hopper-slot", String(hopper.index));
       row.appendChild(text(doc, "span", "slate-weights__id", hopper.id));
       const resin = text(doc, "span", "slate-weights__resin", EMPTY);
       row.appendChild(resin);
@@ -560,6 +562,10 @@
       const model = state.resolved && state.resolved.line;
       show(emptyLine, !model);
       if (!model) return;
+      // How many hopper positions every layer's row has in the Grid
+      // layout (components/weights.css), as the Recipe counts them.
+      const positions = model.layers.reduce((most, layer) => layer.hoppers.reduce((deepest, hopper) => Math.max(deepest, hopper.index + 1), most), 1);
+      layersEl.style.setProperty("--slate-hopper-rows", String(positions));
       model.layers.forEach((layer, i) => {
         const card = element(doc, "div", "slate-weights__layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });
         card.style.setProperty("--slate-layer-i", String(i));

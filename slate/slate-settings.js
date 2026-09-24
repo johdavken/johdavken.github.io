@@ -100,7 +100,7 @@
    * @param {object} ctx
    * @param {object|null} ctx.theme    the theme controller {getTheme, setTheme, subscribe}
    * @param {object[]} [ctx.themes]    the registry (PolynSlateTheme.THEMES)
-   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, getLayerOrientation, setLayerOrientation, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
+   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, getLayerOrientation, setLayerOrientation, getWeightsLayout, setWeightsLayout, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
    * @param {function} [ctx.say]       a line for the operator
    * @param {function} [ctx.legacy]    () => the floor UI's address, for the way back at the foot
@@ -223,12 +223,12 @@
     rootEl.appendChild(tracking);
     rootEl.appendChild(safety);
 
-    // Layout: where a layer's head stands on the Recipe and Weights pages.
-    // Layout: which way the layers stand. A phone always stands them on
-    // top (slate.js), so there the group is withheld (settings.css).
+    // Layout: where a layer's head stands on the Recipe page. A phone
+    // always stands them on top (slate.js), so there the group is
+    // withheld (settings.css), as is the Weights layout's below.
     const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
-    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe changes."));
+    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe page. Nothing about the recipe changes."));
     const orientations = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layers" });
     const orientationButtons = new Map();
     for (const [mode, label, note] of [
@@ -246,6 +246,28 @@
     layout.appendChild(orientations);
     if (!display) layout.appendChild(text(doc, "p", "slate-settings__note", "Layout cannot be changed on this page."));
     rootEl.appendChild(layout);
+
+    // Weights layout: the same three for the Weights page, chosen apart.
+    const weightsLayout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Weights layout" });
+    weightsLayout.appendChild(text(doc, "h2", "slate-settings__heading", "Weights layout"));
+    weightsLayout.appendChild(text(doc, "p", "slate-settings__lead", "How the Weights page lays out each layer's hoppers. No weight changes."));
+    const weightsLayouts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Weights layout" });
+    const weightsLayoutButtons = new Map();
+    for (const [mode, label, note] of [
+      ["left", "Left", "The layer's name beside its hoppers, one hopper per line."],
+      ["top", "Top", "The name above its hoppers, layers side by side."],
+      ["grid", "Grid", "Every layer a row of cells, one per hopper, positions lined up down the page."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-weights-layout": mode });
+      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.addEventListener("click", () => { if (display && typeof display.setWeightsLayout === "function") display.setWeightsLayout(mode); });
+      weightsLayoutButtons.set(mode, button);
+      weightsLayouts.appendChild(button);
+    }
+    weightsLayout.appendChild(weightsLayouts);
+    if (!display) weightsLayout.appendChild(text(doc, "p", "slate-settings__note", "The Weights layout cannot be changed on this page."));
+    rootEl.appendChild(weightsLayout);
 
     // Layer order: which way the same pages run the layers.
     const ordering = element(doc, "section", "slate-settings__group", { "aria-label": "Layer order" });
@@ -529,6 +551,12 @@
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
+      const weightsMode = display && typeof display.getWeightsLayout === "function" ? display.getWeightsLayout() : null;
+      for (const [id, button] of weightsLayoutButtons) {
+        const on = id === weightsMode;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
       const order = display && typeof display.getLayerOrder === "function" ? display.getLayerOrder() : null;
       for (const [id, button] of orderButtons) {
         const on = id === order;
@@ -571,6 +599,7 @@
       mode: id => modeButtons.get(id) || null,
       trackingMode: id => trackingButtons.get(id) || null,
       layerOrientation: id => orientationButtons.get(id) || null,
+      weightsLayout: id => weightsLayoutButtons.get(id) || null,
       layerOrder: id => orderButtons.get(id) || null,
       timelineView: id => viewButtons.get(id) || null,
       inputMode: id => inputButtons.get(id) || null,
