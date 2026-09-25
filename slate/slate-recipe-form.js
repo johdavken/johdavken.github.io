@@ -279,9 +279,21 @@
     /** Clear recipe: every hopper's resin and blend blanked, into the
      * draft - one Apply sends it. Returns how many fields moved. */
     function clearAll() {
+      return blank([...byKey.keys()]);
+    }
+
+    /** Empty: the picked hoppers' resin and blend blanked, the same way -
+     * into the draft, one Apply. The selection stays, to be seen. */
+    function emptyPicked() {
+      return blank([...picked]);
+    }
+
+    function blank(keys) {
       if (destroyed) return 0;
       let moved = 0;
-      for (const [key, slot] of byKey) {
+      for (const key of keys) {
+        const slot = byKey.get(key);
+        if (!slot) continue;
         if (String(draft[key].resin || "") !== "") { draft[key].resin = ""; slot.resin.value = ""; moved += 1; }
         if (slot.pct && String(draft[key].pct || "") !== "") { draft[key].pct = ""; slot.pct.value = ""; moved += 1; }
       }
@@ -378,6 +390,7 @@
       picked: () => [...picked],
       fill,
       clearAll,
+      emptyPicked,
       focusFirst,
       refresh,
       destroy,

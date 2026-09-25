@@ -35,6 +35,14 @@
  * onto the root as data-drag-motion. A reduced-motion device gets still
  * whatever is chosen.
  *
+ * MEASURE
+ *
+ * How a round-hopper line's shared size is entered on the Weights page:
+ * `diameter`, the default - inside wall to inside wall, lid off - or
+ * `circumference`, a tape around the outside. The line stores one number,
+ * its circumference, whichever is chosen: the field converts (C = pi x D)
+ * as it shows and sends, so this device's choice changes no line data.
+ *
  * TRACKING
  *
  * How Slate offers the per-hopper Track toggle. `automatic`, the default,
@@ -102,10 +110,11 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  const DEFAULTS = Object.freeze({ background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const BACKGROUNDS = Object.freeze(["none", "smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"]);
   const HANDLINGS = Object.freeze(["lift", "tilt", "float", "glow", "glass", "stamp", "neon", "still"]);
+  const MEASURES = Object.freeze(["diameter", "circumference"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
   const LAYOUTS = Object.freeze(["grid", "grid-top"]);
   const LAYER_ORDERS = Object.freeze(["forward", "reversed"]);
@@ -119,6 +128,7 @@
     return {
       background: BACKGROUNDS.includes(source.background) ? source.background : DEFAULTS.background,
       handling: HANDLINGS.includes(source.handling) ? source.handling : DEFAULTS.handling,
+      measure: MEASURES.includes(source.measure) ? source.measure : DEFAULTS.measure,
       tracking: TRACKING_MODES.includes(source.tracking) ? source.tracking : DEFAULTS.tracking,
       layout: LAYOUTS.includes(source.layout) ? source.layout : DEFAULTS.layout,
       layerOrder: LAYER_ORDERS.includes(source.layerOrder) ? source.layerOrder : DEFAULTS.layerOrder,
@@ -155,6 +165,11 @@
   /* A handling, or the default for anything that is not one. */
   function handlingOf(value) {
     return HANDLINGS.includes(value) ? value : DEFAULTS.handling;
+  }
+
+  /* A measure, or the default for anything that is not one. */
+  function measureOf(value) {
+    return MEASURES.includes(value) ? value : DEFAULTS.measure;
   }
 
   /* A tracking mode, or the default for anything that is not one. */
@@ -205,6 +220,8 @@
       setBackground: value => apply({ background: backgroundOf(value) }).background,
       getHandling: () => current.handling,
       setHandling: value => apply({ handling: handlingOf(value) }).handling,
+      getMeasure: () => current.measure,
+      setMeasure: value => apply({ measure: measureOf(value) }).measure,
       getTrackingMode: () => current.tracking,
       setTrackingMode: value => apply({ tracking: trackingModeOf(value) }).tracking,
       getLayout: () => current.layout,
@@ -238,5 +255,5 @@
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULTS, BACKGROUNDS, HANDLINGS, TRACKING_MODES, LAYOUTS, LAYER_ORDERS, TIMELINE_VIEWS, HOST_CHOICES, normalize, read, backgroundOf, handlingOf, trackingModeOf, layoutOf, layerOrderOf, timelineViewOf, hostChoiceOf, create, readFrom, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULTS, BACKGROUNDS, HANDLINGS, MEASURES, TRACKING_MODES, LAYOUTS, LAYER_ORDERS, TIMELINE_VIEWS, HOST_CHOICES, normalize, read, backgroundOf, handlingOf, measureOf, trackingModeOf, layoutOf, layerOrderOf, timelineViewOf, hostChoiceOf, create, readFrom, initialize });
 });

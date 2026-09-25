@@ -47,17 +47,13 @@ test("the shell keeps one 1440px composition and never hides behind a width gate
   assert.doesNotMatch(css, /\.slate-shell\s*\{[^}]*display:\s*none/s);
 });
 
-test("the way back names the floor UI, and the harness's is the application beside it", () => {
-  // The floor UI is named, since a desktop's bare URL is Slate's now.
-  assert.equal(shell.legacyHref("https://resin.tools/?view=slate"), "/?view=legacy");
-  assert.equal(shell.legacyHref("https://resin.tools/"), "/?view=legacy");
-  assert.equal(shell.legacyHref("https://resin.tools/index.html?view=slate&other=1#x"), "/index.html?other=1&view=legacy#x");
-  assert.equal(shell.legacyHref("https://resin.tools/slate/slate.html"), "../index.html");
-  assert.equal(shell.legacyHref("https://resin.tools/?view=station"), "../index.html");
-  assert.equal(shell.legacyHref(undefined), "../index.html");
-  const doc = makeDocument({ href: "https://resin.tools/?view=slate" });
-  assert.equal(shell.createShell(doc).querySelector(".slate-header__legacy").getAttribute("href"), "/?view=legacy");
-  assert.equal(shell.createShell(doc, { legacy: "x.html" }).querySelector(".slate-header__legacy").getAttribute("href"), "x.html");
+test("Slate stands on its own: no way back to the floor UI in its frame", () => {
+  const root = shell.createShell(makeDocument({ href: "https://resin.tools/?view=slate" }));
+  assert.equal(root.querySelector(".slate-header__legacy"), null, "the header still links to the floor UI");
+  assert.equal(root.querySelectorAll("a").length, 0, "the frame carries a link");
+  for (const gone of ["legacyHref", "HARNESS_LEGACY"]) assert.ok(!(gone in shell), `${gone} is still exported`);
+  const css = fs.readFileSync(path.join(__dirname, "slate/styles/components/header.css"), "utf8");
+  assert.doesNotMatch(css, /header__legacy/);
 });
 
 /* ----------------------------------------------------------------------
@@ -86,7 +82,16 @@ test("the mark draws in tokens and currentColor only, and turns on its own keyfr
   assert.equal(svg.tagName, "SVG");
   assert.equal(svg.namespaceURI, logo.SVG_NS);
   assert.equal(svg.getAttribute("role"), "img");
-  assert.equal(svg.getAttribute("viewBox"), logo.VIEW_BOX);
+  // The symbol's box grown at its foot for Slate's word: SLATE, spread and centred.
+  assert.equal(svg.getAttribute("viewBox"), logo.VIEW_BOX_WITH_WORD);
+  assert.equal(logo.VIEW_BOX_WITH_WORD.split(" ").slice(0, 3).join(" "), logo.VIEW_BOX.split(" ").slice(0, 3).join(" "), "the word's box does not keep the symbol's width");
+  const word = svg.querySelector(".slate-logo__word");
+  assert.ok(word, "no word under the mark");
+  assert.equal(word.textContent, "SLATE");
+  assert.equal(word.getAttribute("text-anchor"), "middle");
+  assert.equal(word.getAttribute("lengthAdjust"), "spacing");
+  assert.ok(Number(word.getAttribute("y")) < Number(logo.VIEW_BOX_WITH_WORD.split(" ")[3]), "the word falls outside the box");
+  assert.equal(word.hasAttribute("fill"), false, "the word's colour belongs to the sheet");
   const nodes = svg.querySelectorAll("path, circle, g");
   assert.ok(nodes.length > 20);
   for (const node of nodes) {

@@ -1,6 +1,6 @@
-/* The header: the section's title at the left, the way back, a notice
-   when something is wrong with the page, and the RT Sync trigger at the
-   right. */
+/* The header: the section's title at the left (none on the Recipe), a
+   notice when something is wrong with the page, and the RT Sync trigger
+   at the right. */
 
 .slate-header__title {
   font-size: var(--slate-text-xl);
@@ -8,19 +8,6 @@
   line-height: var(--slate-line-tight);
   letter-spacing: -0.01em;
   white-space: nowrap;
-}
-
-.slate-header__legacy {
-  font-size: var(--slate-text-sm);
-  color: var(--slate-text-faint);
-  transition: color var(--slate-motion-ack) var(--slate-motion-ease);
-}
-
-@media (hover: hover) {
-  .slate-header__legacy:hover {
-    color: var(--slate-text);
-    text-decoration: underline;
-  }
 }
 
 .slate-header__notice {
@@ -49,14 +36,6 @@
 
 /* ---- Touch (data-input="touch" on the root) ---- */
 
-.slate-root[data-input="touch"] .slate-header__legacy {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--slate-tap);
-  padding: 0 var(--slate-space-2);
-  text-decoration: underline;
-}
-
 /* A problem with the page is read whole: two lines rather than an
    ellipsis a finger cannot hover. */
 .slate-root[data-input="touch"] .slate-header__notice {
@@ -65,14 +44,10 @@
 }
 
 /* ---- A phone ----
-   A short header: the section's name, the way back and the RT Sync
-   trigger on one line; a notice, when there is one, on its own line
-   beneath them rather than squeezed between. */
-/* A phone's pages are named by the bar and by what they show: the header
-   keeps the RT Sync trigger alone (the way back is at the foot of
-   Settings). */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__legacy {
+   A short header: the RT Sync trigger on its line, a notice, when there
+   is one, on its own line beneath it. A phone's pages are named by the
+   bar and by what they show, so no title. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title {
   display: none;
 }
 

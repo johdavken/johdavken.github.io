@@ -1637,9 +1637,12 @@ test("under the form a hopper id picks its row, Shift picks a run within the lay
   assert.ok(!strip.hasAttribute("hidden"));
   assert.ok(foot.querySelector(".slate-recipe__bulk-hint").hasAttribute("hidden"));
   assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, "1 selected");
+  const clearSelection = strip.querySelector("[data-slate-fill='clear']");
+  assert.ok(!clearSelection.classList.contains("is-lit"), "one pick lit Clear selection");
   click(row(view, "A5").querySelector(".slate-hopper__id"), { shiftKey: true });
   assert.deepEqual(view.bulk().picked.sort(), ["A:1", "A:2", "A:3", "A:4"]);
   assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, "4 selected");
+  assert.ok(clearSelection.classList.contains("is-lit"), "several picks left Clear selection unlit");
   click(row(view, "A2").querySelector(".slate-hopper__id"));
   assert.deepEqual(view.bulk().picked.sort(), ["A:2", "A:3", "A:4"]);
   // A Shift run into another layer is a plain pick there.
@@ -1653,6 +1656,7 @@ test("under the form a hopper id picks its row, Shift picks a run within the lay
   click(strip.querySelector("[data-slate-fill='clear']"));
   assert.deepEqual(view.bulk().picked, []);
   assert.ok(strip.hasAttribute("hidden"));
+  assert.ok(!clearSelection.classList.contains("is-lit"), "an empty selection left Clear selection lit");
   assert.equal(commands.calls.length, 0, "picking dispatched");
   // Ids do nothing outside the form.
   click(bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']"));
@@ -2151,6 +2155,33 @@ test("the Grid head keeps Compare's other share beside the share, never under it
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 3;\s*grid-column: 1;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share-other'), /grid-row: 3;\s*grid-column: 2;[^}]*white-space: nowrap;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__role'), /white-space: nowrap;/);
+});
+
+test("Empty blanks only the selected hoppers into the draft - nothing sent, the selection kept - and Apply sends them as ONE setHopperAssignments", () => {
+  const { view, commands, said } = boot({ desktop: true });
+  view.update(withPlan(), { kind: "structural" });
+  const strip = bulkFootOf(view).querySelector(".slate-recipe__fill");
+  const empty = strip.querySelector("[data-slate-fill='empty']");
+  assert.equal(empty.textContent, recipe.EMPTY_LABEL);
+  assert.equal(empty.getAttribute("data-able"), "false", "Empty offered with nothing selected");
+  const b2 = draftResin(view, "B2").value;
+  click(row(view, "A1").querySelector(".slate-hopper__id"));
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.equal(empty.getAttribute("data-able"), "true");
+  click(empty);
+  assert.equal(commands.calls.length, 0, "Empty reached the line without Apply");
+  assert.equal(draftResin(view, "A1").value, "");
+  assert.equal(draftResin(view, "A2").value, "");
+  assert.equal(draftResin(view, "B2").value, b2, "an unselected hopper was emptied");
+  assert.deepEqual(view.bulk().picked.sort(), ["A:0", "A:1"], "the selection did not stay");
+  // Again: nothing left to empty, and it says so.
+  click(empty);
+  assert.equal(said[said.length - 1], recipe.EMPTY_NONE);
+  click(bulkFootOf(view).querySelector("[data-slate-bulk-do='apply']"));
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperAssignments");
+  assert.deepEqual(commands.calls[0].args.hoppers.map(one => `${one.layer}:${one.index}`).sort(), ["A:0", "A:1"]);
+  assert.ok(commands.calls[0].args.hoppers.every(one => one.resin === ""));
 });
 
 test("Clear recipe blanks every hopper of the shown tab into the draft - nothing sent - Apply sends it as ONE setHopperAssignments, and Cancel puts it all back; on Next it clears the plan", () => {

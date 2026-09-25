@@ -15,8 +15,29 @@
   font-size: var(--slate-text-sm);
 }
 
-.slate-weights__circumference-label {
+/* Diameter | Circumference: the size's name is the choice of how it is
+   entered, a small two-way switch. */
+.slate-weights__measure {
+  display: inline-flex;
+  padding: 2px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-root .slate-weights__measure-option {
+  padding: 2px var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
   font-weight: 500;
+}
+
+.slate-root .slate-weights__measure-option.is-selected {
+  background: var(--slate-surface-raised);
+  color: var(--slate-text);
+  font-weight: 600;
+  box-shadow: var(--slate-shadow-card);
 }
 
 .slate-weights__shared {
@@ -738,10 +759,29 @@
   padding-left: 0;
 }
 
-/* A picked cell keeps the accent over the Grid's own fill. */
-.slate-root[data-weights-layers="grid"] .slate-weights__row.is-picked {
-  background: var(--slate-accent-soft);
-  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+/* A picked cell lifts and glows as the Recipe's does (recipe-edit.css,
+   slate-pick-glow): the accent over the Grid's own fill, raised, its edge
+   breathing. Still, and still lifted, under reduced motion. */
+.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key] {
+  transition: scale var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key].is-picked {
+  z-index: 1;
+  /* Solid, an empty hopper's dashes included: picked is picked. */
+  border-style: solid;
+  border-color: var(--slate-accent);
+  background: linear-gradient(var(--slate-accent-soft) 0 0), var(--slate-surface-raised);
+  scale: 1.03;
+  box-shadow: var(--slate-shadow-pop), inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+  animation: slate-pick-glow 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root .slate-weights__row[data-key].is-picked {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* ---- Always a draft (a desktop's page): plain fields ----

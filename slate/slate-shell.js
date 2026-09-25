@@ -38,44 +38,17 @@
     return node;
   }
 
-  /* THE WAY BACK
-   *
-   * Slate and the legacy interface coexist on one page: the application
-   * host is index.html, and Slate is what a desktop gets there unless the
-   * URL names another view (slate-host.js). So the route back is that same
-   * URL naming the floor UI: ?view=legacy. On the standalone harness
-   * (slate/slate.html), which has no application, the route is the
-   * application's page beside it. */
-  const HARNESS_LEGACY = "../index.html";
-  function legacyHref(href) {
-    let url;
-    try {
-      url = new URL(String(href));
-    } catch (error) {
-      return HARNESS_LEGACY;
-    }
-    const view = url.searchParams.get("view");
-    if (view !== null && view !== "slate") return HARNESS_LEGACY;
-    if (/\/slate\/[^/]*$/.test(url.pathname)) return HARNESS_LEGACY;
-    url.searchParams.delete("view");
-    url.searchParams.set("view", "legacy");
-    return url.pathname + url.search + url.hash;
-  }
-
   /**
    * Build the Slate shell as a single detached element carrying `slate-root`.
    *
+   * Slate stands on its own: no way back to the floor UI in its frame.
+   * A device that wants the floor UI chooses it in Settings (This device
+   * opens), or visits ?view=legacy.
+   *
    * @param {Document} doc
-   * @param {object} [options]
-   * @param {string} [options.legacy]  the href of the legacy interface; by
-   *        default derived from the document's own location (legacyHref)
    */
-  function createShell(doc, options) {
-    const settings = options || {};
+  function createShell(doc) {
     const root = element(doc, "div", "slate-root", { "data-slate-app": "" });
-    const legacy = typeof settings.legacy === "string"
-      ? settings.legacy
-      : legacyHref(doc.location && doc.location.href);
 
     root.appendChild(text(doc, "p", "slate-too-small", TOO_SMALL, { role: "status" }));
 
@@ -85,7 +58,6 @@
 
     const header = element(doc, "header", "slate-header", { "data-slate-mount": "header" });
     header.appendChild(text(doc, "h1", "slate-header__title", "Slate"));
-    header.appendChild(text(doc, "a", "slate-header__legacy", "Legacy", { href: legacy, title: "Open Resin.Tools (Legacy)" }));
     header.appendChild(element(doc, "p", "slate-header__notice", { "data-slate-mount": "notice", role: "status", hidden: "" }));
     header.appendChild(element(doc, "div", "slate-header__sync", { "data-slate-mount": "sync" }));
     shell.appendChild(header);
@@ -120,5 +92,5 @@
     return root;
   }
 
-  return Object.freeze({ MOUNTS, TOO_SMALL, HARNESS_LEGACY, legacyHref, createShell });
+  return Object.freeze({ MOUNTS, TOO_SMALL, createShell });
 });

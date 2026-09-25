@@ -369,6 +369,31 @@
   }
 }
 
+/* A picked cell's pulse: the Glow handling's ring, over the lifted
+   card's shadow and its accent edge. */
+@keyframes slate-pick-glow {
+  0%,
+  100% {
+    box-shadow: var(--slate-shadow-pop), inset 0 0 0 var(--slate-stroke) var(--slate-accent), 0 0 0 0 var(--slate-accent-soft);
+  }
+
+  50% {
+    box-shadow: var(--slate-shadow-pop), inset 0 0 0 var(--slate-stroke) var(--slate-accent), 0 0 0 6px var(--slate-accent-soft);
+  }
+}
+
+/* Clear selection's softer pulse: the ring alone, narrower. */
+@keyframes slate-clear-glow {
+  0%,
+  100% {
+    box-shadow: var(--slate-shadow-card), 0 0 0 0 var(--slate-accent-soft);
+  }
+
+  50% {
+    box-shadow: var(--slate-shadow-card), 0 0 0 4px var(--slate-accent-soft);
+  }
+}
+
 @keyframes slate-drag-float {
   0%,
   100% {
@@ -449,6 +474,13 @@
     rotate: none;
     scale: none;
     translate: none;
+  }
+
+  .slate-root .slate-hopper[data-recipe].is-picked,
+  .slate-root .slate-fill__clear.is-lit,
+  .slate-root .slate-fill__clear {
+    animation: none;
+    transition: none;
   }
 }
 
@@ -706,6 +738,41 @@
 
 .slate-hopper.is-picked .slate-hopper__id {
   color: var(--slate-accent-text);
+}
+
+/* With several hoppers picked, Clear selection - the way out of them, on
+   the Recipe's fill strip and the Weights page's - lifts a little and
+   glows softly, so it is found as readily as the cells it would clear. */
+.slate-root .slate-fill__clear {
+  transition: scale var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root .slate-fill__clear.is-lit {
+  border-color: var(--slate-accent);
+  color: var(--slate-accent-text);
+  scale: 1.04;
+  box-shadow: var(--slate-shadow-card);
+  animation: slate-clear-glow 1.4s ease-in-out infinite;
+}
+
+/* In the Grid a cell wears its own fill and edge (recipe.css), which the
+   pick above cannot reach: a picked cell lifts off the page and its edge
+   breathes in the accent - the Glow handling's pulse - so a selection
+   reads at a glance. The lift eases in and out; under reduced motion the
+   cell still stands lifted and outlined, only still. */
+.slate-root[data-layers="grid"] .slate-hopper[data-recipe] {
+  transition: scale var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-picked {
+  z-index: 1;
+  /* Solid, an empty hopper's dashes included: picked is picked. */
+  border-style: solid;
+  border-color: var(--slate-accent);
+  background: linear-gradient(var(--slate-accent-soft) 0 0), var(--slate-surface-raised);
+  scale: 1.03;
+  box-shadow: var(--slate-shadow-pop), inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+  animation: slate-pick-glow 1.4s ease-in-out infinite;
 }
 
 .slate-recipe__fill {

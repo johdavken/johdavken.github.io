@@ -85,8 +85,18 @@ function boot(options) {
   const said = [];
   let readOnly = !!settings.readOnly;
   const timers = makeTimers();
+  // How the round-hopper size is entered: these tests were written in
+  // circumference; the diameter's own test asks for it.
+  let measure = settings.measure || "circumference";
+  const measureListeners = new Set();
+  const display = {
+    getMeasure: () => measure,
+    setMeasure(value) { measure = value; for (const fn of [...measureListeners]) fn({ measure }); return measure; },
+    subscribe(fn) { measureListeners.add(fn); return () => measureListeners.delete(fn); }
+  };
   const view = weights.create(doc, {
     timers,
+    display,
     tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined,
     alwaysDraft: !!settings.alwaysDraft,
     commands: () => commands,
@@ -96,7 +106,7 @@ function boot(options) {
     say: message => said.push(message)
   });
   doc.body.appendChild(view.element);
-  return { doc, view, commands, profiles, committed, said, timers, setReadOnly: value => { readOnly = value; } };
+  return { doc, view, commands, profiles, committed, said, timers, display, setReadOnly: value => { readOnly = value; } };
 }
 
 const field = (view, key, kind) => view.element.querySelector(`.slate-weights__field[data-key='${key}'][data-kind='${kind || "weight"}']`);
@@ -129,7 +139,7 @@ test("the subtitle names the line, its hoppers and the switch; the switch's line
   assert.equal(weights.computedHint({ resinName: "", usableHeight: 48 }, smart, m), "no resin");
   assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 0 }, smart, m), "no height");
   assert.equal(weights.computedHint({ resinName: "HX204", usableGallons: 0 }, smart, actions.MEASURE.volume), "no volume");
-  assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 48 }, { enabled: true, geometryMode: "cylindrical", circumference: 0 }, m), "no circumference");
+  assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 48 }, { enabled: true, geometryMode: "cylindrical", circumference: 0 }, m), "no hopper size", "the hint names neither diameter nor circumference: either may be how it is entered");
   assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 48 }, smart, m), "no bulk density");
   assert.equal(weights.computedHint({ resinName: "HX204", usableGallons: 12 }, { enabled: true, geometryMode: "volume", circumference: 0 }, actions.MEASURE.volume), "no bulk density");
 });
@@ -291,6 +301,38 @@ test("blank clears (0); blur commits once; geometry and circumference go as thei
     { command: "setHopperCircumference", args: { circumference: "32" } }
   ]);
   for (const call of commands.calls) assert.ok(!contract.normalizeArguments(call.command, call.args).error, call.command);
+});
+
+test("the hopper size is entered as an inside diameter by choice: shown as C / pi, sent as the circumference it stands for; the switch shows the same stored size either way", () => {
+  const { view, commands, display } = boot({ measure: "diameter" });
+  view.update(resolvedFrom(snap => smartLine(snap, { circumference: actions.circumferenceFrom(15) })), { kind: "structural" });
+  const size = field(view, "circumference", "circumference");
+  const options = view.element.querySelectorAll("[data-measure]");
+  assert.deepEqual(options.map(one => one.getAttribute("data-measure")), ["diameter", "circumference"]);
+  assert.deepEqual(options.map(one => one.getAttribute("aria-checked")), ["true", "false"]);
+  assert.match(size.getAttribute("aria-label"), /inside diameter/);
+  assert.equal(size.value, "15", "the stored circumference is not shown as its diameter");
+  // A typed diameter goes to the line as its circumference.
+  type(size, "16");
+  enter(size);
+  assert.deepEqual(commands.calls, [{ command: "setHopperCircumference", args: { circumference: actions.circumferenceFrom(16) } }]);
+  assert.ok(!contract.normalizeArguments(commands.calls[0].command, commands.calls[0].args).error);
+  blur(size);
+  // Circumference chosen: the same stored size, shown as itself.
+  click(options[1]);
+  assert.equal(display.getMeasure(), "circumference");
+  assert.deepEqual(options.map(one => one.getAttribute("aria-checked")), ["false", "true"]);
+  assert.equal(size.value, String(actions.circumferenceFrom(15)));
+  assert.match(size.getAttribute("aria-label"), /circumference/);
+  assert.equal(commands.calls.length, 1, "switching the way it is entered sent something");
+});
+
+test("the size converts both ways without drift: a typed diameter comes back as typed, and nothing is not a size", () => {
+  for (const d of [15, 14.5, 18.25, 22]) assert.equal(actions.diameterFrom(actions.circumferenceFrom(d)), d);
+  assert.equal(actions.circumferenceFrom(0), 0);
+  assert.equal(actions.diameterFrom(0), 0);
+  assert.equal(actions.diameterFrom("x"), 0);
+  assert.ok(Math.abs(actions.circumferenceFrom(15) - 47.124) < 1e-9);
 });
 
 test("a refusal keeps the draft, marks the field and says the application's words on the row; a good entry clears them", () => {
@@ -752,6 +794,7 @@ test("a hopper id picks its row, Shift a run within the layer, the layer's name 
   assert.ok(rowOf(view, "A:2").classList.contains("is-picked"));
   assert.ok(!fill.hasAttribute("hidden"));
   assert.equal(view.element.querySelector(".slate-recipe__fill-count").textContent, "3 selected");
+  assert.ok(view.element.querySelector("[data-slate-weights-fill='clear']").classList.contains("is-lit"), "several picks left Clear selection unlit");
   click(view.element.querySelector(".slate-weights__layer[data-layer='B'] .slate-weights__layer-name"));
   assert.equal(view.bulk().picked.length, 7);
   // Nothing to fill says so.
@@ -767,6 +810,7 @@ test("a hopper id picks its row, Shift a run within the layer, the layer's name 
   click(view.element.querySelector("[data-slate-weights-fill='clear']"));
   assert.deepEqual(view.bulk().picked, []);
   assert.ok(fill.hasAttribute("hidden"));
+  assert.ok(!view.element.querySelector("[data-slate-weights-fill='clear']").classList.contains("is-lit"));
   click(bulkDo(view, "apply"));
   assert.equal(commands.calls.length, 1);
   assert.equal(commands.calls[0].command, "setHopperWeights");

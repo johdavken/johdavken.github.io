@@ -77,6 +77,7 @@
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
   const guideModule = root.PolynSlateGuide;
+  const weightsGuideModule = root.PolynSlateWeightsGuide;
   const adminActions = root.PolynSlateAdminActions;
   const workspacesModule = root.PolynSlateWorkspaces;
   const lineConfigModule = root.PolynSlateLineConfig;
@@ -318,13 +319,18 @@
   }
 
   /* The header names the centre's section - or, on a phone, the page laid
-   * over it: the Timeline or the tool in its place. */
+   * over it: the Timeline or the tool in its place. The Recipe, Slate's
+   * standing page, goes unnamed: the header row keeps its height, so
+   * nothing moves when another section's name comes and goes. */
   function paintTitle() {
     const title = container ? container.querySelector(".slate-header__title") : null;
     if (!title || !sections) return;
     const over = asideOpen && page() && panes.aside ? panes.aside.swap.current() : null;
     const showing = over || sections.current();
-    if (showing) title.textContent = showing.label;
+    if (!showing) return;
+    title.textContent = showing.label;
+    if (showing.id === DEFAULT_SECTION) title.setAttribute("hidden", "");
+    else title.removeAttribute("hidden");
   }
 
   /* A key on the phone's bar. */
@@ -570,8 +576,6 @@
       // A desktop's Recipe: the always-open form, Compare always on (slate-recipe.js).
       desktop: () => tierNow().input !== "touch",
       scan: scanner(),
-      // The floor UI's address, for the way back at the foot of Settings.
-      legacy: () => { const link = container.querySelector(".slate-header__legacy"); return link ? link.getAttribute("href") : "?view=legacy"; },
       // The Timeline's "No weight" on a phone: the Weights page, over it.
       openWeights: () => { setAside(false); if (sections) sections.show("weights"); }
     });
@@ -627,7 +631,16 @@
       })) },
       // How to Use: a short guide to a changeover, under Resin Balance and
       // in the aside as it is.
-      ...(guideModule ? [{ id: "guide", label: guideModule.TITLE, group: "sections", pane: "aside", icon: "guide", create: (d, c) => guideModule.create(d, Object.assign({}, c, { back: () => home("aside") })) }] : []),
+      ...(guideModule ? [{ id: "guide", label: guideModule.TITLE, group: "sections", pane: "aside", icon: "guide", create: (d, c) => guideModule.create(d, Object.assign({}, c, {
+        back: () => home("aside"),
+        more: weightsGuideModule ? () => panes.aside.swap.show("weights-guide") : null
+      })) }] : []),
+      // Hopper Weights Configuration: How to Use's specifics, reached from
+      // it and swapped into the same place; the rail lists it nowhere.
+      ...(weightsGuideModule ? [{ id: "weights-guide", label: weightsGuideModule.TITLE, group: "aside", pane: "aside", icon: "guide", create: (d, c) => weightsGuideModule.create(d, Object.assign({}, c, {
+        back: () => home("aside"),
+        guide: () => panes.aside.swap.show("guide")
+      })) }] : []),
       // The administrator's three. Listed under Resin Balance and marked
       // `admin`, so the rail keeps them off an operator's rail until one
       // is signed in; they are built with the rest and read nothing until

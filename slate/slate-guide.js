@@ -28,11 +28,15 @@
     Object.freeze({ title: "Enter the next job", body: "Switch to Next and enter the job traveler the same way, or scan it with a phone. Or Copy current → Next and change only what differs." }),
     Object.freeze({ title: "Changes track themselves", body: "Every hopper whose resin changes is tracked, and shows on the Timeline at the time to turn its pump off." }),
     Object.freeze({ title: "Plan the blend change", body: "On Next, each hopper also shows what's in it now. Drag one by the bar at its foot to move or swap it: stack resins that run well together, and keep ones staying in the blend where they are.", drawing: "drag" }),
-    Object.freeze({ title: "Edit several at once", body: "Click hopper ids to select them - Shift for a run, a layer's name for the whole layer - enter a resin or blend, Fill, then Apply." }),
+    Object.freeze({ title: "Edit several at once", body: "Click hopper ids to select them - Shift for a run, a layer's name for the whole layer - enter a resin or blend and Fill, or Empty to blank them. Then Apply." }),
     Object.freeze({ title: "Print the hookups", body: "Print → Next makes a sheet for whoever hooks up the line." }),
     Object.freeze({ title: "Run it down", body: "When a Timeline card comes due, turn that hopper's pump off and press Off. Press Back on once it's hooked up again." }),
     Object.freeze({ title: "Finish", body: "Once the new job runs, Promote Next → Current, then Reset tracking." })
   ]);
+
+  /* The way on to the specifics, under Good to know (slate-weights-guide.js). */
+  const MORE_TEXT = "Want the specifics of how hopper weights are configured - Smart Hoppers, volume, bulk density?";
+  const MORE_LINK = "Hopper Weights Configuration →";
 
   const NOTES = Object.freeze([
     Object.freeze({ title: "Ran out", body: "A hopper ran dry before its time? On its row at the Timeline's foot press Ran out, set when, then Apply and Confirm. Slate corrects that hopper's weight, so the next run-down is on time." })
@@ -88,10 +92,12 @@
    * @param {Document} doc
    * @param {object} [ctx]
    * @param {function} [ctx.back]  hand the aside back to the Timeline
+   * @param {function} [ctx.more]  open Hopper Weights Configuration in its place
    */
   function create(doc, ctx) {
     const settings = ctx || {};
     const back = typeof settings.back === "function" ? settings.back : () => {};
+    const more = typeof settings.more === "function" ? settings.more : null;
 
     const rootEl = element(doc, "section", "slate-panel slate-guide", { "aria-label": TITLE });
     const head = element(doc, "div", "slate-panel__head");
@@ -126,10 +132,18 @@
       notes.appendChild(pair);
     }
     body.appendChild(notes);
+    if (more) {
+      const onward = element(doc, "p", "slate-guide__more");
+      onward.appendChild(text(doc, "span", "slate-guide__text", `${MORE_TEXT} `));
+      const link = text(doc, "button", "slate-guide__link", MORE_LINK, { type: "button", "data-slate-guide": "weights" });
+      link.addEventListener("click", () => more());
+      onward.appendChild(link);
+      body.appendChild(onward);
+    }
     rootEl.appendChild(body);
 
     return Object.freeze({ element: rootEl });
   }
 
-  return Object.freeze({ TITLE, CLOSE_LABEL, STEPS, NOTES, create });
+  return Object.freeze({ TITLE, CLOSE_LABEL, STEPS, NOTES, MORE_TEXT, MORE_LINK, create });
 });
