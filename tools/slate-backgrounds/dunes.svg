@@ -1,0 +1,26 @@
+<!-- A Slate background's source (render.js). Dunes: sand ridges as
+     overlapping curves, each lit along its crest and shaded behind,
+     blurred until only the soft light remains. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9d7bb"/>
+      <stop offset="1" stop-color="#c9a47a"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3dfbf"/>
+      <stop offset="0.35" stop-color="#b98a5c"/>
+      <stop offset="1" stop-color="#7a5536"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <g filter="url(#soft)">
+    <path d="M-100 380 C 200 300, 420 460, 760 380 S 1300 260, 1700 360 L 1700 1100 L -100 1100 Z" fill="url(#ridge)" opacity="0.75"/>
+    <path d="M-100 560 C 260 470, 520 640, 880 560 S 1400 470, 1700 580 L 1700 1100 L -100 1100 Z" fill="url(#ridge)" opacity="0.85"/>
+    <path d="M-100 760 C 300 660, 640 840, 1000 750 S 1450 680, 1700 780 L 1700 1100 L -100 1100 Z" fill="url(#ridge)"/>
+    <path d="M-100 920 C 340 850, 700 990, 1080 910 S 1500 870, 1700 940 L 1700 1100 L -100 1100 Z" fill="url(#ridge)"/>
+  </g>
+</svg>

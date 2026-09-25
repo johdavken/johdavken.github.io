@@ -47,27 +47,6 @@
   flex: none;
 }
 
-/* Read-only: a badge that opens Settings. */
-.slate-root .slate-header__readonly {
-  flex: none;
-  padding: var(--slate-space-1) var(--slate-space-3);
-  border: var(--slate-stroke) solid var(--slate-warning);
-  border-radius: 999px;
-  background: var(--slate-warning-soft);
-  color: var(--slate-warning);
-  font-size: var(--slate-text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
-}
-
-@media (hover: hover) {
-  .slate-root .slate-header__readonly:hover {
-    background: var(--slate-surface-hover);
-  }
-}
-
 /* ---- Touch (data-input="touch" on the root) ---- */
 
 .slate-root[data-input="touch"] .slate-header__legacy {
@@ -76,10 +55,6 @@
   min-height: var(--slate-tap);
   padding: 0 var(--slate-space-2);
   text-decoration: underline;
-}
-
-.slate-root[data-input="touch"] .slate-header__readonly {
-  min-height: 36px;
 }
 
 /* A problem with the page is read whole: two lines rather than an

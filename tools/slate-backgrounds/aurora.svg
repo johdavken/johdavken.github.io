@@ -1,0 +1,23 @@
+<!-- A Slate background's source (render.js turns it into the JPEG Slate
+     loads). Aurora: long ribbons of noise, stretched sideways and swirled,
+     mapped through tables that climb from night blue through green to
+     violet, so brightness changes the hue as well as the light. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <filter id="aurora" filterUnits="userSpaceOnUse" x="-300" y="-300" width="2200" height="1600" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0009 0.0042" numOctaves="5" seed="31" result="noise"/>
+    <feDisplacementMap in="noise" in2="noise" scale="420" xChannelSelector="G" yChannelSelector="B" result="swirl"/>
+    <feColorMatrix in="swirl" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1"/>
+    <feComponentTransfer>
+      <feFuncR type="linear" slope="2.4" intercept="-0.7"/>
+      <feFuncG type="linear" slope="2.4" intercept="-0.7"/>
+      <feFuncB type="linear" slope="2.4" intercept="-0.7"/>
+    </feComponentTransfer>
+    <feComponentTransfer>
+      <feFuncR type="table" tableValues="0.03 0.05 0.10 0.30 0.62"/>
+      <feFuncG type="table" tableValues="0.05 0.22 0.62 0.55 0.40"/>
+      <feFuncB type="table" tableValues="0.12 0.28 0.45 0.70 0.88"/>
+    </feComponentTransfer>
+    <feGaussianBlur stdDeviation="4"/>
+  </filter>
+  <rect x="-300" y="-300" width="2200" height="1600" filter="url(#aurora)"/>
+</svg>

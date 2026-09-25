@@ -1,0 +1,63 @@
+/* Slate theme: Ristretto Dark.
+ *
+ * Monokai Pro's Ristretto filter on Slate's semantic contract: espresso
+ * surfaces, rose-white text, the palette's gold for the accent, its green
+ * and cyan for the statuses that are not warnings, its coral and pink for
+ * the ones that are, its periwinkle for a pumped-off hopper. The only
+ * family whose dark half is brown rather than navy or grey, and the only
+ * gold accent. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="ristretto-dark"],
+.slate-theme-scope[data-theme="ristretto-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #211c1c;
+  --slate-surface: #2c2525;
+  --slate-surface-raised: #342c2c;
+  --slate-surface-sunken: #191515;
+  --slate-surface-hover: #3b3232;
+  --slate-surface-selected: #4a3c36;
+
+  --slate-text: #fff1f3;
+  --slate-text-muted: #c3b7b8;
+  --slate-text-faint: #b3a7a8;
+  --slate-text-disabled: #72696a;
+  --slate-text-on-accent: #2c2525;
+
+  --slate-border-subtle: #403838;
+  --slate-border: #857a7a;
+  --slate-border-strong: #948a8b;
+  --slate-focus-ring: #f9cc6c;
+
+  --slate-accent: #f9cc6c;
+  --slate-accent-text: #f9cc6c;
+  --slate-accent-hover: #ffd98a;
+  --slate-accent-active: #e8b955;
+  --slate-accent-soft: rgba(249, 204, 108, 0.16);
+  --slate-pump-off-soft: rgba(168, 169, 235, 0.16);
+
+  --slate-success: #adda78;
+  --slate-warning: #f7987c;
+  --slate-danger: #ff7a93;
+  --slate-info: #85dacc;
+  --slate-success-soft: rgba(173, 218, 120, 0.14);
+  --slate-warning-soft: rgba(243, 141, 112, 0.12);
+  --slate-danger-soft: rgba(253, 104, 131, 0.12);
+
+  --slate-tracking: #adda78;
+  --slate-pump-off: #a8a9eb;
+  --slate-overdue: #ff7a93;
+  --slate-smart: #85dacc;
+
+  --slate-layer-outside: #85dacc;
+  --slate-layer-subskin: #adda78;
+  --slate-layer-core: #f38d70;
+  --slate-layer-inside: #a8a9eb;
+  --slate-layer-single: #948a8b;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.56);
+  --slate-scrim: rgba(0, 0, 0, 0.6);
+  --slate-qr-surface: #fff1f3;
+}

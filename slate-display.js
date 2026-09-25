@@ -5,18 +5,35 @@
  * slate-theme.js - it validates the stored value, tells interested Slate
  * UI (Settings, the boot) when it changes, and writes nothing else.
  *
- * READ-ONLY
+ * READ-ONLY (retired)
  *
- * RT Sync knows owners and members, and every member may write. Read-only
- * is therefore Slate's own promise: with it on, Slate withholds the
- * command bridge from its controls, so nothing done in Slate can change
- * the line's job. The preference is three-valued. `null` is automatic -
- * read-only whenever a line is linked, writable on the device's own local
- * session. `true`/`false` are the operator's explicit choice either way,
- * and `false` is the default: a fresh device is writable. A record that
- * holds `null` chose automatic and keeps it; only a record without the
- * key reads the default. The EFFECTIVE mode (automatic resolved against
- * the line) is the boot's to compute; this only keeps the preference.
+ * Slate once kept a read-only preference here (on, off, or automatic -
+ * read-only whenever a line was linked). It is gone: Slate is always
+ * writable where the bridge allows. A record saved with a `readOnly` key
+ * reads as an unknown key and is dropped on the next write, so a device
+ * that chose On or Automatic is not left locked.
+ *
+ * BACKGROUND
+ *
+ * A soft picture behind Slate, as a translucent window shows the
+ * wallpaper behind it: `none`, the default, or one of seven pictures
+ * (slate/images/backgrounds, drawn by tools/slate-backgrounds) - smoke,
+ * ember, tide, aurora and dunes belong to no theme; hearth is made for
+ * Gruvbox and horizon for Retro 82, though any theme may wear them. The boot writes the word onto the root as
+ * data-background and components/background.css lays the picture over the
+ * page, faintly, with every press passing through it.
+ *
+ * HANDLING
+ *
+ * How a hopper's card moves while it is dragged (components/recipe-edit.css):
+ * `lift`, the default, raises it off the page and swells the cell it would
+ * land on; `tilt` lifts it and leans it the way it is carried; `float`
+ * bobs it; `glow` keeps it flat and breathes its edge; `glass` frosts it;
+ * `stamp` (made for Gruvbox) is flat with a hard offset shadow; `neon`
+ * (made for Retro 82) lights its edge and lays scan lines over it; `still`
+ * does none of it. Written
+ * onto the root as data-drag-motion. A reduced-motion device gets still
+ * whatever is chosen.
  *
  * TRACKING
  *
@@ -27,24 +44,22 @@
  * the word; what it means is slate-tracking.js's, and the dispatching is
  * the recipe's.
  *
- * LAYERS
+ * LAYOUT
  *
- * Where a layer's head - its name, role and share - stands on the Recipe
- * page. `grid`, the default, makes every layer a row of self-contained
- * cells, one per hopper, the positions lined up down the page; `left`
- * keeps the head in a column beside the layer's hoppers, one layer under
- * another; `top` puts it above them and lays the layers side by side,
- * wrapping when there are more than fit. A record saved without a layout
- * reads `grid`; an operator's Left or Top is kept.
- * The boot writes the word onto the Slate root as data-layers and the
- * sheets do the rest: nothing is rebuilt, so an open editor or a drag in
- * flight outlives the switch.
+ * One choice for both the Recipe and the Weights pages. Both are the Grid
+ * - every layer's hoppers as self-contained cells, positions lined up -
+ * and this says where a layer's head stands. `grid`, the default, puts it
+ * at the start of the layer's row, one row under another, the cells
+ * sharing the width. `grid-top` puts it on top: every layer a column, its
+ * cells stacked under its head at a fixed width, the columns centred. The
+ * boot writes the Grid onto the root as data-layers / data-weights-layers
+ * and the head's place as data-grid-heads; the sheets do the rest and
+ * nothing is rebuilt, so an open editor or a drag in flight outlives the
+ * switch. A phone keeps its own layout whatever is chosen.
  *
- * WEIGHTS LAYOUT
- *
- * The same three words for the Weights page, chosen apart from the
- * Recipe's: `grid`, the default, `left` or `top`. Written onto the root
- * as data-weights-layers; nothing is rebuilt either.
+ * The Left and Top layouts were once chosen here too, per page (the
+ * retired `layers` and `weightsLayers` keys). A record holding them reads
+ * as unknown keys, dropped on the next write, and opens on the Grid.
  *
  * LAYER ORDER
  *
@@ -62,13 +77,13 @@
  * Timeline reads the word on every refresh and redraws; its rows are
  * kept and moved, never rebuilt.
  *
- * INPUT
+ * INPUT (retired)
  *
- * Whether Slate draws for a finger or a mouse. `auto`, the default, is
- * touch on a coarse primary pointer or inside the Android app, pointer
- * otherwise; `touch` and `pointer` are the operator's choice either way.
- * This keeps the word; what it resolves to is slate/slate-tier.js's, and
- * the boot writes the result onto the root as data-input.
+ * Whether Slate draws for a finger or a mouse was once a choice here too
+ * (`auto`, `touch` or `pointer`). It is always automatic now - touch on a
+ * coarse primary pointer or inside the Android app, pointer otherwise
+ * (slate/slate-tier.js) - and a record holding the old `input` key reads
+ * it as unknown and drops it on the next write.
  *
  * HOST
  *
@@ -87,29 +102,27 @@
   "use strict";
 
   const STORAGE_KEY = "polyn.slate.display.v1";
-  const DEFAULTS = Object.freeze({ readOnly: false, tracking: "automatic", layers: "grid", weightsLayers: "grid", layerOrder: "forward", timeline: "realtime", input: "auto", host: "auto" });
+  const DEFAULTS = Object.freeze({ background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
-  const READ_ONLY_MODES = Object.freeze(["auto", "on", "off"]);
+  const BACKGROUNDS = Object.freeze(["none", "smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"]);
+  const HANDLINGS = Object.freeze(["lift", "tilt", "float", "glow", "glass", "stamp", "neon", "still"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
-  const LAYER_ORIENTATIONS = Object.freeze(["left", "top", "grid"]);
+  const LAYOUTS = Object.freeze(["grid", "grid-top"]);
   const LAYER_ORDERS = Object.freeze(["forward", "reversed"]);
   const TIMELINE_VIEWS = Object.freeze(["realtime", "list"]);
-  const INPUT_MODES = Object.freeze(["auto", "touch", "pointer"]);
   const HOST_CHOICES = Object.freeze(["auto", "slate", "legacy"]);
 
   /* A stored value, or anything else, to a full set of preferences:
-   * every key present, unknown keys dropped, a bad value its default. A
-   * stored null under readOnly is the automatic choice, kept as such. */
+   * every key present, unknown keys dropped, a bad value its default. */
   function normalize(value) {
     const source = value && typeof value === "object" ? value : {};
     return {
-      readOnly: typeof source.readOnly === "boolean" ? source.readOnly : (source.readOnly === null && "readOnly" in source ? null : DEFAULTS.readOnly),
+      background: BACKGROUNDS.includes(source.background) ? source.background : DEFAULTS.background,
+      handling: HANDLINGS.includes(source.handling) ? source.handling : DEFAULTS.handling,
       tracking: TRACKING_MODES.includes(source.tracking) ? source.tracking : DEFAULTS.tracking,
-      layers: LAYER_ORIENTATIONS.includes(source.layers) ? source.layers : DEFAULTS.layers,
-      weightsLayers: LAYER_ORIENTATIONS.includes(source.weightsLayers) ? source.weightsLayers : DEFAULTS.weightsLayers,
+      layout: LAYOUTS.includes(source.layout) ? source.layout : DEFAULTS.layout,
       layerOrder: LAYER_ORDERS.includes(source.layerOrder) ? source.layerOrder : DEFAULTS.layerOrder,
       timeline: TIMELINE_VIEWS.includes(source.timeline) ? source.timeline : DEFAULTS.timeline,
-      input: INPUT_MODES.includes(source.input) ? source.input : DEFAULTS.input,
       host: HOST_CHOICES.includes(source.host) ? source.host : DEFAULTS.host
     };
   }
@@ -134,17 +147,14 @@
     }
   }
 
-  /* The preference as a word, and back. */
-  function modeOf(readOnly) {
-    if (readOnly === true) return "on";
-    if (readOnly === false) return "off";
-    return "auto";
+  /* A background, or the default for anything that is not one. */
+  function backgroundOf(value) {
+    return BACKGROUNDS.includes(value) ? value : DEFAULTS.background;
   }
 
-  function readOnlyOf(mode) {
-    if (mode === "on" || mode === true) return true;
-    if (mode === "off" || mode === false) return false;
-    return null;
+  /* A handling, or the default for anything that is not one. */
+  function handlingOf(value) {
+    return HANDLINGS.includes(value) ? value : DEFAULTS.handling;
   }
 
   /* A tracking mode, or the default for anything that is not one. */
@@ -152,14 +162,9 @@
     return TRACKING_MODES.includes(value) ? value : DEFAULTS.tracking;
   }
 
-  /* A layer orientation, or the default for anything that is not one. */
-  function layerOrientationOf(value) {
-    return LAYER_ORIENTATIONS.includes(value) ? value : DEFAULTS.layers;
-  }
-
-  /* The Weights page's layout, or its default for anything that is not one. */
-  function weightsLayoutOf(value) {
-    return LAYER_ORIENTATIONS.includes(value) ? value : DEFAULTS.weightsLayers;
+  /* A layout, or the default for anything that is not one. */
+  function layoutOf(value) {
+    return LAYOUTS.includes(value) ? value : DEFAULTS.layout;
   }
 
   /* A layer order, or the default for anything that is not one. */
@@ -172,20 +177,9 @@
     return TIMELINE_VIEWS.includes(value) ? value : DEFAULTS.timeline;
   }
 
-  /* An input mode, or the default for anything that is not one. */
-  function inputModeOf(value) {
-    return INPUT_MODES.includes(value) ? value : DEFAULTS.input;
-  }
-
   /* A host choice, or the default for anything that is not one. */
   function hostChoiceOf(value) {
     return HOST_CHOICES.includes(value) ? value : DEFAULTS.host;
-  }
-
-  /** The effective mode: the preference resolved against the line. */
-  function effectiveReadOnly(readOnly, linked) {
-    if (typeof readOnly === "boolean") return readOnly;
-    return !!linked;
   }
 
   function create(element, storage) {
@@ -207,21 +201,18 @@
     }
 
     return Object.freeze({
-      getReadOnly: () => current.readOnly,
-      getReadOnlyMode: () => modeOf(current.readOnly),
-      setReadOnly: value => apply({ readOnly: readOnlyOf(value) }).readOnly,
+      getBackground: () => current.background,
+      setBackground: value => apply({ background: backgroundOf(value) }).background,
+      getHandling: () => current.handling,
+      setHandling: value => apply({ handling: handlingOf(value) }).handling,
       getTrackingMode: () => current.tracking,
       setTrackingMode: value => apply({ tracking: trackingModeOf(value) }).tracking,
-      getLayerOrientation: () => current.layers,
-      setLayerOrientation: value => apply({ layers: layerOrientationOf(value) }).layers,
-      getWeightsLayout: () => current.weightsLayers,
-      setWeightsLayout: value => apply({ weightsLayers: weightsLayoutOf(value) }).weightsLayers,
+      getLayout: () => current.layout,
+      setLayout: value => apply({ layout: layoutOf(value) }).layout,
       getLayerOrder: () => current.layerOrder,
       setLayerOrder: value => apply({ layerOrder: layerOrderOf(value) }).layerOrder,
       getTimelineView: () => current.timeline,
       setTimelineView: value => apply({ timeline: timelineViewOf(value) }).timeline,
-      getInputMode: () => current.input,
-      setInputMode: value => apply({ input: inputModeOf(value) }).input,
       getHostChoice: () => current.host,
       setHostChoice: value => apply({ host: hostChoiceOf(value) }).host,
       subscribe(listener) {
@@ -247,5 +238,5 @@
     return create(element, storage);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULTS, READ_ONLY_MODES, TRACKING_MODES, LAYER_ORIENTATIONS, LAYER_ORDERS, TIMELINE_VIEWS, INPUT_MODES, HOST_CHOICES, normalize, read, modeOf, readOnlyOf, trackingModeOf, layerOrientationOf, weightsLayoutOf, layerOrderOf, timelineViewOf, inputModeOf, hostChoiceOf, effectiveReadOnly, create, readFrom, initialize });
+  return Object.freeze({ STORAGE_KEY, DEFAULTS, BACKGROUNDS, HANDLINGS, TRACKING_MODES, LAYOUTS, LAYER_ORDERS, TIMELINE_VIEWS, HOST_CHOICES, normalize, read, backgroundOf, handlingOf, trackingModeOf, layoutOf, layerOrderOf, timelineViewOf, hostChoiceOf, create, readFrom, initialize });
 });

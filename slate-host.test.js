@@ -182,7 +182,7 @@ test("the theme is restored onto the host before it is appended, and falls back 
 
 test("the display preferences are restored onto the host the same way, and their absence is survived", () => {
   const calls = [];
-  const display = { initialize(element, environment) { calls.push({ element, environment }); return { getReadOnly: () => null }; } };
+  const display = { initialize(element, environment) { calls.push({ element, environment }); return { getTrackingMode: () => "automatic" }; } };
   const themed = run(ACTIVE, { display });
   const host = themed.body.children[0];
   assert.equal(calls.length, 1);

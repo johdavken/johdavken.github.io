@@ -149,33 +149,307 @@
 .slate-hopper.is-drop-target {
   background: var(--slate-accent-soft);
   box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+  transition: scale var(--slate-motion-drop) var(--slate-motion-ease);
 }
 
+/* In the Grid a cell wears its own fill and edge (recipe.css), which the
+   marks above cannot reach: the cell a card would land on takes the
+   accent's edge and tint, and the one it was lifted from stands dashed,
+   a place held open. */
+.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-drop-target {
+  border-color: var(--slate-accent);
+  background: linear-gradient(var(--slate-accent-soft) 0 0), var(--slate-surface-raised);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-dragging {
+  border-style: dashed;
+  border-color: var(--slate-border);
+  box-shadow: none;
+}
+
+/* The proxy follows the pointer and is nothing to look at: the card
+   inside it is the lifted assignment, a tile laid out as the Grid's cell
+   is - the id and blend on the first line, the resin large under them -
+   at the cell's own size. */
 .slate-drag-proxy {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.slate-drag-proxy__card {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "id pct"
+    "resin resin";
+  align-content: start;
   align-items: center;
-  gap: var(--slate-space-3);
-  padding: var(--slate-space-2) var(--slate-space-3);
+  gap: 2px var(--slate-space-1);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: var(--slate-space-2);
   border: var(--slate-stroke) solid var(--slate-accent);
   border-radius: var(--slate-radius);
   background: var(--slate-surface-raised);
   box-shadow: var(--slate-shadow-pop);
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  will-change: transform;
+  transform-origin: 50% 40%;
 }
 
 .slate-drag-proxy__id {
-  font-weight: 600;
+  grid-area: id;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
 }
 
 .slate-drag-proxy__pct {
-  text-align: right;
+  grid-area: pct;
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.slate-drag-proxy__resin {
+  grid-area: resin;
+  overflow: hidden;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Handling: how the card moves while it is held ----
+   The Handling preference (data-drag-motion on the root, slate-display.js).
+   Lift, the default, raises the card off the page and swells the cell it
+   would land on. Tilt lifts it too and leans it the way it is carried
+   (--slate-drag-sway, from slate-recipe-drag.js), as a card held by one
+   corner. Glow keeps it flat and breathes its edge in the accent, and the
+   cell under it answers. Float bobs it gently, and it settles over a
+   hopper. Glass makes it frosted, the page blurred through it. Stamp is
+   Gruvbox's: a flat card with a hard offset shadow in the theme's yellow,
+   lifted in steps as an old screen would, pressing down over a hopper.
+   Neon is Retro 82's: an edge lit in the accent and a cyan halo, scan
+   lines across the card, the text split red and cyan, a flicker as it
+   switches on. Colours come from the live theme's tokens, so each works
+   on any theme. Still does none of it. */
+
+.slate-root[data-drag-motion="lift"] .slate-drag-proxy__card,
+.slate-root[data-drag-motion="tilt"] .slate-drag-proxy__card {
+  animation: slate-drag-lift var(--slate-motion-move) var(--slate-motion-ease) both;
+}
+
+.slate-root[data-drag-motion="tilt"] .slate-drag-proxy__card {
+  rotate: var(--slate-drag-sway, 0deg);
+  transition: rotate var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root[data-drag-motion="lift"] .slate-hopper.is-drop-target,
+.slate-root[data-drag-motion="tilt"] .slate-hopper.is-drop-target {
+  scale: 1.03;
+}
+
+.slate-root[data-drag-motion="glow"] .slate-drag-proxy__card {
+  animation: slate-drag-glow 1.4s ease-in-out infinite;
+}
+
+.slate-root[data-drag-motion="glow"] .slate-hopper.is-drop-target {
+  animation: slate-drag-answer 1.4s ease-in-out infinite;
+}
+
+/* Float */
+
+.slate-root[data-drag-motion="float"] .slate-drag-proxy__card {
+  scale: 1.04;
+  animation: slate-drag-float 1.6s ease-in-out infinite;
+  transition: translate var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root[data-drag-motion="float"] .slate-drag-proxy__card.is-over {
+  animation: none;
+  translate: 0 0;
+}
+
+.slate-root[data-drag-motion="float"] .slate-hopper.is-drop-target {
+  scale: 1.02;
+}
+
+/* Glass */
+
+.slate-root[data-drag-motion="glass"] .slate-drag-proxy__card {
+  border-color: color-mix(in srgb, var(--slate-text) 28%, transparent);
+  background: color-mix(in srgb, var(--slate-surface-raised) 45%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  animation: slate-drag-appear var(--slate-motion-move) var(--slate-motion-ease) both;
+}
+
+.slate-root[data-drag-motion="glass"] .slate-drag-proxy__card.is-over {
+  border-color: var(--slate-accent);
+}
+
+/* Stamp - made for Gruvbox */
+
+.slate-root[data-drag-motion="stamp"] .slate-drag-proxy__card {
+  border: 2px solid var(--slate-text);
+  border-radius: var(--slate-radius-sm);
+  box-shadow: 6px 6px 0 var(--slate-warning);
+  /* Backwards, not both: once lifted the card is its own rules, so it
+     can press down over a hopper. */
+  animation: slate-drag-stamp 240ms steps(3, end) backwards;
+  transition: translate 90ms steps(2, end), box-shadow 90ms steps(2, end);
+}
+
+.slate-root[data-drag-motion="stamp"] .slate-drag-proxy__card.is-over {
+  translate: 4px 4px;
+  box-shadow: 2px 2px 0 var(--slate-warning);
+}
+
+/* Over the Grid's own mark (above), which it must out-rank. */
+.slate-root[data-drag-motion="stamp"] .slate-hopper[data-recipe].is-drop-target {
+  border-style: solid;
+  border-color: var(--slate-warning);
+  box-shadow: inset 0 0 0 2px var(--slate-warning);
+}
+
+/* Neon - made for Retro 82 */
+
+.slate-root[data-drag-motion="neon"] .slate-drag-proxy__card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--slate-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--slate-accent) 70%, transparent), 0 0 28px color-mix(in srgb, var(--slate-success) 45%, transparent);
+  text-shadow: -1px 0 color-mix(in srgb, var(--slate-danger) 80%, transparent), 1px 0 color-mix(in srgb, var(--slate-success) 80%, transparent);
+  animation: slate-drag-flicker 420ms linear both;
+}
+
+.slate-root[data-drag-motion="neon"] .slate-drag-proxy__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--slate-text) 7%, transparent) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+
+.slate-root[data-drag-motion="neon"] .slate-drag-proxy__card.is-over {
+  box-shadow: 0 0 14px var(--slate-accent), 0 0 36px color-mix(in srgb, var(--slate-success) 60%, transparent);
+}
+
+.slate-root[data-drag-motion="neon"] .slate-hopper[data-recipe].is-drop-target {
+  border-color: var(--slate-success);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-success), 0 0 12px color-mix(in srgb, var(--slate-success) 55%, transparent);
+}
+
+@keyframes slate-drag-lift {
+  from {
+    scale: 1;
+    box-shadow: var(--slate-shadow-card);
+  }
+
+  to {
+    scale: 1.05;
+    box-shadow: var(--slate-shadow-pop);
+  }
+}
+
+@keyframes slate-drag-glow {
+  0%,
+  100% {
+    box-shadow: var(--slate-shadow-pop), 0 0 0 0 var(--slate-accent-soft);
+  }
+
+  50% {
+    box-shadow: var(--slate-shadow-pop), 0 0 0 6px var(--slate-accent-soft);
+  }
+}
+
+@keyframes slate-drag-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes slate-drag-appear {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes slate-drag-stamp {
+  from {
+    translate: 6px 6px;
+    box-shadow: 0 0 0 var(--slate-warning);
+  }
+
+  to {
+    translate: 0 0;
+    box-shadow: 6px 6px 0 var(--slate-warning);
+  }
+}
+
+@keyframes slate-drag-flicker {
+  0% {
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  20% {
+    opacity: 0.3;
+  }
+
+  34% {
+    opacity: 1;
+  }
+
+  42% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slate-drag-answer {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent), 0 0 0 0 var(--slate-accent-soft);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent), 0 0 0 5px var(--slate-accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root .slate-drag-proxy__card,
+  .slate-root .slate-hopper.is-drop-target {
+    animation: none;
+    transition: none;
+    rotate: none;
+    scale: none;
+    translate: none;
+  }
 }
 
 /* ---- The layer menu ---- */

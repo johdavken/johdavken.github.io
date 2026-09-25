@@ -1,0 +1,62 @@
+/* Slate theme: Ristretto Light.
+ *
+ * Monokai Pro Light as Ristretto's day half on Slate's semantic contract:
+ * blush-white surfaces, aubergine-black text, the palette's gold deepened
+ * to amber for the accent, and its green, cyan, orange and pink deepened
+ * until they read on paper. Same token set as yaru-light.css.
+ */
+.slate-root[data-theme="ristretto-light"],
+.slate-theme-scope[data-theme="ristretto-light"] {
+  color-scheme: light;
+  --slate-color-scheme: light;
+
+  --slate-bg: #efe6e3;
+  --slate-surface: #faf4f2;
+  --slate-surface-raised: #fffaf8;
+  --slate-surface-sunken: #e6dbd8;
+  --slate-surface-hover: #f1e7e4;
+  --slate-surface-selected: #eadbd2;
+
+  --slate-text: #29242a;
+  --slate-text-muted: #4f4a50;
+  --slate-text-faint: #5f595d;
+  --slate-text-disabled: #a59fa0;
+  --slate-text-on-accent: #ffffff;
+
+  --slate-border-subtle: #e3d8d5;
+  --slate-border: #c9bebb;
+  --slate-border-strong: #a59fa0;
+  --slate-focus-ring: #955805;
+
+  --slate-accent: #955805;
+  /* Text and filled controls have different contrast requirements. */
+  --slate-accent-text: #854e04;
+  --slate-accent-hover: #854e04;
+  --slate-accent-active: #744403;
+  --slate-accent-soft: rgba(204, 122, 10, 0.14);
+  --slate-pump-off-soft: rgba(112, 88, 190, 0.12);
+
+  --slate-success: #176843;
+  --slate-warning: #973d17;
+  --slate-danger: #b02a55;
+  --slate-info: #13677e;
+  --slate-success-soft: rgba(38, 157, 105, 0.12);
+  --slate-warning-soft: rgba(225, 96, 50, 0.13);
+  --slate-danger-soft: rgba(225, 71, 117, 0.12);
+
+  --slate-tracking: #176843;
+  --slate-pump-off: #5c46a6;
+  --slate-overdue: #b02a55;
+  --slate-smart: #13677e;
+
+  --slate-layer-outside: #1c8ca8;
+  --slate-layer-subskin: #269d69;
+  --slate-layer-core: #e16032;
+  --slate-layer-inside: #7058be;
+  --slate-layer-single: #706b6e;
+
+  --slate-shadow-card: 0 1px 2px rgba(41, 36, 42, 0.08);
+  --slate-shadow-pop: 0 10px 28px rgba(41, 36, 42, 0.22);
+  --slate-scrim: rgba(0, 0, 0, 0.4);
+  --slate-qr-surface: #ffffff;
+}

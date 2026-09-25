@@ -41,16 +41,6 @@
   display: none;
 }
 
-/* A line saying a piece of the section is still to come. */
-.slate-stub {
-  margin-bottom: var(--slate-space-4);
-  padding: var(--slate-space-2) var(--slate-space-3);
-  border: var(--slate-stroke) dashed var(--slate-border);
-  border-radius: var(--slate-radius);
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-sm);
-}
-
 @keyframes slate-section-enter {
   from {
     opacity: 0;

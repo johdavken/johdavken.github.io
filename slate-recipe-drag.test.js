@@ -80,9 +80,11 @@ test("past the threshold a proxy of the lifted values follows the pointer, the o
   assert.ok(list.classList.contains("is-moving"));
   // Over the origin itself: no target.
   assert.equal(handle.target(), null);
+  assert.ok(!proxy.querySelector(".slate-drag-proxy__card").classList.contains("is-over"));
   pointer("pointermove", handleOf(rows[0]), { clientX: 10, clientY: 50 });
   assert.ok(rows[1].classList.contains("is-drop-target"));
   assert.ok(handle.target() === rows[1]);
+  assert.ok(mount.querySelector(".slate-drag-proxy__card").classList.contains("is-over"), "over a hopper, the card did not say so");
   pointer("pointermove", handleOf(rows[0]), { clientX: 10, clientY: 210 });
   assert.ok(!rows[1].classList.contains("is-drop-target"), "the old target kept its mark");
   assert.ok(rows[3].classList.contains("is-drop-target"));
@@ -284,4 +286,39 @@ test("a hold that outlives its row - rebuilt under the finger - lifts nothing", 
   timers.advance(drag.HOLD_MS);
   assert.equal(handle.active(), false, "a badge lifted from a row no longer on the page");
   assert.equal(timers.pending(), 0);
+});
+
+test("the proxy is a card laid out as the Grid's cell - id, blend, then resin - inside a box that only follows the pointer", () => {
+  const { mount, rows, handle } = boot({ timers: makeTimers() });
+  pointer("pointerdown", handleOf(rows[0]), { clientX: 10, clientY: 10 });
+  pointer("pointermove", handleOf(rows[0]), { clientX: 10, clientY: 30 });
+  const proxy = mount.querySelector(".slate-drag-proxy");
+  const card = proxy.querySelector(".slate-drag-proxy__card");
+  assert.ok(card, "the proxy has no card");
+  assert.ok(card.parentNode === proxy);
+  assert.deepEqual(card.children.map(one => one.getAttribute("class")), ["slate-drag-proxy__id", "slate-drag-proxy__pct", "slate-drag-proxy__resin"]);
+  assert.deepEqual(card.children.map(one => one.textContent), ["A1", "60%", "HX204"]);
+  assert.match(proxy.style.transform, /^translate\(/);
+  assert.equal(card.style.transform || "", "", "the card moves with the pointer itself - its transform is the sheet's");
+  handle.cancel();
+});
+
+test("the card leans the way it is carried, no further than SWAY_MAX, and stands upright once the pointer rests", () => {
+  const timers = makeTimers();
+  const { mount, rows, handle } = boot({ timers });
+  pointer("pointerdown", handleOf(rows[0]), { clientX: 100, clientY: 10 });
+  pointer("pointermove", handleOf(rows[0]), { clientX: 100, clientY: 30 });
+  const card = mount.querySelector(".slate-drag-proxy__card");
+  const sway = () => parseFloat(card.style.getPropertyValue("--slate-drag-sway"));
+  assert.equal(sway(), 0, "a straight lift leaned");
+  pointer("pointermove", handleOf(rows[0]), { clientX: 120, clientY: 30 });
+  assert.ok(sway() > 0, "carried right, it did not lean right");
+  for (let x = 140; x < 800; x += 60) pointer("pointermove", handleOf(rows[0]), { clientX: x, clientY: 30 });
+  assert.ok(sway() <= drag.SWAY_MAX, `it leaned past the most: ${sway()}`);
+  pointer("pointermove", handleOf(rows[0]), { clientX: 700, clientY: 30 });
+  assert.ok(sway() < drag.SWAY_MAX, "carried back, it kept its lean");
+  timers.advance(drag.SWAY_REST_MS);
+  assert.equal(sway(), 0, "at rest it did not stand up");
+  handle.cancel();
+  assert.equal(timers.pending(), 0, "a cancelled drag left its rest timer behind");
 });

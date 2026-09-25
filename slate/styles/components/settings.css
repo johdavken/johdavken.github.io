@@ -272,7 +272,7 @@
   inset: -10px -8px;
 }
 
-/* ---- Safety: the read-only mode ---- */
+/* ---- Mode groups: a lead and a row of radio cards ---- */
 
 .slate-settings__lead {
   max-width: 60ch;
@@ -471,7 +471,7 @@
   padding: 0 var(--slate-space-5);
 }
 
-/* A phone stands the layers on top whatever is chosen (slate.js): the
+/* A phone keeps its own layout whatever is chosen (slate.js): the
    Layout group has nothing to offer there. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__group--layout {
   display: none;
@@ -495,15 +495,4 @@
   min-height: var(--slate-tap);
   color: var(--slate-text-muted);
   text-decoration: underline;
-}
-
-/* The Recipe's Layout: a desktop's Recipe is always the Grid (slate.js),
-   so the choice is a finger's only - and a phone's rule above still
-   withholds it there. */
-.slate-settings__group--recipe-layout {
-  display: none;
-}
-
-.slate-root[data-input="touch"] .slate-settings__group--recipe-layout {
-  display: block;
 }

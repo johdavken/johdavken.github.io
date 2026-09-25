@@ -1,0 +1,43 @@
+<!-- A Slate background's source (render.js). Hearth, made for Gruvbox:
+     out-of-focus lights in the palette's yellow, orange, aqua, blue, pink,
+     green and red over its dark warm grey - a fire seen through a window. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <radialGradient id="glow" cx="0.35" cy="0.7" r="0.9">
+      <stop offset="0" stop-color="#3c3836"/>
+      <stop offset="1" stop-color="#1d2021"/>
+    </radialGradient>
+    <filter id="bokeh" filterUnits="userSpaceOnUse" x="-300" y="-300" width="2200" height="1600">
+      <feGaussianBlur stdDeviation="38"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#glow)"/>
+  <g filter="url(#bokeh)">
+    <circle cx="563" cy="208" r="161" fill="#fabd2f" opacity="0.54"/>
+    <circle cx="48" cy="997" r="84" fill="#fe8019" opacity="0.41"/>
+    <circle cx="18" cy="939" r="114" fill="#8ec07c" opacity="0.27"/>
+    <circle cx="788" cy="756" r="77" fill="#83a598" opacity="0.36"/>
+    <circle cx="1028" cy="769" r="75" fill="#d3869b" opacity="0.62"/>
+    <circle cx="153" cy="357" r="221" fill="#b8bb26" opacity="0.53"/>
+    <circle cx="26" cy="1081" r="209" fill="#fb4934" opacity="0.43"/>
+    <circle cx="352" cy="-5" r="202" fill="#fabd2f" opacity="0.64"/>
+    <circle cx="493" cy="758" r="96" fill="#fe8019" opacity="0.49"/>
+    <circle cx="1069" cy="531" r="203" fill="#fabd2f" opacity="0.62"/>
+    <circle cx="270" cy="111" r="208" fill="#fe8019" opacity="0.51"/>
+    <circle cx="284" cy="662" r="84" fill="#8ec07c" opacity="0.5"/>
+    <circle cx="28" cy="1055" r="75" fill="#83a598" opacity="0.53"/>
+    <circle cx="916" cy="988" r="169" fill="#d3869b" opacity="0.6"/>
+    <circle cx="853" cy="1099" r="176" fill="#b8bb26" opacity="0.41"/>
+    <circle cx="408" cy="268" r="122" fill="#fb4934" opacity="0.29"/>
+    <circle cx="514" cy="975" r="186" fill="#fabd2f" opacity="0.64"/>
+    <circle cx="1393" cy="819" r="133" fill="#fe8019" opacity="0.52"/>
+    <circle cx="49" cy="141" r="191" fill="#fabd2f" opacity="0.44"/>
+    <circle cx="1450" cy="600" r="98" fill="#fe8019" opacity="0.67"/>
+    <circle cx="763" cy="-20" r="79" fill="#8ec07c" opacity="0.59"/>
+    <circle cx="1073" cy="542" r="147" fill="#83a598" opacity="0.56"/>
+    <circle cx="1117" cy="917" r="208" fill="#d3869b" opacity="0.61"/>
+    <circle cx="40" cy="91" r="129" fill="#b8bb26" opacity="0.46"/>
+    <circle cx="1260" cy="33" r="75" fill="#fb4934" opacity="0.58"/>
+    <circle cx="534" cy="1083" r="174" fill="#fabd2f" opacity="0.38"/>
+  </g>
+</svg>

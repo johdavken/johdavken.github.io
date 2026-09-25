@@ -1,0 +1,100 @@
+/* Slate's background: a soft picture behind the page.
+ *
+ * The Background preference (data-background on the root, slate-display.js).
+ * A translucent window over a wallpaper shows each pixel as mostly the
+ * window and a little of the picture; a layer of the picture laid OVER the
+ * whole page at low opacity mixes to exactly that, so this draws no
+ * surface translucent and asks nothing of any theme. The layer takes no
+ * pointer, so every press passes through it. A light theme takes it a
+ * little fainter. Those who ask for less transparency get none.
+ * The pictures are drawn by tools/slate-backgrounds.
+ */
+
+.slate-root[data-background="smoke"],
+.slate-settings__background-preview[data-background="smoke"] {
+  --slate-background-image: url("../../images/backgrounds/smoke.jpg");
+}
+
+.slate-root[data-background="ember"],
+.slate-settings__background-preview[data-background="ember"] {
+  --slate-background-image: url("../../images/backgrounds/ember.jpg");
+}
+
+.slate-root[data-background="tide"],
+.slate-settings__background-preview[data-background="tide"] {
+  --slate-background-image: url("../../images/backgrounds/tide.jpg");
+}
+
+.slate-root[data-background="aurora"],
+.slate-settings__background-preview[data-background="aurora"] {
+  --slate-background-image: url("../../images/backgrounds/aurora.jpg");
+}
+
+.slate-root[data-background="dunes"],
+.slate-settings__background-preview[data-background="dunes"] {
+  --slate-background-image: url("../../images/backgrounds/dunes.jpg");
+}
+
+/* Made for Gruvbox. */
+.slate-root[data-background="hearth"],
+.slate-settings__background-preview[data-background="hearth"] {
+  --slate-background-image: url("../../images/backgrounds/hearth.jpg");
+}
+
+/* Made for Retro 82. */
+.slate-root[data-background="horizon"],
+.slate-settings__background-preview[data-background="horizon"] {
+  --slate-background-image: url("../../images/backgrounds/horizon.jpg");
+}
+
+.slate-root[data-background]:not([data-background="none"])::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: var(--slate-background-image) center / cover no-repeat;
+  opacity: var(--slate-background-strength);
+  pointer-events: none;
+}
+
+.slate-root[data-theme$="-light"] {
+  --slate-background-strength: var(--slate-background-strength-light);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .slate-root[data-background]::after {
+    display: none;
+  }
+}
+
+/* ---- Settings: the choices, each with a glimpse of its picture ----
+   Stronger than on the page, so the four can be told apart. */
+
+.slate-settings__backgrounds {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.slate-settings__background-preview {
+  position: relative;
+  display: block;
+  height: 64px;
+  margin-bottom: var(--slate-space-2);
+  overflow: hidden;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-bg);
+}
+
+.slate-settings__background-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--slate-background-image, none) center / cover no-repeat;
+  opacity: 0.55;
+}
+
+/* None's glimpse is the theme alone, whatever the page wears. */
+.slate-settings__background-preview[data-background="none"] {
+  --slate-background-image: none;
+  border-style: dashed;
+}
