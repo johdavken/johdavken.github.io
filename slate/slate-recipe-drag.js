@@ -6,7 +6,12 @@
  * badge carries touch-action: none (recipe-edit.css) so the page does not
  * scroll away under the drag. Then a floating proxy of the assignment
  * follows the pointer while the origin row dims and the row under the
- * pointer is marked. Release on another row hands the caller ONE drop; release
+ * pointer is marked. The proxy is two boxes: the outer one only follows
+ * the pointer (its transform), the card inside it is what the sheet
+ * animates - lifted, tilted, floating and so on, the Handling preference;
+ * the card is-over while a hopper waits under it - and it
+ * carries --slate-drag-sway, the pointer's sideways speed as a lean, which
+ * settles back to upright once the pointer rests. Release on another row hands the caller ONE drop; release
  * anywhere else, Escape, a lost capture or a cancel from outside end the
  * drag with nothing sent. The click a release produces is swallowed once
  * so the badge's row does not also act on it.
@@ -25,6 +30,11 @@
   /* A finger: held this long, this still, before the badge lifts. */
   const HOLD_MS = 300;
   const THRESHOLD_TOUCH = 10;
+  /* The lean: degrees per pixel of sideways movement, at most this far,
+   * and back upright after the pointer has rested this long. */
+  const SWAY_PER_PX = 0.35;
+  const SWAY_MAX = 7;
+  const SWAY_REST_MS = 110;
   const ROW = ".slate-hopper";
   const HANDLE = "[data-slate-handle]";
 
@@ -83,15 +93,21 @@
       if (drag.target) drag.target.classList.remove("is-drop-target");
       drag.target = target;
       if (target) target.classList.add("is-drop-target");
+      // Over a hopper it would land on: some handlings settle the card.
+      drag.card.classList.toggle("is-over", !!target);
     }
 
     function begin(event) {
       const origin = press.row;
       const lifted = values(origin) || {};
       const proxy = element(doc, "div", "slate-drag-proxy", { "aria-hidden": "true" });
-      proxy.appendChild(text(doc, "span", "slate-drag-proxy__id", lifted.id || ""));
-      proxy.appendChild(text(doc, "span", "slate-drag-proxy__resin", lifted.resin || ""));
-      proxy.appendChild(text(doc, "span", "slate-drag-proxy__pct", lifted.pct || ""));
+      // The card, laid out as the Grid's cell is: id and blend on the
+      // first line, the resin under them.
+      const card = element(doc, "div", "slate-drag-proxy__card");
+      card.appendChild(text(doc, "span", "slate-drag-proxy__id", lifted.id || ""));
+      card.appendChild(text(doc, "span", "slate-drag-proxy__pct", lifted.pct || ""));
+      card.appendChild(text(doc, "span", "slate-drag-proxy__resin", lifted.resin || ""));
+      proxy.appendChild(card);
       const rect = typeof origin.getBoundingClientRect === "function" ? origin.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
       proxy.style.width = `${rect.width}px`;
       proxy.style.height = `${rect.height}px`;
@@ -101,6 +117,10 @@
         origin,
         from: positionOf(origin),
         proxy,
+        card,
+        lastX: press.x,
+        sway: 0,
+        rest: null,
         target: null,
         offsetX: press.x - rect.left,
         offsetY: press.y - rect.top
@@ -118,8 +138,26 @@
       const x = Number(event.clientX) || 0;
       const y = Number(event.clientY) || 0;
       drag.proxy.style.transform = `translate(${Math.round(x - drag.offsetX)}px, ${Math.round(y - drag.offsetY)}px)`;
+      lean(x);
       const row = rowAt(x, y);
       mark(row && row !== drag.origin ? row : null);
+    }
+
+    /* The card leans the way the pointer is going, half what it leaned
+     * before and half the new speed, and stands up again at rest. */
+    function lean(x) {
+      const dx = x - drag.lastX;
+      drag.lastX = x;
+      const wanted = Math.max(-SWAY_MAX, Math.min(SWAY_MAX, dx * SWAY_PER_PX));
+      setSway((drag.sway + wanted) / 2);
+      if (drag.rest !== null) timers.clearTimeout(drag.rest);
+      const held = drag;
+      drag.rest = timers.setTimeout(() => { held.rest = null; if (drag === held) setSway(0); }, SWAY_REST_MS);
+    }
+
+    function setSway(value) {
+      drag.sway = Math.abs(value) < 0.05 ? 0 : value;
+      drag.card.style.setProperty("--slate-drag-sway", `${Math.round(drag.sway * 10) / 10}deg`);
     }
 
     function releaseHold() {
@@ -137,6 +175,7 @@
       drag = null;
       if (typeof view.removeEventListener === "function") view.removeEventListener("keydown", onKey, true);
       if (!active) return;
+      if (active.rest !== null) timers.clearTimeout(active.rest);
       active.origin.classList.remove("is-dragging");
       list.classList.remove("is-moving");
       if (active.target) active.target.classList.remove("is-drop-target");
@@ -232,5 +271,5 @@
     });
   }
 
-  return Object.freeze({ THRESHOLD, HOLD_MS, THRESHOLD_TOUCH, ROW, HANDLE, positionOf, create });
+  return Object.freeze({ THRESHOLD, HOLD_MS, THRESHOLD_TOUCH, SWAY_PER_PX, SWAY_MAX, SWAY_REST_MS, ROW, HANDLE, positionOf, create });
 });

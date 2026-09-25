@@ -145,9 +145,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   for (const file of ["scheduling.js", "station-command-contract.js", "station-command-bridge.js", "station-state-bridge.js",
     "station-connection-bridge.js", "station-admin-bridge.js", "station-recipes-bridge.js", "station-weight-profiles-bridge.js", "resin-totals.js", "pressure-conversion.js", "winding-tension.js", "slate-theme.js", "slate-display.js"]) load(file);
   hostEl.slateTheme = root.PolynSlateTheme.create(hostEl, null);
-  // Read-only is automatic on a linked line (slate-display.test.js covers it); this test wants the writable path.
   hostEl.slateDisplay = root.PolynSlateDisplay.create(hostEl, null);
-  hostEl.slateDisplay.setReadOnly("off");
 
   // The application's side: a producer on the state bridge and an executor.
   const demo = require("./slate/slate-demo.js");

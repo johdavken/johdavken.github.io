@@ -103,7 +103,7 @@ test("each tile's day / night switch turns it between its halves - the name, the
   assert.equal(gruvbox.getAttribute("data-theme-choice"), "gruvbox-dark");
 });
 
-test("with no controller the tiles are inert and the section says so; the later-preferences stub is present", () => {
+test("with no controller the tiles are inert and the section says so; there is no More section and no stub", () => {
   const doc = makeDocument();
   const view = settings.create(doc, { theme: null, themes: theme.THEMES });
   const tiles = view.element.querySelectorAll("[data-theme-choice]");
@@ -112,7 +112,8 @@ test("with no controller the tiles are inert and the section says so; the later-
   assert.doesNotThrow(() => click(view.themeSwitch("yaru")));
   assert.equal(tiles[0].getAttribute("data-theme-choice"), "yaru-dark", "the switch still turns the tile");
   assert.match(view.element.querySelector(".slate-settings__note").textContent, /cannot be changed/);
-  assert.match(view.element.querySelector(".slate-stub").textContent, /later phases/);
+  assert.equal(view.element.querySelector(".slate-stub"), null);
+  assert.ok(!view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label")).includes("More settings"));
   assert.equal(view.tile("yaru-dark"), tiles[0]);
   assert.equal(view.tile("rose-pine"), tiles[1]);
   assert.equal(view.tile("nope"), null);
@@ -180,7 +181,7 @@ test("administrator access is the last group and stays closed until it is presse
   const { el, view, toggle, password } = bootAdmin();
   const groups = el.querySelectorAll(".slate-settings__group");
   assert.equal(groups[groups.length - 1].getAttribute("aria-label"), "Administrator access", "the admin block is not last");
-  assert.match(el.querySelector(".slate-stub").textContent, /later phases/, "the More stub was displaced");
+  assert.equal(groups[groups.length - 2].getAttribute("aria-label"), "This device opens", "the admin block no longer follows the last preference");
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.ok(el.querySelector(".slate-settings__admin-body").hasAttribute("hidden"));
   assert.deepEqual(view.admin(), { open: false, pending: false, note: "", signedIn: false });

@@ -35,7 +35,9 @@
     Object.freeze({ id: "catppuccin-light", label: "Catppuccin Latte", scheme: "light", description: "Cool white, ink-grey text, blue accent." }),
     Object.freeze({ id: "catppuccin-dark", label: "Catppuccin Mocha", scheme: "dark", description: "Soft navy, pale text, blue accent." }),
     Object.freeze({ id: "retro-82-light", label: "Retro 82 Light", scheme: "light", description: "Cream, navy text, orange accent." }),
-    Object.freeze({ id: "retro-82-dark", label: "Retro 82 Dark", scheme: "dark", description: "Deep navy, cream text, orange accent." })
+    Object.freeze({ id: "retro-82-dark", label: "Retro 82 Dark", scheme: "dark", description: "Deep navy, cream text, orange accent." }),
+    Object.freeze({ id: "ristretto-light", label: "Ristretto Light", scheme: "light", description: "Blush white, aubergine text, amber accent." }),
+    Object.freeze({ id: "ristretto-dark", label: "Ristretto Dark", scheme: "dark", description: "Espresso brown, rose-white text, gold accent." })
   ]);
   const THEME_IDS = Object.freeze(THEMES.map(theme => theme.id));
   const VALID = new Set(THEME_IDS);

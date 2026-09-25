@@ -15,7 +15,7 @@ const theme = require("./slate-theme.js");
 
 const ROOT = __dirname;
 const THEMES_DIR = path.join(ROOT, "slate/styles/themes");
-const GALLERY_ORDER = ["yaru-light", "yaru-dark", "rose-pine-light", "rose-pine-dark", "tokyo-night-light", "tokyo-night-dark", "gruvbox-light", "gruvbox-dark", "everforest-light", "everforest-dark", "catppuccin-light", "catppuccin-dark", "retro-82-light", "retro-82-dark"];
+const GALLERY_ORDER = ["yaru-light", "yaru-dark", "rose-pine-light", "rose-pine-dark", "tokyo-night-light", "tokyo-night-dark", "gruvbox-light", "gruvbox-dark", "everforest-light", "everforest-dark", "catppuccin-light", "catppuccin-dark", "retro-82-light", "retro-82-dark", "ristretto-light", "ristretto-dark"];
 const RENAMED = { "rose-pine": "rose-pine-light", "tokyo-night": "tokyo-night-dark", "gruvbox": "gruvbox-dark", "everforest": "everforest-dark", "catppuccin": "catppuccin-dark", "retro-82": "retro-82-dark" };
 
 function node(tag) {
@@ -72,13 +72,13 @@ function tokensOf(css) {
  *   Registry and controller
  * -------------------------------------------------------------------- */
 
-test("the Slate registry is seven families as light-over-dark pairs, default Yaru Dark, and its own storage key", () => {
+test("the Slate registry is eight families as light-over-dark pairs, default Yaru Dark, and its own storage key", () => {
   assert.deepEqual([...theme.THEME_IDS], GALLERY_ORDER);
   assert.equal(theme.DEFAULT_THEME, "yaru-dark");
   assert.equal(theme.STORAGE_KEY, "polyn.slate.theme.v1");
   assert.deepEqual(theme.THEMES.map(item => item.scheme), GALLERY_ORDER.map((id, i) => (i % 2 === 0 ? "light" : "dark")));
   for (const item of theme.THEMES) assert.ok(item.id.endsWith(`-${item.scheme}`), `${item.id} is not named for its scheme`);
-  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine Dawn", "Rosé Pine Moon", "Tokyo Night Day", "Tokyo Night", "Gruvbox Light", "Gruvbox Dark", "Everforest Light", "Everforest Dark", "Catppuccin Latte", "Catppuccin Mocha", "Retro 82 Light", "Retro 82 Dark"]);
+  assert.deepEqual(theme.THEMES.map(item => item.label), ["Yaru Light", "Yaru Dark", "Rosé Pine Dawn", "Rosé Pine Moon", "Tokyo Night Day", "Tokyo Night", "Gruvbox Light", "Gruvbox Dark", "Everforest Light", "Everforest Dark", "Catppuccin Latte", "Catppuccin Mocha", "Retro 82 Light", "Retro 82 Dark", "Ristretto Light", "Ristretto Dark"]);
   assert.ok(Object.isFrozen(theme.THEMES) && theme.THEMES.every(Object.isFrozen));
   // Station's preference is a different key: choosing here never recolours Station.
   const station = require("./station-theme.js");

@@ -87,8 +87,6 @@
     header.appendChild(text(doc, "h1", "slate-header__title", "Slate"));
     header.appendChild(text(doc, "a", "slate-header__legacy", "Legacy", { href: legacy, title: "Open Resin.Tools (Legacy)" }));
     header.appendChild(element(doc, "p", "slate-header__notice", { "data-slate-mount": "notice", role: "status", hidden: "" }));
-    // Read-only, when Slate is: a badge that opens Settings, where the mode is chosen.
-    header.appendChild(text(doc, "button", "slate-header__readonly", "Read-only", { type: "button", "data-slate-readonly": "", hidden: "", title: "Slate is read-only on this line. Open Settings to change." }));
     header.appendChild(element(doc, "div", "slate-header__sync", { "data-slate-mount": "sync" }));
     shell.appendChild(header);
 

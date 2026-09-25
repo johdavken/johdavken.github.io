@@ -1,5 +1,5 @@
-/* The Settings section: the theme, the tracking mode, read-only, the
- * layer orientation and order, the timeline's view, and room for what
+/* The Settings section: the theme, the background, the tracking mode, the
+ * layout, the handling of a drag, the layer order, the timeline's view, and room for what
  * comes after them - with the administrator's way in at the very bottom.
  *
  * The theme picker drives the controller slate-host.js (or the harness)
@@ -100,7 +100,7 @@
    * @param {object} ctx
    * @param {object|null} ctx.theme    the theme controller {getTheme, setTheme, subscribe}
    * @param {object[]} [ctx.themes]    the registry (PolynSlateTheme.THEMES)
-   * @param {object|null} [ctx.display] the display controller {getReadOnlyMode, setReadOnly, getTrackingMode, setTrackingMode, getLayerOrientation, setLayerOrientation, getWeightsLayout, setWeightsLayout, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
+   * @param {object|null} [ctx.display] the display controller {getBackground, setBackground, getHandling, setHandling, getTrackingMode, setTrackingMode, getLayout, setLayout, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
    * @param {function} [ctx.say]       a line for the operator
    * @param {function} [ctx.legacy]    () => the floor UI's address, for the way back at the foot
@@ -181,29 +181,41 @@
     if (!controller) appearance.appendChild(text(doc, "p", "slate-settings__note", "The theme cannot be changed on this page."));
     rootEl.appendChild(appearance);
 
-    // Safety: read-only mode. Built here, placed after Tracking.
     const display = settings.display || null;
-    const safety = element(doc, "section", "slate-settings__group", { "aria-label": "Safety" });
-    safety.appendChild(text(doc, "h2", "slate-settings__heading", "Safety"));
-    safety.appendChild(text(doc, "p", "slate-settings__lead", "Read-only keeps Slate from changing the line's job: the recipe, the plan, tracking, pump-off, the changeover and the output stay as they are. Connecting to and leaving lines is not affected."));
-    const modes = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Read-only" });
-    const modeButtons = new Map();
-    // Off, the default, leads, as every group's default does.
-    for (const [mode, label, note] of [["off", "Off", "Always writable."], ["on", "On", "Always read-only."], ["auto", "Automatic", "Read-only whenever a line is linked; writable on this device's own session."]]) {
-      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-readonly-mode": mode });
+
+    // Background: a soft picture behind the page, as a translucent window
+    // shows the wallpaper (components/background.css). None leads.
+    const background = element(doc, "section", "slate-settings__group", { "aria-label": "Background" });
+    background.appendChild(text(doc, "h2", "slate-settings__heading", "Background"));
+    background.appendChild(text(doc, "p", "slate-settings__lead", "A soft picture behind Slate, faint enough to read through. Any of them suits any theme."));
+    const backdrops = element(doc, "div", "slate-settings__modes slate-settings__backgrounds", { role: "radiogroup", "aria-label": "Background" });
+    const backgroundButtons = new Map();
+    for (const [choice, label, note] of [
+      ["none", "None", "The theme's own background."],
+      ["smoke", "Smoke", "Grey smoke drifting across."],
+      ["ember", "Ember", "Warm amber smoke."],
+      ["tide", "Tide", "Cool blue-green smoke."],
+      ["aurora", "Aurora", "Ribbons of green and violet."],
+      ["dunes", "Dunes", "Soft sand ridges."],
+      ["hearth", "Hearth", "Made for Gruvbox: warm lights out of focus."],
+      ["horizon", "Horizon", "Made for Retro 82: a striped sun behind a grid."]
+    ]) {
+      const button = element(doc, "button", "slate-settings__mode slate-settings__background", { type: "button", role: "radio", "aria-checked": "false", "data-background-choice": choice });
+      button.appendChild(element(doc, "span", "slate-settings__background-preview", { "aria-hidden": "true", "data-background": choice }));
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
       button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
-      button.addEventListener("click", () => { if (display) display.setReadOnly(mode); });
-      modeButtons.set(mode, button);
-      modes.appendChild(button);
+      button.addEventListener("click", () => { if (display && typeof display.setBackground === "function") display.setBackground(choice); });
+      backgroundButtons.set(choice, button);
+      backdrops.appendChild(button);
     }
-    safety.appendChild(modes);
-    if (!display) safety.appendChild(text(doc, "p", "slate-settings__note", "Read-only cannot be changed on this page."));
+    background.appendChild(backdrops);
+    if (!display) background.appendChild(text(doc, "p", "slate-settings__note", "The background cannot be changed on this page."));
+    rootEl.appendChild(background);
 
     // Tracking: how the Track toggle is offered.
     const tracking = element(doc, "section", "slate-settings__group", { "aria-label": "Tracking" });
     tracking.appendChild(text(doc, "h2", "slate-settings__heading", "Tracking"));
-    tracking.appendChild(text(doc, "p", "slate-settings__lead", "How the recipe offers Track on each hopper. Automatic tracks hoppers whose resin changes at the changeover for you and only ever turns tracking on; it needs Slate writable (Read-only Off) and changes nothing otherwise."));
+    tracking.appendChild(text(doc, "p", "slate-settings__lead", "How the recipe offers Track on each hopper. Automatic tracks hoppers whose resin changes at the changeover for you and only ever turns tracking on."));
     const trackingModes = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Tracking" });
     const trackingButtons = new Map();
     for (const [mode, label, note] of [
@@ -221,54 +233,57 @@
     tracking.appendChild(trackingModes);
     if (!display) tracking.appendChild(text(doc, "p", "slate-settings__note", "Tracking cannot be changed on this page."));
     rootEl.appendChild(tracking);
-    rootEl.appendChild(safety);
 
-    // Layout: where a layer's head stands on the Recipe page. A phone
-    // always stands them on top (slate.js), so there the group is
-    // withheld (settings.css), as is the Weights layout's below.
-    // A desktop's Recipe is always the Grid: the group is a finger's (settings.css).
-    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout slate-settings__group--recipe-layout", { "aria-label": "Layout" });
+    // Layout: where a layer's head stands in the Recipe's and the Weights
+    // page's Grid. A phone keeps its own layout (slate.js), so there the
+    // group is withheld (settings.css).
+    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
-    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe page. Nothing about the recipe changes."));
-    const orientations = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layers" });
-    const orientationButtons = new Map();
+    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe or the weights changes."));
+    const layouts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layout" });
+    const layoutButtons = new Map();
     for (const [mode, label, note] of [
-      ["left", "Left", "Beside its hoppers, one layer under another."],
-      ["top", "Top", "Above its hoppers, layers side by side, three across; a fourth and fifth wrap below."],
-      ["grid", "Grid", "Every layer a row of cells, one per hopper, positions lined up down the page."]
+      ["grid", "Grid", "Every layer a row of cells, its name at the start, positions lined up down the page."],
+      ["grid-top", "Grid Top", "Every layer a column of cells, its name on top, positions lined up across. The cells keep their size and the columns sit centred."]
     ]) {
-      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layer-orientation": mode });
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layout": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
       button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
-      button.addEventListener("click", () => { if (display && typeof display.setLayerOrientation === "function") display.setLayerOrientation(mode); });
-      orientationButtons.set(mode, button);
-      orientations.appendChild(button);
+      button.addEventListener("click", () => { if (display && typeof display.setLayout === "function") display.setLayout(mode); });
+      layoutButtons.set(mode, button);
+      layouts.appendChild(button);
     }
-    layout.appendChild(orientations);
+    layout.appendChild(layouts);
     if (!display) layout.appendChild(text(doc, "p", "slate-settings__note", "Layout cannot be changed on this page."));
     rootEl.appendChild(layout);
 
-    // Weights layout: the same three for the Weights page, chosen apart.
-    const weightsLayout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Weights layout" });
-    weightsLayout.appendChild(text(doc, "h2", "slate-settings__heading", "Weights layout"));
-    weightsLayout.appendChild(text(doc, "p", "slate-settings__lead", "How the Weights page lays out each layer's hoppers. No weight changes."));
-    const weightsLayouts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Weights layout" });
-    const weightsLayoutButtons = new Map();
+    // Handling: how a hopper's card moves while it is dragged. A phone
+    // has no drag, so there the group is withheld with Layout (settings.css).
+    const handling = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Handling" });
+    handling.appendChild(text(doc, "h2", "slate-settings__heading", "Handling"));
+    handling.appendChild(text(doc, "p", "slate-settings__lead", "How a hopper's card moves while you drag it to another hopper."));
+    const handlings = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Handling" });
+    const handlingButtons = new Map();
     for (const [mode, label, note] of [
-      ["left", "Left", "The layer's name beside its hoppers, one hopper per line."],
-      ["top", "Top", "The name above its hoppers, layers side by side."],
-      ["grid", "Grid", "Every layer a row of cells, one per hopper, positions lined up down the page."]
+      ["lift", "Lift", "The card rises off the page; the hopper it would land on swells to meet it."],
+      ["tilt", "Tilt", "Lifted, and it leans the way you carry it, settling upright when you pause."],
+      ["float", "Float", "It bobs gently as you carry it and settles over a hopper."],
+      ["glow", "Glow", "The card stays flat and its edge breathes; the hopper under it answers."],
+      ["glass", "Glass", "A frosted card, the page blurred through it."],
+      ["stamp", "Stamp", "Made for Gruvbox: flat, a hard offset shadow, pressed down over a hopper."],
+      ["neon", "Neon", "Made for Retro 82: a lit edge, scan lines and a flicker as it switches on."],
+      ["still", "Still", "No movement: the card follows the pointer as it is."]
     ]) {
-      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-weights-layout": mode });
+      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-handling": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
       button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
-      button.addEventListener("click", () => { if (display && typeof display.setWeightsLayout === "function") display.setWeightsLayout(mode); });
-      weightsLayoutButtons.set(mode, button);
-      weightsLayouts.appendChild(button);
+      button.addEventListener("click", () => { if (display && typeof display.setHandling === "function") display.setHandling(mode); });
+      handlingButtons.set(mode, button);
+      handlings.appendChild(button);
     }
-    weightsLayout.appendChild(weightsLayouts);
-    if (!display) weightsLayout.appendChild(text(doc, "p", "slate-settings__note", "The Weights layout cannot be changed on this page."));
-    rootEl.appendChild(weightsLayout);
+    handling.appendChild(handlings);
+    if (!display) handling.appendChild(text(doc, "p", "slate-settings__note", "Handling cannot be changed on this page."));
+    rootEl.appendChild(handling);
 
     // Layer order: which way the same pages run the layers.
     const ordering = element(doc, "section", "slate-settings__group", { "aria-label": "Layer order" });
@@ -312,28 +327,6 @@
     if (!display) timeline.appendChild(text(doc, "p", "slate-settings__note", "The timeline's view cannot be changed on this page."));
     rootEl.appendChild(timeline);
 
-    // Input: drawn for a finger or a mouse.
-    const input = element(doc, "section", "slate-settings__group", { "aria-label": "Input" });
-    input.appendChild(text(doc, "h2", "slate-settings__heading", "Input"));
-    input.appendChild(text(doc, "p", "slate-settings__lead", "Whether Slate is drawn for a finger or a mouse. Touch gives larger targets and a compact rail, and keeps the keyboard down until a field is tapped. Nothing about the job changes."));
-    const inputs = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Input" });
-    const inputButtons = new Map();
-    for (const [mode, label, note] of [
-      ["auto", "Automatic", "Touch on a touch screen and in the Android app; mouse otherwise."],
-      ["touch", "Touch", "Always drawn for a finger, gloved or not."],
-      ["pointer", "Mouse", "Always the desktop sheet, even on a touch screen."]
-    ]) {
-      const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-input-mode": mode });
-      button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
-      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
-      button.addEventListener("click", () => { if (display && typeof display.setInputMode === "function") display.setInputMode(mode); });
-      inputButtons.set(mode, button);
-      inputs.appendChild(button);
-    }
-    input.appendChild(inputs);
-    if (!display) input.appendChild(text(doc, "p", "slate-settings__note", "The input cannot be changed on this page."));
-    rootEl.appendChild(input);
-
     // What this device opens when the address names no view (slate-host.js).
     const opening = element(doc, "section", "slate-settings__group", { "aria-label": "This device opens" });
     opening.appendChild(text(doc, "h2", "slate-settings__heading", "This device opens"));
@@ -355,12 +348,6 @@
     opening.appendChild(hosts);
     if (!display) opening.appendChild(text(doc, "p", "slate-settings__note", "What this device opens cannot be changed on this page."));
     rootEl.appendChild(opening);
-
-    // What comes next.
-    const later = element(doc, "section", "slate-settings__group", { "aria-label": "More settings" });
-    later.appendChild(text(doc, "h2", "slate-settings__heading", "More"));
-    later.appendChild(text(doc, "p", "slate-stub", "Display and workflow preferences arrive in later phases."));
-    rootEl.appendChild(later);
 
     // Administrator access: last, and closed until it is wanted.
     const adminGroup = element(doc, "section", "slate-settings__group slate-settings__admin", { "aria-label": ADMIN_TITLE });
@@ -534,9 +521,15 @@
           entry.toggle.setAttribute("title", night ? `Switch to ${family.light.label}` : `Switch to ${family.dark.label}`);
         }
       }
-      const mode = display ? display.getReadOnlyMode() : null;
-      for (const [id, button] of modeButtons) {
-        const on = id === mode;
+      const backgroundChoice = display && typeof display.getBackground === "function" ? display.getBackground() : null;
+      for (const [id, button] of backgroundButtons) {
+        const on = id === backgroundChoice;
+        button.setAttribute("aria-checked", on ? "true" : "false");
+        button.classList.toggle("is-selected", on);
+      }
+      const handlingMode = display && typeof display.getHandling === "function" ? display.getHandling() : null;
+      for (const [id, button] of handlingButtons) {
+        const on = id === handlingMode;
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
@@ -546,15 +539,9 @@
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
-      const orientation = display && typeof display.getLayerOrientation === "function" ? display.getLayerOrientation() : null;
-      for (const [id, button] of orientationButtons) {
-        const on = id === orientation;
-        button.setAttribute("aria-checked", on ? "true" : "false");
-        button.classList.toggle("is-selected", on);
-      }
-      const weightsMode = display && typeof display.getWeightsLayout === "function" ? display.getWeightsLayout() : null;
-      for (const [id, button] of weightsLayoutButtons) {
-        const on = id === weightsMode;
+      const layoutMode = display && typeof display.getLayout === "function" ? display.getLayout() : null;
+      for (const [id, button] of layoutButtons) {
+        const on = id === layoutMode;
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
@@ -567,12 +554,6 @@
       const timelineView = display && typeof display.getTimelineView === "function" ? display.getTimelineView() : null;
       for (const [id, button] of viewButtons) {
         const on = id === timelineView;
-        button.setAttribute("aria-checked", on ? "true" : "false");
-        button.classList.toggle("is-selected", on);
-      }
-      const inputMode = display && typeof display.getInputMode === "function" ? display.getInputMode() : null;
-      for (const [id, button] of inputButtons) {
-        const on = id === inputMode;
         button.setAttribute("aria-checked", on ? "true" : "false");
         button.classList.toggle("is-selected", on);
       }
@@ -597,13 +578,12 @@
       // its choosing button and its day / night switch.
       tile: id => { const entry = tiles.get(String(id).replace(/-(light|dark)$/, "")); return entry ? entry.choose : null; },
       themeSwitch: id => { const entry = tiles.get(String(id).replace(/-(light|dark)$/, "")); return entry ? entry.toggle : null; },
-      mode: id => modeButtons.get(id) || null,
+      background: id => backgroundButtons.get(id) || null,
+      handling: id => handlingButtons.get(id) || null,
       trackingMode: id => trackingButtons.get(id) || null,
-      layerOrientation: id => orientationButtons.get(id) || null,
-      weightsLayout: id => weightsLayoutButtons.get(id) || null,
+      layout: id => layoutButtons.get(id) || null,
       layerOrder: id => orderButtons.get(id) || null,
       timelineView: id => viewButtons.get(id) || null,
-      inputMode: id => inputButtons.get(id) || null,
       hostChoice: id => hostButtons.get(id) || null,
       admin: () => ({ open: adminOpen, pending: adminPending, note: adminNote.textContent, signedIn: adminGroup.classList.contains("is-signed-in") }),
       // Left behind, the block closes and the password goes with it.

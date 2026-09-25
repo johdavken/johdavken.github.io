@@ -1,0 +1,24 @@
+<!-- A Slate background's source (render.js turns it into the JPEG Slate
+     loads). Smoke from feTurbulence, swirled by displacing the noise with
+     itself, stretched in contrast and mapped to a four-stop palette. The
+     filter runs over a region larger than the picture so the
+     displacement's ragged edges fall outside it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <filter id="smoke" filterUnits="userSpaceOnUse" x="-300" y="-300" width="2200" height="1600" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0011 0.0034" numOctaves="6" seed="11" result="noise"/>
+    <feDisplacementMap in="noise" in2="noise" scale="380" xChannelSelector="G" yChannelSelector="B" result="swirl"/>
+    <feColorMatrix in="swirl" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1"/>
+    <feComponentTransfer>
+      <feFuncR type="linear" slope="2.3" intercept="-0.65"/>
+      <feFuncG type="linear" slope="2.3" intercept="-0.65"/>
+      <feFuncB type="linear" slope="2.3" intercept="-0.65"/>
+    </feComponentTransfer>
+    <feComponentTransfer>
+      <feFuncR type="table" tableValues="0.07 0.20 0.62 0.95"/>
+      <feFuncG type="table" tableValues="0.05 0.10 0.30 0.62"/>
+      <feFuncB type="table" tableValues="0.04 0.06 0.10 0.30"/>
+    </feComponentTransfer>
+    <feGaussianBlur stdDeviation="3.5"/>
+  </filter>
+  <rect x="-300" y="-300" width="2200" height="1600" filter="url(#smoke)"/>
+</svg>

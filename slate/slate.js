@@ -153,57 +153,32 @@
     return commands && resolved && resolved.live ? commands : null;
   }
 
-  /* READ-ONLY
-   *
-   * RT Sync's members may all write; read-only is Slate's own promise
-   * (slate-display.js). The preference is automatic by default - read-only
-   * whenever a line is linked, writable on the device's own session - and
-   * the sections ask this on every render, so a flip of the switch or of
-   * the line takes effect at once. */
-  function linked(resolved) {
-    return !!(resolved && resolved.live && resolved.line && resolved.line.line.linked);
-  }
-
-  function readOnlyNow() {
-    const preference = displayController ? displayController.getReadOnly() : null;
-    return displayModule
-      ? displayModule.effectiveReadOnly(preference, linked(current))
-      : (typeof preference === "boolean" ? preference : linked(current));
-  }
-
-  function renderReadOnly() {
-    const on = readOnlyNow();
-    if (container) container.setAttribute("data-readonly", on ? "on" : "off");
-    const badge = container ? container.querySelector("[data-slate-readonly]") : null;
-    if (badge) {
-      if (on) badge.removeAttribute("hidden");
-      else badge.setAttribute("hidden", "");
-    }
-  }
-
   /* LAYERS
    *
-   * Where a layer's head stands and which way the layers run
-   * (slate-display.js): the words go onto the root as data-layers and
-   * data-layer-order and the sheets lay the sections out from them. No
+   * Both pages are the Grid (slate-display.js); the Layout preference says
+   * where a layer's head stands - at the start of its row, or on top of
+   * its column - and the Layer order which way the layers run. The words
+   * go onto the root as data-layers, data-weights-layers, data-grid-heads
+   * and data-layer-order and the sheets lay the sections out from them. No
    * section is told and nothing is rebuilt. */
   let lastInput = null;
   function renderLayout() {
     if (!container) return;
-    const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "grid";
+    const layout = displayController && typeof displayController.getLayout === "function" ? displayController.getLayout() : "grid";
     const order = displayController && typeof displayController.getLayerOrder === "function" ? displayController.getLayerOrder() : "forward";
     const tier = tierNow();
-    // A phone's column has no room for a layer's head beside its hoppers:
-    // there the head always stands on top. The operator's choice is kept
+    // A phone's column has no room for the Grid: there the layers always
+    // stand on top, in its own layout. The operator's choice is kept
     // (slate-display.js) and comes back on a wider screen.
     const phoneTier = tier.input === "touch" && tier.width === "phone";
-    // A desktop's Recipe is always the Grid (slate-recipe.js `desktop`);
-    // the operator's choice is a finger's, and comes back under one.
-    container.setAttribute("data-layers", phoneTier ? "top" : (tier.input === "touch" ? orientation : "grid"));
-    // The Weights page's own choice, kept the same way on a phone.
-    const weightsLayout = displayController && typeof displayController.getWeightsLayout === "function" ? displayController.getWeightsLayout() : "grid";
-    container.setAttribute("data-weights-layers", phoneTier ? "top" : weightsLayout);
+    container.setAttribute("data-layers", phoneTier ? "top" : "grid");
+    container.setAttribute("data-weights-layers", phoneTier ? "top" : "grid");
+    container.setAttribute("data-grid-heads", layout === "grid-top" ? "top" : "start");
     container.setAttribute("data-layer-order", order);
+    // How a dragged hopper's card moves (components/recipe-edit.css).
+    container.setAttribute("data-drag-motion", displayController && typeof displayController.getHandling === "function" ? displayController.getHandling() : "lift");
+    // The picture behind the page (components/background.css).
+    container.setAttribute("data-background", displayController && typeof displayController.getBackground === "function" ? displayController.getBackground() : "none");
     container.setAttribute("data-input", tier.input);
     container.setAttribute("data-viewport", tier.width);
     container.setAttribute("data-orientation", tier.orientation || "portrait");
@@ -430,20 +405,18 @@
 
   /* TIER
    *
-   * For a finger or a mouse, wide or narrow (slate/slate-tier.js): the
-   * operator's Settings choice resolved against the window. Written onto
+   * For a finger or a mouse, wide or narrow (slate/slate-tier.js): always
+   * the window's own answer - there is no Settings choice. Written onto
    * the root with the layer words, and followed live - a rotation or a
    * keyboard plugged in re-renders the attributes, never the sections. */
   function tierNow() {
-    const preference = displayController && typeof displayController.getInputMode === "function" ? displayController.getInputMode() : "auto";
     if (!tierModule) return { input: "pointer", width: "wide" };
-    return tierModule.tierFor(Object.assign(tierModule.probe(root), { preference }));
+    return tierModule.tierFor(tierModule.probe(root));
   }
 
   /* A preference moved: the root's attributes follow, and every control
    * re-reads its ability. */
   function onDisplayChange() {
-    renderReadOnly();
     renderLayout();
     for (const pane of Object.values(panes)) {
       const swap = pane.swap;
@@ -511,7 +484,6 @@
     if (summary) applyMarks(summary.marks());
     paintHandle();
     renderNotice(resolved);
-    renderReadOnly();
   }
 
   function applyMarks(marks) {
@@ -578,7 +550,6 @@
       theme: themeController,
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
-      readOnly: readOnlyNow,
       trackingMode: () => (displayController && typeof displayController.getTrackingMode === "function" ? displayController.getTrackingMode() : (displayModule ? displayModule.DEFAULTS.tracking : "automatic")),
       timelineView: () => (displayController && typeof displayController.getTimelineView === "function" ? displayController.getTimelineView() : (displayModule ? displayModule.DEFAULTS.timeline : "realtime")),
       rundown,
@@ -781,8 +752,6 @@
     sync = syncModule.create(doc, { connection, admin, conflict });
     if (mounts.sync) mounts.sync.appendChild(sync.element);
 
-    const badge = container.querySelector("[data-slate-readonly]");
-    if (badge) badge.addEventListener("click", () => sections.show("settings"));
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
     const asideHandle = container.querySelector("[data-slate-aside-handle]");

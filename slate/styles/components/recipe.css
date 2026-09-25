@@ -1705,3 +1705,43 @@
   cursor: pointer;
   user-select: none;
 }
+
+/* ---- Grid Top: every layer a column ----
+   The Layout preference's second word (data-grid-heads="top" beside the
+   Grid). Each layer is a column: its head a tile on top, its cells
+   stacked under it, one per position. The columns share one grid and
+   every layer is a subgrid of its rows, so a position lines up across the
+   page whatever a cell holds. The cells keep a fixed width
+   (--slate-grid-top-width) rather than sharing the page, so a line of one
+   or three layers stands centred; a narrow page lets them give. The
+   layer's tone washes down its column. Layer order's `order` still turns
+   the columns round, auto-placement honouring it. */
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-recipe__layers {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, var(--slate-grid-top-width));
+  grid-template-rows: auto repeat(var(--slate-hopper-rows, 6), auto);
+  justify-content: center;
+  gap: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer {
+  grid-row: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  padding: 0 var(--slate-space-2) var(--slate-space-2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head {
+  grid-row: 1;
+  grid-column: 1;
+  padding: var(--slate-space-2) var(--slate-space-1);
+  border-radius: var(--slate-radius) var(--slate-radius) 0 0;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper[data-recipe] {
+  grid-column: 1;
+  grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+}

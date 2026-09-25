@@ -788,3 +788,37 @@
 .slate-weights.is-always-draft .slate-weights__field.is-changed-underneath {
   --slate-field-border: var(--slate-stroke) solid var(--slate-info);
 }
+
+/* ---- Grid Top: every layer a column ----
+   As the Recipe's (recipe.css): each layer a column, its head a tile on
+   top and its cells stacked under it at a fixed width, the layers one
+   grid of rows so a position lines up across, the columns centred. */
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__layers {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, var(--slate-grid-top-width));
+  grid-template-rows: auto repeat(var(--slate-hopper-rows, 6), auto);
+  justify-content: center;
+  gap: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__layer {
+  grid-row: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  padding: 0 var(--slate-space-2) var(--slate-space-2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+}
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__head {
+  grid-row: 1;
+  grid-column: 1;
+  padding: var(--slate-space-2) var(--slate-space-1);
+  border-radius: var(--slate-radius) var(--slate-radius) 0 0;
+}
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__row[data-key] {
+  grid-column: 1;
+  grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+}
