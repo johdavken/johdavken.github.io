@@ -76,6 +76,7 @@
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
+  const guideModule = root.PolynSlateGuide;
   const adminActions = root.PolynSlateAdminActions;
   const workspacesModule = root.PolynSlateWorkspaces;
   const lineConfigModule = root.PolynSlateLineConfig;
@@ -624,6 +625,9 @@
           enter: (field, raw) => (stats ? stats.enter(field, raw) : { ok: false, code: "unavailable", message: "The job's cards did not load." })
         }
       })) },
+      // How to Use: a short guide to a changeover, under Resin Balance and
+      // in the aside as it is.
+      ...(guideModule ? [{ id: "guide", label: guideModule.TITLE, group: "sections", pane: "aside", icon: "guide", create: (d, c) => guideModule.create(d, Object.assign({}, c, { back: () => home("aside") })) }] : []),
       // The administrator's three. Listed under Resin Balance and marked
       // `admin`, so the rail keeps them off an operator's rail until one
       // is signed in; they are built with the rest and read nothing until

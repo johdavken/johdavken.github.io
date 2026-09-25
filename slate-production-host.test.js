@@ -220,7 +220,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   const railItems = hostEl.querySelectorAll(".slate-rail__sections [data-section]");
   const listed = railItems.filter(item => !item.hasAttribute("hidden")).map(item => item.getAttribute("data-section"));
   // With a mouse the Recipe Book opens under the Recipe's tabs and Weights is its third tab, not the rail's.
-  assert.deepEqual(listed, ["recipe", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Resin Balance, with the two calculators in the Tools menu after");
+  assert.deepEqual(listed, ["recipe", "resin-balance", "guide", "pressure", "winding-tension"], "the sections are Recipe, Resin Balance, How to Use, with the two calculators in the Tools menu after");
   // The administrator's three are built with the rest and stand unlisted:
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is

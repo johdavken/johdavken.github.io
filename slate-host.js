@@ -108,6 +108,7 @@
     "slate/styles/components/panel.css",
     "slate/styles/components/timeline.css",
     "slate/styles/components/resin-balance.css",
+    "slate/styles/components/guide.css",
     "slate/styles/components/admin.css",
     "slate/styles/components/pressure.css",
     "slate/styles/components/winding-tension.css",
@@ -158,6 +159,7 @@
     "slate/slate-runout.js",
     "slate/slate-timeline.js",
     "slate/slate-resin-balance.js",
+    "slate/slate-guide.js",
     "slate/slate-workspaces.js",
     "slate/slate-line-config.js",
     "slate/slate-resin-db.js",
@@ -175,7 +177,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.52.12";
+  const VERSION = "0.52.16";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a
