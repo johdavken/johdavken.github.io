@@ -23,7 +23,9 @@
 
   const COMMAND = Object.freeze({
     weight: "setHopperWeight",
+    weights: "setHopperWeights",
     geometry: "setHopperGeometry",
+    geometries: "setHopperGeometries",
     circumference: "setHopperCircumference",
     smart: "setSmartHoppers"
   });
@@ -142,6 +144,17 @@
     return send(commands, COMMAND.geometry, { recipe: RECIPE, layer, index, dimension, value });
   }
 
+  /* The bulk edit's Apply: several hoppers' weights in ONE request,
+   * [{ layer, index, weight }] with each weight as typed (blank is 0). */
+  function setWeights(commands, entries) {
+    return send(commands, COMMAND.weights, { recipe: RECIPE, weights: entries });
+  }
+
+  /* The bulk edit's geometry, the same way: [{ layer, index, dimension, value }]. */
+  function setGeometries(commands, entries) {
+    return send(commands, COMMAND.geometries, { recipe: RECIPE, geometries: entries });
+  }
+
   /* The line's shared circumference, in inches; no position, no recipe. */
   function setCircumference(commands, circumference) {
     return send(commands, COMMAND.circumference, { circumference });
@@ -156,6 +169,6 @@
     COMMAND, KIND, RECIPE, MEASURE, SMART_ON_TEXT, SMART_OFF_TEXT, SMART_UNAVAILABLE_TEXT, READ_ONLY_REASON, NO_BRIDGE,
     smartFrom, measureFor, shapeOf, fieldText, formatPounds,
     abilities, reason, canToggleSmart, smartReason,
-    setWeight, setGeometry, setCircumference, setSmart
+    setWeight, setWeights, setGeometry, setGeometries, setCircumference, setSmart
   });
 });

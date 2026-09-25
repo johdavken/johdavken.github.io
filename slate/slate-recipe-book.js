@@ -9,6 +9,11 @@
  * shares would move. Save Current / Save Next add the running recipe or
  * the plan under a name.
  *
+ * The list shows at most LIST_LIMIT recipes, in the application's order
+ * (favourites first); a search field over it narrows them by name as it
+ * is typed, and a line under it says when more exist than are shown.
+ * The field is built once, so a publish never takes the typing.
+ *
  * Selecting a recipe changes nothing on the line. Every action is one
  * request through slate-book-actions.js; the book redraws from the
  * bridge's own publishes, and the compatibility and preview follow the
@@ -34,6 +39,38 @@
   const SELECT_HINT = "Select a saved recipe to see its blend. Selecting changes nothing on the line.";
   const NOTHING_PLANNED = "nothing is planned; this becomes the plan";
   const NOTHING_CHANGES = "nothing would change";
+  /* The most recipes the list shows at once; the search finds the rest. */
+  const LIST_LIMIT = 8;
+  const SEARCH_LABEL = "Search saved recipes";
+  const SEARCH_PLACEHOLDER = "Search recipes";
+
+  /** A name as the search compares it: case and spacing aside. */
+  function searchable(value) {
+    return String(value == null ? "" : value).trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  /**
+   * The recipes the list shows: those whose name holds the query, in the
+   * order given, at most `limit` of them.
+   * @returns {{ shown: object[], matched: number, total: number }}
+   */
+  function visibleRecipes(recipes, query, limit) {
+    const all = Array.isArray(recipes) ? recipes : [];
+    const needle = searchable(query);
+    const matched = needle ? all.filter(recipe => searchable(recipe && recipe.name).includes(needle)) : all;
+    const cap = Number.isInteger(limit) && limit > 0 ? limit : LIST_LIMIT;
+    return { shown: matched.slice(0, cap), matched: matched.length, total: all.length };
+  }
+
+  /** The line under the list, or "" when everything that matches is shown. */
+  function moreText(visible, query) {
+    if (visible.matched > visible.shown.length) {
+      return searchable(query)
+        ? `Showing ${visible.shown.length} of ${visible.matched} matches. Search more precisely to narrow them.`
+        : `Showing ${visible.shown.length} of ${visible.total}. Search to find the others.`;
+    }
+    return "";
+  }
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -195,9 +232,16 @@
     rootEl.appendChild(note);
 
     const columns = element(doc, "div", "slate-book__columns");
+    // The list's column: the search over it, the list, the line under it.
+    const listColumn = element(doc, "div", "slate-book__list-column");
+    const search = element(doc, "input", "slate-book__search", { type: "search", autocomplete: "off", spellcheck: "false", enterkeyhint: "search", "aria-label": SEARCH_LABEL, placeholder: SEARCH_PLACEHOLDER, "data-book-search": "" });
     const list = element(doc, "ol", "slate-book__list", { "aria-label": "Saved recipes" });
+    const more = element(doc, "p", "slate-book__more", { role: "status", hidden: "" });
+    listColumn.appendChild(search);
+    listColumn.appendChild(list);
+    listColumn.appendChild(more);
     const detail = element(doc, "div", "slate-book__detail", { "aria-live": "polite" });
-    columns.appendChild(list);
+    columns.appendChild(listColumn);
     columns.appendChild(detail);
     rootEl.appendChild(columns);
 
@@ -385,11 +429,18 @@
       clear(list);
       const book = state.book;
       const items = connected() && book && Array.isArray(book.recipes) ? book.recipes : [];
+      // The search only when there is something to search.
+      show(search, items.length > 0);
       if (items.length === 0) {
         list.appendChild(text(doc, "li", "slate-book__empty", emptyText(book, connected())));
+        show(more, false);
         return;
       }
-      for (const recipe of items) {
+      const visible = visibleRecipes(items, search.value, LIST_LIMIT);
+      if (!visible.shown.length) list.appendChild(text(doc, "li", "slate-book__empty", `No saved recipe matches “${String(search.value).trim()}”.`));
+      more.textContent = moreText(visible, search.value);
+      show(more, !!more.textContent);
+      for (const recipe of visible.shown) {
         const item = element(doc, "li", "slate-book__item");
         const row = element(doc, "button", "slate-book__row", { type: "button", "data-recipe": recipe.id, "aria-pressed": recipe.id === state.selectedId ? "true" : "false" });
         if (recipe.favorite) { row.classList.add("is-favorite"); row.setAttribute("aria-label", `${recipe.name}, favourite`); }
@@ -579,6 +630,15 @@
       }
     });
 
+    // The search narrows the list as it is typed; Escape empties it.
+    search.addEventListener("input", () => paintList());
+    search.addEventListener("keydown", event => {
+      if (!event || event.key !== "Escape" || !search.value) return;
+      if (typeof event.stopPropagation === "function") event.stopPropagation();
+      search.value = "";
+      paintList();
+    });
+
     nameInput.addEventListener("keydown", event => {
       if (!event) return;
       if (event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); confirmEntry(); }
@@ -603,5 +663,5 @@
     });
   }
 
-  return Object.freeze({ LOAD_CURRENT_TEXT, LOAD_NEXT_TEXT, SELECT_HINT, NOTHING_PLANNED, NOTHING_CHANGES, formatWhen, rowMeta, emptyText, subtitleFor, compatibility, previewFor, create });
+  return Object.freeze({ LIST_LIMIT, SEARCH_LABEL, SEARCH_PLACEHOLDER, searchable, visibleRecipes, moreText, LOAD_CURRENT_TEXT, LOAD_NEXT_TEXT, SELECT_HINT, NOTHING_PLANNED, NOTHING_CHANGES, formatWhen, rowMeta, emptyText, subtitleFor, compatibility, previewFor, create });
 });

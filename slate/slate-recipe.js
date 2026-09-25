@@ -41,6 +41,28 @@
  * Book serves both tabs; it closes with the section, a bulk edit or a
  * move to the touch tier, where the inline Save as recipe stands again.
  *
+ * On a desktop the tabs carry a third, Weights: the Weights page
+ * (slate-weights.js, the same view the rail lists under a finger) in the
+ * bodies' place, built always a draft - edited freely, sent by Apply. The recipe's own switches - Compare, Bulk edit, Print -
+ * stand aside while it shows; a bulk edit holding changes keeps the tab
+ * from turning, as it keeps Current from Next.
+ *
+ * THE DESKTOP'S RECIPE
+ *
+ * With `desktop` answering true (slate.js: the pointer tier) the section
+ * is simpler and always ready: the shown tab is always the bulk form -
+ * no Bulk edit button, the fill bar always under the layers, Apply
+ * sending what changed and Cancel standing only while there is something
+ * to discard - and Compare is always on, with no switch; its band shows
+ * over the drafts too. A cell's weight is the Weights tab's, so the cell
+ * keeps its line unseen. The badge picks the row for the fill; the
+ * assignment moves by the grab strip at the cell's foot. What writes the
+ * line outside the form - a share, the layer menu, a drag, the plan's
+ * moves, Save - waits while there are changes to apply or discard, and
+ * works freely otherwise; a publish reaches every field not typed in
+ * (the form's follow()). The Recipe stands in the Grid layout there
+ * (slate.js). Under a finger all of this is as before.
+ *
  * The section dispatches nothing itself. Its seams - slate-tracking.js,
  * slate-recipe-actions.js, slate-plan-actions.js - are handed the command
  * bridge the boot gives this section, and the boot is told of every
@@ -68,11 +90,12 @@
     pick("PolynSlateBookActions", "./slate-book-actions.js"),
     pick("PolynSlateRecipeDraft", "./slate-recipe-draft.js"),
     pick("PolynSlateRecipeForm", "./slate-recipe-form.js"),
-    pick("PolynSlateRecipeBook", "./slate-recipe-book.js")
+    pick("PolynSlateRecipeBook", "./slate-recipe-book.js"),
+    pick("PolynSlateWeights", "./slate-weights.js")
   );
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateRecipe = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule, bookViewModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (trackingModule, lineModule, sourceModule, actionsModule, planModule, searchModule, dragModule, menuModule, printModule, bookModule, draftModule, formModule, bookViewModule, weightsModule) {
   "use strict";
 
   /* A press outside, by the shared rule - a finger closes on a still
@@ -95,6 +118,7 @@
   const SAVE_LABEL = "Save as recipe\u2026";
   const SAVE_ENTRY_LABEL = Object.freeze({ current: "Save the running recipe as", next: "Save the planned recipe as" });
   const BOOK_LABEL = "Recipe Book";
+  const WEIGHTS_LABEL = "Weights";
   const EMPTY = "—";
   const NO_PLAN = "Nothing is planned yet. Start from the running recipe, then change what the changeover needs.";
   const CHANGED_UNDERNEATH = "changed in the application while you were editing; what you are entering here has not been applied.";
@@ -103,6 +127,8 @@
   const BULK_LABEL = "Bulk edit";
   const BULK_APPLY_LABEL = "Apply";
   const BULK_CANCEL_LABEL = "Cancel";
+  const CLEAR_LABEL = "Clear recipe";
+  const CLEAR_EMPTY = "Nothing to clear: every hopper on this tab is already empty.";
   const BULK_BUSY = "Apply or cancel the bulk edit first.";
   const BULK_NO_ROWS = "Nothing is planned to edit.";
   const BULK_ABANDONED = "The line changed on another device; the bulk edit you had open was not applied.";
@@ -111,6 +137,10 @@
   const BULK_SWITCH = "Apply or cancel the bulk edit before switching tabs.";
   const BULK_HINT = "Click a hopper id to select rows and fill them at once.";
   const BULK_HINT_PHONE = "Tap hoppers to select them, then fill them at once.";
+  const DRAFT_IDLE = "No changes. Nothing is sent until Apply.";
+  const DRAFT_BUSY = "Apply or discard the recipe changes first.";
+  const NONE_PICKED = "Select hoppers to fill";
+  const GRIP_TITLE = "Drag onto another hopper to move this assignment there";
   const FILL_LABEL = "Fill";
   const FILL_NOTHING = "Enter a resin or a blend to fill into the selected hoppers.";
   const FILL_NONE = "Nothing to fill: the selected hoppers already hold that, or only hopper 1 was selected for a blend.";
@@ -232,8 +262,13 @@
       }
     };
     const view = doc.defaultView || null;
+    // A desktop (slate.js hands the pointer tier's answer): the always-open
+    // form, Compare always on, no weight in the cell, the grab strip.
+    const desktop = () => {
+      try { return typeof settings.desktop === "function" && !!settings.desktop(); } catch (error) { return false; }
+    };
 
-    const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current" });
+    const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current", "data-view": "recipe" });
 
     /* ---- The bar ---- */
 
@@ -248,12 +283,15 @@
       tabButtons.set(id, tab);
       tabs.appendChild(tab);
     }
+    // The desktop's third tab (recipe.css keeps it off the touch tier).
+    const weightsTab = text(doc, "button", "slate-tabs__tab slate-recipe__weights-tab", WEIGHTS_LABEL, { type: "button", role: "tab", "data-slate-view": "weights", "aria-selected": "false" });
+    tabs.appendChild(weightsTab);
     bar.appendChild(tabs);
 
-    const compareSwitch = text(doc, "button", "slate-switch", "Compare", { type: "button", role: "switch", "aria-checked": "false", "data-slate-compare": "", "data-able": "false" });
+    const compareSwitch = text(doc, "button", "slate-switch slate-recipe__only slate-recipe__compare", "Compare", { type: "button", role: "switch", "aria-checked": "false", "data-slate-compare": "", "data-able": "false" });
     bar.appendChild(compareSwitch);
 
-    const bulkButton = text(doc, "button", "slate-switch slate-recipe__bulk", BULK_LABEL, { type: "button", "aria-pressed": "false", "data-slate-bulk": "", "data-able": "false" });
+    const bulkButton = text(doc, "button", "slate-switch slate-recipe__bulk slate-recipe__only", BULK_LABEL, { type: "button", "aria-pressed": "false", "data-slate-bulk": "", "data-able": "false" });
     bar.appendChild(bulkButton);
 
     // The plan's two moves stand in the Next body's foot (built below), as
@@ -264,7 +302,7 @@
     planStrip.appendChild(copyButton);
     planStrip.appendChild(promoteButton);
 
-    const printBox = element(doc, "div", "slate-print");
+    const printBox = element(doc, "div", "slate-print slate-recipe__only");
     const printTrigger = text(doc, "button", "slate-print__trigger", "Print", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
     const printMenu = element(doc, "div", "slate-print__menu", { role: "menu", hidden: "" });
     const printItems = new Map();
@@ -280,7 +318,7 @@
     // Scan: in Print's place under a finger (recipe-edit.css shows one or
     // the other). A job traveler or a dosing screen photographed into the
     // tab on screen, through the application's own scan flow.
-    const scanBox = element(doc, "div", "slate-scan");
+    const scanBox = element(doc, "div", "slate-scan slate-recipe__only");
     const scanTrigger = text(doc, "button", "slate-scan__trigger", "Scan", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
     const scanMenu = element(doc, "div", "slate-scan__menu", { role: "menu", hidden: "" });
     const scanItems = new Map();
@@ -374,10 +412,13 @@
       const summary = text(doc, "p", "slate-recipe__bulk-summary", "", { role: "status" });
       const hint = text(doc, "span", "slate-recipe__bulk-hint", BULK_HINT);
       const bulkNote = element(doc, "p", "slate-recipe__bulk-note", { role: "status", hidden: "" });
+      // Clear recipe: every hopper blanked into the draft; Apply sends it.
+      const bulkClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-recipe__clear", CLEAR_LABEL, { type: "button", "data-slate-bulk-do": "clear", title: id === "next" ? "Blank every hopper of the plan; nothing changes until Apply" : "Blank every hopper of the running recipe; nothing changes until Apply" });
       const bulkCancel = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", BULK_CANCEL_LABEL, { type: "button", "data-slate-bulk-do": "cancel" });
       const bulkApply = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", BULK_APPLY_LABEL, { type: "button", "data-slate-bulk-do": "apply", "data-able": "false" });
-      for (const node of [summary, hint, bulkNote, bulkCancel, bulkApply]) bulk.appendChild(node);
-      el.appendChild(bulk);
+      for (const node of [summary, hint, bulkNote, bulkClear, bulkCancel, bulkApply]) bulk.appendChild(node);
+      // Under the layers, ahead of the foot: a desktop shows both at once.
+      el.insertBefore(bulk, body.foot);
       body.bulk = { el: bulk, summary, hint, note: bulkNote, cancel: bulkCancel, apply: bulkApply, fill: { el: fill, count: fillCount, resin: fillResin, pct: fillPct, button: fillButton, clear: fillClear } };
       // The name entry under the foot, built once so a publish never
       // takes the operator's typing.
@@ -396,7 +437,7 @@
           list: layersEl,
           mount: rootEl,
           view: doc,
-          able: () => !form && actionsModule.abilities(commands(), guard()).move,
+          able: () => !formHolds() && actionsModule.abilities(commands(), guard()).move,
           values: row => {
             const entry = body.rows.get(`${row.getAttribute("data-layer")}:${row.getAttribute("data-index")}`);
             const last = entry && entry.last ? entry.last : {};
@@ -421,6 +462,13 @@
     if (bookView) bookPanel.appendChild(bookView.element);
     rootEl.appendChild(bookPanel);
     let bookOpen = false;
+
+    // The desktop's Weights tab: the page in the bodies' place.
+    const weightsPanel = element(doc, "div", "slate-recipe__weights", { role: "tabpanel", "aria-label": WEIGHTS_LABEL, hidden: "" });
+    const weightsView = weightsModule && typeof weightsModule.create === "function" ? weightsModule.create(doc, Object.assign({}, settings, { alwaysDraft: true })) : null;
+    if (weightsView) weightsPanel.appendChild(weightsView.element);
+    rootEl.insertBefore(weightsPanel, bookPanel);
+    let weightsShown = false;
 
     // The application's scanner, handed in by the boot: { able(), start(kind, recipe) }.
     const scanner = settings.scan && typeof settings.scan.start === "function" ? settings.scan : null;
@@ -466,15 +514,30 @@
         entry.cells.weight = weight;
         row.appendChild(weight);
         row.appendChild(controls);
+      } else {
+        // The plan has no weight; its cell keeps the line all the same, so
+        // a Next cell stands as tall as a Current one (recipe.css).
+        row.appendChild(element(doc, "span", "slate-hopper__weight", { "data-spacer": "", "aria-hidden": "true" }));
       }
       entry.mark = element(doc, "span", "slate-hopper__mark");
       entry.other = element(doc, "span", "slate-hopper__other", { hidden: "" });
       entry.note = element(doc, "p", "slate-hopper__note", { role: "status", hidden: "" });
+      // A desktop's grab strip at the cell's foot (recipe.css draws it only there).
+      entry.grip = element(doc, "span", "slate-hopper__grip", { "data-slate-handle": "", title: GRIP_TITLE, "aria-hidden": "true" });
       row.appendChild(entry.mark);
       row.appendChild(entry.other);
       row.appendChild(entry.note);
+      row.appendChild(entry.grip);
+      paintHandle(entry);
       paintRow(entry, cells, null);
       return entry;
+    }
+
+    /* Which part lifts the assignment: the grab strip on a desktop, where
+     * the badge picks for the fill; the badge under a finger. */
+    function paintHandle(entry) {
+      if (desktop()) entry.idCell.removeAttribute("data-slate-handle");
+      else entry.idCell.setAttribute("data-slate-handle", "");
     }
 
     function paintRow(entry, cells, skip) {
@@ -532,8 +595,9 @@
         others,
         timers,
         say,
-        able: () => { const able = actionsModule.abilities(commands(), guard()); return { copy: !form && able.copyLayer, clear: !form && able.clearLayer }; },
-        reason: action => (form ? BULK_BUSY : actionsModule.reason(commands(), action === "copy" ? "copyLayer" : "clearLayer", guard())),
+        // A desktop's always-open form holds the menu only while it has changes.
+        able: () => { const able = actionsModule.abilities(commands(), guard()); const held = formHolds(); return { copy: !held && able.copyLayer, clear: !held && able.clearLayer }; },
+        reason: action => (formHolds() ? (form.auto ? DRAFT_BUSY : BULK_BUSY) : actionsModule.reason(commands(), action === "copy" ? "copyLayer" : "clearLayer", guard())),
         onCopyTo: toLayer => settle(actionsModule.copyLayer(commands(), body.recipe, layer.id, toLayer)),
         onClear: () => settle(actionsModule.clearLayer(commands(), body.recipe, layer.id))
       }) : null;
@@ -630,8 +694,11 @@
           const before = entry.last || {};
           const changed = paintRow(entry, cells, editingHere);
           if (drafting) {
+            const moved = before.resinName !== cells.resinName || before.pctValue !== cells.pctValue;
+            // Always open (a desktop): a field not typed in follows the line.
+            if (form.auto) { if (moved) form.view.follow(key, state.hoppers[key]); continue; }
             // The field keeps what was typed; the diff moves to the new value.
-            if (!own && (before.resinName !== cells.resinName || before.pctValue !== cells.pctValue)) form.view.rebase(key, state.hoppers[key]);
+            if (!own && moved) form.view.rebase(key, state.hoppers[key]);
             continue;
           }
           if (editingHere && !own) {
@@ -689,8 +756,15 @@
     // slate-tracking.js's offersToggle). The Compare switch adds the
     // lines that say what the other recipe holds; the blend alone moving
     // is a line, no band.
+    /* Compare as it stands now: the switch's, or always on a desktop with a plan. */
+    function comparing() {
+      return compare || (desktop() && !!(current && current.plan && current.plan.planned));
+    }
+
     function paintCompare() {
+      const compare = comparing();
       rootEl.classList.toggle("is-comparing", compare);
+      rootEl.classList.toggle("is-desk", desktop());
       const mode = modeNow();
       for (const id of RECIPES) {
         const body = bodies[id];
@@ -707,8 +781,9 @@
           const line = compare && other ? otherLine(tag, other) : null;
           entry.row.classList.toggle("is-differs", !!(other && other.resinDiffers));
           const mine = own ? own.hoppers[key] : null;
-          // Under Bulk edit the drafts are the cell's news: Compare's band steps aside.
-          paintChange(entry, id, compare && !drafting ? other : null);
+          // Under Bulk edit the drafts are the cell's news: Compare's band
+          // steps aside - but for a desktop's always-open form, where it stays.
+          paintChange(entry, id, compare && (!drafting || (form && form.auto)) ? other : null);
           const empty = !String((mine && mine.resinName) || "").trim() && !(other && String(other.resin || "").trim());
           emptyAt.set(entry.index, (emptyAt.has(entry.index) ? emptyAt.get(entry.index) : true) && empty);
           if (line) paintOther(entry, id, tag, line);
@@ -732,7 +807,13 @@
         for (const [layerId, head] of body.heads) {
           const other = changes ? changes.layers[layerId] : null;
           const line = compare && other && other.differs;
-          if (line) head.shareOther.textContent = `${tag} ${formatPct(other.share)}`;
+          // Short, to sit beside the share: ">" the plan's, "<" the running
+          // recipe's; the words are its label.
+          if (line) {
+            head.shareOther.textContent = `${id === "next" ? "<" : ">"} ${formatPct(other.share)}`;
+            head.shareOther.setAttribute("title", `${tag} ${formatPct(other.share)}`);
+            head.shareOther.setAttribute("aria-label", `${tag} ${formatPct(other.share)}`);
+          }
           show(head.shareOther, !!line);
         }
       }
@@ -748,6 +829,13 @@
 
     /* ---- Abilities ---- */
 
+    /* Whether the form holds the other edits back: always, as a bulk
+     * edit opened by its button; while it has changes, when always open. */
+    function formHolds() {
+      if (!form) return false;
+      return form.auto ? form.view.changes().length > 0 : true;
+    }
+
     function applyAbilities() {
       const bridge = commands();
       const options = guard();
@@ -758,8 +846,9 @@
       rootEl.classList.toggle("is-readonly", !!readOnly());
       // An open form outlives neither read-only nor the command it needs.
       if (form && !able.assign) discardForm(options.readOnly ? BULK_READ_ONLY : BULK_NO_BRIDGE);
-      const busy = !!form;
-      const held = control => (busy ? BULK_BUSY : actionsModule.reason(bridge, control, options));
+      // Always open (a desktop), the form holds the rest only while it has changes.
+      const busy = formHolds();
+      const held = control => (busy ? (form && form.auto ? DRAFT_BUSY : BULK_BUSY) : actionsModule.reason(bridge, control, options));
 
       for (const id of RECIPES) {
         const body = bodies[id];
@@ -1106,8 +1195,49 @@
       closeScan();
     }
 
+    /* The Weights tab: the page shown in the bodies' place, or put away
+     * with its draft abandoned (the Weights page's own hide). */
+    function paintTabs() {
+      for (const [key, tab] of tabButtons) tab.setAttribute("aria-selected", !weightsShown && key === recipe ? "true" : "false");
+      weightsTab.setAttribute("aria-selected", weightsShown ? "true" : "false");
+      rootEl.setAttribute("data-view", weightsShown ? "weights" : "recipe");
+    }
+
+    function showWeights() {
+      if (weightsShown) return true;
+      if (!weightsView) return false;
+      if (form && form.view.changes().length > 0) { say(BULK_SWITCH); return false; }
+      closeForm();
+      closeEditor();
+      closeSave();
+      setBook(false);
+      for (const key of RECIPES) if (bodies[key].drag) bodies[key].drag.cancel();
+      disarm();
+      disarmPromote();
+      closeMenus();
+      closePrint();
+      weightsShown = true;
+      for (const key of RECIPES) show(bodies[key].el, false);
+      show(weightsPanel, true);
+      paintTabs();
+      return true;
+    }
+
+    function hideWeights() {
+      if (!weightsShown) return;
+      weightsShown = false;
+      show(weightsPanel, false);
+      if (weightsView) weightsView.onHide();
+      show(bodies[recipe].el, true);
+      paintTabs();
+    }
+
     function setRecipe(id) {
       if (!RECIPES.includes(id)) return recipe;
+      // The Weights page's bulk edit holds the tab as the recipe's does.
+      const weightsBulk = weightsShown && weightsView && typeof weightsView.bulk === "function" ? weightsView.bulk() : null;
+      if (weightsBulk && weightsBulk.changes > 0) { say(BULK_SWITCH); return recipe; }
+      hideWeights();
       if (id !== recipe) {
         if (form && form.view.changes().length > 0) { say(BULK_SWITCH); return recipe; }
         closeForm();
@@ -1126,12 +1256,15 @@
       }
       applyAbilities();
       paintCompare();
+      ensureForm();
       return recipe;
     }
 
     tabs.addEventListener("click", event => {
       const target = event && event.target;
-      const tab = target && typeof target.closest === "function" ? target.closest("[data-recipe]") : null;
+      if (!target || typeof target.closest !== "function") return;
+      if (target.closest("[data-slate-view='weights']")) { showWeights(); return; }
+      const tab = target.closest("[data-recipe]");
       if (tab && tabs.contains(tab)) setRecipe(tab.getAttribute("data-recipe"));
     });
 
@@ -1424,7 +1557,13 @@
       const changes = form.view.changes();
       const problems = form.view.problems();
       const totals = form.view.totals().filter(total => !total.ok);
-      body.bulk.summary.textContent = draftModule.summary(changes);
+      body.bulk.summary.textContent = form.auto && !changes.length ? DRAFT_IDLE : draftModule.summary(changes);
+      if (form.auto) {
+        // Nothing to discard, no Cancel; and the rest waits exactly while there are changes.
+        show(body.bulk.cancel, changes.length > 0);
+        const holds = changes.length > 0;
+        if (holds !== form.held) { form.held = holds; applyAbilities(); }
+      }
       for (const [layerId, head] of body.heads) {
         const bad = totals.find(total => total.layer === layerId);
         head.note.textContent = bad ? bad.message : "";
@@ -1448,9 +1587,11 @@
       if (!form) return;
       const count = form.view.picked().length;
       const strip = form.body.bulk.fill;
-      show(strip.el, count > 0);
+      // Always open, the fill bar is always up; it says when nothing is picked.
+      show(strip.el, count > 0 || form.auto);
       show(form.body.bulk.hint, count === 0);
-      strip.count.textContent = selectedLabel(count);
+      strip.count.textContent = count || !form.auto ? selectedLabel(count) : NONE_PICKED;
+      for (const button of [strip.button, strip.clear]) button.setAttribute("data-able", count ? "true" : "false");
     }
 
     function resetFill(body) {
@@ -1471,19 +1612,33 @@
       if (!form.view.fill(values)) say(FILL_NONE);
     }
 
-    function openForm() {
-      if (form) { discardOrArm(); return; }
-      if (bulkButton.getAttribute("data-able") !== "true") { say(bulkButton.getAttribute("title") || "Bulk edit is unavailable."); return; }
+    /* A desktop's form: opened whenever the shown tab has rows and the
+     * command, and none is open - quietly, taking no focus and closing
+     * nothing the operator has open (a share editor, the Book). */
+    function ensureForm() {
+      if (!desktop() || form || weightsShown || !current || !current.line) return;
+      if (!bodies[recipe].rows.size) return;
+      if (!actionsModule.abilities(commands(), guard()).assign) return;
+      openForm({ auto: true });
+    }
+
+    function openForm(options) {
+      const auto = !!(options && options.auto);
+      if (form) { if (!auto) discardOrArm(); return; }
+      if (weightsShown) return;
+      if (!auto && bulkButton.getAttribute("data-able") !== "true") { say(bulkButton.getAttribute("title") || "Bulk edit is unavailable."); return; }
       const body = bodies[recipe];
       const model = current && current.line;
-      if (!model || !body.rows.size) { say(BULK_NO_ROWS); return; }
-      closeEditor();
-      closeSave();
-      setBook(false);
-      if (body.drag) body.drag.cancel();
-      disarm();
-      disarmPromote();
-      closeMenus();
+      if (!model || !body.rows.size) { if (!auto) say(BULK_NO_ROWS); return; }
+      if (!auto) {
+        closeEditor();
+        closeSave();
+        setBook(false);
+        if (body.drag) body.drag.cancel();
+        disarm();
+        disarmPromote();
+        closeMenus();
+      }
       const state = sourceModule.stateFor(current, body.recipe);
       const formView = formModule.create(doc, body, {
         base: draftModule.baseFrom(state, model),
@@ -1495,21 +1650,26 @@
         onLast: () => { if (typeof body.bulk.apply.focus === "function") body.bulk.apply.focus(); },
         onPick: () => paintFill(),
         touch: touch(),
+        // A desktop's always-open form reads as the cells did before it.
+        plain: auto,
         view
       });
-      form = { recipe: body.recipe, body, view: formView, armTimer: null };
+      form = { recipe: body.recipe, body, view: formView, armTimer: null, auto, held: false };
       // Empty hoppers come back to be filled.
       paintCompare();
       resetFill(body);
       body.bulk.hint.textContent = phone() ? BULK_HINT_PHONE : BULK_HINT;
       show(body.bulk.hint, true);
-      show(body.foot, false);
+      // Always open, the foot (the Book, Reset, the plan's moves) stays.
+      if (!auto) show(body.foot, false);
       show(body.bulk.el, true);
       setBulkNote("");
+      paintForm();
+      paintFill();
       applyAbilities();
       // A finger taps the field it wants; focusing one would pop the
       // keyboard over the form's own foot.
-      if (!touch()) formView.focusFirst();
+      if (!auto && !touch()) formView.focusFirst();
     }
 
     // The form goes; the cells show the canonical value again, as
@@ -1534,7 +1694,7 @@
       show(open.body.foot, open.body.recipe !== "next" || planned);
       applyAbilities();
       paintCompare();
-      if (typeof bulkButton.focus === "function") bulkButton.focus();
+      if (!open.auto && typeof bulkButton.focus === "function") bulkButton.focus();
     }
 
     /** Close and say what was lost, when something was. */
@@ -1556,8 +1716,8 @@
     function discardOrArm() {
       if (!form) return;
       const count = form.view.changes().length;
-      if (count === 0) { closeForm(); return; }
-      if (form.body.bulk.cancel.hasAttribute("data-armed")) { discardForm(); return; }
+      if (count === 0) { closeForm(); ensureForm(); return; }
+      if (form.body.bulk.cancel.hasAttribute("data-armed")) { discardForm(); ensureForm(); return; }
       form.body.bulk.cancel.setAttribute("data-armed", "");
       form.body.bulk.cancel.textContent = discardLabel(count);
       form.armTimer = timers.setTimeout(() => { if (form) { form.armTimer = null; disarmCancel(); } }, RESET_ARM_MS);
@@ -1576,6 +1736,7 @@
       if (result && result.ok) {
         closeForm();
         if (result.changed) { onCommitted(result); say(draftModule.applied(changes)); }
+        ensureForm();
         return result;
       }
       setBulkNote((result && result.message) || "The application refused the change.");
@@ -1588,7 +1749,9 @@
         const target = event && event.target;
         const button = target && typeof target.closest === "function" ? target.closest("[data-slate-bulk-do]") : null;
         if (!button || !form || form.recipe !== id) return;
-        if (button.getAttribute("data-slate-bulk-do") === "apply") applyForm();
+        const what = button.getAttribute("data-slate-bulk-do");
+        if (what === "apply") applyForm();
+        else if (what === "clear") { if (!form.view.clearAll()) say(CLEAR_EMPTY); }
         else discardOrArm();
       });
       bodies[id].bulk.fill.el.addEventListener("click", event => {
@@ -1734,6 +1897,9 @@
       paintCompare();
       applyMarks(marks);
       if (bookView) bookView.update(resolved);
+      if (weightsView) weightsView.update(resolved, meta);
+      for (const id of RECIPES) for (const entry of bodies[id].rows.values()) paintHandle(entry);
+      ensureForm();
       scheduleAutoTrack();
     }
 
@@ -1745,11 +1911,16 @@
     function refresh() {
       declined.clear();
       // The tier moved: each keeps only its own way to the Book.
-      if (touch()) setBook(false);
+      if (touch()) { setBook(false); hideWeights(); }
       else closeSave();
+      // The tier moved: a desktop's always-open form is not a finger's.
+      if (form && form.auto && !desktop()) discardForm();
+      for (const id of RECIPES) for (const entry of bodies[id].rows.values()) paintHandle(entry);
       if (bookView) bookView.refresh();
+      if (weightsView) weightsView.refresh();
       applyAbilities();
       paintCompare();
+      ensureForm();
       scheduleAutoTrack();
     }
 
@@ -1758,6 +1929,7 @@
       closeEditor();
       closeSave();
       setBook(false);
+      if (weightsView) weightsView.onHide();
       for (const id of RECIPES) if (bodies[id].drag) bodies[id].drag.cancel();
       disarm();
       disarmPromote();
@@ -1778,13 +1950,17 @@
       editing: () => (editing ? { slot: editing.slot, recipe: editing.recipe, layer: editing.layer, index: editing.index } : null),
       saving: () => (saving ? { recipe: saving.recipe, existing: saving.existing, busy: saving.busy } : null),
       book: () => (bookOpen && bookView ? bookView : null),
-      bulk: () => (form ? { recipe: form.recipe, changes: form.view.changes().length, armed: form.body.bulk.cancel.hasAttribute("data-armed"), picked: form.view.picked() } : null),
+      showWeights,
+      weights: () => (weightsShown && weightsView ? weightsView : null),
+      onShow: () => ensureForm(),
+      bulk: () => (form ? { recipe: form.recipe, changes: form.view.changes().length, armed: form.body.bulk.cancel.hasAttribute("data-armed"), picked: form.view.picked(), auto: !!form.auto } : null),
       onHide
     });
   }
 
   return Object.freeze({
-    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, BOOK_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
+    DRAFT_IDLE, DRAFT_BUSY, NONE_PICKED, GRIP_TITLE, CLEAR_LABEL, CLEAR_EMPTY,
+    RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, BOOK_LABEL, WEIGHTS_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
     BULK_LABEL, BULK_BUSY, BULK_NO_ROWS, BULK_ABANDONED, BULK_READ_ONLY, BULK_NO_BRIDGE, BULK_SWITCH, BULK_HINT, FILL_NOTHING, FILL_NONE, discardLabel, discardedNote, selectedLabel,
     formatPct, formatWeight, cellsFor, subtitleFor, create
   });

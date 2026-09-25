@@ -342,6 +342,11 @@ test("the Weights Grid: a row per layer, the head a tile at its start and one ce
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__rows'), /display: contents;/);
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]'), /grid-column: calc\(var\(--slate-hopper-slot, 0\) \+ 2\);/);
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row.is-empty'), /border-style: dashed;/);
+  // Lined up with the Recipe's cell so a switch of tab moves nothing: the id's line as tall as the blend's,
+  // the resin at the Recipe's size, the field the room under the Recipe's resin.
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /min-height: calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\)\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__resin'), /font-size: var\(--slate-text-lg\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind]'), /--slate-field-min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\) \+ 4px\);/);
   const container = css.indexOf("@container slate-weights");
   assert.ok(container > -1);
   assert.ok(css.indexOf('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]') > container, "the Grid's cells stand before the touch tier's narrow rows, which would win");
@@ -544,8 +549,9 @@ test("hosted under Automatic tracking on the device's own session, no Track is o
   assert.equal(linked.executed.length, 2);
 });
 
-test("hosted, the root carries the layer orientation; the switch flips the attribute alone - no command, no rebuild, every row keeps its element", () => {
-  const { hostEl, executed, controller } = bootHosted({ linked: false });
+test("hosted, the root carries the layer orientation under a finger; the switch flips the attribute alone - no command, no rebuild, every row keeps its element; a desktop's Recipe is always the Grid", () => {
+  const { hostEl, executed, controller } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 1280 }) });
+  assert.equal(hostEl.getAttribute("data-input"), "touch");
   assert.equal(hostEl.getAttribute("data-layers"), "grid");
   const rows = hostEl.querySelectorAll(".slate-hopper");
   assert.ok(rows.length > 0);
@@ -562,9 +568,20 @@ test("hosted, the root carries the layer orientation; the switch flips the attri
   controller.setLayerOrientation("left");
   assert.equal(hostEl.getAttribute("data-layers"), "left");
 
-  const stored = bootHosted({ linked: false, stored: { layers: "top" } });
+  const stored = bootHosted({ linked: false, stored: { layers: "top" }, env: fakeMedia({ coarse: true, width: 1280 }) });
   assert.equal(stored.hostEl.getAttribute("data-layers"), "top");
   assert.equal(stored.hostEl.querySelector("[data-layer-orientation='top']").getAttribute("aria-checked"), "true");
+
+  // A desktop: the Recipe stands in the Grid whatever was chosen, the choice kept for a finger,
+  // and Settings' Recipe Layout group is a finger's (settings.css).
+  const desk = bootHosted({ linked: false, stored: { layers: "top" }, env: fakeMedia({ coarse: false, width: 1440 }) });
+  assert.equal(desk.hostEl.getAttribute("data-input"), "pointer");
+  assert.equal(desk.hostEl.getAttribute("data-layers"), "grid");
+  assert.equal(desk.controller.getLayerOrientation(), "top", "the desktop overwrote the operator's choice");
+  assert.ok(desk.hostEl.querySelector("[data-layer-orientation='top']").closest(".slate-settings__group").classList.contains("slate-settings__group--recipe-layout"));
+  const settingsCss = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "settings.css"), "utf8");
+  assert.match(settingsCss, /\n\.slate-settings__group--recipe-layout \{\s*display: none;/);
+  assert.match(settingsCss, /\.slate-root\[data-input="touch"\] \.slate-settings__group--recipe-layout \{\s*display: block;/);
 });
 
 /* ----------------------------------------------------------------------
@@ -717,9 +734,9 @@ test("every layer card carries its index for the sheets, and the reversed rule t
   const after = hostEl.querySelectorAll(".slate-hopper");
   assert.equal(after.length, before.length);
   for (let i = 0; i < before.length; i += 1) assert.ok(before[i] === after[i], `row ${i} was rebuilt by the order switch`);
-  // The Weights cards carry the same index.
+  // The Weights cards carry the same index - the rail's page and the Recipe's Weights tab alike.
   const weights = hostEl.querySelectorAll(".slate-weights__layer");
-  assert.deepEqual(weights.map(card => card.style.getPropertyValue("--slate-layer-i")), ["0", "1", "2"]);
+  assert.deepEqual(weights.map(card => card.style.getPropertyValue("--slate-layer-i")), ["0", "1", "2", "0", "1", "2"]);
   const stored = bootHosted({ linked: false, stored: { layerOrder: "reversed", timeline: "realtime", input: "auto", host: "auto" } });
   assert.equal(stored.hostEl.getAttribute("data-layer-order"), "reversed");
 });
@@ -860,6 +877,26 @@ test("Settings offers Automatic / Touch / Mouse input as radios after Timeline, 
   const inert = settings.create(doc, { theme: null, themes: [], display: null });
   assert.match(inert.element.querySelectorAll(".slate-settings__note").map(one => one.textContent).join(" "), /input cannot be changed/);
   click(inert.inputMode("touch"));
+});
+
+test("under a finger the rail lists Weights and Recipe Book; with a mouse neither - and Weights showing when the mouse arrives becomes the Recipe's Weights tab", () => {
+  const media = fakeMedia({ coarse: true, width: 1280 });
+  const { hostEl, controller, executed } = bootHosted({ linked: false, env: media });
+  const item = id => hostEl.querySelector(`.slate-rail__sections [data-section='${id}']`);
+  assert.ok(!item("weights").hasAttribute("hidden") && !item("recipe-book").hasAttribute("hidden"));
+  item("weights").dispatchEvent({ type: "click", target: item("weights"), stopPropagation() {} });
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Weights");
+  controller.setInputMode("pointer");
+  assert.ok(item("weights").hasAttribute("hidden") && item("recipe-book").hasAttribute("hidden"));
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
+  assert.equal(hostEl.querySelector(".slate-recipe__weights-tab").getAttribute("aria-selected"), "true", "the Recipe did not open on its Weights tab");
+  assert.ok(!hostEl.querySelector(".slate-recipe__weights").hasAttribute("hidden"));
+  // Back under a finger: the tab is put away and the rail lists Weights again.
+  controller.setInputMode("touch");
+  assert.ok(!item("weights").hasAttribute("hidden"));
+  assert.ok(hostEl.querySelector(".slate-recipe__weights").hasAttribute("hidden"));
+  assert.equal(hostEl.querySelector(".slate-tabs__tab[data-recipe='current']").getAttribute("aria-selected"), "true");
+  assert.equal(executed.length, 0);
 });
 
 test("hosted, the root carries the tier: a desktop is pointer and wide; a coarse or native window is touch; the width follows a rotation; the Settings choice wins - and nothing is rebuilt or dispatched", () => {

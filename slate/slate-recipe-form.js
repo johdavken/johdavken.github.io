@@ -22,6 +22,14 @@
  * picked row's fields - still the draft, still one Apply. Picking is
  * pointer work; the fields themselves stay the keyboard's.
  *
+ * With `plain` (a desktop's always-open form) the fields are drawn as
+ * the cell's own text (recipe.css): an empty resin shows the cell's "+",
+ * the blend carries its "%", and a field that differs from the line is
+ * marked is-drafted - the one sign, with no box, that it will be sent.
+ *
+ * Under an always-open form (a desktop's Recipe) follow() lets a publish
+ * reach the fields not typed in, so the form can stay open for good.
+ *
  * The form dispatches nothing and touches no cell text: the section
  * applies the draft and restores the cells when the form is destroyed.
  */
@@ -79,6 +87,7 @@
     const sameResin = typeof settings.sameResin === "function" ? settings.sameResin : null;
     const validate = typeof settings.validate === "function" ? settings.validate : null;
     const model = settings.model || null;
+    const plain = !!settings.plain;
     let base = settings.base || {};
     const draft = draftModule.draftFrom(base);
     const fields = [];          // in tab order: { key, kind, input, entry }
@@ -124,8 +133,19 @@
       }
     }
 
+    // Plain fields have no box: what will be sent is marked on the field.
+    function paintDrafted() {
+      if (!plain) return;
+      for (const [key, slot] of byKey) {
+        const change = draftModule.changesFor({ [key]: base[key] }, { [key]: draft[key] }, sameResin)[0] || {};
+        slot.resin.classList.toggle("is-drafted", change.resin !== undefined);
+        if (slot.pct) slot.pct.classList.toggle("is-drafted", change.pct !== undefined);
+      }
+    }
+
     function refresh() {
       if (destroyed) return;
+      paintDrafted();
       paintH1();
       paintProblems();
       onChange();
@@ -138,7 +158,7 @@
       const wrapper = element(doc, "div", "slate-combobox slate-hopper__draft");
       const resin = element(doc, "input", "slate-hopper__draft-resin", {
         type: "text", autocomplete: "off", spellcheck: "false", autocapitalize: "characters", enterkeyhint: "next", maxlength: String(searchModule.CODE_MAX),
-        "aria-label": `Resin for ${entry.hopper}`, "data-slate-draft": "resin", placeholder: "No resin"
+        "aria-label": `Resin for ${entry.hopper}`, "data-slate-draft": "resin", placeholder: plain ? "+" : "No resin"
       });
       resin.value = start.resin;
       wrapper.appendChild(resin);
@@ -166,7 +186,20 @@
           type: "text", inputmode: "decimal", enterkeyhint: "next", autocomplete: "off", "aria-label": `Blend for ${entry.hopper}`, "data-slate-draft": "pct"
         });
         pct.value = start.pct;
-        entry.row.insertBefore(pct, entry.cells.pct.nextSibling);
+        // Plain, the blend carries its "%" as the cell does - hidden with
+        // the blend's placeholder while there is none (recipe.css).
+        if (plain) {
+          pct.setAttribute("placeholder", " ");
+          const holder = element(doc, "span", "slate-hopper__draft-pctwrap");
+          holder.appendChild(pct);
+          const unit = element(doc, "span", "slate-hopper__draft-unit", { "aria-hidden": "true" });
+          unit.textContent = "%";
+          holder.appendChild(unit);
+          entry.row.insertBefore(holder, entry.cells.pct.nextSibling);
+          slot.holder = holder;
+        } else {
+          entry.row.insertBefore(pct, entry.cells.pct.nextSibling);
+        }
         slot.pct = pct;
         fields.push({ key, kind: "pct", input: pct, entry });
         pct.addEventListener("input", () => { draft[key].pct = pct.value; refresh(); });
@@ -243,6 +276,19 @@
       return moved;
     }
 
+    /** Clear recipe: every hopper's resin and blend blanked, into the
+     * draft - one Apply sends it. Returns how many fields moved. */
+    function clearAll() {
+      if (destroyed) return 0;
+      let moved = 0;
+      for (const [key, slot] of byKey) {
+        if (String(draft[key].resin || "") !== "") { draft[key].resin = ""; slot.resin.value = ""; moved += 1; }
+        if (slot.pct && String(draft[key].pct || "") !== "") { draft[key].pct = ""; slot.pct.value = ""; moved += 1; }
+      }
+      if (moved) refresh();
+      return moved;
+    }
+
     function focusFirst() {
       const first = fields[0];
       if (!first) return;
@@ -264,6 +310,23 @@
       refresh();
     }
 
+    /* A publish moved a slot under an always-open form (a desktop's
+     * Recipe): a slot not typed in takes the new value, field and base
+     * alike, and says nothing; one typed in keeps what was typed and is
+     * rebased and marked, as rebase() does. */
+    function follow(key, next) {
+      const slot = byKey.get(key);
+      if (!slot || !base[key]) return false;
+      const touched = draftModule.changesFor({ [key]: base[key] }, { [key]: draft[key] }, sameResin).length > 0;
+      if (touched) { rebase(key, next); return false; }
+      base = draftModule.rebase(base, key, next);
+      draft[key] = draftModule.draftFrom({ [key]: base[key] })[key];
+      slot.resin.value = draft[key].resin;
+      if (slot.pct) slot.pct.value = draft[key].pct;
+      refresh();
+      return true;
+    }
+
     /** The application's words on one row (a refusal naming a hopper). */
     function setNote(key, message) {
       const slot = byKey.get(key);
@@ -280,7 +343,8 @@
         if (slot.search) slot.search.destroy();
         const wrapper = slot.resin.parentNode;
         if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
-        if (slot.pct && slot.pct.parentNode) slot.pct.parentNode.removeChild(slot.pct);
+        if (slot.holder && slot.holder.parentNode) slot.holder.parentNode.removeChild(slot.holder);
+        else if (slot.pct && slot.pct.parentNode) slot.pct.parentNode.removeChild(slot.pct);
         if (slot.preview && slot.preview.parentNode) slot.preview.parentNode.removeChild(slot.preview);
         show(slot.entry.cells.resin, true);
         show(slot.entry.cells.pct, true);
@@ -294,6 +358,7 @@
       body.el.classList.remove("is-drafting");
     }
 
+    paintDrafted();
     paintH1();
     paintProblems();
 
@@ -305,12 +370,14 @@
       draft: () => JSON.parse(JSON.stringify(draft)),
       fields: () => fields.map(field => ({ key: field.key, kind: field.kind, input: field.input })),
       rebase,
+      follow,
       setNote,
       pick,
       pickLayer,
       clearPicked,
       picked: () => [...picked],
       fill,
+      clearAll,
       focusFirst,
       refresh,
       destroy,

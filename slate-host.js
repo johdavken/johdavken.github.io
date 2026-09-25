@@ -138,10 +138,11 @@
     "slate/slate-recipe-drag.js",
     "slate/slate-layer-menu.js",
     "slate/slate-print.js",
-    // Before the Recipe, which opens the Book under its tabs on a desktop.
+    // Before the Recipe, which opens the Book under its tabs and the
+    // Weights as its third tab on a desktop.
     "slate/slate-recipe-book.js",
-    "slate/slate-recipe.js",
     "slate/slate-weights.js",
+    "slate/slate-recipe.js",
     "slate/slate-wizard.js",
     "slate/slate-changeover.js",
     "slate/slate-line-rate.js",
@@ -170,7 +171,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.48.0";
+  const VERSION = "0.50.0";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a

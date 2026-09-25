@@ -141,6 +141,32 @@
 
 /* ---- The list ---- */
 
+/* The list's column: the search over the list, and under it the line
+   saying when more recipes exist than the list shows. */
+.slate-book__list-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  min-width: 0;
+}
+
+.slate-book__search {
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 30px;
+  --slate-field-width: 100%;
+  min-width: 0;
+}
+
+.slate-book__more {
+  margin: 0;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
 .slate-book__list {
   display: flex;
   flex-direction: column;

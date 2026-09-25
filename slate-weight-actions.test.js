@@ -52,11 +52,22 @@ test("a refusal comes back as the bridge gave it; no bridge answers unavailable 
   assert.equal(actions.setSmart({}, true).code, "unavailable");
 });
 
+test("the bulk requests: setWeights and setGeometries each send ONE request naming Current, the entries as given", () => {
+  const commands = makeCommands({ capabilities: ALL });
+  actions.setWeights(commands, [{ layer: "A", index: 0, weight: "450" }, { layer: "B", index: 1, weight: 0 }]);
+  actions.setGeometries(commands, [{ layer: "A", index: 0, dimension: "height", value: "40" }]);
+  assert.deepEqual(commands.calls, [
+    { command: "setHopperWeights", args: { recipe: "current", weights: [{ layer: "A", index: 0, weight: "450" }, { layer: "B", index: 1, weight: 0 }] } },
+    { command: "setHopperGeometries", args: { recipe: "current", geometries: [{ layer: "A", index: 0, dimension: "height", value: "40" }] } }
+  ]);
+  assert.equal(actions.setWeights(null, []).code, "unavailable");
+});
+
 test("abilities follow the bridge's capabilities; read-only withholds all with its reason", () => {
   const full = makeCommands({ capabilities: ALL });
-  assert.deepEqual(actions.abilities(full), { weight: true, geometry: true, circumference: true, smart: true });
+  assert.deepEqual(actions.abilities(full), { weight: true, weights: true, geometry: true, geometries: true, circumference: true, smart: true });
   const some = makeCommands({ capabilities: ["setHopperWeight", "setLineRate"] });
-  assert.deepEqual(actions.abilities(some), { weight: true, geometry: false, circumference: false, smart: false });
+  assert.deepEqual(actions.abilities(some), { weight: true, weights: false, geometry: false, geometries: false, circumference: false, smart: false });
   assert.match(actions.reason(some, "geometry"), /does not offer setHopperGeometry/);
   const readOnly = actions.abilities(full, { readOnly: true });
   assert.ok(Object.values(readOnly).every(value => value === false));
