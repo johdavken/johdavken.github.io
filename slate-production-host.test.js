@@ -157,7 +157,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   stateHandle.publish();
   const executed = [];
   root.PolynStationCommandBridge.connect({
-    capabilities: ["setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setHopperWeight", "setHopperGeometry", "setHopperCircumference", "setSmartHoppers"],
+    capabilities: ["setHopperTracking", "setPumpOff", "resetTracking", "setLineRate", "setHopperWeight", "setHopperWeights", "setHopperGeometry", "setHopperGeometries", "setHopperCircumference", "setSmartHoppers"],
     execute(command, args) {
       executed.push({ command, args });
       return root.PolynStationCommandContract.success({ changed: true, revision: 1, persisted: true, snapshot: root.PolynStationStateBridge.getSnapshot() });
@@ -221,14 +221,14 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   assert.ok(!timelineWrap.hasAttribute("hidden") && balanceWrap.hasAttribute("hidden"));
   const railItems = hostEl.querySelectorAll(".slate-rail__sections [data-section]");
   const listed = railItems.filter(item => !item.hasAttribute("hidden")).map(item => item.getAttribute("data-section"));
-  // With a mouse the Recipe Book opens under the Recipe's tabs, not from the rail.
-  assert.deepEqual(listed, ["recipe", "weights", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Weights, Resin Balance, with the two calculators in the Tools menu after");
+  // With a mouse the Recipe Book opens under the Recipe's tabs and Weights is its third tab, not the rail's.
+  assert.deepEqual(listed, ["recipe", "resin-balance", "pressure", "winding-tension"], "the sections are Recipe, Resin Balance, with the two calculators in the Tools menu after");
   // The administrator's three are built with the rest and stand unlisted:
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is
   // not drawn.
   // A phone's Home is built and unlisted too, on a screen that is not one.
-  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "recipe-book", "workspaces", "line-config", "resins"]);
+  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "recipe-book", "weights", "workspaces", "line-config", "resins"]);
   assert.ok(hostEl.querySelector(".slate-rail__divider").hasAttribute("hidden"), "the administrator's rule is drawn with nobody signed in");
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);
@@ -311,34 +311,44 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   toolsButton.dispatchEvent({ type: "click", target: toolsButton, stopPropagation() {} });
   assert.equal(toolsButton.getAttribute("aria-expanded"), "false");
 
-  // Weights: a section of its own, under the Recipe Book. A weight goes
-  // through the same executor as one setHopperWeight to Current, the
-  // profiles come off the weight-profiles bridge the application
-  // connected (loaded by index.html, never by the host), and the Recipe's
-  // rows are untouched by the visit.
-  const weightsItem = hostEl.querySelector(".slate-rail__sections [data-section='weights']");
-  weightsItem.dispatchEvent({ type: "click", target: weightsItem, stopPropagation() {} });
-  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Weights");
-  assert.ok(!hostEl.querySelector(".slate-centre .slate-section[data-section='weights']").hasAttribute("hidden"));
-  const weightField = hostEl.querySelector(".slate-weights__field[data-key='A:0'][data-kind='weight']");
+  // Weights: with a mouse, the Recipe's third tab (under a finger the rail
+  // lists it as a section of its own). A weight goes through the same
+  // executor as one setHopperWeight to Current, the profiles come off the
+  // weight-profiles bridge the application connected (loaded by
+  // index.html, never by the host), and the Recipe's rows are untouched by
+  // the visit.
+  const weightsTab = hostEl.querySelector(".slate-recipe__weights-tab");
+  weightsTab.dispatchEvent({ type: "click", target: weightsTab, stopPropagation() {} });
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe", "the Weights tab left the Recipe");
+  const tabbed = hostEl.querySelector(".slate-recipe__weights");
+  assert.ok(!tabbed.hasAttribute("hidden"), "the Weights tab did not show the page");
+  assert.equal(weightsTab.getAttribute("aria-selected"), "true");
+  assert.ok(hostEl.querySelector(".slate-recipe__body[data-recipe='current']").hasAttribute("hidden"), "the recipe stayed under the Weights tab");
+  const weightField = tabbed.querySelector(".slate-weights__field[data-key='A:0'][data-kind='weight']");
   assert.equal(weightField.value, "400");
   assert.equal(weightField.getAttribute("readonly"), null, "the field is withheld on a writable live line");
+  // Always a draft on a desktop: typing and Enter send nothing; Apply sends ONE setHopperWeights.
   weightField.dispatchEvent({ type: "focus", target: weightField });
   weightField.value = "450";
+  weightField.dispatchEvent({ type: "input", target: weightField });
   weightField.dispatchEvent({ type: "keydown", key: "Enter", target: weightField, preventDefault() {} });
-  // The contract read the draft text into pounds before the executor saw it.
-  assert.equal(JSON.stringify(executed[2]), JSON.stringify({ command: "setHopperWeight", args: { recipe: "current", layer: "A", index: 0, weight: 450 } }));
-  assert.equal(hostEl.querySelector(".slate-weights [data-slate-smart]").getAttribute("data-able"), "false", "Smart Hoppers offered off an identified line");
-  assert.equal(hostEl.querySelectorAll(".slate-book__row[data-profile]").length, 1);
-  assert.equal(hostEl.querySelector(".slate-book__row[data-profile='w1'] .slate-book__row-name").textContent, "Standard 48in");
-  const profileRow = hostEl.querySelector(".slate-book__row[data-profile='w1']");
+  assert.equal(executed.length, 2, "a draft reached the executor without Apply");
+  const apply = tabbed.querySelector("[data-slate-weights-bulk-do='apply']");
+  apply.dispatchEvent({ type: "click", target: apply, stopPropagation() {} });
+  assert.equal(JSON.stringify(executed[2]), JSON.stringify({ command: "setHopperWeights", args: { recipe: "current", weights: [{ layer: "A", index: 0, weight: 450 }] } }));
+  assert.equal(executed.length, 3, "the weight was sent more than once");
+  assert.equal(tabbed.querySelector("[data-slate-smart]").getAttribute("data-able"), "false", "Smart Hoppers offered off an identified line");
+  assert.equal(tabbed.querySelectorAll(".slate-book__row[data-profile]").length, 1);
+  assert.equal(tabbed.querySelector(".slate-book__row[data-profile='w1'] .slate-book__row-name").textContent, "Standard 48in");
+  const profileRow = tabbed.querySelector(".slate-book__row[data-profile='w1']");
   profileRow.dispatchEvent({ type: "click", target: profileRow, stopPropagation() {} });
-  const loadButton = hostEl.querySelector(".slate-weights [data-book-action='load']");
+  const loadButton = tabbed.querySelector("[data-book-action='load']");
   assert.equal(loadButton.getAttribute("data-able"), "true");
   assert.equal(hostEl.querySelectorAll(".slate-hopper").length, 16, "the Weights rows count as recipe rows");
-  const recipeItem = hostEl.querySelector(".slate-rail__sections [data-section='recipe']");
-  recipeItem.dispatchEvent({ type: "click", target: recipeItem, stopPropagation() {} });
-  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
+  const currentTab = hostEl.querySelector(".slate-tabs__tab[data-recipe='current']");
+  currentTab.dispatchEvent({ type: "click", target: currentTab, stopPropagation() {} });
+  assert.ok(tabbed.hasAttribute("hidden"));
+  assert.ok(!hostEl.querySelector(".slate-recipe__body[data-recipe='current']").hasAttribute("hidden"));
   profilesHandle.disconnect();
 
   // The Recipe Book reads the recipes bridge the application connected.

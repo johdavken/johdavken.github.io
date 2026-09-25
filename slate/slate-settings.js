@@ -226,7 +226,8 @@
     // Layout: where a layer's head stands on the Recipe page. A phone
     // always stands them on top (slate.js), so there the group is
     // withheld (settings.css), as is the Weights layout's below.
-    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Layout" });
+    // A desktop's Recipe is always the Grid: the group is a finger's (settings.css).
+    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout slate-settings__group--recipe-layout", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
     layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe page. Nothing about the recipe changes."));
     const orientations = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layers" });

@@ -31,6 +31,33 @@
  * edited: when the line's value moves under an open draft, the row says
  * so and the draft stands. A change of shape - the switch flipped, the
  * line's measure changed - rebuilds the rows; anything else is patched.
+ *
+ * BULK EDIT
+ *
+ * The bar's Bulk edit makes every weight field - and, with Smart Hoppers,
+ * every geometry field - a draft at once: nothing reaches the line until
+ * Apply, which sends ONE setHopperWeights for the weights that changed
+ * (and ONE setHopperGeometries for the geometry). A hopper id picks its
+ * row (Shift for a run within the layer, the layer's name for the layer)
+ * and the foot's fill strip writes one weight - and one measure - into
+ * every picked row's field: still the draft. While it is open the switch,
+ * the circumference and the profiles stand aside, so a change is either
+ * in the draft or on the line, never both. Cancel arms while there are
+ * changes. Another device's value under a drafted field is said and the
+ * draft stands; an untouched field follows the line; a structural publish
+ * abandons the form. The foot wears the Recipe's bulk classes.
+ *
+ * ALWAYS A DRAFT (a desktop's)
+ *
+ * Built with `alwaysDraft` - the Recipe's Weights tab on a desktop - the
+ * page has no Bulk edit button: the form is simply what the page is.
+ * Every weight and measure is a draft from the start, the fill window
+ * stands in the foot at all times and holds the Smart Hoppers switch and
+ * the circumference beside the fill fields, and Apply sends the changes.
+ * The switch and the circumference stay live - the circumference commits
+ * on its own, as a line-wide value - but the switch, which rebuilds the
+ * rows, and a profile's Load wait while there are changes to apply or
+ * discard. After Apply, Cancel or a rebuild the page is a fresh draft.
  */
 (function (root, factory) {
   const line = typeof require === "function"
@@ -55,6 +82,33 @@
   const ABANDONED = "The line changed; your unapplied entry was dropped.";
   const NO_LINE = "No line to weigh.";
   const KIND = actionsModule.KIND;
+  const BULK_LABEL = "Bulk edit";
+  const BULK_HINT = "Click a hopper id to select hoppers and fill them at once.";
+  const BULK_BUSY = "Apply or cancel the bulk edit first.";
+  const DRAFT_BUSY = "Apply or discard the weight changes first.";
+  const DRAFT_IDLE = "No changes. Nothing is sent until Apply.";
+  const NONE_PICKED = "Select hoppers to fill";
+  const BULK_NOTHING = "Nothing has changed to apply.";
+  const BULK_INVALID = "Correct the marked fields: a weight or a measure is a number, 0 or more.";
+  const BULK_ABANDONED = "The line changed on another device; the bulk edit you had open was not applied.";
+  const BULK_READ_ONLY = "Slate became read-only; the bulk edit was closed and nothing was applied.";
+  const BULK_NO_BRIDGE = "The application stopped offering the bulk edit; it was closed and nothing was applied.";
+  const BULK_ARM_MS = 4000;
+  const FILL_NOTHING = "Enter a weight or a measure to fill into the selected hoppers.";
+  const FILL_NONE = "Nothing to fill: the selected hoppers already hold that.";
+  const selectedLabel = count => (count === 1 ? "1 selected" : `${count} selected`);
+  const discardLabel = count => (count === 1 ? "Discard 1 change" : `Discard ${count} changes`);
+  const discardedNote = count => (count === 1 ? "The bulk edit was closed; 1 change was not applied." : `The bulk edit was closed; ${count} changes were not applied.`);
+  const appliedNote = count => (count === 1 ? "Applied 1 change." : `Applied ${count} changes.`);
+
+  /* A draft's text as a number of pounds or a measure: blank is 0; what
+   * is not a number, or is below 0, is null. */
+  function draftNumber(textValue) {
+    const trimmed = String(textValue == null ? "" : textValue).trim();
+    if (trimmed === "") return 0;
+    const number = Number(trimmed);
+    return Number.isFinite(number) && number >= 0 ? number : null;
+  }
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -214,12 +268,17 @@
     const say = typeof settings.say === "function" ? settings.say : () => {};
     const guard = () => ({ readOnly: !!readOnly() });
     const commands = () => commandsFor();
+    const timers = settings.timers || { setTimeout, clearTimeout };
+    const touch = () => {
+      try { return typeof settings.tier === "function" && settings.tier().input === "touch"; } catch (error) { return false; }
+    };
+    const always = !!settings.alwaysDraft;
 
     const rootEl = element(doc, "div", "slate-weights", { "data-shape": "off" });
 
     /* ---- The bar: subtitle, the switch, the circumference ---- */
-    const bar = element(doc, "div", "slate-section__bar");
-    const subtitle = text(doc, "p", "slate-section__subtitle", "");
+    const bar = element(doc, "div", "slate-section__bar slate-weights__bar");
+    const subtitle = text(doc, "p", "slate-section__subtitle slate-weights__subtitle", "");
     bar.appendChild(subtitle);
     const circumferenceWrap = element(doc, "label", "slate-weights__circumference", { hidden: "" });
     circumferenceWrap.appendChild(text(doc, "span", "slate-weights__circumference-label", "Circumference"));
@@ -231,6 +290,8 @@
     circumferenceWrap.appendChild(text(doc, "span", "slate-weights__unit", "in"));
     circumferenceWrap.appendChild(text(doc, "span", "slate-weights__shared", "shared by every hopper"));
     bar.appendChild(circumferenceWrap);
+    const bulkSwitch = text(doc, "button", "slate-switch slate-weights__bulk", BULK_LABEL, { type: "button", "aria-pressed": "false", "data-slate-weights-bulk": "", "data-able": "false" });
+    if (!always) bar.appendChild(bulkSwitch);
     const smartSwitch = text(doc, "button", "slate-switch slate-weights__smart", "Smart Hoppers", { type: "button", role: "switch", "aria-checked": "false", "data-slate-smart": "", "data-able": "false" });
     bar.appendChild(smartSwitch);
     rootEl.appendChild(bar);
@@ -244,6 +305,34 @@
     // full name as its label, and the row of labels only repeated them.
     const layersEl = element(doc, "div", "slate-weights__layers");
     rootEl.appendChild(layersEl);
+
+    // The bulk edit's foot, built once and shown while the form is open:
+    // the fill strip for picked rows, what would change, the
+    // application's answer, Cancel, Apply (the Recipe's bulk classes).
+    const bulkFoot = element(doc, "div", "slate-recipe__foot slate-recipe__bulk-foot slate-weights__bulk-foot", { hidden: "" });
+    const fill = element(doc, "div", "slate-recipe__fill", { hidden: "" });
+    const fillCount = text(doc, "span", "slate-recipe__fill-count", "");
+    const fillWeight = element(doc, "input", "slate-recipe__fill-pct slate-weights__fill", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Weight to fill into the selected hoppers, pounds", placeholder: "Weight (no change)", "data-slate-weights-fill-field": "weight" });
+    const fillGeometry = element(doc, "input", "slate-recipe__fill-pct slate-weights__fill", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Measure to fill into the selected hoppers", placeholder: "Measure (no change)", "data-slate-weights-fill-field": "geometry", hidden: "" });
+    const fillButton = text(doc, "button", "slate-recipe__plan-action", "Fill", { type: "button", "data-slate-weights-fill": "fill" });
+    const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Clear selection", { type: "button", "data-slate-weights-fill": "clear" });
+    // Always a draft: the switch and the circumference lead the fill
+    // window, a rule between them and the fill fields.
+    if (always) {
+      fill.appendChild(smartSwitch);
+      fill.appendChild(circumferenceWrap);
+      fill.appendChild(element(doc, "span", "slate-weights__fill-rule", { "aria-hidden": "true" }));
+      rootEl.classList.add("is-always-draft");
+    }
+    for (const node of [fillCount, fillWeight, fillGeometry, fillButton, fillClear]) fill.appendChild(node);
+    bulkFoot.appendChild(fill);
+    const bulkSummary = text(doc, "p", "slate-recipe__bulk-summary", "", { role: "status" });
+    const bulkHint = text(doc, "span", "slate-recipe__bulk-hint", BULK_HINT);
+    const bulkNote = element(doc, "p", "slate-recipe__bulk-note", { role: "status", hidden: "" });
+    const bulkCancel = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Cancel", { type: "button", "data-slate-weights-bulk-do": "cancel" });
+    const bulkApply = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--promote", "Apply", { type: "button", "data-slate-weights-bulk-do": "apply", "data-able": "false" });
+    for (const node of [bulkSummary, bulkHint, bulkNote, bulkCancel, bulkApply]) bulkFoot.appendChild(node);
+    rootEl.appendChild(bulkFoot);
     // A phone leaves out the hoppers empty in both recipes (weights.css);
     // this brings them back - a weight is the equipment's, empty or not.
     const showEmpty = text(doc, "button", "slate-weights__show-empty", "", { type: "button", hidden: "", "aria-pressed": "false" });
@@ -285,7 +374,7 @@
 
     const state = {
       resolved: null, smart: actionsModule.smartFrom(null), shape: null, measure: null, built: false,
-      editing: null, committing: null, rows: new Map(), showEmpty: false,
+      editing: null, committing: null, rows: new Map(), showEmpty: false, bulk: null,
       book: null, selectedId: null, entry: null, confirm: null, moreOpen: false, pending: null, duplicate: null
     };
 
@@ -443,6 +532,8 @@
       });
       input.addEventListener("focus", () => {
         if (input.hasAttribute("readonly")) return;
+        // Under the bulk edit a field is a draft: no edit to open or commit.
+        if (state.bulk && kind !== KIND.circumference) return;
         state.editing = { key, kind, base: actionsModule.fieldText(valueOf(key, kind)) };
         input.classList.remove("is-changed-underneath");
         markEditing(key, true);
@@ -450,9 +541,24 @@
       });
       input.addEventListener("input", () => {
         input.removeAttribute("aria-invalid");
+        if (state.bulk && kind !== KIND.circumference) paintBulk();
       });
       input.addEventListener("keydown", event => {
         if (!event) return;
+        if (state.bulk && kind !== KIND.circumference) {
+          if (event.key === "Enter" && typeof event.preventDefault === "function") event.preventDefault();
+          // Escape puts a changed field back; on an unchanged one it
+          // reaches the form (Cancel's arm).
+          if (event.key === "Escape" && fieldChanged(key, kind)) {
+            if (typeof event.stopPropagation === "function") event.stopPropagation();
+            input.value = actionsModule.fieldText(valueOf(key, kind));
+            input.removeAttribute("aria-invalid");
+            input.classList.remove("is-changed-underneath");
+            setRowNote(key, "");
+            paintBulk();
+          }
+          return;
+        }
         if (event.key === "Enter") {
           if (typeof event.preventDefault === "function") event.preventDefault();
           commitField(key, kind);
@@ -478,6 +584,20 @@
      * edited; then a moved value is said, never written. */
     function patchField(input, key, kind, own) {
       const canonical = actionsModule.fieldText(valueOf(key, kind));
+      if (state.bulk && kind !== KIND.circumference) {
+        // A draft: an untouched field follows the line; a typed one
+        // stands, and another device's move under it is said.
+        const baseKey = `${key}|${kind}`;
+        const base = state.bulk.base.has(baseKey) ? state.bulk.base.get(baseKey) : canonical;
+        if (String(input.value || "").trim() === base) input.value = canonical;
+        else if (canonical !== base && !own && !input.classList.contains("is-changed-underneath")) {
+          input.classList.add("is-changed-underneath");
+          const shown = kind === KIND.weight ? actionsModule.formatPounds(canonical) : (canonical || "0");
+          setRowNote(key, `${capitalize(nounFor(key, kind))} is now ${shown} ${unitFor(kind)} in the application; the value you entered stands and is what Apply sends.`);
+        }
+        state.bulk.base.set(baseKey, canonical);
+        return;
+      }
       if (!editingIs(key, kind)) {
         if (input.value !== canonical) input.value = canonical;
         input.classList.remove("is-changed-underneath");
@@ -524,7 +644,7 @@
       row.appendChild(text(doc, "span", "slate-weights__id", hopper.id));
       const resin = text(doc, "span", "slate-weights__resin", EMPTY);
       row.appendChild(resin);
-      const weightWrap = element(doc, "span", "slate-weights__wrap");
+      const weightWrap = element(doc, "span", "slate-weights__wrap slate-weights__weight");
       const weightInput = element(doc, "input", "slate-weights__field", {
         type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
         "data-kind": KIND.weight, "data-key": key, "data-layer": layer.id, "data-index": String(hopper.index),
@@ -537,6 +657,9 @@
       let geometryInput = null;
       let computed = null;
       if (m) {
+        // A measured row: the Grid sets the two fields side by side, the
+        // readout on the line the Recipe's grab strip takes (weights.css).
+        row.setAttribute("data-measured", "");
         const geometryWrap = element(doc, "span", "slate-weights__wrap slate-weights__geometry");
         geometryInput = element(doc, "input", "slate-weights__field", {
           type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
@@ -570,7 +693,11 @@
         const card = element(doc, "div", "slate-weights__layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });
         card.style.setProperty("--slate-layer-i", String(i));
         const head = element(doc, "div", "slate-weights__head");
-        head.appendChild(text(doc, "span", "slate-weights__layer-name", `Layer ${layer.id}`));
+        // "Layer A" as the Recipe writes it: the word apart from the letter.
+        const name = element(doc, "span", "slate-weights__layer-name");
+        name.appendChild(text(doc, "span", "slate-weights__layer-word", "Layer "));
+        name.appendChild(doc.createTextNode(layer.id));
+        head.appendChild(name);
         head.appendChild(text(doc, "span", "slate-weights__layer-role", layer.roleLabel));
         card.appendChild(head);
         const rows = element(doc, "div", "slate-weights__rows");
@@ -634,12 +761,35 @@
         fields.push([entry.weightInput, KIND.weight]);
         if (entry.geometryInput) fields.push([entry.geometryInput, KIND.geometry]);
       }
+      // Under the bulk edit a field is the bulk command's; the
+      // circumference and the switch stand aside.
+      const bulkKind = { weight: "weights", geometry: "geometries" };
       for (const [input, kind] of fields) {
-        const can = !!able[kind];
+        const control = state.bulk ? (bulkKind[kind] || kind) : kind;
+        const held = !!state.bulk && !always && kind === KIND.circumference;
+        const can = !!able[control] && !held;
         input.setAttribute("aria-disabled", can ? "false" : "true");
         if (can) input.removeAttribute("readonly");
         else input.setAttribute("readonly", "");
-        input.setAttribute("title", can ? "" : `Cannot be changed here: ${actionsModule.reason(commands(), kind, guard())}`);
+        input.setAttribute("title", can ? "" : (held ? BULK_BUSY : `Cannot be changed here: ${actionsModule.reason(commands(), control, guard())}`));
+      }
+      const bulkAble = !!able.weights && state.rows.size > 0;
+      bulkSwitch.setAttribute("data-able", bulkAble || state.bulk ? "true" : "false");
+      bulkSwitch.setAttribute("aria-pressed", state.bulk ? "true" : "false");
+      bulkSwitch.setAttribute("title", state.bulk
+        ? "Close the bulk edit (Cancel)"
+        : (bulkAble ? "Edit every hopper's weight, then apply once" : `Bulk edit is unavailable: ${state.rows.size ? actionsModule.reason(commands(), "weights", guard()) : NO_LINE}`));
+      paintSmartAbility(always ? bulkChanges().length > 0 : false);
+    }
+
+    /* The switch: held under a bulk edit (always, when a desktop's page
+     * has changes waiting), else the bridge's answer. */
+    function paintSmartAbility(waiting) {
+      const held = always ? waiting : !!state.bulk;
+      if (held) {
+        smartSwitch.setAttribute("data-able", "false");
+        smartSwitch.setAttribute("title", `Smart Hoppers cannot be changed here: ${always ? DRAFT_BUSY : BULK_BUSY}`);
+        return;
       }
       const canSmart = actionsModule.canToggleSmart(commands(), state.smart, guard());
       smartSwitch.setAttribute("data-able", canSmart ? "true" : "false");
@@ -659,6 +809,7 @@
     /* ---- The switch ---- */
 
     function toggleSmart() {
+      if (state.bulk && (!always || bulkChanges().length > 0)) { say(always ? DRAFT_BUSY : BULK_BUSY); return null; }
       if (smartSwitch.getAttribute("data-able") !== "true") {
         say(`Smart Hoppers cannot be changed here: ${actionsModule.smartReason(commands(), state.smart, guard())}`);
         return null;
@@ -672,6 +823,316 @@
       }
       return result;
     }
+
+    /* ---- Bulk edit ---- */
+
+    /* Every draft field of the form: a weight on every row, and the
+     * geometry where Smart Hoppers measures one. */
+    function bulkFields() {
+      const out = [];
+      for (const [key, entry] of state.rows) {
+        out.push({ key, kind: KIND.weight, input: entry.weightInput, entry });
+        if (entry.geometryInput) out.push({ key, kind: KIND.geometry, input: entry.geometryInput, entry });
+      }
+      return out;
+    }
+
+    function fieldChanged(key, kind) {
+      const input = inputFor(key, kind);
+      if (!input) return false;
+      const typed = String(input.value || "").trim();
+      const resting = actionsModule.fieldText(valueOf(key, kind));
+      if (typed === resting) return false;
+      const a = draftNumber(typed);
+      const b = draftNumber(resting);
+      return !(a !== null && b !== null && a === b);
+    }
+
+    function bulkChanges() {
+      return state.bulk ? bulkFields().filter(field => fieldChanged(field.key, field.kind)) : [];
+    }
+
+    function summaryText(changes) {
+      if (!changes.length) return BULK_NOTHING;
+      const weights = changes.filter(one => one.kind === KIND.weight).length;
+      const measures = changes.length - weights;
+      const m = smartMeasure();
+      const parts = [];
+      if (weights) parts.push(`${weights} weight${weights === 1 ? "" : "s"}`);
+      if (measures) parts.push(`${measures} ${m ? m.noun.replace(/^usable /, "") : "measure"}${measures === 1 ? "" : "s"}`);
+      return `${parts.join(" and ")} change${changes.length === 1 ? "s" : ""} on Apply.`;
+    }
+
+    function setBulkNote(message) {
+      bulkNote.textContent = message || "";
+      show(bulkNote, !!message);
+    }
+
+    function disarmBulk() {
+      if (!state.bulk) return;
+      if (state.bulk.armTimer !== null) { timers.clearTimeout(state.bulk.armTimer); state.bulk.armTimer = null; }
+      state.bulk.armed = false;
+      bulkCancel.removeAttribute("data-armed");
+    }
+
+    function paintBulk() {
+      if (!state.bulk) return;
+      const changes = bulkChanges();
+      const changed = new Set(changes.map(one => `${one.key}|${one.kind}`));
+      for (const field of bulkFields()) field.input.classList.toggle("is-drafted", changed.has(`${field.key}|${field.kind}`));
+      bulkSummary.textContent = always && !changes.length ? DRAFT_IDLE : summaryText(changes);
+      if (always) {
+        // Nothing to discard, nothing to cancel; the switch, which
+        // rebuilds the rows, waits for the changes to go or be applied.
+        show(bulkCancel, changes.length > 0);
+        paintSmartAbility(changes.length > 0);
+      }
+      if (!changes.length) disarmBulk();
+      bulkCancel.textContent = state.bulk.armed ? discardLabel(changes.length) : "Cancel";
+      const can = changes.length > 0 && !state.bulk.busy && !!actionsModule.abilities(commands(), guard()).weights;
+      bulkApply.setAttribute("data-able", can ? "true" : "false");
+      bulkApply.setAttribute("title", can ? "Send every change in one request" : (changes.length ? BULK_BUSY : BULK_NOTHING));
+      for (const button of [bulkApply, bulkCancel]) {
+        if (state.bulk.busy) button.setAttribute("disabled", "");
+        else button.removeAttribute("disabled");
+      }
+      paintPicked();
+    }
+
+    function paintPicked() {
+      if (!state.bulk) return;
+      for (const [key, entry] of state.rows) entry.row.classList.toggle("is-picked", state.bulk.picked.has(key));
+      const count = state.bulk.picked.size;
+      show(fill, always || count > 0);
+      fillCount.textContent = count || !always ? selectedLabel(count) : NONE_PICKED;
+      for (const button of [fillButton, fillClear]) button.setAttribute("data-able", count ? "true" : "false");
+      const m = smartMeasure();
+      show(fillGeometry, !!m);
+      if (m) fillGeometry.setAttribute("placeholder", `${capitalize(m.noun.replace(/^usable /, ""))} (no change)`);
+    }
+
+    /* The form, begun: every field's resting value recorded, the foot up.
+     * A desktop's page begins one whenever it has rows and none is open. */
+    function startDrafting() {
+      state.bulk = { picked: new Set(), anchor: null, armed: false, armTimer: null, busy: false, base: new Map() };
+      for (const field of bulkFields()) state.bulk.base.set(`${field.key}|${field.kind}`, actionsModule.fieldText(valueOf(field.key, field.kind)));
+      // Always a draft, the profiles stay: data-bulk sets them aside.
+      if (!always) rootEl.setAttribute("data-bulk", "");
+      rootEl.classList.add("is-drafting");
+      fillWeight.value = "";
+      fillGeometry.value = "";
+      setBulkNote("");
+      show(bulkFoot, true);
+      applyAbilities();
+      paintBulk();
+    }
+
+    // Held while the rows are being rebuilt: the fresh draft begins once
+    // they show the line's values (update()).
+    let rebuilding = false;
+    function ensureDrafting() {
+      if (always && !rebuilding && !state.bulk && state.rows.size) startDrafting();
+    }
+
+    function openBulk() {
+      if (state.bulk) { discardOrArm(); return; }
+      if (bulkSwitch.getAttribute("data-able") !== "true") { say(bulkSwitch.getAttribute("title") || "Bulk edit is unavailable."); return; }
+      abandonEdit(true);
+      closeEntry();
+      state.confirm = null;
+      state.moreOpen = false;
+      startDrafting();
+      // With a mouse the first field takes the typing; under a finger
+      // nothing pops the keyboard unasked.
+      if (!touch()) {
+        const first = bulkFields().find(field => !field.input.hasAttribute("readonly"));
+        if (first && typeof first.input.focus === "function") first.input.focus();
+      }
+    }
+
+    function closeBulk() {
+      const bulk = state.bulk;
+      if (!bulk) return;
+      disarmBulk();
+      state.bulk = null;
+      rootEl.removeAttribute("data-bulk");
+      rootEl.classList.remove("is-drafting");
+      show(bulkFoot, false);
+      show(fill, false);
+      setBulkNote("");
+      for (const field of bulkFields()) {
+        field.input.value = actionsModule.fieldText(valueOf(field.key, field.kind));
+        field.input.classList.remove("is-drafted", "is-changed-underneath");
+        field.input.removeAttribute("aria-invalid");
+        field.entry.row.classList.remove("is-picked");
+        setRowNote(field.key, "");
+      }
+      const active = doc.activeElement;
+      if (active && rootEl.contains && rootEl.contains(active) && typeof active.blur === "function") active.blur();
+      applyAbilities();
+      paintProfiles();
+      // A desktop's page is a fresh draft again at once.
+      ensureDrafting();
+    }
+
+    /* Closed without applying: said when changes were dropped. */
+    function discardBulk(message) {
+      if (!state.bulk) return;
+      const count = bulkChanges().length;
+      closeBulk();
+      if (count > 0) say(message || discardedNote(count));
+    }
+
+    function discardOrArm() {
+      if (!state.bulk || state.bulk.busy) return;
+      const count = bulkChanges().length;
+      if (!count) { closeBulk(); return; }
+      if (state.bulk.armed) { closeBulk(); say(discardedNote(count)); return; }
+      state.bulk.armed = true;
+      bulkCancel.setAttribute("data-armed", "");
+      bulkCancel.textContent = discardLabel(count);
+      const bulk = state.bulk;
+      bulk.armTimer = timers.setTimeout(() => { bulk.armTimer = null; if (state.bulk === bulk) { disarmBulk(); paintBulk(); } }, BULK_ARM_MS);
+    }
+
+    function pick(key, range) {
+      const bulk = state.bulk;
+      if (!bulk || !state.rows.has(key)) return;
+      const entry = state.rows.get(key);
+      const anchor = bulk.anchor && state.rows.get(bulk.anchor);
+      if (range && anchor && anchor.layer === entry.layer) {
+        const low = Math.min(anchor.index, entry.index);
+        const high = Math.max(anchor.index, entry.index);
+        for (const [other, row] of state.rows) if (row.layer === entry.layer && row.index >= low && row.index <= high) bulk.picked.add(other);
+      } else if (bulk.picked.has(key)) bulk.picked.delete(key);
+      else bulk.picked.add(key);
+      bulk.anchor = key;
+      paintPicked();
+    }
+
+    function pickLayer(layer) {
+      const bulk = state.bulk;
+      if (!bulk) return;
+      const keys = [...state.rows].filter(([, row]) => row.layer === layer).map(([key]) => key);
+      const all = keys.length > 0 && keys.every(key => bulk.picked.has(key));
+      for (const key of keys) { if (all) bulk.picked.delete(key); else bulk.picked.add(key); }
+      paintPicked();
+    }
+
+    function fillPicked() {
+      const bulk = state.bulk;
+      if (!bulk || !bulk.picked.size) return;
+      const m = smartMeasure();
+      const weightText = String(fillWeight.value || "").trim();
+      const geometryText = m ? String(fillGeometry.value || "").trim() : "";
+      if (!weightText && !geometryText) { setBulkNote(FILL_NOTHING); return; }
+      let bad = false;
+      for (const [input, value] of [[fillWeight, weightText], [fillGeometry, geometryText]]) {
+        const wrong = value !== "" && draftNumber(value) === null;
+        if (wrong) input.setAttribute("aria-invalid", "true");
+        else input.removeAttribute("aria-invalid");
+        bad = bad || wrong;
+      }
+      if (bad) { setBulkNote(BULK_INVALID); return; }
+      let moved = 0;
+      for (const key of bulk.picked) {
+        const entry = state.rows.get(key);
+        if (!entry) continue;
+        for (const [input, value] of [[entry.weightInput, weightText], [entry.geometryInput, geometryText]]) {
+          if (!input || value === "" || input.hasAttribute("readonly")) continue;
+          if (String(input.value || "").trim() !== value) { input.value = value; input.removeAttribute("aria-invalid"); moved += 1; }
+        }
+      }
+      setBulkNote(moved ? "" : FILL_NONE);
+      fillWeight.value = "";
+      fillGeometry.value = "";
+      paintBulk();
+    }
+
+    function sendBulk(changes, kind, run) {
+      const list = changes.filter(one => one.kind === kind);
+      if (!list.length) return { ok: true, changed: false, count: 0 };
+      const result = run(list) || { ok: false, message: "The application gave no answer." };
+      if (result.ok && result.changed) onCommitted(result);
+      return Object.assign({}, result, { count: list.length });
+    }
+
+    function applyBulk() {
+      const bulk = state.bulk;
+      if (!bulk || bulk.busy) return;
+      const changes = bulkChanges();
+      if (!changes.length) { setBulkNote(BULK_NOTHING); return; }
+      const invalid = changes.filter(one => draftNumber(one.input.value) === null);
+      for (const field of bulkFields()) field.input.removeAttribute("aria-invalid");
+      if (invalid.length) {
+        for (const one of invalid) one.input.setAttribute("aria-invalid", "true");
+        setBulkNote(BULK_INVALID);
+        return;
+      }
+      if (bulkApply.getAttribute("data-able") !== "true") { say(bulkApply.getAttribute("title") || BULK_NOTHING); return; }
+      const m = smartMeasure();
+      const entryOf = one => { const row = state.rows.get(one.key); return { layer: row.layer, index: row.index }; };
+      bulk.busy = true;
+      paintBulk();
+      let weights;
+      let geometries;
+      try {
+        weights = sendBulk(changes, KIND.weight, list => actionsModule.setWeights(commands(), list.map(one => Object.assign(entryOf(one), { weight: draftNumber(one.input.value) }))));
+        geometries = weights.ok
+          ? sendBulk(changes, KIND.geometry, list => actionsModule.setGeometries(commands(), list.map(one => Object.assign(entryOf(one), { dimension: m ? m.dimension : "height", value: draftNumber(one.input.value) }))))
+          : null;
+      } finally {
+        bulk.busy = false;
+      }
+      if (state.bulk !== bulk) return;
+      const failed = !weights.ok ? weights : (geometries && !geometries.ok ? geometries : null);
+      if (failed) {
+        // What went through is on the line now, and its fields no longer
+        // count as changes; what was refused stays drafted, with the words.
+        setBulkNote(failed.message || "The application refused the change.");
+        paintBulk();
+        return;
+      }
+      closeBulk();
+      say(appliedNote(changes.length));
+    }
+
+    bulkSwitch.addEventListener("click", () => openBulk());
+    bulkFoot.addEventListener("click", event => {
+      const target = event && event.target;
+      if (!target || typeof target.closest !== "function") return;
+      const action = target.closest("[data-slate-weights-bulk-do]");
+      if (action && !action.hasAttribute("disabled")) {
+        if (action.getAttribute("data-slate-weights-bulk-do") === "apply") applyBulk();
+        else discardOrArm();
+        return;
+      }
+      const filling = target.closest("[data-slate-weights-fill]");
+      if (!filling) return;
+      if (filling.getAttribute("data-slate-weights-fill") === "fill") fillPicked();
+      else if (state.bulk) { state.bulk.picked.clear(); state.bulk.anchor = null; paintPicked(); }
+    });
+    for (const input of [fillWeight, fillGeometry]) {
+      input.addEventListener("keydown", event => {
+        if (event && event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); fillPicked(); }
+      });
+    }
+    layersEl.addEventListener("click", event => {
+      if (!state.bulk) return;
+      const target = event && event.target;
+      if (!target || typeof target.closest !== "function") return;
+      const id = target.closest(".slate-weights__id");
+      if (id && layersEl.contains(id)) {
+        const row = id.closest(".slate-weights__row");
+        if (row) pick(row.getAttribute("data-key"), !!event.shiftKey);
+        return;
+      }
+      const name = target.closest(".slate-weights__layer-name");
+      if (name && layersEl.contains(name)) {
+        const card = name.closest(".slate-weights__layer");
+        if (card) pickLayer(card.getAttribute("data-layer"));
+      }
+    });
 
     /* ---- Profiles ---- */
 
@@ -972,18 +1433,28 @@
       state.shape = shape;
       if (structural) {
         abandonEdit(own);
-        buildLayers();
+        rebuilding = true;
+        try {
+          if (state.bulk) discardBulk(own ? null : BULK_ABANDONED);
+          buildLayers();
+        } finally {
+          rebuilding = false;
+        }
       }
       paintRows(own);
       paintChrome();
       applyAbilities();
       paintProfiles();
+      ensureDrafting();
+      paintBulk();
     }
 
     /* A read-only flip: every field re-reads its ability; a draft, an
      * entry or a confirm whose ability is gone closes. */
     function refresh() {
+      if (state.bulk && !actionsModule.abilities(commands(), guard()).weights) discardBulk(readOnly() ? BULK_READ_ONLY : BULK_NO_BRIDGE);
       applyAbilities();
+      paintBulk();
       if (state.editing && !actionsModule.abilities(commands(), guard())[state.editing.kind]) cancelField(state.editing.key, state.editing.kind);
       const can = able();
       if (state.entry && !(state.entry.mode === "save" ? can.save : can[state.entry.mode])) closeEntry();
@@ -1020,8 +1491,9 @@
         case "confirm-entry": confirmEntry(); break;
         case "replace": replaceExisting(); break;
         case "cancel-entry": closeEntry(); paintProfiles(); break;
-        case "load": if (profile) openConfirm("load", profile.id); break;
-        case "update": if (profile) openConfirm("update", profile.id); break;
+        // A desktop's page: a load or an update waits for the changes.
+        case "load": if (always && bulkChanges().length) say(DRAFT_BUSY); else if (profile) openConfirm("load", profile.id); break;
+        case "update": if (always && bulkChanges().length) say(DRAFT_BUSY); else if (profile) openConfirm("update", profile.id); break;
         case "more": state.moreOpen = !state.moreOpen; paintDetail(); break;
         case "rename": if (profile) openEntry("rename", profile.id); break;
         case "duplicate": if (profile) openEntry("duplicate", profile.id); break;
@@ -1039,6 +1511,7 @@
     });
     rootEl.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
+      if (state.bulk) { discardOrArm(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (state.confirm || state.moreOpen) { state.confirm = null; state.moreOpen = false; paintDetail(); if (typeof event.stopPropagation === "function") event.stopPropagation(); }
     });
 
@@ -1054,7 +1527,9 @@
       editing: () => state.editing,
       shape: () => state.shape,
       getState: () => ({ selectedId: state.selectedId, entry: state.entry, confirm: state.confirm, pending: state.pending }),
+      bulk: () => (state.bulk ? { changes: bulkChanges().length, picked: [...state.bulk.picked], armed: state.bulk.armed, busy: state.bulk.busy } : null),
       onHide() {
+        discardBulk();
         abandonEdit(true);
         closeEntry();
         state.confirm = null;
@@ -1065,6 +1540,7 @@
   }
 
   return Object.freeze({
+    BULK_LABEL, BULK_HINT, BULK_BUSY, DRAFT_BUSY, DRAFT_IDLE, NONE_PICKED, BULK_NOTHING, BULK_INVALID, BULK_ABANDONED, BULK_READ_ONLY, BULK_NO_BRIDGE, FILL_NOTHING, FILL_NONE, discardLabel, discardedNote, appliedNote, draftNumber,
     TITLE, SELECT_HINT, NOTHING_CHANGES, ABANDONED, NO_LINE,
     formatWhen, subtitleFor, smartText, computedHint, rowMeta, emptyText, profilesSubtitle, compatibility, previewFor, create
   });

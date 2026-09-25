@@ -33,7 +33,8 @@ const SLATE_FILES = [
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];
 const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"], admin: ["slate-admin-actions.js"] };
 const INNER_HTML = ["slate-sync.js"];
-const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js", "slate-recipe-drag.js"];
+// slate-weights.js: its bulk edit's Cancel arms for a moment, as the Recipe's does.
+const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js", "slate-recipe-drag.js", "slate-weights.js"];
 /* The pure Station modules Slate shares: the run-down arithmetic and the
  * floor UI's print sheet. Both draw into whatever they are handed and
  * spend no Station token. */

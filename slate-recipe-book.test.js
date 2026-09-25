@@ -545,3 +545,61 @@ test("the name entry wraps rather than squeezing its field: a long label (the Wo
   const name = css.match(/\n\.slate-book__name \{([^}]*)\}/)[1];
   assert.match(name, /flex: 1 1 12em;/, "the field needs a basis so it wraps to its own line instead of collapsing");
 });
+
+/* ----------------------------------------------------------------------
+ *   The list: at most eight, and a search
+ * -------------------------------------------------------------------- */
+
+const manyRecipes = count => bookOf({ recipes: Array.from({ length: count }, (_, i) => recipeOf(`m${i + 1}`, i % 3 === 0 ? `Blue film ${i + 1}` : `Clear ${i + 1}`)), count });
+const typeSearch = (view, value) => { const field = q(view, "[data-book-search]"); field.value = value; field.dispatchEvent({ type: "input", target: field }); return field; };
+
+test("visibleRecipes narrows by name - case and spacing aside - keeps the order, and shows at most the limit; moreText says when more exist", () => {
+  assert.equal(book.LIST_LIMIT, 8);
+  const list = Array.from({ length: 12 }, (_, i) => ({ id: `x${i}`, name: i < 4 ? `Blue  Film ${i}` : `Clear ${i}` }));
+  const all = book.visibleRecipes(list, "", 8);
+  assert.deepEqual(all.shown.map(one => one.id), ["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7"]);
+  assert.equal(all.matched, 12);
+  assert.equal(book.moreText(all, ""), "Showing 8 of 12. Search to find the others.");
+  const blue = book.visibleRecipes(list, "  blue FILM ", 8);
+  assert.deepEqual(blue.shown.map(one => one.id), ["x0", "x1", "x2", "x3"]);
+  assert.equal(book.moreText(blue, "blue"), "");
+  assert.equal(book.visibleRecipes(list, "nothing", 8).shown.length, 0);
+  // "l" is in every name: more matches than the list shows.
+  assert.equal(book.moreText(book.visibleRecipes(list, "l", 8), "l"), "Showing 8 of 12 matches. Search more precisely to narrow them.");
+  // "c" matches exactly eight: all shown, nothing more to say.
+  assert.equal(book.moreText(book.visibleRecipes(list, "c", 8), "c"), "");
+});
+
+test("the list shows no more than eight recipes with a line saying how many more; the search above it narrows them as it is typed, Escape empties it, and none matching is said", () => {
+  const { view, recipes } = boot(manyRecipes(12));
+  assert.equal(rows(view).length, 8);
+  const more = q(view, ".slate-book__more");
+  assert.ok(!more.hasAttribute("hidden"));
+  assert.equal(more.textContent, "Showing 8 of 12. Search to find the others.");
+  const field = typeSearch(view, "blue");
+  assert.deepEqual(rows(view).map(row => row.querySelector(".slate-book__row-name").textContent), ["Blue film 1", "Blue film 4", "Blue film 7", "Blue film 10"]);
+  assert.ok(more.hasAttribute("hidden"));
+  // Selecting from the narrowed list works and sends nothing.
+  click(rows(view)[1]);
+  assert.equal(view.getState().selectedId, "m4");
+  assert.equal(recipes.requests.length, 0);
+  // A publish keeps the typing and the narrowing.
+  recipes.set(manyRecipes(12));
+  assert.equal(q(view, "[data-book-search]").value, "blue");
+  assert.equal(rows(view).length, 4);
+  typeSearch(view, "zzz");
+  assert.equal(rows(view).length, 0);
+  assert.match(q(view, ".slate-book__list .slate-book__empty").textContent, /No saved recipe matches “zzz”/);
+  const escape = key(field, "Escape");
+  assert.equal(field.value, "");
+  assert.equal(escape._stopped, true);
+  assert.equal(rows(view).length, 8);
+});
+
+test("the search stands only over a list with recipes in it", () => {
+  const empty = boot(bookOf({ recipes: [], count: 0 }));
+  assert.ok(q(empty.view, "[data-book-search]").hasAttribute("hidden"));
+  const few = boot(bookOf());
+  assert.ok(!q(few.view, "[data-book-search]").hasAttribute("hidden"));
+  assert.ok(q(few.view, ".slate-book__more").hasAttribute("hidden"), "a short list says there are more");
+});

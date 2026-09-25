@@ -47,8 +47,13 @@
   /* The recipe's layer column: the layer's name, role and share at the
      left of its hopper rows. */
   --slate-layer-head-width: 168px;
-  /* The Grid layout's head tile, at the start of each layer's row of cells. */
-  --slate-grid-head-width: 104px;
+  /* The Grid layout's head tile, at the start of each layer's row of
+     cells: room for "Outside subskin" on one line, and for the share
+     with the other recipe's beside it. */
+  --slate-grid-head-width: 136px;
+  /* A desktop's grab strip at the foot of a Grid cell - the Recipe's,
+     and the room the Weights cell keeps for it so the two line up. */
+  --slate-grid-grip: 10px;
   /* The recipe row's tracking column: room for the Track pill, fixed so
      the blend and weight columns beside it never move. */
   --slate-controls-width: 84px;

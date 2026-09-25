@@ -496,3 +496,14 @@
   color: var(--slate-text-muted);
   text-decoration: underline;
 }
+
+/* The Recipe's Layout: a desktop's Recipe is always the Grid (slate.js),
+   so the choice is a finger's only - and a phone's rule above still
+   withholds it there. */
+.slate-settings__group--recipe-layout {
+  display: none;
+}
+
+.slate-root[data-input="touch"] .slate-settings__group--recipe-layout {
+  display: block;
+}

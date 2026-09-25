@@ -8,7 +8,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { makeDocument, click, key, makeCommands } = require("./tools/slate-test/fake-dom.js");
+const { makeDocument, click, key, makeCommands, makeTimers } = require("./tools/slate-test/fake-dom.js");
 const contract = require("./station-command-contract.js");
 const weights = require("./slate/slate-weights.js");
 const actions = require("./slate/slate-weight-actions.js");
@@ -84,7 +84,11 @@ function boot(options) {
   const committed = [];
   const said = [];
   let readOnly = !!settings.readOnly;
+  const timers = makeTimers();
   const view = weights.create(doc, {
+    timers,
+    tier: settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined,
+    alwaysDraft: !!settings.alwaysDraft,
     commands: () => commands,
     weightProfiles: profiles,
     readOnly: () => readOnly,
@@ -92,7 +96,7 @@ function boot(options) {
     say: message => said.push(message)
   });
   doc.body.appendChild(view.element);
-  return { doc, view, commands, profiles, committed, said, setReadOnly: value => { readOnly = value; } };
+  return { doc, view, commands, profiles, committed, said, timers, setReadOnly: value => { readOnly = value; } };
 }
 
 const field = (view, key, kind) => view.element.querySelector(`.slate-weights__field[data-key='${key}'][data-kind='${kind || "weight"}']`);
@@ -648,4 +652,344 @@ test("a hopper empty in both recipes is marked vacant (a phone leaves it out), u
   assert.equal(button.getAttribute("aria-pressed"), "true");
   click(button);
   assert.deepEqual(vacant(), before);
+});
+
+/* ----------------------------------------------------------------------
+ *   Bulk edit
+ * -------------------------------------------------------------------- */
+
+const bulkSwitch = view => view.element.querySelector("[data-slate-weights-bulk]");
+const bulkFoot = view => view.element.querySelector(".slate-weights__bulk-foot");
+const bulkDo = (view, what) => view.element.querySelector(`[data-slate-weights-bulk-do='${what}']`);
+const typed = (input, value) => { input.value = value; input.dispatchEvent({ type: "input", target: input }); };
+const idOf = (view, key) => rowOf(view, key).querySelector(".slate-weights__id");
+
+test("Bulk edit makes every weight a draft: typing sends nothing, a blur or Enter commits nothing, the switch, circumference and profiles stand aside, and the foot says what would change", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(bulkSwitch(view).getAttribute("data-able"), "true");
+  assert.ok(bulkFoot(view).hasAttribute("hidden"));
+  click(bulkSwitch(view));
+  assert.ok(view.bulk());
+  assert.equal(bulkSwitch(view).getAttribute("aria-pressed"), "true");
+  assert.ok(view.element.hasAttribute("data-bulk"), "the profiles do not stand aside (weights.css keys on data-bulk)");
+  assert.ok(!bulkFoot(view).hasAttribute("hidden"));
+  assert.equal(field(view, "A:0").focused, true, "with a mouse the first field takes the typing");
+  assert.equal(view.element.querySelector("[data-slate-smart]").getAttribute("data-able"), "false");
+  assert.equal(view.element.querySelector(".slate-weights__field[data-kind='circumference']").hasAttribute("readonly"), true);
+
+  const a1 = field(view, "A:0");
+  typed(a1, "450");
+  enter(a1);
+  blur(a1);
+  const b2 = field(view, "B:1");
+  b2.dispatchEvent({ type: "focus", target: b2 });
+  typed(b2, "");
+  blur(b2);
+  assert.equal(commands.calls.length, 0, "a draft reached the line");
+  assert.equal(view.bulk().changes, 2);
+  assert.ok(a1.classList.contains("is-drafted") && b2.classList.contains("is-drafted"));
+  assert.ok(!field(view, "A:1").classList.contains("is-drafted"));
+  assert.match(view.element.querySelector(".slate-recipe__bulk-summary").textContent, /^2 weights change on Apply/);
+  // A typed value equal to the line's is no change.
+  typed(field(view, "A:1"), "380.0");
+  assert.equal(view.bulk().changes, 2);
+  // Escape in a changed field puts it back.
+  key(b2, "Escape");
+  assert.equal(b2.value, "260");
+  assert.equal(view.bulk().changes, 1);
+});
+
+test("Apply sends ONE setHopperWeights naming only what changed - blank as 0 - the form closes and the section says how many", () => {
+  const { view, commands, committed, said } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  typed(field(view, "C:1"), "");
+  click(bulkDo(view, "apply"));
+  assert.deepEqual(commands.calls, [{ command: "setHopperWeights", args: { recipe: "current", weights: [{ layer: "A", index: 0, weight: 450 }, { layer: "C", index: 1, weight: 0 }] } }]);
+  assert.equal(committed.length, 1);
+  assert.equal(view.bulk(), null);
+  assert.ok(bulkFoot(view).hasAttribute("hidden"));
+  assert.equal(said[said.length - 1], "Applied 2 changes.");
+  assert.equal(view.element.querySelector("[data-slate-smart]").getAttribute("data-able"), "false", "(no identified line in the demo: the switch stays unable, not bulk-held)");
+});
+
+test("nothing changed withholds Apply; a field that is not a number is marked and nothing is sent; a refusal keeps every draft with the application's words", () => {
+  const refuse = makeCommands({ capabilities: ALL, answer: command => (command === "setHopperWeights" ? { ok: false, code: "bad_argument", message: "Hopper Z9 does not exist." } : undefined) });
+  const { view, said } = boot({ commands: refuse });
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(view));
+  assert.equal(bulkDo(view, "apply").getAttribute("data-able"), "false");
+  click(bulkDo(view, "apply"));
+  assert.equal(refuse.calls.length, 0);
+  typed(field(view, "A:0"), "heavy");
+  typed(field(view, "A:1"), "-4");
+  click(bulkDo(view, "apply"));
+  assert.equal(refuse.calls.length, 0, "an unreadable draft was sent");
+  assert.equal(field(view, "A:0").getAttribute("aria-invalid"), "true");
+  assert.equal(field(view, "A:1").getAttribute("aria-invalid"), "true");
+  assert.equal(view.element.querySelector(".slate-recipe__bulk-note").textContent, weights.BULK_INVALID);
+  typed(field(view, "A:0"), "450");
+  typed(field(view, "A:1"), "380");
+  click(bulkDo(view, "apply"));
+  assert.equal(refuse.calls.length, 1);
+  assert.ok(view.bulk(), "a refusal closed the form");
+  assert.equal(field(view, "A:0").value, "450");
+  assert.equal(view.element.querySelector(".slate-recipe__bulk-note").textContent, "Hopper Z9 does not exist.");
+  assert.ok(!said.includes("Applied 1 change."));
+});
+
+test("a hopper id picks its row, Shift a run within the layer, the layer's name the layer; Fill writes one weight into every picked field - still the draft - and Clear selection empties it", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(view));
+  const fill = view.element.querySelector(".slate-recipe__fill");
+  assert.ok(fill.hasAttribute("hidden"));
+  click(idOf(view, "A:1"));
+  idOf(view, "A:3").dispatchEvent({ type: "click", target: idOf(view, "A:3"), shiftKey: true });
+  assert.deepEqual(view.bulk().picked, ["A:1", "A:2", "A:3"]);
+  assert.ok(rowOf(view, "A:2").classList.contains("is-picked"));
+  assert.ok(!fill.hasAttribute("hidden"));
+  assert.equal(view.element.querySelector(".slate-recipe__fill-count").textContent, "3 selected");
+  click(view.element.querySelector(".slate-weights__layer[data-layer='B'] .slate-weights__layer-name"));
+  assert.equal(view.bulk().picked.length, 7);
+  // Nothing to fill says so.
+  click(view.element.querySelector("[data-slate-weights-fill='fill']"));
+  assert.equal(view.element.querySelector(".slate-recipe__bulk-note").textContent, weights.FILL_NOTHING);
+  const fillWeight = view.element.querySelector("[data-slate-weights-fill-field='weight']");
+  fillWeight.value = "500";
+  click(view.element.querySelector("[data-slate-weights-fill='fill']"));
+  for (const keyName of ["A:1", "A:2", "A:3", "B:0", "B:1", "B:2", "B:3"]) assert.equal(field(view, keyName).value, "500", `${keyName} was not filled`);
+  assert.equal(field(view, "A:0").value, "400", "an unpicked field was filled");
+  assert.equal(commands.calls.length, 0, "Fill reached the line");
+  assert.equal(view.bulk().changes, 7);
+  click(view.element.querySelector("[data-slate-weights-fill='clear']"));
+  assert.deepEqual(view.bulk().picked, []);
+  assert.ok(fill.hasAttribute("hidden"));
+  click(bulkDo(view, "apply"));
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperWeights");
+  assert.equal(commands.calls[0].args.weights.length, 7);
+});
+
+test("with Smart Hoppers the geometry is drafted too: Apply sends one setHopperWeights and one setHopperGeometries in the line's dimension", () => {
+  const { view, commands } = boot();
+  view.update(resolvedFrom(snap => smartLine(snap)), { kind: "structural" });
+  click(bulkSwitch(view));
+  typed(field(view, "A:1"), "390");
+  typed(field(view, "A:1", "geometry"), "50");
+  assert.match(view.element.querySelector(".slate-recipe__bulk-summary").textContent, /1 weight and 1 height change/);
+  assert.ok(!view.element.querySelector("[data-slate-weights-fill-field='geometry']").hasAttribute("hidden"));
+  click(bulkDo(view, "apply"));
+  assert.deepEqual(commands.calls, [
+    { command: "setHopperWeights", args: { recipe: "current", weights: [{ layer: "A", index: 1, weight: 390 }] } },
+    { command: "setHopperGeometries", args: { recipe: "current", geometries: [{ layer: "A", index: 1, dimension: "height", value: 50 }] } }
+  ]);
+  assert.equal(view.bulk(), null);
+});
+
+test("Cancel closes at once with nothing changed; with changes it arms, disarms after a moment, and a second press - or Escape twice - discards and says what was lost", () => {
+  const { view, said, timers, commands } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(view));
+  click(bulkDo(view, "cancel"));
+  assert.equal(view.bulk(), null);
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  click(bulkDo(view, "cancel"));
+  assert.ok(view.bulk().armed);
+  assert.equal(bulkDo(view, "cancel").textContent, "Discard 1 change");
+  timers.advance(weights.BULK_ARM_MS || 4000);
+  assert.equal(view.bulk().armed, false);
+  assert.equal(bulkDo(view, "cancel").textContent, "Cancel");
+  click(bulkDo(view, "cancel"));
+  click(bulkDo(view, "cancel"));
+  assert.equal(view.bulk(), null);
+  assert.equal(field(view, "A:0").value, "400", "the discarded draft stayed in the field");
+  assert.equal(said[said.length - 1], "The bulk edit was closed; 1 change was not applied.");
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  key(view.element.querySelector(".slate-recipe__bulk-summary"), "Escape");
+  key(view.element.querySelector(".slate-recipe__bulk-summary"), "Escape");
+  assert.equal(view.bulk(), null);
+  assert.equal(commands.calls.length, 0);
+});
+
+test("under the form a publish: an untouched field follows the line, a drafted one stands and says the move; a structural publish, read-only and a hide close it and say so", () => {
+  const { view, said, setReadOnly } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  view.update(resolvedFrom(snap => { snap.layers[0].hoppers[0].weight = 410; snap.layers[0].hoppers[1].weight = 385; }), { kind: "values" });
+  assert.equal(field(view, "A:0").value, "450", "another device's value took the draft");
+  assert.ok(field(view, "A:0").classList.contains("is-changed-underneath"));
+  assert.match(rowOf(view, "A:0").querySelector(".slate-weights__row-note").textContent, /is now 410 lb in the application/);
+  assert.equal(field(view, "A:1").value, "385", "an untouched field did not follow the line");
+  assert.equal(view.bulk().changes, 1);
+
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], weights.BULK_ABANDONED);
+
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  setReadOnly(true);
+  view.refresh();
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], weights.BULK_READ_ONLY);
+  assert.equal(bulkSwitch(view).getAttribute("data-able"), "false");
+  setReadOnly(false);
+  view.refresh();
+
+  click(bulkSwitch(view));
+  typed(field(view, "A:0"), "450");
+  view.onHide();
+  assert.equal(view.bulk(), null);
+  assert.equal(said[said.length - 1], "The bulk edit was closed; 1 change was not applied.");
+});
+
+test("without setHopperWeights Bulk edit is unable with the reason; under a finger it opens without taking the focus", () => {
+  const some = makeCommands({ capabilities: ["setHopperWeight"] });
+  const { view, said } = boot({ commands: some });
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(bulkSwitch(view).getAttribute("data-able"), "false");
+  assert.match(bulkSwitch(view).getAttribute("title"), /does not offer setHopperWeights/);
+  click(bulkSwitch(view));
+  assert.equal(view.bulk(), null);
+  assert.match(said[said.length - 1], /setHopperWeights/);
+  const finger = boot({ touch: true });
+  finger.view.update(resolvedFrom(), { kind: "structural" });
+  click(bulkSwitch(finger.view));
+  assert.ok(finger.view.bulk());
+  assert.notEqual(field(finger.view, "A:0").focused, true);
+});
+
+/* ----------------------------------------------------------------------
+ *   Always a draft (a desktop's page)
+ * -------------------------------------------------------------------- */
+
+const fillWindow = view => view.element.querySelector(".slate-recipe__fill");
+
+test("always a draft: no Bulk edit button; the page is a draft from its first publish, the fill window always up with the switch and the circumference in it; Apply leaves a fresh draft", () => {
+  const { view, commands, said } = boot({ alwaysDraft: true });
+  assert.equal(view.bulk(), null, "a draft with no rows");
+  view.update(resolvedFrom(snap => smartLine(snap, { enabled: false })), { kind: "structural" });
+  assert.equal(bulkSwitch(view), null, "the Bulk edit button is still there");
+  assert.ok(view.bulk(), "the page is not a draft");
+  assert.ok(!bulkFoot(view).hasAttribute("hidden"));
+  assert.ok(!fillWindow(view).hasAttribute("hidden"), "the fill window waits for a pick");
+  assert.ok(fillWindow(view).querySelector("[data-slate-smart]"), "the switch is not in the fill window");
+  assert.ok(fillWindow(view).querySelector(".slate-weights__circumference"), "the circumference is not in the fill window");
+  assert.equal(view.element.querySelector(".slate-weights__bar [data-slate-smart]"), null, "the switch stayed in the bar");
+  assert.equal(view.element.querySelector(".slate-recipe__fill-count").textContent, weights.NONE_PICKED);
+  assert.equal(view.element.querySelector("[data-slate-weights-fill='fill']").getAttribute("data-able"), "false");
+  assert.equal(view.element.querySelector(".slate-recipe__bulk-summary").textContent, weights.DRAFT_IDLE);
+  assert.ok(bulkDo(view, "cancel").hasAttribute("hidden"), "Cancel stands with nothing to discard");
+  assert.ok(!view.element.hasAttribute("data-bulk"), "the profiles were set aside");
+  assert.notEqual(field(view, "A:0").focused, true, "a publish took the focus");
+
+  typed(field(view, "A:0"), "450");
+  assert.ok(!bulkDo(view, "cancel").hasAttribute("hidden"));
+  enter(field(view, "A:0"));
+  blur(field(view, "A:0"));
+  assert.equal(commands.calls.length, 0);
+  click(bulkDo(view, "apply"));
+  assert.deepEqual(commands.calls, [{ command: "setHopperWeights", args: { recipe: "current", weights: [{ layer: "A", index: 0, weight: 450 }] } }]);
+  assert.equal(said[said.length - 1], "Applied 1 change.");
+  assert.ok(view.bulk(), "after Apply the page is not a fresh draft");
+  assert.equal(view.bulk().changes, 0);
+
+  // Cancel with changes arms, a second press discards, and the page is a draft again.
+  typed(field(view, "A:1"), "999");
+  click(bulkDo(view, "cancel"));
+  click(bulkDo(view, "cancel"));
+  assert.equal(field(view, "A:1").value, "380");
+  assert.ok(view.bulk() && view.bulk().changes === 0);
+});
+
+test("always a draft: the switch waits while there are changes, and flips without them - the rebuilt page a fresh draft; Load and Update wait too; the circumference commits on its own", () => {
+  const { view, commands, said } = boot({ alwaysDraft: true });
+  view.update(resolvedFrom(snap => { snap.line.identified = true; smartLine(snap, { enabled: false }); }), { kind: "structural" });
+  const toggle = view.element.querySelector("[data-slate-smart]");
+  const ableBefore = toggle.getAttribute("data-able");
+  typed(field(view, "A:0"), "450");
+  assert.equal(toggle.getAttribute("data-able"), "false");
+  assert.match(toggle.getAttribute("title"), /Apply or discard the weight changes first/);
+  click(toggle);
+  assert.equal(commands.calls.length, 0);
+  assert.equal(said[said.length - 1], weights.DRAFT_BUSY);
+  // A profile's Load and Update wait for the changes.
+  click(view.element.querySelector(".slate-book__row[data-profile='p2']"));
+  click(view.element.querySelector("[data-book-action='load']"));
+  assert.equal(view.element.querySelector(".slate-book__confirm"), null, "Load confirmed over waiting changes");
+  assert.equal(said[said.length - 1], weights.DRAFT_BUSY);
+  click(view.element.querySelector("[data-book-action='update']"));
+  assert.equal(said[said.length - 1], weights.DRAFT_BUSY);
+  // Put back: the switch reads the bridge again, and a shape change rebuilds into a fresh draft.
+  typed(field(view, "A:0"), "400");
+  assert.equal(toggle.getAttribute("data-able"), ableBefore);
+  view.update(resolvedFrom(snap => { snap.line.identified = true; smartLine(snap); }), { kind: "structural", own: true });
+  assert.ok(view.bulk(), "the rebuilt page is not a draft");
+  assert.equal(view.bulk().changes, 0);
+  assert.equal(field(view, "A:1", "geometry").value, "48", "the rebuilt page's fields do not show the line");
+  assert.equal(view.element.querySelectorAll(".slate-weights__field.is-changed-underneath").length, 0, "the rebuild marked fields as moved underneath");
+  // The circumference, in the fill window, commits on its own.
+  const circumference = view.element.querySelector(".slate-weights__field[data-kind='circumference']");
+  assert.equal(circumference.hasAttribute("readonly"), false);
+  circumference.dispatchEvent({ type: "focus", target: circumference });
+  circumference.value = "32";
+  enter(circumference);
+  assert.deepEqual(commands.calls[commands.calls.length - 1], { command: "setHopperCircumference", args: { circumference: "32" } });
+});
+
+test("always a draft: a structural publish from another device drops the changes and says so, then the page is a fresh draft; read-only locks the fields and lifting it drafts again", () => {
+  const { view, said, setReadOnly } = boot({ alwaysDraft: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  typed(field(view, "A:0"), "450");
+  view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(said[said.length - 1], weights.BULK_ABANDONED);
+  assert.ok(view.bulk() && view.bulk().changes === 0);
+  assert.equal(field(view, "A:0").value, "400");
+  setReadOnly(true);
+  view.refresh();
+  assert.equal(field(view, "A:0").hasAttribute("readonly"), true);
+  setReadOnly(false);
+  view.refresh();
+  assert.ok(view.bulk());
+  assert.equal(field(view, "A:0").hasAttribute("readonly"), false);
+});
+
+test("the layer's head reads as the Recipe's - the word apart from the letter - and a desktop's page draws its fields plain, keeping an edge for a refusal and a move underneath", () => {
+  const { view } = boot({ alwaysDraft: true });
+  view.update(resolvedFrom(), { kind: "structural" });
+  const name = view.element.querySelector(".slate-weights__layer[data-layer='A'] .slate-weights__layer-name");
+  assert.equal(name.textContent, "Layer A");
+  assert.equal(name.querySelector(".slate-weights__layer-word").textContent, "Layer ");
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/weights.css"), "utf8");
+  assert.match(css, /\.slate-root\[data-weights-layers="grid"\] \.slate-weights__layer-word \{[^}]*color: var\(--slate-text-muted\);/);
+  assert.match(css, /\.slate-weights\.is-always-draft \.slate-weights__field:not\(\[data-kind="circumference"\]\) \{[^}]*--slate-field-border: var\(--slate-stroke\) solid transparent;[^}]*--slate-field-bg: transparent;/);
+  assert.match(css, /\.slate-weights\.is-always-draft \.slate-weights__field\.is-drafted \{[^}]*color: var\(--slate-accent-text\);/);
+  assert.match(css, /\.slate-weights\.is-always-draft \.slate-weights__field\[aria-invalid="true"\] \{\s*--slate-field-border: var\(--slate-stroke\) solid var\(--slate-danger\);/);
+  assert.match(css, /\.slate-weights\.is-always-draft \.slate-weights__field\.is-changed-underneath \{\s*--slate-field-border: var\(--slate-stroke\) solid var\(--slate-info\);/);
+});
+
+test("in the Grid a measured cell sets its weight and measure side by side and its readout on the line the Recipe's grab strip takes, so it is as tall as any other cell", () => {
+  const { view } = boot({ alwaysDraft: true });
+  view.update(resolvedFrom(snap => smartLine(snap)), { kind: "structural" });
+  const a1 = rowOf(view, "A:0");
+  assert.ok(a1.hasAttribute("data-measured"));
+  assert.ok(a1.querySelector(".slate-weights__weight .slate-weights__field[data-kind='weight']"));
+  assert.ok(a1.querySelector(".slate-weights__geometry .slate-weights__field[data-kind='geometry']"));
+  const plain = boot({ alwaysDraft: true });
+  plain.view.update(resolvedFrom(), { kind: "structural" });
+  assert.equal(rowOf(plain.view, "A:0").hasAttribute("data-measured"), false);
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/weights.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]'), /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__weight'), /grid-column: 1;/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__geometry'), /grid-column: 2;/);
+  // The readout takes the grab strip's room: one line at its height, the measured cell's own bottom room reduced by it.
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__computed'), /line-height: var\(--slate-grid-grip\);[^}]*white-space: nowrap;/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured]'), /padding-bottom: calc\(var\(--slate-space-2\) - var\(--slate-space-1\)\);/);
 });

@@ -95,8 +95,10 @@
   const TIMELINE = "timeline";
   /* A phone's first page (slate-home.js), listed only there. */
   const HOME = "home";
-  /* Listed on the rail under a finger; a desktop opens it in the Recipe. */
+  /* Listed on the rail under a finger; a desktop opens each in the
+   * Recipe - the Book under its tabs, Weights as its third tab. */
   const BOOK = "recipe-book";
+  const WEIGHTS = "weights";
   const SCRAP = "scrap";
 
   const mounts = {};
@@ -175,6 +177,7 @@
    * (slate-display.js): the words go onto the root as data-layers and
    * data-layer-order and the sheets lay the sections out from them. No
    * section is told and nothing is rebuilt. */
+  let lastInput = null;
   function renderLayout() {
     if (!container) return;
     const orientation = displayController && typeof displayController.getLayerOrientation === "function" ? displayController.getLayerOrientation() : "grid";
@@ -184,7 +187,9 @@
     // there the head always stands on top. The operator's choice is kept
     // (slate-display.js) and comes back on a wider screen.
     const phoneTier = tier.input === "touch" && tier.width === "phone";
-    container.setAttribute("data-layers", phoneTier ? "top" : orientation);
+    // A desktop's Recipe is always the Grid (slate-recipe.js `desktop`);
+    // the operator's choice is a finger's, and comes back under one.
+    container.setAttribute("data-layers", phoneTier ? "top" : (tier.input === "touch" ? orientation : "grid"));
     // The Weights page's own choice, kept the same way on a phone.
     const weightsLayout = displayController && typeof displayController.getWeightsLayout === "function" ? displayController.getWeightsLayout() : "grid";
     container.setAttribute("data-weights-layers", phoneTier ? "top" : weightsLayout);
@@ -203,8 +208,21 @@
     if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
     // A desktop opens the Recipe Book under the Recipe's tabs
     // (slate-recipe.js); the rail lists it under a finger only.
-    if (railView) railView.setListed(BOOK, tier.input === "touch");
-    if (tier.input !== "touch" && sections && sections.current() && sections.current().id === BOOK) sections.show(DEFAULT_SECTION);
+    if (railView) { railView.setListed(BOOK, tier.input === "touch"); railView.setListed(WEIGHTS, tier.input === "touch"); }
+    // A mouse or a finger arrived: the Recipe changes its ways with it
+    // (a preference change refreshes every section itself).
+    if (tier.input !== lastInput) {
+      lastInput = tier.input;
+      const recipeView = sections ? sections.section(DEFAULT_SECTION) : null;
+      if (recipeView && typeof recipeView.refresh === "function") recipeView.refresh();
+    }
+    const shownId = sections && sections.current() ? sections.current().id : null;
+    if (tier.input !== "touch" && (shownId === BOOK || shownId === WEIGHTS)) {
+      sections.show(DEFAULT_SECTION);
+      // Weights was showing: the Recipe's Weights tab takes its place.
+      const recipeView = shownId === WEIGHTS ? sections.section(DEFAULT_SECTION) : null;
+      if (recipeView && typeof recipeView.showWeights === "function") recipeView.showWeights();
+    }
     paintBar();
   }
 
@@ -563,6 +581,8 @@
       lineRate: lineRateEstimate,
       lineRateStorage,
       tier: tierNow,
+      // A desktop's Recipe: the always-open form, Compare always on (slate-recipe.js).
+      desktop: () => tierNow().input !== "touch",
       scan: scanner(),
       // The floor UI's address, for the way back at the foot of Settings.
       legacy: () => { const link = container.querySelector(".slate-header__legacy"); return link ? link.getAttribute("href") : "?view=legacy"; },
@@ -607,7 +627,7 @@
       ...(homeModule ? [{ id: HOME, label: homeModule.TITLE, group: "sections", phone: true, icon: "home", create: (d, c) => homeModule.create(d, Object.assign({}, c, { home: homeHooks })) }] : []),
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
       { id: BOOK, label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
-      { id: "weights", label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
+      { id: WEIGHTS, label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, {
         totals: resinTotals,
         back: () => home("aside"),

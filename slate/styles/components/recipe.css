@@ -324,6 +324,12 @@
   color: var(--slate-text-muted);
 }
 
+/* A Next cell's weight line holds nothing: it is drawn only where the Grid
+   draws a Current cell's (below), so the two stand as tall. */
+.slate-hopper__weight[data-spacer] {
+  display: none;
+}
+
 /* Smart Hoppers computed the weight shown; the entered one is in the title. */
 .slate-hopper__weight.is-smart {
   color: var(--slate-smart);
@@ -574,6 +580,27 @@
 
 .slate-root .slate-recipe__book-toggle.is-open::after {
   transform: translateY(0.1em) rotate(-135deg);
+}
+
+/* The Weights tab, a desktop's third (slate-recipe.js): the Weights page
+   in the bodies' place. The recipe's own switches stand aside while it
+   shows - unseen but keeping their room, so the tabs never shift along
+   the bar. The page's own bar is not drawn - its switches stand in its
+   fill window (weights.css), and the Recipe's line says the line - nor
+   the switch's line of words, so the layers start where the recipe's do
+   (the switch's title still says why it is unable). */
+.slate-root[data-input="touch"] .slate-recipe__weights-tab,
+.slate-root[data-input="touch"] .slate-recipe__weights {
+  display: none;
+}
+
+.slate-recipe[data-view="weights"] .slate-recipe__only {
+  visibility: hidden;
+}
+
+.slate-recipe__weights .slate-weights__bar,
+.slate-recipe__weights .slate-weights__smart-text {
+  display: none;
 }
 
 /* The Book under the tab: the section's own view, set on a raised panel.
@@ -971,7 +998,16 @@
    the tone (the stripe's width stays, transparent, so the text keeps its
    place). The name and role lead, the share sits at the foot, and the
    menu keeps the top corner out of their way. */
+/* The head's lines: the name, the role, and at the foot the share with
+   Compare's other share beside it - never under it, so a layer whose
+   share changes is no taller, on either tab. A refusal's note, when
+   there is one, takes a line of its own. */
 .slate-root[data-layers="grid"] .slate-layer__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  column-gap: var(--slate-space-2);
+  row-gap: var(--slate-space-1);
   position: relative;
   padding: var(--slate-space-2) var(--slate-space-3);
   border-left-color: transparent;
@@ -1000,13 +1036,39 @@
 .slate-root[data-layers="grid"] .slate-layer__role {
   font-size: var(--slate-text-xs);
   line-height: var(--slate-line-tight);
+  white-space: nowrap;
 }
 
 .slate-root[data-layers="grid"] .slate-layer__share {
+  grid-row: 3;
+  grid-column: 1;
+  align-self: end;
   font-size: var(--slate-text-lg);
 }
 
+.slate-root[data-layers="grid"] .slate-layer__name,
+.slate-root[data-layers="grid"] .slate-layer__role,
+.slate-root[data-layers="grid"] .slate-layer__note {
+  grid-column: 1 / -1;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__share-other {
+  grid-row: 3;
+  grid-column: 2;
+  align-self: end;
+  min-width: 0;
+  overflow: hidden;
+  /* On the share's line, sitting on its baseline. */
+  padding-bottom: 0.2em;
+  font-size: var(--slate-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .slate-root[data-layers="grid"] .slate-layer__input {
+  grid-row: 3;
+  grid-column: 1;
+  align-self: end;
   font-size: var(--slate-text-lg);
 }
 
@@ -1023,7 +1085,8 @@
     "resin resin"
     "weight controls"
     "mark mark"
-    "note note";
+    "note note"
+    "grip grip";
   align-content: start;
   align-items: center;
   gap: 2px var(--slate-space-1);
@@ -1094,6 +1157,11 @@
   font-size: var(--slate-text-sm);
   text-align: left;
   white-space: nowrap;
+}
+
+/* A Next cell's empty weight line, as tall as a Current cell's with its text. */
+.slate-root[data-layers="grid"] .slate-hopper__weight[data-spacer] {
+  min-height: calc(var(--slate-text-sm) * var(--slate-line-normal));
 }
 
 .slate-root[data-layers="grid"] .slate-hopper__controls {
@@ -1502,4 +1570,138 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__resin[data-able],
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct[data-able] {
   text-decoration: none;
+}
+
+/* ---- A desktop's Recipe (slate-recipe.js `desktop`: is-desk) ----
+   Always a draft and always comparing, so neither switch is drawn; a
+   cell's weight is the Weights tab's, so its line stays, unseen, and a
+   cell is as tall with or without one; the assignment is lifted by the
+   grab strip at the cell's foot, below Compare's band, the badge being
+   the fill's pick. */
+.slate-recipe.is-desk .slate-recipe__bulk,
+.slate-recipe.is-desk .slate-recipe__compare {
+  display: none;
+}
+
+.slate-recipe.is-desk .slate-hopper__weight {
+  visibility: hidden;
+}
+
+.slate-hopper__grip {
+  display: none;
+}
+
+.slate-recipe.is-desk .slate-hopper__grip {
+  display: flex;
+  grid-area: grip;
+  align-items: center;
+  justify-content: center;
+  height: var(--slate-grid-grip);
+  margin: 0 calc(-1 * var(--slate-space-2)) calc(-1 * var(--slate-space-1));
+  touch-action: none;
+}
+
+/* The strip's mark: a short bar, faint until the cell may move. */
+.slate-hopper__grip::before {
+  content: "";
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--slate-border);
+}
+
+.slate-hopper.is-movable .slate-hopper__grip {
+  cursor: grab;
+}
+
+@media (hover: hover) {
+  .slate-hopper.is-movable:hover .slate-hopper__grip::before {
+    background: var(--slate-text-faint);
+  }
+
+  .slate-hopper.is-movable .slate-hopper__grip:hover::before {
+    background: var(--slate-accent);
+  }
+}
+
+/* The draft's fields read as the cell did before the form (the form's
+   `plain`): no box, the resin large at the left, the blend bold at the
+   top right with its "%", each as tall as the line it replaces - so a
+   cell is the same height drafting or not, and lines up with the Weights
+   tab's (weights.css). A hover shows the field is there; what differs
+   from the line is written in the accent; an empty resin keeps the "+". */
+.slate-recipe.is-desk .slate-hopper__draft-resin,
+.slate-recipe.is-desk .slate-hopper__draft-pct {
+  --slate-field-border: var(--slate-stroke) solid transparent;
+  --slate-field-bg: transparent;
+  --slate-field-padding: 0;
+  /* The line, less the (unseen) border's two strokes: the field's own
+     line-height sets it, since min-height is only a floor. */
+  --slate-field-min-height: 0;
+  font-size: var(--slate-text-lg);
+  line-height: calc(var(--slate-text-lg) * var(--slate-line-normal) - 2 * var(--slate-stroke));
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-resin {
+  font-weight: 600;
+  text-align: left;
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-resin:placeholder-shown {
+  text-align: center;
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-resin::placeholder {
+  color: var(--slate-text-faint);
+  font-weight: 400;
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-pctwrap {
+  grid-area: pct;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-pct {
+  --slate-field-width: 2.6em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: right;
+}
+
+.slate-hopper__draft-unit {
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.slate-hopper__draft-pct:placeholder-shown + .slate-hopper__draft-unit {
+  visibility: hidden;
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-h1 {
+  color: inherit;
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+@media (hover: hover) {
+  .slate-recipe.is-desk .slate-hopper__draft-resin:hover,
+  .slate-recipe.is-desk .slate-hopper__draft-pct:hover {
+    --slate-field-bg: var(--slate-surface-hover);
+  }
+}
+
+.slate-recipe.is-desk .slate-hopper__draft-resin.is-drafted,
+.slate-recipe.is-desk .slate-hopper__draft-pct.is-drafted {
+  color: var(--slate-accent-text);
+}
+
+/* The badge picks for the fill on a desktop, so it reads as a pick. */
+.slate-recipe.is-desk .slate-hopper__id {
+  cursor: pointer;
+  user-select: none;
 }

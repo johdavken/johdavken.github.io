@@ -231,6 +231,58 @@
   font-size: var(--slate-text-sm);
 }
 
+/* ---- Bulk edit ----
+   The form (slate-weights.js): every field a draft, the foot the
+   Recipe's bulk foot (recipe-edit.css). A hopper id or a layer's name
+   picks rows; a picked row wears the accent as the Recipe's does. A
+   changed field is filled with the accent's soft tone - a state, not a
+   focus ring. The profiles stand aside while it is open. */
+
+.slate-weights[data-bulk] .slate-weights__profiles {
+  display: none;
+}
+
+.slate-weights.is-drafting .slate-weights__id,
+.slate-weights.is-drafting .slate-weights__layer-name {
+  cursor: pointer;
+  user-select: none;
+}
+
+.slate-weights__row.is-picked {
+  background: var(--slate-accent-soft);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+.slate-weights__row.is-picked .slate-weights__id {
+  color: var(--slate-accent-text);
+}
+
+/* Always a draft (a desktop's page): the fill window holds the Smart
+   Hoppers switch and the circumference ahead of the fill fields, a rule
+   between; on the Recipe's Weights tab the page's own bar, left with
+   only its subtitle, is not drawn (recipe.css). */
+/* The foot stands between the layers and the profiles: room below it too. */
+.slate-weights__bulk-foot {
+  margin-bottom: var(--slate-space-5);
+}
+
+.slate-weights__fill-rule {
+  align-self: stretch;
+  width: var(--slate-stroke);
+  margin: 0 var(--slate-space-1);
+  background: var(--slate-border);
+}
+
+/* The fill strip's fields hold a word of placeholder more than the
+   Recipe's blend does. */
+.slate-weights__fill {
+  flex-basis: 180px;
+}
+
+.slate-weights__field.is-drafted {
+  --slate-field-bg: var(--slate-accent-soft);
+}
+
 /* ---- The profiles ---- */
 
 /* The Book's rows and layers, without what a profile does not have: no
@@ -576,6 +628,13 @@
   font-weight: 700;
 }
 
+/* The word small and muted beside the letter, as the Recipe's head. */
+.slate-root[data-weights-layers="grid"] .slate-weights__layer-word {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
 .slate-root[data-weights-layers="grid"] .slate-weights__layer-role {
   font-size: var(--slate-text-xs);
   line-height: var(--slate-line-tight);
@@ -585,14 +644,19 @@
   display: contents;
 }
 
-/* A cell: the id and resin on its first line, each field under them. */
+/* A cell, lined up with the Recipe's (recipe.css) so a switch of tab
+   moves nothing: the id on the first line - as tall as the Recipe's
+   blend beside its id - the resin large on the second, the fields under
+   them where the Recipe has its weight and Track. */
 .slate-root[data-weights-layers="grid"] .slate-weights__row[data-key] {
   grid-column: calc(var(--slate-hopper-slot, 0) + 2);
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-content: start;
   align-items: center;
-  gap: var(--slate-space-1) var(--slate-space-2);
+  gap: 2px var(--slate-space-1);
   padding: var(--slate-space-2);
+  /* The room the Recipe's cell gives its grab strip (recipe.css). */
+  padding-bottom: calc(var(--slate-space-2) + var(--slate-grid-grip) + 2px - var(--slate-space-1));
   border: var(--slate-stroke) solid light-dark(transparent, var(--slate-border));
   border-radius: var(--slate-radius);
   background: var(--slate-surface-raised);
@@ -611,33 +675,116 @@
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__id {
+  grid-column: 1 / -1;
+  /* The Recipe's blend beside the id sets that line's height. */
+  min-height: calc(var(--slate-text-lg) * var(--slate-line-normal));
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
   font-weight: 700;
 }
 
+/* With Smart Hoppers the weight and the measure share the third line, and
+   the readout takes the line the Recipe's grab strip does - so the room
+   kept for that strip below is the readout's here. */
+.slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured] {
+  padding-bottom: calc(var(--slate-space-2) - var(--slate-space-1));
+}
+
 .slate-root[data-weights-layers="grid"] .slate-weights__resin {
+  grid-column: 1 / -1;
+  font-size: var(--slate-text-lg);
   font-weight: 600;
-  text-align: right;
+  text-align: left;
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__wrap {
-  grid-column: 1 / -1;
+  min-width: 0;
   justify-content: flex-start;
 }
 
-/* The field takes the cell's width, beside its unit. */
-.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind] {
-  --slate-field-width: auto;
-  flex: 1 1 0;
+.slate-root[data-weights-layers="grid"] .slate-weights__weight {
+  grid-column: 1;
 }
 
+.slate-root[data-weights-layers="grid"] .slate-weights__geometry {
+  grid-column: 2;
+}
+
+/* The field takes the cell's width, beside its unit, and the room the
+   Recipe's cell (recipe.css) gives below its resin: the weight's line
+   plus the two row gaps of its empty mark and note rows. So a cell is as
+   tall on either tab - with Track hidden (Automatic tracking, the
+   default); where Track shows, a Recipe cell stands a few pixels taller. */
+.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind] {
+  --slate-field-width: auto;
+  --slate-field-min-height: calc(var(--slate-text-sm) * var(--slate-line-normal) + 4px);
+  --slate-field-padding: 0 var(--slate-space-2);
+  flex: 1 1 0;
+  font-size: var(--slate-text-sm);
+}
+
+/* One line at the strip's height; the full words are its title. */
 .slate-root[data-weights-layers="grid"] .slate-weights__computed {
   grid-column: 1 / -1;
-  white-space: normal;
+  overflow: hidden;
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-grid-grip);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__row-note {
   grid-column: 1 / -1;
   padding-left: 0;
+}
+
+/* A picked cell keeps the accent over the Grid's own fill. */
+.slate-root[data-weights-layers="grid"] .slate-weights__row.is-picked {
+  background: var(--slate-accent-soft);
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-accent);
+}
+
+/* ---- Always a draft (a desktop's page): plain fields ----
+   As the Recipe's draft (recipe.css): no box - the value reads as the
+   cell's own text, a hover shows the field is there, and what differs
+   from the line is written in the accent. A refusal and a move
+   underneath keep their edge, being the only sign there is. The weight
+   sits compact at the unit, so the numbers line up down the page. The
+   circumference, in the fill window, keeps its box. */
+.slate-weights.is-always-draft .slate-weights__field:not([data-kind="circumference"]) {
+  --slate-field-border: var(--slate-stroke) solid transparent;
+  --slate-field-bg: transparent;
+  --slate-field-padding: 0 var(--slate-space-1);
+  --slate-field-width: 4.5em;
+  flex: 0 0 auto;
+}
+
+@media (hover: hover) {
+  .slate-weights.is-always-draft .slate-weights__field:not([data-kind="circumference"]):hover {
+    --slate-field-bg: var(--slate-surface-hover);
+  }
+}
+
+/* Where a field can size to what it holds, the weight reads from the
+   left as the Recipe's weight line did: "400 lb". */
+@supports (field-sizing: content) {
+  .slate-weights.is-always-draft .slate-weights__field[data-kind]:not([data-kind="circumference"]) {
+    --slate-field-width: auto;
+    min-width: 2ch;
+    field-sizing: content;
+    text-align: left;
+  }
+}
+
+.slate-weights.is-always-draft .slate-weights__field.is-drafted {
+  --slate-field-bg: transparent;
+  color: var(--slate-accent-text);
+}
+
+.slate-weights.is-always-draft .slate-weights__field[aria-invalid="true"] {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-danger);
+}
+
+.slate-weights.is-always-draft .slate-weights__field.is-changed-underneath {
+  --slate-field-border: var(--slate-stroke) solid var(--slate-info);
 }
