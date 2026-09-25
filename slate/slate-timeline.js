@@ -27,7 +27,9 @@
  * the hopper's stored weight - or, with Smart Hoppers computing it, its
  * measure (slate-runout.js). Apply sends that one change through
  * slate-weight-actions.js and, if chosen, updates a weight profile through
- * slate-profile-actions.js; nothing changes before Apply. Several hoppers
+ * slate-profile-actions.js; nothing changes before Apply, and Apply asks
+ * twice - the first press arms it as Confirm for a few seconds, the second
+ * corrects; a changed time, Cancel or the wait disarms it. Several hoppers
  * short by about the same share are said to point at the line's output.
  *
  * The LIST view (the Timeline preference, slate-display.js) is the same
@@ -52,6 +54,10 @@
   "use strict";
 
   const TICK_MS = 20000;
+  /* Ran out's Apply: armed as Confirm this long after the first press. */
+  const RANOUT_ARM_MS = 4000;
+  const RANOUT_APPLY_LABEL = "Apply";
+  const RANOUT_CONFIRM_LABEL = "Confirm";
   const FALLBACK_HEIGHT = 640;
   const NONE_TRACKED = "No hoppers tracked. Turn on Track in the recipe.";
   // Under Automatic tracking there is no Track to turn on: the recipe
@@ -313,7 +319,7 @@
     const correctNote = text(doc, "p", "slate-timeline__correct-note", "", { role: "status", hidden: "" });
     const correctActions = element(doc, "div", "slate-timeline__correct-actions");
     const correctCancel = text(doc, "button", "slate-timeline__correct-button", "Cancel", { type: "button", "data-slate-runout": "cancel" });
-    const correctApply = text(doc, "button", "slate-timeline__correct-button slate-timeline__correct-button--apply", "Apply", { type: "button", "data-slate-runout": "apply", "data-able": "false" });
+    const correctApply = text(doc, "button", "slate-timeline__correct-button slate-timeline__correct-button--apply", RANOUT_APPLY_LABEL, { type: "button", "data-slate-runout": "apply", "data-able": "false" });
     correctActions.appendChild(correctCancel);
     correctActions.appendChild(correctApply);
     for (const node of [correctTitle, correctTimes, correctFed, correctChange, correctShared, profileLabel, correctNote, correctActions]) correct.appendChild(node);
@@ -1036,6 +1042,7 @@
       const at = now();
       // When the pump went off: the application's record, else the planned moment.
       const pumpedOffAt = Number.isFinite(entry.pumpOffAt) ? entry.pumpOffAt : (Number.isFinite(entry.pumpOffBy) ? entry.pumpOffBy : at);
+      disarmApply();
       state.correcting = { key, entry: Object.assign({}, entry), pumpedOffAt, ranOutAt: at, correction: null, busy: false };
       setText(correctTitle, `${entry.id} ${entry.resin || ""} ran out early`.replace(/\s+/g, " "));
       offInput.value = clockValue(pumpedOffAt);
@@ -1049,8 +1056,32 @@
     }
 
     function closeCorrection() {
+      disarmApply();
       state.correcting = null;
       show(correct, false);
+    }
+
+    /* The second press is the one that corrects: the first arms Apply as
+     * Confirm, which stands down on its own after RANOUT_ARM_MS. */
+    let armTimer = null;
+    function disarmApply() {
+      if (armTimer !== null) { timers.clearTimeout(armTimer); armTimer = null; }
+      if (!correctApply.hasAttribute("data-armed")) return;
+      correctApply.removeAttribute("data-armed");
+      correctApply.textContent = RANOUT_APPLY_LABEL;
+    }
+
+    function pressApply() {
+      const open = state.correcting;
+      if (!open || open.busy) return;
+      if (correctApply.hasAttribute("data-armed")) { disarmApply(); applyCorrection(); return; }
+      paintCorrection();
+      const c = open.correction;
+      if (!c || !c.ok || correctApply.getAttribute("data-able") !== "true") { say(correctApply.getAttribute("title") || runoutModule.reasonText(c && c.reason)); return; }
+      correctApply.setAttribute("data-armed", "");
+      correctApply.textContent = RANOUT_CONFIRM_LABEL;
+      say(`Press Confirm to apply: ${describe(c, open.entry.id)}`);
+      armTimer = timers.setTimeout(() => { armTimer = null; disarmApply(); }, RANOUT_ARM_MS);
     }
 
     async function applyCorrection() {
@@ -1092,14 +1123,16 @@
       show(correctNote, true);
     }
 
-    for (const input of [offInput, outInput]) input.addEventListener("input", () => paintCorrection());
+    // A changed time changes what Confirm would apply: it asks again.
+    for (const input of [offInput, outInput]) input.addEventListener("input", () => { disarmApply(); paintCorrection(); });
+    profileSelect.addEventListener("change", () => disarmApply());
     correct.addEventListener("click", event => {
       const target = event && event.target;
       const button = target && typeof target.closest === "function" ? target.closest("[data-slate-runout]") : null;
       if (!button) return;
       const action = button.getAttribute("data-slate-runout");
       if (action === "cancel") closeCorrection();
-      else if (action === "apply") applyCorrection();
+      else if (action === "apply") pressApply();
     });
     correct.addEventListener("keydown", event => {
       if (event && event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeCorrection(); }
@@ -1126,6 +1159,7 @@
     }
 
     function destroy() {
+      disarmApply();
       if (state.timer !== null) timers.clearTimeout(state.timer);
       state.timer = null;
       if (visibility && typeof visibility.removeEventListener === "function") visibility.removeEventListener("visibilitychange", wake);
@@ -1152,7 +1186,7 @@
   }
 
   return Object.freeze({
-    TICK_MS, FALLBACK_HEIGHT, NONE_TRACKED, NONE_TRACKED_AUTOMATIC, STALE_CHANGEOVER, NO_LINE,
+    TICK_MS, RANOUT_ARM_MS, RANOUT_APPLY_LABEL, RANOUT_CONFIRM_LABEL, FALLBACK_HEIGHT, NONE_TRACKED, NONE_TRACKED_AUTOMATIC, STALE_CHANGEOVER, NO_LINE,
     TOP_INSET, BOTTOM_INSET, CHANGEOVER_INSET, GAP, CARD_PAD, CARD_HEAD, MEMBER_ROW, CARD_FACTS, DOT_X, CARD_LEFT, LEADER_INTO, leaderFor,
     cardHeight, facts, countsFor, changeoverText, create
   });

@@ -875,6 +875,8 @@ test("Apply sends ONE setHopperWeight with the corrected weight and, when a prof
   off.dispatchEvent({ type: "input", target: off });
   assert.equal(view.correction().to, 127.5);
   click(q(view, "[data-slate-runout='apply']"));
+  assert.equal(commands.calls.length, 0, "the first press applied without asking");
+  click(q(view, "[data-slate-runout='apply']"));
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(commands.calls, [{ command: "setHopperWeight", args: { recipe: "current", layer: "B", index: 1, weight: 127.5 } }]);
   assert.equal(committed.length, 1);
@@ -901,6 +903,7 @@ test("with Smart Hoppers computing B2's weight the correction goes to its usable
   assert.equal(correction.to, 15.7);
   assert.match(q(view, ".slate-timeline__correct-change").textContent, /Usable height \(Smart Hoppers\): 48 in → 15\.7 in/);
   click(q(view, "[data-slate-runout='apply']"));
+  click(q(view, "[data-slate-runout='apply']"));
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(commands.calls, [{ command: "setHopperGeometry", args: { recipe: "current", layer: "B", index: 1, dimension: "height", value: 15.7 } }]);
 
@@ -926,8 +929,56 @@ test("with Smart Hoppers computing B2's weight the correction goes to its usable
   refusing.view.update(pumpedAt(60));
   click(q(refusing.view, ".slate-timeline__done [data-slate-ranout='B:1']"));
   click(q(refusing.view, "[data-slate-runout='apply']"));
+  click(q(refusing.view, "[data-slate-runout='apply']"));
   assert.ok(!q(refusing.view, ".slate-timeline__correct").hasAttribute("hidden"));
   assert.equal(q(refusing.view, ".slate-timeline__correct-note").textContent, "No such hopper.");
+});
+
+test("Ran out asks before it corrects: the first Apply arms Confirm and sends nothing; a changed time, Cancel or the wait stands it down; only Confirm applies", async () => {
+  const commands = makeCommands({ capabilities: ALL_WEIGHTS });
+  const { view, said, timers } = boot({ height: 1200, commands });
+  view.update(pumpedAt(60));
+  click(q(view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  const apply = q(view, "[data-slate-runout='apply']");
+  assert.equal(apply.textContent, timelineModule.RANOUT_APPLY_LABEL);
+  click(apply);
+  assert.equal(commands.calls.length, 0, "the first press applied");
+  assert.ok(apply.hasAttribute("data-armed"));
+  assert.equal(apply.textContent, timelineModule.RANOUT_CONFIRM_LABEL);
+  assert.match(said[said.length - 1], /^Press Confirm to apply: .*260 lb → 85 lb/);
+
+  // The wait stands it down.
+  timers.advance(timelineModule.RANOUT_ARM_MS);
+  assert.ok(!apply.hasAttribute("data-armed"));
+  assert.equal(apply.textContent, timelineModule.RANOUT_APPLY_LABEL);
+  click(apply);
+  assert.equal(commands.calls.length, 0, "a press after the wait applied without asking again");
+
+  // A changed time changes what would be applied: it asks again.
+  const out = q(view, "[data-slate-runout='out']");
+  out.value = "07:30";
+  out.dispatchEvent({ type: "input", target: out });
+  assert.ok(!apply.hasAttribute("data-armed"), "a changed time kept Confirm armed");
+  click(apply);
+
+  // Cancel stands it down, and reopening starts at Apply.
+  click(q(view, "[data-slate-runout='cancel']"));
+  click(q(view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  assert.ok(!apply.hasAttribute("data-armed"));
+  assert.equal(apply.textContent, timelineModule.RANOUT_APPLY_LABEL);
+  assert.equal(commands.calls.length, 0);
+
+  const pending = timers.pending();
+  click(apply);
+  assert.equal(timers.pending(), pending + 1, "arming set no timer");
+  click(apply);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(commands.calls.length, 1);
+  assert.equal(commands.calls[0].command, "setHopperWeight");
+  assert.equal(timers.pending(), pending, "the arm timer outlived the Confirm");
+
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  assert.match(css, /\.slate-timeline__correct-button--apply\[data-armed\] \{[^}]*--slate-warning/);
 });
 
 test("without a recorded pump-off time the planned one is offered; the correction closes when the hopper goes back on", () => {

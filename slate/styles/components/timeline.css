@@ -642,6 +642,13 @@
   color: var(--slate-text-on-accent);
 }
 
+/* Armed: the first press turned Apply into Confirm (slate-timeline.js). */
+.slate-root .slate-timeline__correct-button--apply[data-armed] {
+  border-color: var(--slate-warning);
+  background: var(--slate-warning-soft);
+  color: var(--slate-warning);
+}
+
 .slate-root .slate-timeline__correct-button[data-able="false"] {
   opacity: 0.5;
   cursor: not-allowed;

@@ -1,0 +1,139 @@
+/* How to Use: a changeover in numbered steps, in the Timeline's place
+   (slate-guide.js). The body scrolls inside the panel, which keeps its
+   height as the Timeline's does. */
+
+.slate-guide__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--slate-space-1);
+}
+
+.slate-guide__caption {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-guide__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-guide__step {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: var(--slate-space-2);
+  align-items: start;
+}
+
+.slate-guide__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-guide__title,
+.slate-guide__note-title {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-guide__text,
+.slate-guide__note-text {
+  margin: 2px 0 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-guide__subhead {
+  margin-top: var(--slate-space-2);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.slate-guide__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  margin: 0;
+}
+
+.slate-guide__note-text {
+  margin-left: 0;
+}
+
+/* The drawing: two cells in the theme's own fills, the lifted one
+   outlined in the accent, the path it is carried along dashed. */
+.slate-guide__drawing {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin-top: var(--slate-space-2);
+}
+
+.slate-guide__cell {
+  fill: var(--slate-surface-sunken);
+  stroke: var(--slate-border);
+  stroke-width: 1;
+}
+
+.slate-guide__cell.is-lifted {
+  stroke: var(--slate-accent);
+  stroke-width: 1.5;
+}
+
+.slate-guide__cell-id {
+  fill: var(--slate-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.slate-guide__cell-resin {
+  fill: var(--slate-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.slate-guide__cell-now {
+  fill: var(--slate-info);
+  font-size: 9px;
+}
+
+.slate-guide__cell-grip {
+  fill: var(--slate-text-faint);
+}
+
+.slate-guide__arrow.is-head {
+  stroke-dasharray: none;
+}
+
+.slate-guide__arrow {
+  fill: none;
+  stroke: var(--slate-accent);
+  stroke-dasharray: 4 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
