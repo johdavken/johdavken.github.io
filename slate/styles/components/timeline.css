@@ -116,6 +116,10 @@
   margin-top: var(--slate-space-2);
   margin-left: calc(-1 * var(--slate-space-3));
   padding-left: var(--slate-space-3);
+  /* And a little past the cards' right edge, so their border is never on
+     the clip: a rounded, antialiased edge flush with it loses a pixel. */
+  margin-right: calc(-1 * var(--slate-space-1));
+  padding-right: var(--slate-space-1);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
