@@ -292,7 +292,10 @@
            * null when the entered weight stands. */
           smartWeight: projectSmartWeight(resolveSmart(hopper)),
           track: !!(hopper && hopper.track),
-          pumpOff: !!(hopper && hopper.pumpOff)
+          pumpOff: !!(hopper && hopper.pumpOff),
+          /* When the pump went off (epoch ms), while it is off and the
+           * application knows; null otherwise. Runtime state, as pumpOff. */
+          pumpOffAt: hopper && hopper.pumpOff && Number(hopper.pumpOffAt) > 0 ? Number(hopper.pumpOffAt) : null
         }))
       }))
     };

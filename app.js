@@ -1797,6 +1797,7 @@
                 resinName: normName(h.resinName || ""),
                 track: !!h.track,
                 pumpOff: !!h.pumpOff,
+                ...(h.pumpOff && Number(h.pumpOffAt) > 0 ? { pumpOffAt: Number(h.pumpOffAt) } : {}),
                 usableHeight: clampNum(h.usableHeight),
                 circumference: clampNum(h.circumference),
                 usableGallons: clampNum(h.usableGallons)
@@ -2530,6 +2531,7 @@
             resinName: normName(fh.resinName || ""),
             track: !!fh.track,
             pumpOff: !!fh.pumpOff,
+            ...(fh.pumpOff && Number(fh.pumpOffAt) > 0 ? { pumpOffAt: Number(fh.pumpOffAt) } : {}),
             usableHeight: clampNum(fh.usableHeight),
             circumference: clampNum(fh.circumference),
             usableGallons: clampNum(fh.usableGallons)
@@ -4198,6 +4200,7 @@
           resinName:normName(hopper.resinName || ""),
           track:!!hopper.track,
           pumpOff:!!hopper.pumpOff,
+          ...(hopper.pumpOff && Number(hopper.pumpOffAt) > 0 ? { pumpOffAt: Number(hopper.pumpOffAt) } : {}),
           usableHeight:clampNum(hopper.usableHeight),
           circumference:clampNum(hopper.circumference),
           usableGallons:clampNum(hopper.usableGallons)
@@ -5191,6 +5194,7 @@
         recipeLayers().forEach(L=>L.hoppers.forEach(hopper=>{
           hopper.track = false;
           hopper.pumpOff = false;
+          delete hopper.pumpOffAt;
         }));
         cellRefs.forEach(ref=>ref.refreshCellState());
         updateTrackingUI();
@@ -6574,6 +6578,7 @@
             hopper.pct = 0;
             hopper.track = false;
             hopper.pumpOff = false;
+            delete hopper.pumpOffAt;
           });
         });
         // Wipes every resin assignment on this page, so any scanned lots for
@@ -7191,6 +7196,7 @@
             startByDate,
             offsetMin,
             pumpOff: !!h.pumpOff,
+            ...(h.pumpOff && Number(h.pumpOffAt) > 0 ? { pumpOffAt: Number(h.pumpOffAt) } : {}),
             _ref: { h }
           });
         });
@@ -7635,6 +7641,7 @@
         // flip the live hopper's pumpOff, persist, recompute (which re-renders
         // this row with the new I/O state and syncs).
         row.querySelector("[data-pump-toggle]").addEventListener("click",()=>{
+          if (h._ref.h.pumpOff) delete h._ref.h.pumpOffAt; else h._ref.h.pumpOffAt = Date.now();
           h._ref.h.pumpOff = !h._ref.h.pumpOff;
           saveSession();
           validateAndCompute({ sync: true, immediate: true, kind: "pump-off" });
@@ -7716,6 +7723,7 @@
         fixBtn.addEventListener("click",()=>openHopperWeightEditor(h.layer, h.hopperIndex));
 
         row.querySelector("[data-pump-toggle]").addEventListener("click",()=>{
+          if (h._ref.h.pumpOff) delete h._ref.h.pumpOffAt; else h._ref.h.pumpOffAt = Date.now();
           h._ref.h.pumpOff = !h._ref.h.pumpOff;
           saveSession();
           validateAndCompute({ sync: true, immediate: true, kind: "pump-off" });
@@ -7839,6 +7847,7 @@
         L.hoppers.forEach(h => {
           h.track = false;
           h.pumpOff = false;
+          delete h.pumpOffAt;
         });
       });
     }
@@ -7891,6 +7900,7 @@
           h.resinName = "";
           h.track = false;
           h.pumpOff = false;
+          delete h.pumpOffAt;
         });
       });
       state.layers.forEach(recomputeAutoH1);
@@ -10154,6 +10164,11 @@
         const at = locate(args.recipe, args.layer, args.index);
         if (at.failure) return at.failure;
         if (!!at.hopper.pumpOff === args.pumpOff) return unchanged();
+        // When the pump went off is runtime state too, kept with the
+        // physical hopper and synced with the job (never in a recipe or a
+        // weight profile), and only while it is off: a "ran out early"
+        // correction measures from it.
+        if (args.pumpOff) at.hopper.pumpOffAt = Date.now(); else delete at.hopper.pumpOffAt;
         at.hopper.pumpOff = args.pumpOff;
         const persisted = commit({ sync: true, immediate: true, kind: "pump-off", grid: false, hookups: false });
         return done(true, persisted);
@@ -10474,6 +10489,7 @@
           hopper.pct = 0;
           hopper.track = false;
           hopper.pumpOff = false;
+          delete hopper.pumpOffAt;
         });
         const persisted = commit({ sync: true, immediate: true, kind: "recipe-clear" });
         recordRecipeEdit(before, args.recipe);

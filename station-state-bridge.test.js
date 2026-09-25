@@ -294,10 +294,25 @@ test("hookup sources cross per recipe document, in their own module's shape", ()
  * crosses here is the planned recipe as recipe fields, and whether each
  * document has anything to undo - never the stacks, never a setter. */
 
+test("when a pump went off crosses as pumpOffAt only while it is off; a running pump, or an unreadable time, crosses as null", () => {
+  const state = appState();
+  const hoppers = state.layers[0].hoppers;
+  hoppers[0].pumpOff = true;
+  hoppers[0].pumpOffAt = 1790000000000;
+  hoppers[1].pumpOff = false;
+  hoppers[1].pumpOffAt = 1790000000000;
+  state.layers[1].hoppers[0].pumpOff = true;
+  state.layers[1].hoppers[0].pumpOffAt = "soon";
+  const layers = bridgeModule.project(state, {}).layers;
+  assert.equal(layers[0].hoppers[0].pumpOffAt, 1790000000000);
+  assert.equal(layers[0].hoppers[1].pumpOffAt, null, "a running pump carried a pump-off moment");
+  assert.equal(layers[1].hoppers[0].pumpOffAt, null);
+});
+
 test("the Current projection is unchanged by the Next recipe crossing", () => {
   const snapshot = bridgeModule.project(appState(), {});
   assert.deepEqual(Object.keys(snapshot.layers[0].hoppers[0]).sort(),
-    ["effectiveWeight", "index", "pct", "pumpOff", "resinName", "smartWeight", "track", "usableGallons", "usableHeight", "weight"]);
+    ["effectiveWeight", "index", "pct", "pumpOff", "pumpOffAt", "resinName", "smartWeight", "track", "usableGallons", "usableHeight", "weight"]);
   assert.deepEqual(Object.keys(snapshot.layers[0]).sort(), ["hoppers", "layerPct", "name"]);
   assert.equal(snapshot.layers[0].hoppers[0].resinName, "RESIN-A", "Current must still read the live layers");
   assert.equal(snapshot.layers[0].layerPct, 34);

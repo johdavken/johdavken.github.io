@@ -57,6 +57,7 @@
         state[`${name}:${index}`] = {
           track: !!(hopper && hopper.track),
           pumpOff: !!(hopper && hopper.pumpOff),
+          pumpOffAt: hopper && hopper.pumpOff && Number(hopper.pumpOffAt) > 0 ? Number(hopper.pumpOffAt) : null,
           resinName: hopper && hopper.resinName ? String(hopper.resinName) : "",
           pct: finite(hopper && hopper.pct),
           effectiveWeight: finite(hopper && hopper.effectiveWeight),

@@ -909,6 +909,24 @@ test("setHopperTracking sets the Current hopper's flag as the grid's clock butto
   assert.equal(h.hopper("current", "A", 2).track, false);
 });
 
+test("setPumpOff records when the pump went off - runtime state carried to Station as pumpOffAt - keeps the first moment, and forgets it when the pump runs again or tracking resets", () => {
+  const h = boot();
+  const before = Date.now();
+  h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true }));
+  const at = h.hopper("current", "A", 0).pumpOffAt;
+  assert.ok(Number.isFinite(at) && at >= before && at <= Date.now(), "the pump-off moment was not recorded");
+  // Turning it off again is no change and keeps the first moment.
+  assert.equal(h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true })).changed, false);
+  assert.equal(h.hopper("current", "A", 0).pumpOffAt, at);
+  h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: false }));
+  assert.equal("pumpOffAt" in h.hopper("current", "A", 0), false, "a running pump kept its pump-off moment");
+  h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true }));
+  assert.equal(h.dispatch("resetTracking", { recipe: "current" }).ok, true);
+  assert.equal("pumpOffAt" in h.hopper("current", "A", 0), false, "Reset tracking kept a pump-off moment");
+  // Nothing else ever carries it: a hopper whose pump never went off has no such key.
+  assert.equal("pumpOffAt" in h.hopper("current", "B", 0), false);
+});
+
 test("setPumpOff sets the Current hopper's flag as the Timeline's I/O toggle does: synced at once as pump-off, saved, no grid rebuild, no history", () => {
   const h = boot();
   const result = h.dispatch("setPumpOff", Object.assign({}, CUR, { index: 0, pumpOff: true }));

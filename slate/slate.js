@@ -102,6 +102,16 @@
   const SCRAP = "scrap";
 
   const mounts = {};
+  /* Weight profiles loaded from Slate this session, by the line's workspace. */
+  const loadedProfiles = new Map();
+  function profileLine() {
+    try {
+      const book = weightProfiles && typeof weightProfiles.getBook === "function" ? weightProfiles.getBook() : null;
+      return book && book.workspace && book.workspace.id ? String(book.workspace.id) : null;
+    } catch (error) {
+      return null;
+    }
+  }
   let container = null;
   let current = null;
   let lastOwnRevision = null;
@@ -561,6 +571,10 @@
       admin,
       recipes,
       weightProfiles,
+      // The weight profile last loaded here, per line, this session: the one
+      // a "ran out early" correction offers to update (slate-timeline.js).
+      rememberWeightProfile: id => { const line = profileLine(); if (line) loadedProfiles.set(line, id); },
+      lastWeightProfile: () => { const line = profileLine(); return line ? (loadedProfiles.get(line) || null) : null; },
       theme: themeController,
       themes: themeModule ? themeModule.THEMES : [],
       display: displayController,
