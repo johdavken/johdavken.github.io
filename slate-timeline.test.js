@@ -723,6 +723,8 @@ test("no scrollbar: the window marks the edge where more continues - below at th
 
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
   assert.match(css, /\n\.slate-timeline__viewport \{[^}]*margin-left: calc\(-1 \* var\(--slate-space-3\)\);\s*padding-left: var\(--slate-space-3\);[^}]*scrollbar-width: none;/);
+  // The cards' right border is kept off the clip.
+  assert.match(css, /\n\.slate-timeline__viewport \{[^}]*margin-right: calc\(-1 \* var\(--slate-space-1\)\);\s*padding-right: var\(--slate-space-1\);/);
   assert.match(css, /\.slate-timeline__viewport::-webkit-scrollbar \{\s*display: none;/);
   assert.match(css, /\.slate-timeline__viewport\[data-more-below\] \{\s*mask-image:/);
   assert.match(css, /\.slate-timeline__viewport\[data-more-above\] \{\s*mask-image:/);
