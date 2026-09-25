@@ -101,11 +101,59 @@
 
 /* ---- Axis ---- */
 
+/* The axis's window: the axis fills it, and on a desktop or a tablet
+   grows past it when the cards need more room - slate-timeline.js sets
+   the axis's min-height - and the window scrolls, the Timeline's head
+   and foot staying put. A phone's Timeline is a page that scrolls whole:
+   there the window is only as tall as the axis (phone rule below). */
+.slate-timeline__viewport {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  /* The clock's labels hang left of their gutter into the panel's
+     padding: the window reaches into it too, so none is clipped. */
+  margin-top: var(--slate-space-2);
+  margin-left: calc(-1 * var(--slate-space-3));
+  padding-left: var(--slate-space-3);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* No scrollbar: the edge where more continues fades instead (below). */
+  scrollbar-width: none;
+}
+
+.slate-timeline__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* More above, more below, or both: that edge fades (slate-timeline.js
+   marks the window as it scrolls). */
+.slate-timeline__viewport[data-more-below] {
+  mask-image: linear-gradient(to bottom, black calc(100% - var(--slate-space-6)), transparent);
+}
+
+.slate-timeline__viewport[data-more-above] {
+  mask-image: linear-gradient(to bottom, transparent, black var(--slate-space-6));
+}
+
+.slate-timeline__viewport[data-more-above][data-more-below] {
+  mask-image: linear-gradient(to bottom, transparent, black var(--slate-space-6), black calc(100% - var(--slate-space-6)), transparent);
+}
+
+.slate-timeline__viewport[hidden] {
+  display: none;
+}
+
 .slate-timeline__axis {
   position: relative;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   min-height: 0;
-  margin-top: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__viewport {
+  flex: none;
+  overflow: visible;
 }
 
 .slate-timeline.is-idle .slate-timeline__axis,
@@ -230,8 +278,11 @@
 
 /* ---- Cards ---- */
 
-/* An event: the dot on the rail, a stem to the card when the card was
-   pushed off its instant, and the card to the right of the rail. */
+/* An event: the dot on the rail at its instant, the card to the right of
+   a lane, and in the lane a leader from the dot to the card's top corner -
+   so a card pushed off its instant still points at its own dot; dots and
+   cards stand in the same order, so no two leaders cross. The geometry
+   across the axis is mirrored in slate-timeline.js (DOT_X, CARD_LEFT). */
 .slate-timeline__event {
   position: absolute;
   right: 0;
@@ -249,18 +300,31 @@
   background: var(--slate-accent);
 }
 
-.slate-timeline__stem {
+.slate-timeline__leader {
   position: absolute;
-  top: 0;
-  left: 58px;
-  width: 2px;
-  background: var(--slate-accent-soft);
+  left: 59px;
+  height: 0;
+  margin-top: -1px;
+  border-top: 2px solid color-mix(in srgb, var(--slate-accent) 45%, transparent);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+/* Pointing at a card lights its leader and its dot. */
+@media (hover: hover) {
+  .slate-timeline__event:hover .slate-timeline__leader {
+    border-top-color: var(--slate-accent);
+  }
+
+  .slate-timeline__event:hover .slate-timeline__dot {
+    box-shadow: 0 0 0 3px var(--slate-accent-soft);
+  }
 }
 
 .slate-timeline__card {
   position: absolute;
   right: 0;
-  left: 68px;
+  left: 80px;
   padding: 6px var(--slate-space-2);
   border: var(--slate-stroke) solid var(--slate-border);
   border-radius: var(--slate-radius);
@@ -281,7 +345,7 @@
 .slate-timeline__pinned {
   position: absolute;
   right: 0;
-  left: 68px;
+  left: 80px;
 }
 
 .slate-timeline__card.is-pinned {
@@ -352,8 +416,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A single card says the time in its head; the row repeats it only in a group. */
-.slate-timeline__card:not(.is-group):not(.is-pinned) .slate-timeline__member-at {
+/* A card says its time in its head - a group its span - so its rows keep
+   their room for the resin; each row's own clock is its title. Only the
+   pinned block, whose hoppers can be far apart, keeps a clock per row. */
+.slate-timeline__card:not(.is-pinned) .slate-timeline__member-at {
   display: none;
 }
 
@@ -396,6 +462,11 @@
   padding-top: var(--slate-space-2);
   border-top: var(--slate-stroke) solid var(--slate-border-subtle);
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.slate-timeline__done::-webkit-scrollbar {
+  display: none;
 }
 
 .slate-timeline__member.is-off {

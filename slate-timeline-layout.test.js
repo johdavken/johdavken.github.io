@@ -208,3 +208,48 @@ test("a pinned overdue block takes the top and the cards start under it; when no
   assert.equal(a, b);
   assert.deepEqual(layout.placeCards([], short).cards, []);
 });
+
+/* ----------------------------------------------------------------------
+ *   spanNeeded: the axis long enough that nothing merges
+ * -------------------------------------------------------------------- */
+
+test("spanNeeded: nothing to place needs no room; cards that fit ask for no more than the window", () => {
+  assert.deepEqual(layout.spanNeeded([], { cardHeight, gap: 6, minSpan: 400 }), { span: 400, needed: 0, grows: false, fits: true });
+  const roomy = layout.spanNeeded(groupsAt([60, 180, 300]), { cardHeight, gap: 6, minSpan: 600 });
+  assert.equal(roomy.span, 600);
+  assert.equal(roomy.grows, false);
+});
+
+test("spanNeeded: a crowded run grows the axis exactly enough that placeCards merges nothing - only hoppers within five minutes share a card, and every dot stands at its own instant", () => {
+  // Eight hoppers pumping off six minutes apart, and three at the same minute; a short window.
+  const minutes = [20, 26, 32, 38, 44, 50, 56, 62, 90, 90, 92];
+  const groups = groupsAt(minutes);
+  assert.equal(groups.length, 9, "the five-minute grouping itself changed");
+  const options = { topInset: 18, bottomInset: 28, gap: 6, cardHeight };
+  const short = 240;
+  const merged = layout.placeCards(groups, Object.assign({ height: short }, options));
+  assert.ok(merged.cards.length < groups.length, "the short window did not need merging to begin with");
+  const need = layout.spanNeeded(groups, { cardHeight, gap: 6, minSpan: short - 18 - 28 });
+  assert.equal(need.grows, true);
+  assert.equal(need.fits, true);
+  const placed = layout.placeCards(groups, Object.assign({ height: 18 + need.span + 28 }, options));
+  assert.equal(placed.cards.length, groups.length, "a grown axis still merged");
+  assert.ok(placed.cards.every(card => !card.group.merged && !card.clipped));
+  for (const card of placed.cards) assert.ok(Math.abs(card.y0 - (18 + card.group.fraction * need.span)) < 1e-9, "a dot left its instant");
+  assertSound(placed, options);
+  // And it is the least: a pixel less and the last card no longer fits without a merge.
+  const tight = layout.placeCards(groups, Object.assign({ height: 18 + need.span - 1 + 28 }, options));
+  assert.ok(tight.cards.length < groups.length || tight.cards.some(card => card.displacement < 0), "the span asked for more than it needs");
+});
+
+test("spanNeeded: the pinned block's room counts; a card near the axis's end cannot ask for an endless axis; the cap is kept and says it does not fit", () => {
+  const groups = groupsAt([10, 20, 30]);
+  const bare = layout.spanNeeded(groups, { cardHeight, gap: 6, minSpan: 0 });
+  const pinned = layout.spanNeeded(groups, { cardHeight, gap: 6, minSpan: 0, floorOffset: 200 });
+  assert.ok(pinned.needed >= bare.needed && pinned.needed >= 200);
+  const nearEnd = layout.spanNeeded([{ fraction: 0.999, members: [{}] }], { cardHeight, gap: 6, minSpan: 0 });
+  assert.equal(nearEnd.needed, cardHeight({ members: [{}] }) / layout.MIN_END_ROOM);
+  const capped = layout.spanNeeded(groupsAt([10, 16, 22, 28, 34, 40]), { cardHeight, gap: 6, minSpan: 50, maxSpan: 100 });
+  assert.equal(capped.span, 100);
+  assert.equal(capped.fits, false);
+});

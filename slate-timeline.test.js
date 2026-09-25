@@ -216,7 +216,7 @@ test("a usable changeover fits the axis: the mark stands at its instant, the sca
     assert.equal(topOf(el) + topOf(el.querySelector(".slate-timeline__dot")), Math.round(card.y0 * 10) / 10);
     assert.equal(topOf(el) + topOf(el.querySelector(".slate-timeline__card")), Math.round(card.y * 10) / 10);
     assert.equal(el.querySelector(".slate-timeline__card").classList.contains("is-group"), card.group.members.length > 1);
-    assert.match(el.querySelector(".slate-timeline__when").textContent, card.group.members.length > 1 ? /^\d+ hoppers · (in |now)/ : /^pump off by .+ · (in |now)/);
+    assert.match(el.querySelector(".slate-timeline__when").textContent, card.group.members.length > 1 ? /^pump off (by \S+ ?[AP]?M? |[^·]+–[^·]+ )· (in |now)/ : /^pump off by .+ · (in |now)/);
   }
   assert.ok(axis._rect.height === 700);
 });
@@ -302,7 +302,8 @@ test("hoppers within five minutes share a card that lists each with its own time
   assert.equal(events.length, 1);
   const card = events[0].querySelector(".slate-timeline__card");
   assert.ok(card.classList.contains("is-group"));
-  assert.match(card.querySelector(".slate-timeline__when").textContent, /^2 hoppers · in /);
+  // A group's head says its minutes - one clock, or the span - not a count; the rows show that.
+  assert.match(card.querySelector(".slate-timeline__when").textContent, /^pump off (by .+|.+–.+) · in /);
   assert.deepEqual(card.querySelectorAll(".slate-timeline__member").map(member => member.getAttribute("data-hopper")), ["A1", "A2"]);
   assert.ok(card.querySelectorAll(".slate-timeline__member-at").every(at => /\d/.test(at.textContent)));
   assert.ok(card.querySelector(".slate-timeline__facts").hasAttribute("hidden"), "a group card shows a single's facts");
@@ -400,7 +401,9 @@ test("the default tick is twenty seconds, a throwing listener does not stop the 
   const fakeView = { ResizeObserver: class { constructor(fn) { callback = fn; } observe(node) { observed.push(node); } disconnect() { observed.length = 0; } } };
   const sized = boot({ view: fakeView, height: 600 });
   sized.view.update(withChangeover(NOW, 4));
-  assert.equal(observed.length, 1);
+  // The axis and its window: a grown axis keeps its height while the window changes.
+  assert.equal(observed.length, 2);
+  assert.ok(observed.includes(sized.axis) && observed.some(node => node.getAttribute("class") === "slate-timeline__viewport"));
   assert.equal(sized.view.placed().span, 600 - timelineModule.TOP_INSET - timelineModule.CHANGEOVER_INSET);
   sized.axis._rect.height = 900;
   callback();
@@ -503,7 +506,10 @@ test("the list view lists every tracked hopper as a row in time order - late fir
   assert.equal(q(view, ".slate-timeline__chip.is-unavailable").getAttribute("data-key"), "A:0");
   for (const row of qa(view, ".slate-timeline__member")) {
     assert.ok(before.get(row.getAttribute("data-key")) === row, `${row.getAttribute("data-key")} was rebuilt`);
-    assert.equal(row.getAttribute("title"), null);
+    // The list's titles go; only a group's rows keep one - their own clock, which the head gives as a span.
+    const inGroup = !!row.closest(".slate-timeline__card.is-group");
+    if (inGroup) assert.match(row.getAttribute("title"), /^[A-Z]\d+ (pump off by|empty at) \d/);
+    else assert.equal(row.getAttribute("title"), null);
   }
   // And back again: the same rows, in the list.
   setTimelineView("list");
@@ -660,4 +666,119 @@ test("on a phone the late block stands above the Now line and the scale starts u
   assert.equal(tq(".slate-timeline__axis").style.minHeight || "", "", "a tablet's axis grew");
   assert.equal(topOfPx(tq(".slate-timeline__now")), timelineModule.TOP_INSET);
   assert.ok(topOfPx(tq(".slate-timeline__pinned")) > timelineModule.TOP_INSET);
+});
+
+/* ----------------------------------------------------------------------
+ *   A short window: the axis grows and scrolls rather than merge
+ * -------------------------------------------------------------------- */
+
+test("on a desktop a window too short for the cards grows the axis past it - the Timeline scrolls - so no card merges; a tall window fits as before; a phone keeps its page", () => {
+  const short = boot({ height: 200 });
+  short.view.update(withChangeover(NOW, 4));
+  const placed = short.view.placed();
+  assert.ok(placed.cards.length > 0);
+  assert.ok(placed.cards.every(card => !card.group.merged && !card.clipped), "a card merged on a short window");
+  const grown = Number(String(short.axis.style.minHeight).replace("px", ""));
+  assert.ok(grown > 200, "the axis did not grow past its window");
+  assert.ok(short.view.element.classList.contains("is-scrolling"));
+  assert.ok(short.axis.parentNode.getAttribute("class") === "slate-timeline__viewport", "the axis has no window to scroll in");
+  // Every dot at its instant on the grown scale.
+  for (const card of placed.cards) assert.ok(Math.abs(card.y0 - (timelineModule.TOP_INSET + card.group.fraction * placed.span)) < 1e-6);
+
+  const tall = boot({ height: 1200 });
+  tall.view.update(withChangeover(NOW, 4));
+  assert.equal(tall.axis.style.minHeight || "", "", "a tall window's axis grew");
+  assert.ok(!tall.view.element.classList.contains("is-scrolling"));
+  assert.equal(tall.view.placed().span, 1200 - timelineModule.TOP_INSET - timelineModule.CHANGEOVER_INSET);
+
+  // The list view hides the window with the axis.
+  short.setTimelineView("list");
+  short.view.refresh();
+  assert.ok(short.axis.parentNode.hasAttribute("hidden"));
+});
+
+test("the sheet: the axis's window scrolls on a desktop or a tablet, and on a phone is only as tall as the axis, the page scrolling", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  assert.match(css, /\n\.slate-timeline__viewport \{[^}]*min-height: 0;[^}]*overflow-y: auto;/);
+  assert.match(css, /\.slate-timeline__axis \{\s*position: relative;\s*flex: 1 0 auto;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-timeline__viewport \{\s*flex: none;\s*overflow: visible;/);
+});
+
+test("no scrollbar: the window marks the edge where more continues - below at the top, both midway, above at the end - and the sheet fades that edge and gives the clock's labels their room", () => {
+  const { view } = boot({ height: 200 });
+  view.update(withChangeover(NOW, 4));
+  const viewport = q(view, ".slate-timeline__viewport");
+  const scrollTo = top => { viewport.scrollTop = top; viewport.dispatchEvent({ type: "scroll", target: viewport }); };
+  viewport.clientHeight = 200;
+  viewport.scrollHeight = 600;
+  scrollTo(0);
+  assert.ok(!viewport.hasAttribute("data-more-above") && viewport.hasAttribute("data-more-below"));
+  scrollTo(200);
+  assert.ok(viewport.hasAttribute("data-more-above") && viewport.hasAttribute("data-more-below"));
+  scrollTo(400);
+  assert.ok(viewport.hasAttribute("data-more-above") && !viewport.hasAttribute("data-more-below"));
+  viewport.scrollHeight = 200;
+  scrollTo(0);
+  assert.ok(!viewport.hasAttribute("data-more-above") && !viewport.hasAttribute("data-more-below"), "a window with nothing hidden fades an edge");
+
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  assert.match(css, /\n\.slate-timeline__viewport \{[^}]*margin-left: calc\(-1 \* var\(--slate-space-3\)\);\s*padding-left: var\(--slate-space-3\);[^}]*scrollbar-width: none;/);
+  assert.match(css, /\.slate-timeline__viewport::-webkit-scrollbar \{\s*display: none;/);
+  assert.match(css, /\.slate-timeline__viewport\[data-more-below\] \{\s*mask-image:/);
+  assert.match(css, /\.slate-timeline__viewport\[data-more-above\] \{\s*mask-image:/);
+  assert.match(css, /\.slate-timeline__viewport\[data-more-above\]\[data-more-below\] \{\s*mask-image:/);
+  assert.match(css, /\.slate-timeline__done \{[^}]*scrollbar-width: none;/);
+  assert.match(css, /\.slate-timeline__done::-webkit-scrollbar \{\s*display: none;/);
+});
+
+test("each card's leader runs from its own dot to the card's top corner - level when the card stands at its instant, steeper the further it was pushed - and no two leaders cross", () => {
+  const M = timelineModule;
+  const level = M.leaderFor(100, 100 - M.LEADER_INTO);
+  assert.equal(level.angle, 0);
+  assert.equal(level.length, M.CARD_LEFT - M.DOT_X);
+  const pushed = M.leaderFor(100, 180);
+  assert.ok(pushed.angle > 45 && pushed.length > 80, "a pushed card's leader is not steeper and longer");
+
+  const { view } = boot({ height: 200 });
+  view.update(withChangeover(NOW, 4));
+  const events = qa(view, ".slate-timeline__event");
+  assert.ok(events.length >= 2);
+  assert.equal(qa(view, ".slate-timeline__stem").length, 0, "the stem on the axis is still drawn");
+  // Dots and cards in the same order: each leader's two ends below the previous one's.
+  let previous = null;
+  for (const el of events) {
+    const base = topOf(el);
+    const dotY = base + topOf(el.querySelector(".slate-timeline__dot"));
+    const cardY = base + topOf(el.querySelector(".slate-timeline__card"));
+    const leader = el.querySelector(".slate-timeline__leader");
+    assert.equal(topOf(leader), dotY - base, "a leader does not start at its dot");
+    assert.match(leader.style.transform, /^rotate\(-?\d+(\.\d+)?deg\)$/);
+    if (previous) assert.ok(dotY > previous.dotY && cardY > previous.cardY, "two leaders cross");
+    previous = { dotY, cardY };
+  }
+
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  // The geometry the script draws with is the sheet's.
+  const dot = rule(".slate-timeline__dot");
+  const dotLeft = Number(dot.match(/left: (\d+)px/)[1]);
+  const dotWidth = Number(dot.match(/width: (\d+)px/)[1]);
+  assert.equal(dotLeft + dotWidth / 2, M.DOT_X);
+  assert.match(rule(".slate-timeline__leader"), new RegExp(`left: ${M.DOT_X}px;`));
+  assert.match(rule(".slate-timeline__card"), new RegExp(`left: ${M.CARD_LEFT}px;`));
+  assert.match(rule(".slate-timeline__pinned"), new RegExp(`left: ${M.CARD_LEFT}px;`));
+});
+
+test("a group's head says its minutes - one clock when they share one, the span otherwise - so its rows drop their clock for the resin; each row's own clock is its title", () => {
+  const { view } = boot({ height: 1200 });
+  view.update(withChangeover(NOW, 4));
+  const group = qa(view, ".slate-timeline__card.is-group")[0];
+  assert.ok(group, "the demo has no group");
+  const head = group.querySelector(".slate-timeline__when").textContent;
+  assert.match(head, /^pump off (by \S+( [AP]M)?|\S+–\S+( [AP]M)?) · in /);
+  assert.doesNotMatch(head, /hoppers/);
+  for (const row of group.querySelectorAll(".slate-timeline__member")) assert.match(row.getAttribute("title"), /pump off by \d/);
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  assert.match(css, /\.slate-timeline__card:not\(\.is-pinned\) \.slate-timeline__member-at \{\s*display: none;/);
+  assert.doesNotMatch(css, /:not\(\.is-group\):not\(\.is-pinned\) \.slate-timeline__member-at/);
 });

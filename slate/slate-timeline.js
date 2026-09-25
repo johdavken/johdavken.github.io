@@ -48,6 +48,10 @@
   const STALE_CHANGEOVER = "Changeover needs confirming";
   /* On a phone the scale stretches for crowded cards, up to this. */
   const MAX_PHONE_SPAN = 4000;
+  /* A desktop's or a tablet's axis grows past its window to keep every
+   * card apart (slate-timeline-layout.js spanNeeded), up to this; only a
+   * run-down longer still merges, as a last resort. */
+  const MAX_SPAN = 8000;
   const ALARM_LABEL = "Alarm when pump-off is due";
   const NO_LINE = "No line to project.";
 
@@ -61,6 +65,12 @@
   const CARD_HEAD = 18;
   const MEMBER_ROW = 28;
   const CARD_FACTS = 16;
+  /* Across the axis (mirrored in timeline.css): the dot's centre on the
+   * rail, the cards' left edge past the leaders' lane, and how far into
+   * the card's top a leader lands. */
+  const DOT_X = 59;
+  const CARD_LEFT = 80;
+  const LEADER_INTO = 10;
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -96,6 +106,13 @@
   function cardHeight(group) {
     const members = group && Array.isArray(group.members) ? group.members.length : 0;
     return CARD_PAD + CARD_HEAD + members * MEMBER_ROW + (members === 1 && !group.pinned ? CARD_FACTS : 0);
+  }
+
+  /** The leader from a dot at `dotY` to a card whose top is at `cardY`: its length and its angle, degrees. */
+  function leaderFor(dotY, cardY) {
+    const dx = CARD_LEFT - DOT_X;
+    const dy = (cardY + LEADER_INTO) - dotY;
+    return { length: Math.round(Math.hypot(dx, dy) * 100) / 100, angle: Math.round(Math.atan2(dy, dx) * 180 / Math.PI * 100) / 100 };
   }
 
   /** "400 lb · 3h 10m run-down" for a single card's second line. */
@@ -210,7 +227,22 @@
     axis.appendChild(pinned);
     const eventsEl = element(doc, "div", "slate-timeline__events");
     axis.appendChild(eventsEl);
-    rootEl.appendChild(axis);
+    // The axis's window: a desktop's or a tablet's axis grows past it when
+    // the cards need more room than it shows, and it scrolls.
+    const viewport = element(doc, "div", "slate-timeline__viewport");
+    viewport.appendChild(axis);
+    rootEl.appendChild(viewport);
+    // No scrollbar is drawn (timeline.css): the edge where more continues
+    // fades instead, marked here as the window scrolls and as it is drawn.
+    function paintEdges() {
+      const top = Number(viewport.scrollTop) || 0;
+      const room = (Number(viewport.scrollHeight) || 0) - (Number(viewport.clientHeight) || 0);
+      if (room > 1 && top > 1) viewport.setAttribute("data-more-above", "");
+      else viewport.removeAttribute("data-more-above");
+      if (room > 1 && top < room - 1) viewport.setAttribute("data-more-below", "");
+      else viewport.removeAttribute("data-more-below");
+    }
+    viewport.addEventListener("scroll", paintEdges);
     // The list view's rows, in the axis's place.
     const listEl = element(doc, "div", "slate-timeline__list", { hidden: "" });
     rootEl.appendChild(listEl);
@@ -294,6 +326,12 @@
 
     /* ---- Measuring ---- */
 
+    /* What the axis's window shows: the axis's own height before it grows. */
+    function visibleHeight() {
+      if (Number.isFinite(viewport.clientHeight) && viewport.clientHeight > 0) return viewport.clientHeight;
+      return axis.style.minHeight ? FALLBACK_HEIGHT : measuredHeight();
+    }
+
     function measuredHeight() {
       if (Number.isFinite(axis.clientHeight) && axis.clientHeight > 0) return axis.clientHeight;
       const rect = typeof axis.getBoundingClientRect === "function" ? axis.getBoundingClientRect() : null;
@@ -376,7 +414,9 @@
       if (built) return built;
       const el = element(doc, "div", "slate-timeline__event", { "data-group": key });
       const dot = element(doc, "span", "slate-timeline__dot", { "aria-hidden": "true" });
-      const stem = element(doc, "span", "slate-timeline__stem", { "aria-hidden": "true" });
+      // A line from the dot to its own card: dots and cards stand in the
+      // same order, so no two leaders cross, however far a card is pushed.
+      const leader = element(doc, "span", "slate-timeline__leader", { "aria-hidden": "true" });
       const card = element(doc, "div", "slate-timeline__card");
       const when = text(doc, "p", "slate-timeline__when", "");
       const members = element(doc, "div", "slate-timeline__members");
@@ -384,10 +424,10 @@
       card.appendChild(when);
       card.appendChild(members);
       card.appendChild(factsLine);
+      el.appendChild(leader);
       el.appendChild(dot);
-      el.appendChild(stem);
       el.appendChild(card);
-      built = { el, dot, stem, card, when, members, facts: factsLine, key };
+      built = { el, dot, leader, card, when, members, facts: factsLine, key };
       state.events.set(key, built);
       eventsEl.appendChild(el);
       return built;
@@ -408,8 +448,26 @@
       const count = group.members.length;
       const until = group.at - at;
       const countdown = until < 0 ? "now" : `in ${rundownModule.formatRemaining(until)}`;
-      if (count > 1) return `${count} hoppers · ${countdown}`;
+      // A group says its minutes in its head - one clock when they share
+      // one, the span otherwise - so its rows keep their room for the resin.
+      if (count > 1) {
+        const marks = group.members.map(member => member.markAt).filter(Number.isFinite);
+        const first = rundownModule.formatClock(marks.length ? Math.min(...marks) : group.at);
+        const last = rundownModule.formatClock(marks.length ? Math.max(...marks) : group.at);
+        if (first === last) return `${verb} ${first} · ${countdown}`;
+        return `${group.kind === "empty" ? "empty" : "pump off"} ${clockRange(first, last)} · ${countdown}`;
+      }
       return `${verb} ${rundownModule.formatClock(group.at)} · ${countdown}`;
+    }
+
+    /* "8:17 PM" and "8:18 PM" read as "8:17–8:18 PM": the half of the day
+     * said once when both share it. */
+    function clockRange(first, last) {
+      const meridiem = /\s?([AaPp]\.?[Mm]\.?)$/;
+      const a = first.match(meridiem);
+      const b = last.match(meridiem);
+      if (a && b && a[1].toUpperCase() === b[1].toUpperCase()) return `${first.replace(meridiem, "")}–${last}`;
+      return `${first}–${last}`;
     }
 
     /* ---- Ticks and lines ---- */
@@ -500,6 +558,7 @@
       const listing = state.view === "list";
       rootEl.setAttribute("data-view", state.view);
       show(axis, !listing);
+      show(viewport, !listing);
       show(listEl, listing);
       if (listing) show(scale, false);
       if (listing) {
@@ -602,10 +661,33 @@
         }
         span = Math.min(span, MAX_PHONE_SPAN);
         axis.style.minHeight = px(origin + bottomInsetFor + span + GAP);
-      } else if (axis.style.minHeight) {
-        axis.style.minHeight = "";
       }
-      const height = measuredHeight();
+      /* A desktop or a tablet: the axis fits its window while the cards
+       * fit in it apart - hoppers within five minutes of each other share a
+       * card, and no others - and grows past the window when they need more,
+       * the window then scrolling. Every dot stays at its own instant. */
+      let grown = null;
+      if (!phone) {
+        const early = layoutModule.groupEvents(entries, { now: at, windowMs: state.window.windowMs });
+        const overdue = early.overdue ? Object.assign({ pinned: true }, early.overdue) : null;
+        state.visible = visibleHeight();
+        const need = layoutModule.spanNeeded(early.groups, {
+          cardHeight,
+          gap: GAP,
+          floorOffset: overdue ? cardHeight(overdue) + 2 * GAP : 0,
+          minSpan: Math.max(state.visible - TOP_INSET - bottomInsetFor, 0),
+          maxSpan: MAX_SPAN
+        });
+        if (need.grows) {
+          grown = TOP_INSET + need.span + bottomInsetFor;
+          axis.style.minHeight = px(grown);
+        } else if (axis.style.minHeight) {
+          axis.style.minHeight = "";
+        }
+      }
+      rootEl.classList.toggle("is-scrolling", grown !== null);
+      paintEdges();
+      const height = grown !== null ? grown : measuredHeight();
       state.height = height;
       const windowMs = state.window.windowMs;
       const bottomInset = fit ? CHANGEOVER_INSET : BOTTOM_INSET;
@@ -646,16 +728,21 @@
 
       // The cards.
       const keepEvents = new Set();
+      const titled = new Map();
       for (const card of placed.cards) {
         const group = card.group;
         const built = event(group);
         keepEvents.add(built.key);
         // The event box starts at whichever is higher, the instant or the
-        // card; the dot sits at the instant, the stem spans the displacement.
+        // card; the dot sits at the instant, the leader runs from it to the
+        // card's top corner.
         const top = Math.min(card.y0, card.y);
         built.el.style.top = px(top);
         built.dot.style.top = px(card.y0 - top);
-        built.stem.style.height = px(Math.abs(card.displacement));
+        const line = leaderFor(card.y0 - top, card.y - top);
+        built.leader.style.top = px(card.y0 - top);
+        built.leader.style.width = px(line.length);
+        built.leader.style.transform = `rotate(${line.angle}deg)`;
         built.card.style.top = px(card.y - top);
         built.card.classList.toggle("is-group", group.members.length > 1);
         built.card.classList.toggle("is-merged", !!group.merged);
@@ -671,6 +758,8 @@
           keep.add(member.key);
           const rowBuilt = paintRow(member, rundownModule.formatClock(member.markAt), at);
           place(built.members, rowBuilt);
+          // In a group the row's own clock is its title (the head says the span).
+          if (group.members.length > 1) titled.set(member.key, `${member.id} ${group.kind === "empty" ? "empty at" : "pump off by"} ${rundownModule.formatClock(member.markAt)}`);
         }
       }
       pruneEvents(keepEvents);
@@ -690,8 +779,12 @@
         chips.appendChild(text(doc, "span", "slate-timeline__chip is-unavailable", `${entry.id} · ${rundownModule.reasonLabel(entry.reason)}`, attributes));
       }
       show(chips, grouped.later.length + grouped.unavailable.length > 0);
-      // A row that stood in the list carries a title the card's head says instead.
-      for (const built of state.rows.values()) built.el.removeAttribute("title");
+      // A row that stood in the list carries a title the card's head says
+      // instead - but for a group's, whose own clock is its title.
+      for (const [key, built] of state.rows) {
+        if (titled.has(key)) built.el.setAttribute("title", titled.get(key));
+        else built.el.removeAttribute("title");
+      }
     }
 
     /* ---- Results ---- */
@@ -762,8 +855,11 @@
     const view = settings.view || null;
     if (view && typeof view.ResizeObserver === "function") {
       // The axis is hidden in the list view; its collapse is not a resize to draw for.
-      state.resize = new view.ResizeObserver(() => { if (state.inputs && state.view !== "list" && measuredHeight() !== state.height) render(); });
+      // A grown axis keeps its height while its window changes: the window's
+      // own height is watched too.
+      state.resize = new view.ResizeObserver(() => { if (state.inputs && state.view !== "list" && (measuredHeight() !== state.height || visibleHeight() !== state.visible)) render(); });
       state.resize.observe(axis);
+      state.resize.observe(viewport);
     }
 
     /* ---- API ---- */
@@ -822,7 +918,7 @@
 
   return Object.freeze({
     TICK_MS, FALLBACK_HEIGHT, NONE_TRACKED, NONE_TRACKED_AUTOMATIC, STALE_CHANGEOVER, NO_LINE,
-    TOP_INSET, BOTTOM_INSET, CHANGEOVER_INSET, GAP, CARD_PAD, CARD_HEAD, MEMBER_ROW, CARD_FACTS,
+    TOP_INSET, BOTTOM_INSET, CHANGEOVER_INSET, GAP, CARD_PAD, CARD_HEAD, MEMBER_ROW, CARD_FACTS, DOT_X, CARD_LEFT, LEADER_INTO, leaderFor,
     cardHeight, facts, countsFor, changeoverText, create
   });
 });

@@ -9,6 +9,10 @@
  *   groupEvents    who is overdue, who is on the axis (in groups within
  *                  five minutes of a group's earliest member), who is beyond
  *                  the horizon, who has no estimate, who is pumped off
+ *   spanNeeded     the shortest axis on which every card fits without a
+ *                  merge - so only hoppers within five minutes share a card
+ *                  and every dot stands at its own instant; the Timeline
+ *                  grows to it and scrolls when the window is shorter
  *   placeCards     where each card sits so that none overlap and none leave
  *                  the axis, while every dot stays at its exact instant
  *
@@ -194,6 +198,48 @@
     };
   }
 
+  /* ---- The length the cards need ---- */
+
+  /* A card near the axis's end is not allowed to demand an endless axis:
+   * its instant is counted as if it stood at most this near the end. */
+  const MIN_END_ROOM = 0.05;
+
+  /**
+   * The shortest span (the axis's time scale, px) on which placeCards
+   * needs no merge. Stacked from their instants, the last card ends at the
+   * greater of: every card stacked from the floor, and any card's instant
+   * plus the cards after it. Both must end by the span's end.
+   *
+   * @param {Array} groups       groupEvents' groups (each with its fraction)
+   * @param {object} options     { cardHeight(group), gap, floorOffset (the
+   *                             pinned block's room above the first card),
+   *                             minSpan (what the window shows), maxSpan }
+   * @returns {{ span: number, needed: number, grows: boolean, fits: boolean }}
+   */
+  function spanNeeded(groups, options) {
+    const settings = options || {};
+    const gap = Number.isFinite(settings.gap) ? settings.gap : 0;
+    const cardHeight = typeof settings.cardHeight === "function" ? settings.cardHeight : () => 0;
+    const floorOffset = Number.isFinite(settings.floorOffset) ? Math.max(settings.floorOffset, 0) : 0;
+    const minSpan = Number.isFinite(settings.minSpan) ? Math.max(settings.minSpan, 0) : 0;
+    const maxSpan = Number.isFinite(settings.maxSpan) && settings.maxSpan > 0 ? settings.maxSpan : Infinity;
+    const list = Array.isArray(groups) ? groups : [];
+    const heights = list.map(group => Math.max(Number(cardHeight(group)) || 0, 0));
+    let needed = 0;
+    if (list.length) {
+      const stacked = heights.reduce((sum, height) => sum + height, 0) + gap * (list.length - 1);
+      needed = floorOffset + stacked;
+      let tail = -gap;
+      for (let index = list.length - 1; index >= 0; index -= 1) {
+        tail += heights[index] + gap;
+        const fraction = Math.max(0, Math.min(1, Number(list[index].fraction) || 0));
+        needed = Math.max(needed, tail / Math.max(1 - fraction, MIN_END_ROOM));
+      }
+    }
+    const span = Math.min(Math.max(minSpan, needed), Math.max(maxSpan, minSpan));
+    return { span, needed, grows: span > minSpan, fits: needed <= span };
+  }
+
   /* ---- The cards ---- */
 
   function mergeInto(groups, index) {
@@ -280,7 +326,7 @@
   }
 
   return Object.freeze({
-    FIT_MARGIN, MIN_WINDOW_MS, GROUP_MS, MINOR_LADDER, LABEL_LADDER, MINOR_MIN_PX, LABEL_MIN_PX, LABEL_EDGE_PX,
-    windowFor, tickPlan, verticalTicks, groupEvents, placeCards
+    FIT_MARGIN, MIN_WINDOW_MS, GROUP_MS, MINOR_LADDER, LABEL_LADDER, MINOR_MIN_PX, LABEL_MIN_PX, LABEL_EDGE_PX, MIN_END_ROOM,
+    windowFor, tickPlan, verticalTicks, groupEvents, spanNeeded, placeCards
   });
 });
