@@ -178,7 +178,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   for (const file of hostScripts) load(file);
 
   assert.equal(root.PolynStationStateBridge.isConnected(), true);
-  assert.equal(hostEl.querySelectorAll(".slate-hopper").length, 16, "the recipe did not draw from the live snapshot");
+  assert.equal(hostEl.querySelectorAll(".slate-recipe .slate-hopper").length, 16, "the recipe did not draw from the live snapshot");
   assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
   assert.match(hostEl.querySelector(".slate-section__subtitle").textContent, /Live$/);
   assert.equal(hostEl.querySelector(".slate-card--rate .slate-card__value").textContent, "850 lb/hr");
@@ -342,7 +342,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   profileRow.dispatchEvent({ type: "click", target: profileRow, stopPropagation() {} });
   const loadButton = tabbed.querySelector("[data-book-action='load']");
   assert.equal(loadButton.getAttribute("data-able"), "true");
-  assert.equal(hostEl.querySelectorAll(".slate-hopper").length, 16, "the Weights rows count as recipe rows");
+  assert.equal(hostEl.querySelectorAll(".slate-recipe .slate-hopper").length, 16, "the Weights rows count as recipe rows");
   const currentTab = hostEl.querySelector(".slate-tabs__tab[data-recipe='current']");
   currentTab.dispatchEvent({ type: "click", target: currentTab, stopPropagation() {} });
   assert.ok(tabbed.hasAttribute("hidden"));

@@ -76,6 +76,19 @@
     return Number.isFinite(number) && number > 0 ? String(number) : "";
   }
 
+  /* A round hopper's size either way: the line stores its circumference,
+   * and a diameter is entered and shown as C / pi. Rounded so a typed
+   * diameter comes back as typed: 15 -> 47.124 -> 15. */
+  function diameterFrom(circumference) {
+    const c = Number(circumference);
+    return Number.isFinite(c) && c > 0 ? Math.round((c / Math.PI) * 100) / 100 : 0;
+  }
+
+  function circumferenceFrom(diameter) {
+    const d = Number(diameter);
+    return Number.isFinite(d) && d > 0 ? Math.round(d * Math.PI * 1000) / 1000 : 0;
+  }
+
   function formatPounds(value) {
     const number = Number(value);
     return Number.isFinite(number) && number > 0 ? Math.round(number).toLocaleString("en-US") : "—";
@@ -169,6 +182,6 @@
     COMMAND, KIND, RECIPE, MEASURE, SMART_ON_TEXT, SMART_OFF_TEXT, SMART_UNAVAILABLE_TEXT, READ_ONLY_REASON, NO_BRIDGE,
     smartFrom, measureFor, shapeOf, fieldText, formatPounds,
     abilities, reason, canToggleSmart, smartReason,
-    setWeight, setWeights, setGeometry, setGeometries, setCircumference, setSmart
+    setWeight, setWeights, setGeometry, setGeometries, setCircumference, setSmart, diameterFrom, circumferenceFrom
   });
 });

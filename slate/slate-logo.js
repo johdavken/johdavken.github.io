@@ -8,7 +8,12 @@
  * theme's layer and accent colours. It turns as the application's does -
  * the streams revolve, a glint travels each channel, the output strokes
  * breathe - on Slate's own keyframes (rail.css), with a reduced-motion
- * switch. The application's sprite sits inside the <main> host.css hides,
+ * switch. Under it all, Slate's own word: SLATE, small, spaced wide and
+ * centred under the ring and the letters together, in the muted text
+ * colour - so the mark grows a band at its foot (VIEW_BOX_WITH_WORD;
+ * VIEW_BOX stays the symbol's). Other ways of setting the word are kept
+ * in tools/slate-logo-study.
+ * The application's sprite sits inside the <main> host.css hides,
  * and its colours and rotor are legacy CSS; a <use> of it would draw in
  * the wrong palette.
  */
@@ -21,6 +26,9 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const VIEW_BOX = "0 0 196 104";
+  /* The symbol's box, grown at its foot for the word. */
+  const VIEW_BOX_WITH_WORD = "0 0 196 121";
+  const WORD = "SLATE";
 
   /* Path data, verbatim from the application's symbol. */
   const PATHS = Object.freeze({
@@ -75,9 +83,9 @@
     const settings = options || {};
     const svg = svgNode(doc, "svg", {
       class: "slate-logo",
-      viewBox: VIEW_BOX,
+      viewBox: VIEW_BOX_WITH_WORD,
       role: "img",
-      "aria-label": settings.label || "Resin.Tools",
+      "aria-label": settings.label || "Resin.Tools Slate",
       focusable: "false"
     });
 
@@ -119,8 +127,14 @@
     svg.appendChild(outputs);
 
     svg.appendChild(svgNode(doc, "path", { d: PATHS.rule, fill: "none", stroke: "currentColor", "stroke-width": ".7", opacity: ".4" }));
+
+    // The word: centred under ring and letters, its letters spread to fill
+    // 150 units (the face and colour are rail.css's .slate-logo__word).
+    const word = svgNode(doc, "text", { class: "slate-logo__word", x: "98", y: "116", "text-anchor": "middle", textLength: "150", lengthAdjust: "spacing", "aria-hidden": "true" });
+    word.textContent = WORD;
+    svg.appendChild(word);
     return svg;
   }
 
-  return Object.freeze({ SVG_NS, VIEW_BOX, PATHS, STREAMS, create });
+  return Object.freeze({ SVG_NS, VIEW_BOX, VIEW_BOX_WITH_WORD, WORD, PATHS, STREAMS, create });
 });

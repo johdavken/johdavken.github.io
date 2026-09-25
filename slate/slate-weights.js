@@ -171,7 +171,7 @@
     if (!state.resinName) return "no resin";
     const geometry = measure ? Number(state[measure.field]) : 0;
     if (!(geometry > 0)) return `no ${measure ? measure.noun.replace("usable ", "") : "geometry"}`;
-    if (measure && measure.dimension === "height" && !(smart && smart.circumference > 0)) return "no circumference";
+    if (measure && measure.dimension === "height" && !(smart && smart.circumference > 0)) return "no hopper size";
     return "no bulk density";
   }
 
@@ -280,11 +280,25 @@
     const bar = element(doc, "div", "slate-section__bar slate-weights__bar");
     const subtitle = text(doc, "p", "slate-section__subtitle slate-weights__subtitle", "");
     bar.appendChild(subtitle);
-    const circumferenceWrap = element(doc, "label", "slate-weights__circumference", { hidden: "" });
-    circumferenceWrap.appendChild(text(doc, "span", "slate-weights__circumference-label", "Circumference"));
+    // The line's round-hopper size: entered as the inside diameter (lid
+    // off, wall to wall) or the circumference, this device's choice
+    // (slate-display.js). The line stores the circumference either way;
+    // the field converts as it shows and sends.
+    const display = settings.display || null;
+    const measure = () => (display && typeof display.getMeasure === "function" ? display.getMeasure() : "diameter");
+    const circumferenceWrap = element(doc, "div", "slate-weights__circumference", { hidden: "" });
+    const measureSwitch = element(doc, "div", "slate-weights__measure", { role: "radiogroup", "aria-label": "Enter the hopper size as" });
+    const measureButtons = new Map();
+    for (const [mode, label, title] of [["diameter", "Diameter", "Inside diameter: lid off, inside wall to inside wall across the centre"], ["circumference", "Circumference", "Circumference: a tape around the outside"]]) {
+      const button = text(doc, "button", "slate-weights__measure-option", label, { type: "button", role: "radio", "aria-checked": "false", "data-measure": mode, title });
+      button.addEventListener("click", () => { if (display && typeof display.setMeasure === "function") display.setMeasure(mode); });
+      measureButtons.set(mode, button);
+      measureSwitch.appendChild(button);
+    }
+    circumferenceWrap.appendChild(measureSwitch);
     const circumferenceInput = element(doc, "input", "slate-weights__field", {
       type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
-      "data-kind": KIND.circumference, "data-key": "circumference", "aria-label": "Hopper circumference, inches, shared by every hopper on the line"
+      "data-kind": KIND.circumference, "data-key": "circumference"
     });
     circumferenceWrap.appendChild(circumferenceInput);
     circumferenceWrap.appendChild(text(doc, "span", "slate-weights__unit", "in"));
@@ -315,7 +329,7 @@
     const fillWeight = element(doc, "input", "slate-recipe__fill-pct slate-weights__fill", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Weight to fill into the selected hoppers, pounds", placeholder: "Weight (no change)", "data-slate-weights-fill-field": "weight" });
     const fillGeometry = element(doc, "input", "slate-recipe__fill-pct slate-weights__fill", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Measure to fill into the selected hoppers", placeholder: "Measure (no change)", "data-slate-weights-fill-field": "geometry", hidden: "" });
     const fillButton = text(doc, "button", "slate-recipe__plan-action", "Fill", { type: "button", "data-slate-weights-fill": "fill" });
-    const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Clear selection", { type: "button", "data-slate-weights-fill": "clear" });
+    const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-fill__clear", "Clear selection", { type: "button", "data-slate-weights-fill": "clear" });
     // Always a draft: the switch and the circumference lead the fill
     // window, a rule between them and the fill fields.
     if (always) {
@@ -384,7 +398,7 @@
     const smartMeasure = () => (state.shape && state.shape !== "off" ? state.measure : null);
 
     function valueOf(key, kind) {
-      if (kind === KIND.circumference) return state.smart.circumference;
+      if (kind === KIND.circumference) return measure() === "diameter" ? actionsModule.diameterFrom(state.smart.circumference) : state.smart.circumference;
       const runtime = runtimeOf(key);
       if (kind === KIND.geometry) { const m = smartMeasure(); return m ? runtime[m.field] : 0; }
       return runtime.weight;
@@ -398,7 +412,7 @@
     }
 
     function nounFor(key, kind) {
-      if (kind === KIND.circumference) return "the hopper circumference";
+      if (kind === KIND.circumference) return measure() === "diameter" ? "the hopper diameter" : "the hopper circumference";
       const row = state.rows.get(key);
       const id = row ? row.id : key;
       const m = smartMeasure();
@@ -440,7 +454,13 @@
 
     function requestFor(key, kind, value) {
       const bridge = commands();
-      if (kind === KIND.circumference) return actionsModule.setCircumference(bridge, value);
+      if (kind === KIND.circumference) {
+        // A diameter goes to the line as the circumference it stands for;
+        // what is not a number goes as typed, for the contract to refuse.
+        const typed = Number(String(value).trim());
+        const sent = measure() === "diameter" && Number.isFinite(typed) && typed >= 0 ? actionsModule.circumferenceFrom(typed) : value;
+        return actionsModule.setCircumference(bridge, sent);
+      }
       const row = state.rows.get(key);
       if (kind === KIND.geometry) {
         const m = smartMeasure();
@@ -747,10 +767,24 @@
         if (entry.geometryInput) patchField(entry.geometryInput, key, KIND.geometry, own);
         paintComputed(entry, key);
       }
+      paintMeasure();
       patchField(circumferenceInput, "circumference", KIND.circumference, own);
       show(showEmpty, vacant > 0);
       showEmpty.textContent = state.showEmpty ? "Hide empty hoppers" : `Show empty hoppers (${vacant})`;
       showEmpty.setAttribute("aria-pressed", state.showEmpty ? "true" : "false");
+    }
+
+    /* The Diameter | Circumference choice: the checked option and the
+     * field's name follow this device's preference. */
+    function paintMeasure() {
+      const mode = measure();
+      for (const [id, button] of measureButtons) {
+        button.setAttribute("aria-checked", id === mode ? "true" : "false");
+        button.classList.toggle("is-selected", id === mode);
+      }
+      circumferenceInput.setAttribute("aria-label", mode === "diameter"
+        ? "Hopper inside diameter, inches, wall to wall, shared by every hopper on the line"
+        : "Hopper circumference, inches, shared by every hopper on the line");
     }
 
     function applyAbilities() {
@@ -906,6 +940,8 @@
       show(fill, always || count > 0);
       fillCount.textContent = count || !always ? selectedLabel(count) : NONE_PICKED;
       for (const button of [fillButton, fillClear]) button.setAttribute("data-able", count ? "true" : "false");
+      // Several picked: the way out of them lifts and glows, as the Recipe's.
+      fillClear.classList.toggle("is-lit", count > 1);
       const m = smartMeasure();
       show(fillGeometry, !!m);
       if (m) fillGeometry.setAttribute("placeholder", `${capitalize(m.noun.replace(/^usable /, ""))} (no change)`);
@@ -1520,6 +1556,17 @@
     });
 
     wireField(circumferenceInput, "circumference", KIND.circumference);
+    paintMeasure();
+    if (display && typeof display.subscribe === "function") {
+      let shownMeasure = measure();
+      display.subscribe(() => {
+        if (measure() === shownMeasure) return;
+        shownMeasure = measure();
+        paintMeasure();
+        // The same stored size, shown the other way.
+        if (!editingIs("circumference", KIND.circumference)) circumferenceInput.value = actionsModule.fieldText(valueOf("circumference", KIND.circumference));
+      });
+    }
     if (profiles && typeof profiles.subscribe === "function") profiles.subscribe(updateBook);
     updateBook();
 

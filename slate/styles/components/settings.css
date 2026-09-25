@@ -477,22 +477,65 @@
   display: none;
 }
 
-/* The way back to the floor UI at the foot of Settings: a phone's, whose
-   header has no room for it (header.css). */
-.slate-settings__legacy {
-  display: none;
+/* ---- Handling: the chosen style, played (slate-handling-preview.js) ----
+   A small stage under the choices: a Grid cell at the right, and the
+   drag's own proxy carried onto it and home again. Everything the card
+   and the cell do is the drag's sheet (recipe-edit.css) by the root's
+   data-drag-motion; this only sets the stage. */
+
+.slate-settings__preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-4);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__legacy {
-  display: block;
-  margin: var(--slate-space-4) 0 var(--slate-space-5);
-  text-align: center;
+.slate-settings__preview-label {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__legacy-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--slate-tap);
-  color: var(--slate-text-muted);
-  text-decoration: underline;
+.slate-handling-preview {
+  --slate-preview-cell-width: 150px;
+  --slate-preview-cell-height: 84px;
+  --slate-preview-travel: 176px;
+  position: relative;
+  box-sizing: content-box;
+  width: calc(var(--slate-preview-travel) + var(--slate-preview-cell-width));
+  max-width: 100%;
+  height: var(--slate-preview-cell-height);
+  padding: var(--slate-space-4);
+  border: var(--slate-stroke) dashed var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-root .slate-handling-preview__cell {
+  position: absolute;
+  top: var(--slate-space-4);
+  left: calc(var(--slate-space-4) + var(--slate-preview-travel));
+  box-sizing: border-box;
+  width: var(--slate-preview-cell-width);
+  height: var(--slate-preview-cell-height);
+}
+
+/* The proxy is fixed to the viewport in a real drag; here it stands on
+   the stage and is carried by a transition rather than a pointer. */
+.slate-root .slate-handling-preview__carry {
+  position: absolute;
+  top: var(--slate-space-4);
+  left: var(--slate-space-4);
+  z-index: 1;
+  width: var(--slate-preview-cell-width);
+  height: var(--slate-preview-cell-height);
+  transition: transform 600ms var(--slate-motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root .slate-handling-preview__carry {
+    transition: none;
+  }
 }

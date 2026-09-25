@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Slate logo study</title>
+<!-- A study, not part of Slate: the real mark (slate-logo.js) on the real
+     theme files, with a SLATE wordmark added under the RT's colour bars in
+     several ways. Served from the repo root: /tools/slate-logo-study/. -->
+<link rel="stylesheet" href="../../slate/styles/tokens.css">
+<link rel="stylesheet" href="../../slate/styles/themes/yaru-dark.css">
+<link rel="stylesheet" href="../../slate/styles/themes/gruvbox-dark.css">
+<link rel="stylesheet" href="../../slate/styles/themes/retro-82-dark.css">
+<link rel="stylesheet" href="../../slate/styles/themes/catppuccin-light.css">
+<link rel="stylesheet" href="../../slate/styles/components/rail.css">
+<style>
+  body { margin: 0; padding: 24px; background: #111; font: 14px ui-sans-serif, system-ui, sans-serif; color: #ddd; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 20px; color: #999; }
+  .row { display: grid; grid-template-columns: 220px repeat(4, 1fr); gap: 12px; align-items: stretch; margin-bottom: 12px; }
+  .row > .label { padding: 12px 8px; }
+  .label b { display: block; font-size: 15px; margin-bottom: 4px; color: #fff; }
+  .label span { color: #aaa; font-size: 12.5px; line-height: 1.4; }
+  .slate-root { padding: 18px 20px 14px; border-radius: 10px; background: var(--slate-surface); color: var(--slate-text); }
+  .slate-root .theme { display: block; margin-top: 10px; font-size: 11px; color: var(--slate-text-faint); }
+  .rail { width: 186px; }
+  .head { display: grid; grid-template-columns: 220px repeat(4, 1fr); gap: 12px; margin-bottom: 6px; color: #888; font-size: 12px; }
+  .head div { padding-left: 20px; }
+</style>
+</head>
+<body>
+<h1>Slate logo: a SLATE wordmark under the colour bars</h1>
+<p class="lead">The real mark, at the rail's width (186px), on four themes. The bars under RT still breathe and the streams still turn. Letter labels are for picking: tell me A–H.</p>
+<div class="head"><div></div><div>Yaru Dark</div><div>Gruvbox Dark</div><div>Retro 82 Dark</div><div>Catppuccin Latte</div></div>
+<div id="rows"></div>
+
+<script src="../../slate/slate-logo.js"></script>
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  const THEMES = ["yaru-dark", "gruvbox-dark", "retro-82-dark", "catppuccin-light"];
+  // Under RT, the bars run x 100 -> 188 at y 91. Each variant adds a word
+  // below them and grows the viewBox to make room.
+  const SANS = "ui-sans-serif, system-ui, sans-serif";
+  const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+  const VARIANTS = [
+    { key: "A", name: "Spaced, under the bars", note: "Muted text colour, sans, letters spread to the bars' span.",
+      text: { x: 100, y: 103, size: 7.2, weight: 600, fill: "var(--slate-text-muted)", family: SANS, fit: 88 }, height: 108 },
+    { key: "B", name: "Spaced, smaller and fainter", note: "Quieter: smaller, the faint text colour, so RT still leads.",
+      text: { x: 100, y: 102, size: 6, weight: 500, fill: "var(--slate-text-faint)", family: SANS, fit: 88 }, height: 106 },
+    { key: "C", name: "Monospace", note: "The same spread in the monospace face: more instrument-panel.",
+      text: { x: 100, y: 103, size: 7, weight: 500, fill: "var(--slate-text-muted)", family: MONO, fit: 88 }, height: 108 },
+    { key: "D", name: "In the accent", note: "The theme's accent, picking up the first colour bar.",
+      text: { x: 100, y: 103, size: 7.2, weight: 700, fill: "var(--slate-accent-text)", family: SANS, fit: 88 }, height: 108 },
+    { key: "E", name: "Bold, full text colour", note: "As strong as it gets: a second line of the name.",
+      text: { x: 100, y: 104, size: 8.2, weight: 800, fill: "var(--slate-text)", family: SANS, fit: 88 }, height: 109 },
+    { key: "F", name: "Under the whole mark", note: "Centred under ring and letters together, wider apart.",
+      text: { x: 98, y: 116, size: 8, weight: 600, fill: "var(--slate-text-muted)", family: SANS, fit: 150, anchor: "middle" }, height: 121 },
+    { key: "G", name: "Hairline rule, then the word", note: "A thin rule under the bars, the word beneath: a nameplate.",
+      text: { x: 100, y: 105, size: 6.6, weight: 600, fill: "var(--slate-text-muted)", family: SANS, fit: 88 }, rule: true, height: 109 },
+    { key: "H", name: "Letters in the bars' colours", note: "Each letter takes the bar above it: the streams naming the tool.",
+      text: { x: 100, y: 103, size: 7.6, weight: 800, family: SANS, fit: 88 }, perLetter: true, height: 108 }
+  ];
+  const COLOURS = ["var(--slate-accent)", "var(--slate-layer-core)", "var(--slate-layer-subskin)", "var(--slate-layer-outside)", "var(--slate-layer-inside)"];
+
+  function mark(variant) {
+    const svg = PolynSlateLogo.create(document);
+    svg.setAttribute("viewBox", `0 0 196 ${variant.height}`);
+    const t = variant.text;
+    if (variant.rule) {
+      const rule = document.createElementNS(NS, "path");
+      rule.setAttribute("d", "M100 96.5h88");
+      rule.setAttribute("stroke", "currentColor");
+      rule.setAttribute("stroke-width", ".5");
+      rule.setAttribute("opacity", ".35");
+      svg.appendChild(rule);
+    }
+    if (variant.perLetter) {
+      // One letter over each bar: bars start at 100, 117, 134, 151, 168 (the last runs to 188).
+      const starts = [100, 117, 134, 151, 168];
+      "SLATE".split("").forEach((letter, i) => {
+        const node = document.createElementNS(NS, "text");
+        node.setAttribute("x", starts[i] + (i === 4 ? 10 : 6));
+        node.setAttribute("y", t.y);
+        node.setAttribute("text-anchor", "middle");
+        node.setAttribute("font-family", t.family);
+        node.setAttribute("font-size", t.size);
+        node.setAttribute("font-weight", t.weight);
+        node.setAttribute("fill", COLOURS[i]);
+        node.textContent = letter;
+        svg.appendChild(node);
+      });
+      return svg;
+    }
+    const node = document.createElementNS(NS, "text");
+    const anchorMiddle = t.anchor === "middle";
+    node.setAttribute("x", anchorMiddle ? t.x : t.x);
+    node.setAttribute("y", t.y);
+    node.setAttribute("font-family", t.family);
+    node.setAttribute("font-size", t.size);
+    node.setAttribute("font-weight", t.weight);
+    node.setAttribute("fill", t.fill);
+    if (anchorMiddle) node.setAttribute("text-anchor", "middle");
+    // Spread to the span: SVG spaces the letters to fill textLength.
+    node.setAttribute("textLength", t.fit);
+    node.setAttribute("lengthAdjust", "spacing");
+    node.textContent = "SLATE";
+    svg.appendChild(node);
+    return svg;
+  }
+
+  const rows = document.getElementById("rows");
+  for (const variant of VARIANTS) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const label = document.createElement("div");
+    label.className = "label";
+    label.innerHTML = `<b>${variant.key}. ${variant.name}</b><span>${variant.note}</span>`;
+    row.appendChild(label);
+    for (const theme of THEMES) {
+      const cell = document.createElement("div");
+      cell.className = "slate-root";
+      cell.setAttribute("data-theme", theme);
+      const rail = document.createElement("div");
+      rail.className = "rail";
+      rail.appendChild(mark(variant));
+      cell.appendChild(rail);
+      rows.appendChild(row);
+      row.appendChild(cell);
+    }
+  }
+</script>
+</body>
+</html>

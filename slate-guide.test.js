@@ -53,7 +53,7 @@ test("it names the controls as the screen does", () => {
   assert.doesNotMatch(all, /pump (it|that hopper) off|tablet/i);
   // "Hookups" are which silos the hoppers are hooked to: the rearranging step is the blend change.
   assert.ok(guide.STEPS.some(step => step.title === "Plan the blend change" && step.drawing === "drag"));
-  for (const word of ["Apply", "Fill", "Print", "Off", "Back on", "Reset tracking", "Ran out", "Confirm"]) {
+  for (const word of ["Apply", "Fill", "Empty", "Print", "Off", "Back on", "Reset tracking", "Ran out", "Confirm"]) {
     assert.ok(all.includes(word), `the guide does not say "${word}"`);
   }
   const recipe = fs.readFileSync(path.join(__dirname, "slate", "slate-recipe.js"), "utf8");

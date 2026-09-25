@@ -137,3 +137,157 @@
   stroke-linejoin: round;
   stroke-width: 1.5;
 }
+
+/* ---- The way on, and the way back ----
+   A link-styled button: How to Use's line to Hopper Weights
+   Configuration, and that section's way back. */
+
+.slate-guide__more {
+  margin: var(--slate-space-2) 0 0;
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-guide__link {
+  padding: 0;
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-align: left;
+}
+
+@media (hover: hover) {
+  .slate-root .slate-guide__link:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---- Hopper Weights Configuration (slate-weights-guide.js) ----
+   Numbered sections, each words, a formula block - the rule in the
+   monospace face, the example worked under it - and a drawing where one
+   helps. */
+
+.slate-wguide__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+}
+
+.slate-wguide__heading {
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+}
+
+.slate-wguide__formula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-left: 3px solid var(--slate-accent);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-wguide__rule {
+  color: var(--slate-text);
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-wguide__worked {
+  margin: var(--slate-space-1) 0 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-wguide__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  margin: 0;
+  padding-left: var(--slate-space-4);
+}
+
+/* The drawings, in the theme's own colours. */
+.slate-wguide__drawing {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: var(--slate-space-1) 0;
+}
+
+.slate-wguide__label {
+  fill: var(--slate-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.slate-wguide__bar {
+  fill: var(--slate-border);
+}
+
+.slate-wguide__bar.is-layer {
+  fill: var(--slate-layer-core);
+}
+
+.slate-wguide__bar.is-hopper {
+  fill: var(--slate-accent);
+}
+
+.slate-wguide__steel {
+  fill: var(--slate-surface-raised);
+  stroke: var(--slate-border-strong);
+}
+
+.slate-wguide__steel-line,
+.slate-wguide__rim {
+  fill: none;
+  stroke: var(--slate-border-strong);
+  stroke-width: 1.2;
+}
+
+.slate-wguide__valve {
+  fill: var(--slate-accent);
+}
+
+.slate-wguide__resin {
+  fill: color-mix(in srgb, var(--slate-layer-core) 28%, transparent);
+}
+
+.slate-wguide__note {
+  fill: var(--slate-text-faint);
+  font-size: 9px;
+}
+
+.slate-wguide__note.is-strong {
+  fill: var(--slate-accent-text);
+  font-weight: 700;
+}
+
+.slate-wguide__measure {
+  fill: none;
+  stroke: var(--slate-info);
+  stroke-dasharray: 3 2;
+  stroke-width: 1.2;
+}
+
+.slate-wguide__measure-label {
+  fill: var(--slate-info);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.slate-wguide__solid {
+  fill: var(--slate-layer-core);
+}
+
+.slate-wguide__box {
+  fill: color-mix(in srgb, var(--slate-text) 6%, transparent);
+  stroke: var(--slate-border-strong);
+}
+
+.slate-wguide__pellet {
+  fill: var(--slate-layer-core);
+}

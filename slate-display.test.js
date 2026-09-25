@@ -35,7 +35,7 @@ function node() {
 test("the preferences default, persist under their own key, and the retired read-only key is dropped", () => {
   assert.equal(display.STORAGE_KEY, "polyn.slate.display.v1");
   assert.notEqual(display.STORAGE_KEY, theme.STORAGE_KEY);
-  const defaults = { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" };
+  const defaults = { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" };
   assert.deepEqual(display.normalize(null), defaults);
   assert.deepEqual(display.normalize({ other: 1 }), defaults);
   // A device that chose On or Automatic before read-only was retired is not left locked.
@@ -60,8 +60,8 @@ test("the preferences default, persist under their own key, and the retired read
 test("the tracking mode is one of three words, defaults to automatic, persists beside the others, and an old record without it reads automatic", () => {
   assert.deepEqual(display.TRACKING_MODES, ["automatic", "assisted", "manual"]);
   assert.equal(display.DEFAULTS.tracking, "automatic");
-  assert.deepEqual(display.normalize({ tracking: "manual" }), { background: "none", handling: "lift", tracking: "manual", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
-  assert.deepEqual(display.normalize({ tracking: "nope" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ tracking: "manual" }), { background: "none", handling: "lift", measure: "diameter", tracking: "manual", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ tracking: "nope" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   assert.equal(display.trackingModeOf("assisted"), "assisted");
   assert.equal(display.trackingModeOf("AUTOMATIC"), "automatic");
   assert.equal(display.trackingModeOf(undefined), "automatic");
@@ -72,7 +72,7 @@ test("the tracking mode is one of three words, defaults to automatic, persists b
   const heard = [];
   controller.subscribe(value => heard.push(value.tracking));
   assert.equal(controller.setTrackingMode("manual"), "manual");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", tracking: "manual", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", measure: "diameter", tracking: "manual", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   controller.setTrackingMode("manual");
   assert.equal(controller.setTrackingMode("nonsense"), "automatic");
   assert.deepEqual(heard, ["manual", "automatic"]);
@@ -238,6 +238,58 @@ test("the handling sheet: the card lifts under Lift and Tilt, leans by --slate-d
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s*\.slate-root \.slate-drag-proxy__card,\s*\.slate-root \.slate-hopper\.is-drop-target \{[^}]*animation: none;[^}]*rotate: none;[^}]*scale: none;/);
 });
 
+test("a picked cell lifts and glows on both pages: raised, solid accent edge, the Glow pulse over the Grid's own fill - and still, though lifted, under reduced motion", () => {
+  const read = name => fs.readFileSync(path.join(__dirname, "slate", "styles", "components", name), "utf8");
+  const edit = read("recipe-edit.css");
+  // Several picked: Clear selection lifts a little and glows softly.
+  const lit = edit.slice(edit.indexOf(".slate-root .slate-fill__clear.is-lit {"));
+  assert.match(lit.slice(0, lit.indexOf("}")), /scale: 1\.0\d;[\s\S]*animation: slate-clear-glow /);
+  assert.match(edit, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.slate-fill__clear\.is-lit/, "reduced motion does not still Clear selection");
+  assert.match(edit, /@keyframes slate-pick-glow \{[\s\S]*?0 0 0 6px var\(--slate-accent-soft\)/);
+  for (const [css, selector] of [
+    [edit, '.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-picked'],
+    [read("weights.css"), '.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key].is-picked']
+  ]) {
+    const at = css.indexOf(`${selector} {`);
+    assert.ok(at > -1, `no rule for ${selector}`);
+    const rule = css.slice(at, css.indexOf("}", at));
+    for (const want of [/scale: 1\.0\d;/, /border-style: solid;/, /border-color: var\(--slate-accent\);/, /animation: slate-pick-glow /, /z-index: 1;/]) assert.match(rule, want, `${selector} lacks ${want}`);
+    // It must out-rank the Grid's own cell rule: the attribute on the cell is what does it.
+    assert.match(selector, /\[data-(recipe|key)\]\.is-picked$/);
+    // Inside a reduced-motion block (no other at-rule between).
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.slate-root \.slate-(hopper\[data-recipe\]|weights__row\[data-key\])\.is-picked[^{]*\{\s*animation: none;\s*transition: none;/, "reduced motion does not still the pick");
+  }
+});
+
+test("hosted, the header goes unnamed on the Recipe, Slate's standing page, and names every other section; there is no link to the floor UI", () => {
+  const { hostEl } = bootHosted({ linked: false });
+  const title = hostEl.querySelector(".slate-header__title");
+  assert.equal(hostEl.querySelectorAll(".slate-centre .slate-section").find(one => !one.hasAttribute("hidden")).getAttribute("data-section"), "recipe");
+  assert.ok(title.hasAttribute("hidden"), "the Recipe is still named in the header");
+  const settingsItem = hostEl.querySelector(".slate-rail__item[data-section='settings']");
+  settingsItem.dispatchEvent({ type: "click", target: settingsItem, stopPropagation() {} });
+  assert.ok(!title.hasAttribute("hidden"));
+  assert.equal(title.textContent, "Settings");
+  const recipeItem = hostEl.querySelector(".slate-rail__item[data-section='recipe']");
+  recipeItem.dispatchEvent({ type: "click", target: recipeItem, stopPropagation() {} });
+  assert.ok(title.hasAttribute("hidden"));
+  assert.equal(hostEl.querySelector(".slate-header__legacy"), null);
+  assert.equal(hostEl.querySelector(".slate-settings__legacy-link"), null);
+});
+
+test("the hopper size is entered as diameter by default, or circumference; a device's choice, persisted beside the others", () => {
+  assert.deepEqual(display.MEASURES, ["diameter", "circumference"]);
+  assert.equal(display.DEFAULTS.measure, "diameter");
+  assert.equal(display.normalize({ measure: "circumference" }).measure, "circumference");
+  assert.equal(display.normalize({ measure: "radius" }).measure, "diameter");
+  const saved = storage();
+  const controller = display.create(node(), saved);
+  assert.equal(controller.getMeasure(), "diameter");
+  assert.equal(controller.setMeasure("circumference"), "circumference");
+  assert.equal(JSON.parse(saved.store[display.STORAGE_KEY]).measure, "circumference");
+  assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ tracking: "manual" }) })).getMeasure(), "diameter");
+});
+
 /* ----------------------------------------------------------------------
  *   What the sections do with it
  * -------------------------------------------------------------------- */
@@ -358,8 +410,8 @@ test("the layout is grid or grid-top, defaults to grid, persists beside the othe
   assert.deepEqual(display.LAYOUTS, ["grid", "grid-top"]);
   assert.equal(display.DEFAULTS.layout, "grid");
   for (const gone of ["LAYER_ORIENTATIONS", "layerOrientationOf", "weightsLayoutOf"]) assert.ok(!(gone in display), `${gone} is still exported`);
-  assert.deepEqual(display.normalize({ layout: "grid-top" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid-top", layerOrder: "forward", timeline: "realtime", host: "auto" });
-  assert.deepEqual(display.normalize({ layout: "top" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ layout: "grid-top" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid-top", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ layout: "top" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   assert.equal(display.layoutOf("grid-top"), "grid-top");
   assert.equal(display.layoutOf("GRID-TOP"), "grid");
   assert.equal(display.layoutOf(undefined), "grid");
@@ -371,7 +423,7 @@ test("the layout is grid or grid-top, defaults to grid, persists beside the othe
   const heard = [];
   controller.subscribe(value => heard.push(`${value.layout}/${value.tracking}`));
   assert.equal(controller.setLayout("grid-top"), "grid-top");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", tracking: "automatic", layout: "grid-top", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid-top", layerOrder: "forward", timeline: "realtime", host: "auto" });
   controller.setLayout("grid-top");
   assert.equal(controller.setLayout("nonsense"), "grid");
   controller.setLayout("grid-top");
@@ -711,8 +763,8 @@ test("Grid Top: every layer a column - the layers one grid of rows, each layer a
 test("the layer order is forward or reversed, defaults to forward, persists beside the others, and an old record without it reads forward", () => {
   assert.deepEqual(display.LAYER_ORDERS, ["forward", "reversed"]);
   assert.equal(display.DEFAULTS.layerOrder, "forward");
-  assert.deepEqual(display.normalize({ layerOrder: "reversed", timeline: "realtime", host: "auto" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "reversed", timeline: "realtime", host: "auto" });
-  assert.deepEqual(display.normalize({ layerOrder: "backwards" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ layerOrder: "reversed", timeline: "realtime", host: "auto" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "reversed", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ layerOrder: "backwards" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   assert.equal(display.layerOrderOf("reversed"), "reversed");
   assert.equal(display.layerOrderOf("REVERSED"), "forward");
   assert.equal(display.layerOrderOf(undefined), "forward");
@@ -723,7 +775,7 @@ test("the layer order is forward or reversed, defaults to forward, persists besi
   const heard = [];
   controller.subscribe(value => heard.push(`${value.layerOrder}/${value.layout}`));
   assert.equal(controller.setLayerOrder("reversed"), "reversed");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "reversed", timeline: "realtime", host: "auto" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "reversed", timeline: "realtime", host: "auto" });
   controller.setLayerOrder("reversed");
   assert.equal(controller.setLayerOrder("nonsense"), "forward");
   controller.setLayerOrder("reversed");
@@ -742,6 +794,8 @@ test("Settings offers A → E / E → A as radios after Layout, marks the curren
   assert.ok(group, "no Layer order radiogroup");
   const labels = view.element.querySelectorAll(".slate-settings__group").map(one => one.getAttribute("aria-label"));
   assert.equal(labels.indexOf("Layer order"), labels.indexOf("Handling") + 1);
+  // Only the view: the line itself sets the real order.
+  assert.match(group.closest(".slate-settings__group").querySelector(".slate-settings__lead").textContent, /only how they are shown here: the actual layer order is set by the connected line\./);
   const modes = view.element.querySelectorAll("[data-layer-order]");
   assert.deepEqual(modes.map(one => one.getAttribute("data-layer-order")), ["forward", "reversed"]);
   assert.deepEqual(modes.map(one => one.getAttribute("role")), ["radio", "radio"]);
@@ -790,8 +844,8 @@ test("every layer card carries its index for the sheets, and the reversed rule t
 test("the timeline view is realtime or list, defaults to realtime, persists beside the others, and an old record without it reads realtime", () => {
   assert.deepEqual(display.TIMELINE_VIEWS, ["realtime", "list"]);
   assert.equal(display.DEFAULTS.timeline, "realtime");
-  assert.deepEqual(display.normalize({ timeline: "list", host: "auto" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "list", host: "auto" });
-  assert.deepEqual(display.normalize({ timeline: "table" }), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
+  assert.deepEqual(display.normalize({ timeline: "list", host: "auto" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "list", host: "auto" });
+  assert.deepEqual(display.normalize({ timeline: "table" }), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   assert.equal(display.timelineViewOf("list"), "list");
   assert.equal(display.timelineViewOf("LIST"), "realtime");
   const saved = storage();
@@ -800,7 +854,7 @@ test("the timeline view is realtime or list, defaults to realtime, persists besi
   const heard = [];
   controller.subscribe(value => heard.push(value.timeline));
   assert.equal(controller.setTimelineView("list"), "list");
-  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "list", host: "auto" });
+  assert.deepEqual(JSON.parse(saved.store[display.STORAGE_KEY]), { background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "list", host: "auto" });
   controller.setTimelineView("list");
   assert.equal(controller.setTimelineView("nonsense"), "realtime");
   controller.setLayerOrder("reversed");
@@ -1062,7 +1116,7 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   click(bar("settings"));
   assert.deepEqual(active(), ["settings"]);
   assert.equal(shown().getAttribute("data-section"), "settings");
-  assert.ok(hostEl.querySelector(".slate-settings__legacy-link"), "Settings has no way back to the floor UI");
+  assert.equal(hostEl.querySelector(".slate-settings__legacy-link"), null, "Settings still links to the floor UI");
 
   // Tools raises its sheet over the scrim; a choice opens the tool and lights Tools.
   click(bar("tools"));

@@ -18,10 +18,10 @@
  */
 (function (root, factory) {
   const pick = (name, file) => (typeof require === "function" ? require(file) : (root && root[name]));
-  const api = factory(pick("PolynSlateAdminActions", "./slate-admin-actions.js"));
+  const api = factory(pick("PolynSlateAdminActions", "./slate-admin-actions.js"), pick("PolynSlateHandlingPreview", "./slate-handling-preview.js"));
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateSettings = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (adminModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (adminModule, handlingPreviewModule) {
   "use strict";
 
   const ADMIN_TITLE = "Administrator access";
@@ -103,7 +103,6 @@
    * @param {object|null} [ctx.display] the display controller {getBackground, setBackground, getHandling, setHandling, getTrackingMode, setTrackingMode, getLayout, setLayout, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
    * @param {function} [ctx.say]       a line for the operator
-   * @param {function} [ctx.legacy]    () => the floor UI's address, for the way back at the foot
    */
   function create(doc, ctx) {
     const settings = ctx || {};
@@ -282,13 +281,26 @@
       handlings.appendChild(button);
     }
     handling.appendChild(handlings);
+    // The chosen style, played: the drag's own parts on a loop, styled by
+    // the same sheet as a real drag (slate-handling-preview.js). It runs
+    // while Settings shows and starts over when the choice changes.
+    const handlingPreview = handlingPreviewModule && typeof handlingPreviewModule.create === "function"
+      ? handlingPreviewModule.create(doc, { timers: settings.timers })
+      : null;
+    if (handlingPreview) {
+      const previewBox = element(doc, "div", "slate-settings__preview");
+      previewBox.appendChild(text(doc, "span", "slate-settings__preview-label", "Preview"));
+      previewBox.appendChild(handlingPreview.element);
+      handling.appendChild(previewBox);
+    }
+    let previewedHandling = display && typeof display.getHandling === "function" ? display.getHandling() : null;
     if (!display) handling.appendChild(text(doc, "p", "slate-settings__note", "Handling cannot be changed on this page."));
     rootEl.appendChild(handling);
 
     // Layer order: which way the same pages run the layers.
     const ordering = element(doc, "section", "slate-settings__group", { "aria-label": "Layer order" });
     ordering.appendChild(text(doc, "h2", "slate-settings__heading", "Layer order"));
-    ordering.appendChild(text(doc, "p", "slate-settings__lead", "Which way the Recipe and Weights pages list the layers."));
+    ordering.appendChild(text(doc, "p", "slate-settings__lead", "Which way the Recipe and Weights pages list the layers. This changes only how they are shown here: the actual layer order is set by the connected line."));
     const orders = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layer order" });
     const orderButtons = new Map();
     for (const [mode, label, note] of [
@@ -387,14 +399,6 @@
     adminBody.appendChild(adminNote);
     adminGroup.appendChild(adminBody);
     rootEl.appendChild(adminGroup);
-
-    // The way back to the floor UI, at the very foot: a phone's header has
-    // no room for it (settings.css shows it there only).
-    const legacyHref = typeof settings.legacy === "function" ? settings.legacy() : "?view=legacy";
-    const legacyFoot = element(doc, "p", "slate-settings__legacy");
-    const legacyLink = text(doc, "a", "slate-settings__legacy-link", "Open Resin.Tools (Legacy)", { href: legacyHref || "?view=legacy" });
-    legacyFoot.appendChild(legacyLink);
-    rootEl.appendChild(legacyFoot);
 
     let adminOpen = false;
     let adminPending = false;
@@ -528,6 +532,7 @@
         button.classList.toggle("is-selected", on);
       }
       const handlingMode = display && typeof display.getHandling === "function" ? display.getHandling() : null;
+      if (handlingPreview && handlingMode !== previewedHandling) { previewedHandling = handlingMode; handlingPreview.replay(); }
       for (const [id, button] of handlingButtons) {
         const on = id === handlingMode;
         button.setAttribute("aria-checked", on ? "true" : "false");
@@ -586,8 +591,11 @@
       timelineView: id => viewButtons.get(id) || null,
       hostChoice: id => hostButtons.get(id) || null,
       admin: () => ({ open: adminOpen, pending: adminPending, note: adminNote.textContent, signedIn: adminGroup.classList.contains("is-signed-in") }),
-      // Left behind, the block closes and the password goes with it.
-      onHide() { openAdmin(false); }
+      preview: () => handlingPreview,
+      onShow() { if (handlingPreview) handlingPreview.start(); },
+      // Left behind, the block closes and the password goes with it, and
+      // the preview stops.
+      onHide() { openAdmin(false); if (handlingPreview) handlingPreview.stop(); }
     });
   }
 

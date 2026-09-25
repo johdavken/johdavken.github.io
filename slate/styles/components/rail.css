@@ -27,6 +27,15 @@
   height: auto;
 }
 
+/* Slate's word under the mark (slate-logo.js): small, in the interface's
+   face, the muted text colour. Its spacing is the SVG's own (textLength). */
+.slate-logo__word {
+  fill: var(--slate-text-muted);
+  font-family: var(--slate-font);
+  font-size: 8px;
+  font-weight: 600;
+}
+
 /* The mark turns as the application's does: the streams revolve once a
    half-minute, a glint travels each channel, the output strokes breathe.
    Each glint and stroke is offset by its own --slate-flow-delay. */

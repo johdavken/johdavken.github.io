@@ -26,7 +26,7 @@ const SLATE_FILES = [
   "slate-sections.js", "slate-tier.js", "slate-rail.js", "slate-phone-bar.js", "slate-home.js", "slate-recipe.js", "slate-tracking.js", "slate-stat-cards.js",
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
-  "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-settings.js", "slate-timeline-layout.js", "slate-runout.js", "slate-timeline.js", "slate-resin-balance.js", "slate-guide.js",
+  "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-handling-preview.js", "slate-settings.js", "slate-timeline-layout.js", "slate-runout.js", "slate-timeline.js", "slate-resin-balance.js", "slate-guide.js", "slate-weights-guide.js",
   "slate-pressure.js", "slate-winding-tension.js",
   "slate-workspaces.js", "slate-line-config.js", "slate-resin-db.js"
 ];
@@ -34,7 +34,7 @@ const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-ac
 const REQUESTS = { connection: ["slate-sync.js"], recipes: ["slate-book-actions.js"], weightProfiles: ["slate-profile-actions.js"], admin: ["slate-admin-actions.js"] };
 const INNER_HTML = ["slate-sync.js"];
 // slate-weights.js: its bulk edit's Cancel arms for a moment, as the Recipe's does.
-const TIMEOUTS = ["slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js", "slate-recipe-drag.js", "slate-weights.js"];
+const TIMEOUTS = ["slate-handling-preview.js", "slate-timeline.js", "slate-recipe.js", "slate-layer-menu.js", "slate.js", "slate-recipe-drag.js", "slate-weights.js"];
 /* The pure Station modules Slate shares: the run-down arithmetic and the
  * floor UI's print sheet. Both draw into whatever they are handed and
  * spend no Station token. */

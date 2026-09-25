@@ -129,6 +129,9 @@
   const BULK_CANCEL_LABEL = "Cancel";
   const CLEAR_LABEL = "Clear recipe";
   const CLEAR_EMPTY = "Nothing to clear: every hopper on this tab is already empty.";
+  const EMPTY_LABEL = "Empty";
+  const EMPTY_TITLE = "Blank the selected hoppers' resin and blend; nothing changes until Apply";
+  const EMPTY_NONE = "Nothing to empty: the selected hoppers are already empty.";
   const BULK_BUSY = "Apply or cancel the bulk edit first.";
   const BULK_NO_ROWS = "Nothing is planned to edit.";
   const BULK_ABANDONED = "The line changed on another device; the bulk edit you had open was not applied.";
@@ -405,8 +408,10 @@
       fillBox.appendChild(fillResin);
       const fillPct = element(doc, "input", "slate-recipe__fill-pct", { type: "text", inputmode: "decimal", enterkeyhint: "done", autocomplete: "off", "aria-label": "Blend to fill into the selected hoppers", placeholder: "Blend (no change)", "data-slate-fill-field": "pct" });
       const fillButton = text(doc, "button", "slate-recipe__plan-action", FILL_LABEL, { type: "button", "data-slate-fill": "fill" });
-      const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet", "Clear selection", { type: "button", "data-slate-fill": "clear" });
-      for (const node of [fillCount, fillBox, fillPct, fillButton, fillClear]) fill.appendChild(node);
+      // Empty: the picked hoppers blanked, beside Fill (Clear recipe blanks them all).
+      const fillEmpty = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-fill__empty", EMPTY_LABEL, { type: "button", "data-slate-fill": "empty", title: EMPTY_TITLE });
+      const fillClear = text(doc, "button", "slate-recipe__plan-action slate-recipe__plan-action--quiet slate-fill__clear", "Clear selection", { type: "button", "data-slate-fill": "clear" });
+      for (const node of [fillCount, fillBox, fillPct, fillButton, fillEmpty, fillClear]) fill.appendChild(node);
       searchModule.attach(doc, fillResin, { resins, host: fillBox, id: `slate-fill-${id}` });
       bulk.appendChild(fill);
       const summary = text(doc, "p", "slate-recipe__bulk-summary", "", { role: "status" });
@@ -419,7 +424,7 @@
       for (const node of [summary, hint, bulkNote, bulkClear, bulkCancel, bulkApply]) bulk.appendChild(node);
       // Under the layers, ahead of the foot: a desktop shows both at once.
       el.insertBefore(bulk, body.foot);
-      body.bulk = { el: bulk, summary, hint, note: bulkNote, cancel: bulkCancel, apply: bulkApply, fill: { el: fill, count: fillCount, resin: fillResin, pct: fillPct, button: fillButton, clear: fillClear } };
+      body.bulk = { el: bulk, summary, hint, note: bulkNote, cancel: bulkCancel, apply: bulkApply, fill: { el: fill, count: fillCount, resin: fillResin, pct: fillPct, button: fillButton, empty: fillEmpty, clear: fillClear } };
       // The name entry under the foot, built once so a publish never
       // takes the operator's typing.
       const entry = element(doc, "div", "slate-recipe__save-entry", { hidden: "" });
@@ -1591,7 +1596,9 @@
       show(strip.el, count > 0 || form.auto);
       show(form.body.bulk.hint, count === 0);
       strip.count.textContent = count || !form.auto ? selectedLabel(count) : NONE_PICKED;
-      for (const button of [strip.button, strip.clear]) button.setAttribute("data-able", count ? "true" : "false");
+      for (const button of [strip.button, strip.empty, strip.clear]) button.setAttribute("data-able", count ? "true" : "false");
+      // Several picked: the way out of them lifts and glows (recipe-edit.css).
+      strip.clear.classList.toggle("is-lit", count > 1);
     }
 
     function resetFill(body) {
@@ -1758,7 +1765,9 @@
         const target = event && event.target;
         const button = target && typeof target.closest === "function" ? target.closest("[data-slate-fill]") : null;
         if (!button || !form || form.recipe !== id) return;
-        if (button.getAttribute("data-slate-fill") === "fill") doFill();
+        const what = button.getAttribute("data-slate-fill");
+        if (what === "fill") doFill();
+        else if (what === "empty") { if (!form.view.picked().length) say(NONE_PICKED); else if (!form.view.emptyPicked()) say(EMPTY_NONE); }
         else form.view.clearPicked();
       });
       // Enter in either strip field fills (an Enter the open list spent
@@ -1959,7 +1968,7 @@
   }
 
   return Object.freeze({
-    DRAFT_IDLE, DRAFT_BUSY, NONE_PICKED, GRIP_TITLE, CLEAR_LABEL, CLEAR_EMPTY,
+    DRAFT_IDLE, DRAFT_BUSY, NONE_PICKED, GRIP_TITLE, CLEAR_LABEL, CLEAR_EMPTY, EMPTY_LABEL, EMPTY_NONE,
     RECIPES, RECIPE_LABEL, RESET_LABEL, RESET_ARMED_LABEL, RESET_ARM_MS, PROMOTE_ARMED_LABEL, SAVE_LABEL, SAVE_ENTRY_LABEL, BOOK_LABEL, WEIGHTS_LABEL, EMPTY, NO_PLAN, CHANGED_UNDERNEATH, ABANDONED,
     BULK_LABEL, BULK_BUSY, BULK_NO_ROWS, BULK_ABANDONED, BULK_READ_ONLY, BULK_NO_BRIDGE, BULK_SWITCH, BULK_HINT, FILL_NOTHING, FILL_NONE, discardLabel, discardedNote, selectedLabel,
     formatPct, formatWeight, cellsFor, subtitleFor, create
