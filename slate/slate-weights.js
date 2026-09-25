@@ -1256,7 +1256,11 @@
       const still = state.selectedId === profile.id;
       if (state.confirm === confirm) state.confirm = null;
       if (result.ok) {
-        if (confirm.kind === "load") setBookNote("ok", profilesModule.WORDING.loaded(profile.name));
+        if (confirm.kind === "load") {
+          setBookNote("ok", profilesModule.WORDING.loaded(profile.name));
+          // The Timeline's "ran out early" offers to update this profile too.
+          if (typeof settings.rememberWeightProfile === "function") settings.rememberWeightProfile(profile.id);
+        }
         else if (confirm.kind === "update") setBookNote("ok", profilesModule.WORDING.updated(profile.name));
         else { setBookNote("ok", profilesModule.WORDING.deleted(profile.name)); if (still) state.selectedId = null; }
       } else {

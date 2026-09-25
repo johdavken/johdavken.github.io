@@ -187,6 +187,9 @@
    is wide enough that a label clears the card's edge. */
 .slate-timeline__rail {
   position: absolute;
+  /* Over the leaders, so one running along the axis passes behind the
+     line; the dots stand over it in turn. */
+  z-index: 1;
   top: 0;
   bottom: 0;
   left: 58px;
@@ -283,56 +286,74 @@
 /* ---- Cards ---- */
 
 /* An event: the dot on the rail at its instant, the card to the right of
-   a lane, and in the lane a leader from the dot to the card's top corner -
-   so a card pushed off its instant still points at its own dot; dots and
-   cards stand in the same order, so no two leaders cross. The geometry
-   across the axis is mirrored in slate-timeline.js (DOT_X, CARD_LEFT). */
+   a narrow lane, and a curved leader from the dot to the card's top
+   corner - so a card pushed off its instant still points at its own dot.
+   Every leader has the same curve, so none crosses another, and where one
+   runs along the axis it passes behind the line. The geometry across the
+   axis is mirrored in slate-timeline.js (DOT_X, CARD_LEFT). */
 .slate-timeline__event {
+  --slate-lead: var(--slate-accent);
   position: absolute;
   right: 0;
   left: 0;
 }
 
+/* Every other event, down the axis, takes the theme's foreground for its
+   dot, its leader and its card's edge: neighbours - the only leaders that
+   can run side by side - never share a colour. The foreground, because
+   every other colour a theme has already means a state on the floor. */
+.slate-timeline__event[data-lead="alt"] {
+  --slate-lead: var(--slate-text);
+}
+
 .slate-timeline__dot {
   position: absolute;
+  z-index: 2;
   left: 54px;
   width: 10px;
   height: 10px;
   margin-top: -5px;
   border: 2px solid var(--slate-surface-raised);
   border-radius: 50%;
-  background: var(--slate-accent);
+  background: var(--slate-lead, var(--slate-accent));
 }
 
 .slate-timeline__leader {
   position: absolute;
-  left: 59px;
-  height: 0;
-  margin-top: -1px;
-  border-top: 2px solid color-mix(in srgb, var(--slate-accent) 45%, transparent);
-  transform-origin: 0 50%;
+  top: 0;
+  left: 0;
+  overflow: visible;
   pointer-events: none;
+}
+
+.slate-timeline__leader-path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--slate-lead, var(--slate-accent)) 45%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 /* Pointing at a card lights its leader and its dot. */
 @media (hover: hover) {
-  .slate-timeline__event:hover .slate-timeline__leader {
-    border-top-color: var(--slate-accent);
+  .slate-timeline__event:hover .slate-timeline__leader-path {
+    stroke: var(--slate-lead, var(--slate-accent));
   }
 
   .slate-timeline__event:hover .slate-timeline__dot {
-    box-shadow: 0 0 0 3px var(--slate-accent-soft);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--slate-lead, var(--slate-accent)) 30%, transparent);
   }
 }
 
 .slate-timeline__card {
   position: absolute;
   right: 0;
-  left: 80px;
+  left: 72px;
   padding: 6px var(--slate-space-2);
   border: var(--slate-stroke) solid var(--slate-border);
   border-radius: var(--slate-radius);
   background: var(--slate-surface);
+  /* The card's edge in its dot's colour (an event's; the pinned block has none). */
+  box-shadow: inset 3px 0 0 var(--slate-lead, transparent);
   animation: slate-card-enter var(--slate-motion-move) var(--slate-motion-ease) both;
 }
 
@@ -349,7 +370,7 @@
 .slate-timeline__pinned {
   position: absolute;
   right: 0;
-  left: 80px;
+  left: 72px;
 }
 
 .slate-timeline__card.is-pinned {
@@ -387,7 +408,11 @@
    card is narrow, so the id and resin share one shrinking column. */
 .slate-timeline__member {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  /* The name, then whatever the row shows beside it - its clock, Ran out…,
+     the pill - each a column only while it is drawn. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   align-items: center;
   column-gap: var(--slate-space-1);
   height: 28px;
@@ -467,6 +492,10 @@
   border-top: var(--slate-stroke) solid var(--slate-border-subtle);
   overflow-y: auto;
   scrollbar-width: none;
+  /* Past the pills' right edge, so their border is never on the clip (as
+     the axis's window does for the cards); nothing moves. */
+  margin-right: calc(-1 * var(--slate-space-1));
+  padding-right: var(--slate-space-1);
 }
 
 .slate-timeline__done::-webkit-scrollbar {
@@ -475,6 +504,147 @@
 
 .slate-timeline__member.is-off {
   color: var(--slate-text-muted);
+}
+
+/* ---- Ran out early (slate-timeline.js, slate-runout.js) ----
+   Offered on a pumped-off row only; its panel stands over those rows. */
+.slate-timeline__ranout {
+  display: none;
+}
+
+/* A small outlined pill beside Back on, so it reads as a control. */
+.slate-timeline__done .slate-timeline__ranout {
+  display: inline-block;
+  flex: none;
+  padding: 1px var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .slate-root .slate-timeline__ranout:hover {
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
+}
+
+.slate-timeline__correct {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-bottom: var(--slate-space-2);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-warning);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-timeline__correct[hidden] {
+  display: none;
+}
+
+.slate-timeline__correct-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.slate-timeline__correct-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-timeline__correct-time,
+.slate-timeline__correct-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  min-width: 0;
+}
+
+.slate-timeline__correct-profile[hidden] {
+  display: none;
+}
+
+.slate-timeline__correct-word {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  white-space: nowrap;
+}
+
+.slate-timeline__correct-input {
+  --slate-field-padding: 2px var(--slate-space-1);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius-sm);
+  --slate-field-bg: var(--slate-surface-raised);
+  --slate-field-width: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-root .slate-timeline__correct-select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px var(--slate-space-1);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  background: var(--slate-surface-raised);
+  color: inherit;
+  font: inherit;
+}
+
+.slate-timeline__correct-fed,
+.slate-timeline__correct-change,
+.slate-timeline__correct-shared,
+.slate-timeline__correct-note {
+  margin: 0;
+  line-height: var(--slate-line-normal);
+}
+
+.slate-timeline__correct-fed {
+  color: var(--slate-text-muted);
+}
+
+.slate-timeline__correct-change.is-change {
+  color: var(--slate-text);
+  font-weight: 600;
+}
+
+.slate-timeline__correct-shared {
+  color: var(--slate-warning);
+}
+
+.slate-timeline__correct-note {
+  color: var(--slate-danger);
+}
+
+.slate-timeline__correct-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-timeline__correct-button {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  font-weight: 500;
+}
+
+.slate-root .slate-timeline__correct-button--apply {
+  border-color: var(--slate-accent);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-timeline__correct-button[data-able="false"] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ---- Motion ---- */

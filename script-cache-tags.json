@@ -40,8 +40,8 @@
     "hash": "f66df8dc486ae51c"
   },
   "station-state-bridge.js": {
-    "v": "0.8.0",
-    "hash": "0102eb01dc3dc6de"
+    "v": "0.8.1",
+    "hash": "118619a2d4051dfa"
   },
   "station-connection-bridge.js": {
     "v": "0.3.0",
@@ -68,8 +68,8 @@
     "hash": "dabd9aeada8d333a"
   },
   "station-host.js": {
-    "v": "0.4.74",
-    "hash": "8c22df978715f917"
+    "v": "0.4.75",
+    "hash": "5d98cc595f5e23fc"
   },
   "slate-theme.js": {
     "v": "0.4.0",
@@ -80,8 +80,8 @@
     "hash": "6ff1ffcdc069a1ff"
   },
   "slate-host.js": {
-    "v": "0.51.1",
-    "hash": "7bfb84ef8bb7fb5c"
+    "v": "0.52.4",
+    "hash": "fa4a434c31780075"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -208,8 +208,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.33.11",
-    "hash": "ab335a984f183d52"
+    "v": "0.33.12",
+    "hash": "8747c1ea600cf9b2"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

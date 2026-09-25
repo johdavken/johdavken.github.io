@@ -68,7 +68,9 @@ function boot(options) {
     onCommitted: result => committed.push(result),
     say: message => said.push(message),
     tier: settings.tier,
-    openWeights: settings.openWeights
+    openWeights: settings.openWeights,
+    weightProfiles: settings.weightProfiles,
+    lastWeightProfile: settings.lastWeightProfile
   });
   doc.body.appendChild(view.element);
   const axis = view.element.querySelector(".slate-timeline__axis");
@@ -206,7 +208,10 @@ test("a usable changeover fits the axis: the mark stands at its instant, the sca
   assert.equal(off.querySelector(".slate-timeline__member-at").textContent, "Off");
   // The foot is its rows alone: no heading over them.
   assert.equal(q(view, ".slate-timeline__done-title"), null);
-  assert.equal(q(view, ".slate-timeline__done").firstChild.getAttribute("class"), "slate-timeline__done-list");
+  // Only the "ran out early" panel, hidden until asked for, stands ahead of the rows.
+  const footChildren = q(view, ".slate-timeline__done").children;
+  assert.deepEqual(footChildren.map(node => node.getAttribute("class")), ["slate-timeline__correct", "slate-timeline__done-list"]);
+  assert.ok(footChildren[0].hasAttribute("hidden"));
   assert.equal(off.querySelector(".slate-toggle__label").textContent, "Back on");
   assert.equal(off.querySelector("[data-slate-control]").getAttribute("aria-pressed"), "true");
   // Cards: each event's dot at the instant, the card at its placed y.
@@ -216,7 +221,10 @@ test("a usable changeover fits the axis: the mark stands at its instant, the sca
     assert.equal(topOf(el) + topOf(el.querySelector(".slate-timeline__dot")), Math.round(card.y0 * 10) / 10);
     assert.equal(topOf(el) + topOf(el.querySelector(".slate-timeline__card")), Math.round(card.y * 10) / 10);
     assert.equal(el.querySelector(".slate-timeline__card").classList.contains("is-group"), card.group.members.length > 1);
-    assert.match(el.querySelector(".slate-timeline__when").textContent, card.group.members.length > 1 ? /^pump off (by \S+ ?[AP]?M? |[^·]+–[^·]+ )· (in |now)/ : /^pump off by .+ · (in |now)/);
+    // The head says only when (the words are its title): the minute, or a group's span.
+    const when = el.querySelector(".slate-timeline__when");
+    assert.match(when.textContent, /^\d{1,2}:\d{2}(–\d{1,2}:\d{2})?( [AP]M)? · (in |now)/);
+    assert.match(when.getAttribute("title"), card.group.members.length > 1 ? /^pump off (by |)\S/ : /^pump off by \d/);
   }
   assert.ok(axis._rect.height === 700);
 });
@@ -251,7 +259,9 @@ test("without a changeover the axis is a fixed horizon: 6H by default, 12H on th
   assert.match(q(view, ".slate-timeline__changeover-line").textContent, /not set/);
   assert.ok(q(view, ".slate-timeline__changeover").hasAttribute("hidden"));
   assert.equal(qa(view, ".slate-timeline__event").length, 1);
-  assert.match(q(view, ".slate-timeline__event .slate-timeline__when").textContent, /^empty at /);
+  // Without a changeover a card marks when the hopper runs empty, and says so in a word.
+  assert.match(q(view, ".slate-timeline__event .slate-timeline__when").textContent, /^empty \d/);
+  assert.match(q(view, ".slate-timeline__event .slate-timeline__when").getAttribute("title"), /^empty (at )?\d/);
   const later = qa(view, ".slate-timeline__chip.is-later");
   assert.equal(later.length, 1);
   assert.match(later[0].textContent, /^B1 → 17h/);
@@ -303,7 +313,8 @@ test("hoppers within five minutes share a card that lists each with its own time
   const card = events[0].querySelector(".slate-timeline__card");
   assert.ok(card.classList.contains("is-group"));
   // A group's head says its minutes - one clock, or the span - not a count; the rows show that.
-  assert.match(card.querySelector(".slate-timeline__when").textContent, /^pump off (by .+|.+–.+) · in /);
+  // A group's head says its minutes - one clock, or the span - not a count; the rows show that.
+  assert.match(card.querySelector(".slate-timeline__when").textContent, /^\d{1,2}:\d{2}(–\d{1,2}:\d{2})?( [AP]M)? · in /);
   assert.deepEqual(card.querySelectorAll(".slate-timeline__member").map(member => member.getAttribute("data-hopper")), ["A1", "A2"]);
   assert.ok(card.querySelectorAll(".slate-timeline__member-at").every(at => /\d/.test(at.textContent)));
   assert.ok(card.querySelector(".slate-timeline__facts").hasAttribute("hidden"), "a group card shows a single's facts");
@@ -730,46 +741,53 @@ test("no scrollbar: the window marks the edge where more continues - below at th
   assert.match(css, /\.slate-timeline__viewport\[data-more-above\] \{\s*mask-image:/);
   assert.match(css, /\.slate-timeline__viewport\[data-more-above\]\[data-more-below\] \{\s*mask-image:/);
   assert.match(css, /\.slate-timeline__done \{[^}]*scrollbar-width: none;/);
+  // The foot's pills are kept off its clip, as the cards are off the axis window's.
+  assert.match(css, /\.slate-timeline__done \{[^}]*margin-right: calc\(-1 \* var\(--slate-space-1\)\);\s*padding-right: var\(--slate-space-1\);/);
   assert.match(css, /\.slate-timeline__done::-webkit-scrollbar \{\s*display: none;/);
 });
 
-test("each card's leader runs from its own dot to the card's top corner - level when the card stands at its instant, steeper the further it was pushed - and no two leaders cross", () => {
+test("each card's leader curves from its own dot to the card's top corner, every one with the same handles, so no two cross; the axis line is drawn over them and the dots over it", () => {
   const M = timelineModule;
-  const level = M.leaderFor(100, 100 - M.LEADER_INTO);
-  assert.equal(level.angle, 0);
-  assert.equal(level.length, M.CARD_LEFT - M.DOT_X);
-  const pushed = M.leaderFor(100, 180);
-  assert.ok(pushed.angle > 45 && pushed.length > 80, "a pushed card's leader is not steeper and longer");
+  const parse = d => d.match(/-?\d+(\.\d+)?/g).map(Number);
+  const [mx, my, c1x, c1y, c2x, c2y, ex, ey] = parse(M.leaderFor(100, 180).d);
+  assert.deepEqual([mx, my], [M.DOT_X, 100], "a leader does not leave its dot");
+  assert.deepEqual([ex, ey], [M.CARD_LEFT, 180 + M.LEADER_INTO], "a leader does not reach its card's corner");
+  // Leaving and entering to the right: the handles level with each end, the same for every leader.
+  assert.equal(c1y, 100);
+  assert.equal(c2y, ey);
+  assert.equal(c1x - M.DOT_X, M.CARD_LEFT - c2x);
 
   const { view } = boot({ height: 200 });
   view.update(withChangeover(NOW, 4));
   const events = qa(view, ".slate-timeline__event");
   assert.ok(events.length >= 2);
   assert.equal(qa(view, ".slate-timeline__stem").length, 0, "the stem on the axis is still drawn");
-  // Dots and cards in the same order: each leader's two ends below the previous one's.
-  let previous = null;
-  for (const el of events) {
+  const bezierY = (p, t) => { const u = 1 - t; return u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]; };
+  const curves = events.map(el => {
     const base = topOf(el);
-    const dotY = base + topOf(el.querySelector(".slate-timeline__dot"));
-    const cardY = base + topOf(el.querySelector(".slate-timeline__card"));
-    const leader = el.querySelector(".slate-timeline__leader");
-    assert.equal(topOf(leader), dotY - base, "a leader does not start at its dot");
-    assert.match(leader.style.transform, /^rotate\(-?\d+(\.\d+)?deg\)$/);
-    if (previous) assert.ok(dotY > previous.dotY && cardY > previous.cardY, "two leaders cross");
-    previous = { dotY, cardY };
+    const path = el.querySelector(".slate-timeline__leader-path");
+    const p = parse(path.getAttribute("d"));
+    assert.equal(p[1], topOf(el.querySelector(".slate-timeline__dot")), "a leader does not start at its dot");
+    return { base, p };
+  });
+  // Sampled along their length, each leader stays below the one before it.
+  for (let i = 1; i < curves.length; i += 1) {
+    for (let t = 0; t <= 1.0001; t += 0.05) {
+      assert.ok(curves[i].base + bezierY(curves[i].p, t) > curves[i - 1].base + bezierY(curves[i - 1].p, t), `two leaders cross at t=${t.toFixed(2)}`);
+    }
   }
 
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
-  // The geometry the script draws with is the sheet's.
   const dot = rule(".slate-timeline__dot");
-  const dotLeft = Number(dot.match(/left: (\d+)px/)[1]);
-  const dotWidth = Number(dot.match(/width: (\d+)px/)[1]);
-  assert.equal(dotLeft + dotWidth / 2, M.DOT_X);
-  assert.match(rule(".slate-timeline__leader"), new RegExp(`left: ${M.DOT_X}px;`));
+  assert.equal(Number(dot.match(/left: (\d+)px/)[1]) + Number(dot.match(/width: (\d+)px/)[1]) / 2, M.DOT_X);
   assert.match(rule(".slate-timeline__card"), new RegExp(`left: ${M.CARD_LEFT}px;`));
   assert.match(rule(".slate-timeline__pinned"), new RegExp(`left: ${M.CARD_LEFT}px;`));
+  // The line over the leaders, the dots over the line.
+  assert.match(rule(".slate-timeline__rail"), /z-index: 1;/);
+  assert.match(dot, /z-index: 2;/);
 });
+
 
 test("a group's head says its minutes - one clock when they share one, the span otherwise - so its rows drop their clock for the resin; each row's own clock is its title", () => {
   const { view } = boot({ height: 1200 });
@@ -777,10 +795,173 @@ test("a group's head says its minutes - one clock when they share one, the span 
   const group = qa(view, ".slate-timeline__card.is-group")[0];
   assert.ok(group, "the demo has no group");
   const head = group.querySelector(".slate-timeline__when").textContent;
-  assert.match(head, /^pump off (by \S+( [AP]M)?|\S+–\S+( [AP]M)?) · in /);
-  assert.doesNotMatch(head, /hoppers/);
+  assert.match(head, /^(\S+( [AP]M)?|\S+–\S+( [AP]M)?) · in /);
+  assert.doesNotMatch(head, /hoppers|pump off/);
+  assert.match(group.querySelector(".slate-timeline__when").getAttribute("title"), /^pump off (by )?\d/);
   for (const row of group.querySelectorAll(".slate-timeline__member")) assert.match(row.getAttribute("title"), /pump off by \d/);
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
   assert.match(css, /\.slate-timeline__card:not\(\.is-pinned\) \.slate-timeline__member-at \{\s*display: none;/);
   assert.doesNotMatch(css, /:not\(\.is-group\):not\(\.is-pinned\) \.slate-timeline__member-at/);
+});
+
+/* ----------------------------------------------------------------------
+ *   Ran out early: correct the stored weight
+ * -------------------------------------------------------------------- */
+
+/* B2 (B:1) is pumped off in the demo: 260 lb at 85 lb/hr (850 x 50% x 20%). */
+const pumpedAt = (minutesAgo, mutate) => withChangeover(NOW, 4, snap => {
+  snap.layers[1].hoppers[1].pumpOffAt = NOW - minutesAgo * 60 * 1000;
+  if (mutate) mutate(snap);
+});
+
+function makeProfileBridge(options) {
+  const settings = options || {};
+  const requests = [];
+  return {
+    requests,
+    isConnected: () => true,
+    capabilities: () => ["saveCurrentWeights", "replaceWeightProfile", "loadWeightProfile", "renameWeightProfile", "duplicateWeightProfile", "deleteWeightProfile", "refresh"],
+    getBook: () => ({ assigned: true, workspace: { id: "ws-1", displayName: "Line 5" }, refreshing: false, profiles: [{ id: "p1", name: "Standard", layers: [] }, { id: "p2", name: "Heavy", layers: [] }], count: 2 }),
+    subscribe: () => () => {},
+    async request(action, args) { requests.push({ action, args }); return settings.answer || { ok: true }; }
+  };
+}
+
+const ALL_WEIGHTS = ["setPumpOff", "setHopperTracking", "resetTracking", "setHopperWeight", "setHopperGeometry"];
+
+test("Ran out on a pumped-off row opens the correction with the recorded pump-off time and now; it previews the stored weight the run-down measured; opening and cancelling change nothing", () => {
+  const commands = makeCommands({ capabilities: ALL_WEIGHTS });
+  const { view } = boot({ height: 1200, commands });
+  view.update(pumpedAt(60));
+  const row = q(view, ".slate-timeline__done .slate-timeline__member[data-key='B:1']");
+  assert.ok(row, "B2 is not in the foot");
+  const ranOut = row.querySelector("[data-slate-ranout]");
+  assert.equal(ranOut.textContent, "Ran out", "an ellipsis reads as text cut off in the narrow row");
+  // Only the foot offers it: the sheet hides it on a running hopper's row.
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  assert.match(css, /\n\.slate-timeline__ranout \{\s*display: none;/);
+  assert.match(css, /\n\.slate-timeline__done \.slate-timeline__ranout \{\s*display: inline-block;/);
+  click(ranOut);
+  const panel = q(view, ".slate-timeline__correct");
+  assert.ok(!panel.hasAttribute("hidden"));
+  assert.equal(q(view, "[data-slate-runout='off']").value, "07:00", "not the recorded pump-off time");
+  assert.equal(q(view, "[data-slate-runout='out']").value, "08:00", "not now");
+  // Fed 1h of an expected 3h 04m at 85 lb/hr: 85 lb, exactly what it fed.
+  const correction = view.correction();
+  assert.equal(correction.ok, true);
+  assert.equal(correction.target, "weight");
+  assert.equal(correction.from, 260);
+  assert.equal(correction.to, 85);
+  assert.match(q(view, ".slate-timeline__correct-change").textContent, /Receiver weight: 260 lb → 85 lb/);
+  assert.match(q(view, ".slate-timeline__correct-fed").textContent, /^Fed 1h 00m of an expected 3h 0\dm \(67% short\)\.$/);
+  assert.equal(commands.calls.length, 0, "opening the correction sent something");
+  click(q(view, "[data-slate-runout='cancel']"));
+  assert.ok(panel.hasAttribute("hidden"));
+  assert.equal(commands.calls.length, 0, "cancelling sent something");
+});
+
+test("Apply sends ONE setHopperWeight with the corrected weight and, when a profile is chosen - the last one loaded, by default - updates it; the times can be corrected first", async () => {
+  const commands = makeCommands({ capabilities: ALL_WEIGHTS });
+  const weightProfiles = makeProfileBridge();
+  const { view, said, committed } = boot({ height: 1200, commands, weightProfiles, lastWeightProfile: () => "p2" });
+  view.update(pumpedAt(60));
+  click(q(view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  const select = q(view, "[data-slate-runout='profile']");
+  assert.equal(select.value, "p2", "the last loaded profile is not offered");
+  assert.deepEqual(select.querySelectorAll("option").map(option => option.getAttribute("value")), ["", "p1", "p2"]);
+  // It went off at 6:30, not as recorded: 1h 30m fed at 85 lb/hr is 127.5 lb.
+  const off = q(view, "[data-slate-runout='off']");
+  off.value = "06:30";
+  off.dispatchEvent({ type: "input", target: off });
+  assert.equal(view.correction().to, 127.5);
+  click(q(view, "[data-slate-runout='apply']"));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands.calls, [{ command: "setHopperWeight", args: { recipe: "current", layer: "B", index: 1, weight: 127.5 } }]);
+  assert.equal(committed.length, 1);
+  assert.deepEqual(weightProfiles.requests, [{ action: "replaceWeightProfile", args: { id: "p2" } }]);
+  assert.ok(q(view, ".slate-timeline__correct").hasAttribute("hidden"));
+  assert.match(said[said.length - 1], /^B2: receiver weight is now 127\.5 lb\. “Heavy” was updated/);
+});
+
+test("with Smart Hoppers computing B2's weight the correction goes to its usable height, one setHopperGeometry; not early, read-only or refused say so and change nothing", async () => {
+  const smart = snap => {
+    snap.smartHoppers = { enabled: true, geometryMode: "cylindrical", circumference: 30 };
+    const b2 = snap.layers[1].hoppers[1];
+    b2.usableHeight = 48;
+    b2.smartWeight = { value: 260, bulkDensity: 44, resinCode: "HD622" };
+    b2.effectiveWeight = 260;
+  };
+  const commands = makeCommands({ capabilities: ALL_WEIGHTS });
+  const { view } = boot({ height: 1200, commands });
+  view.update(pumpedAt(60, smart));
+  click(q(view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  const correction = view.correction();
+  assert.equal(correction.target, "geometry");
+  assert.equal(correction.from, 48);
+  assert.equal(correction.to, 15.7);
+  assert.match(q(view, ".slate-timeline__correct-change").textContent, /Usable height \(Smart Hoppers\): 48 in → 15\.7 in/);
+  click(q(view, "[data-slate-runout='apply']"));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands.calls, [{ command: "setHopperGeometry", args: { recipe: "current", layer: "B", index: 1, dimension: "height", value: 15.7 } }]);
+
+  // Not early: it fed longer than expected.
+  const late = boot({ height: 1200, commands: makeCommands({ capabilities: ALL_WEIGHTS }) });
+  late.view.update(pumpedAt(240));
+  click(q(late.view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  assert.equal(late.view.correction().reason, "not-early");
+  assert.equal(q(late.view, "[data-slate-runout='apply']").getAttribute("data-able"), "false");
+  click(q(late.view, "[data-slate-runout='apply']"));
+  assert.equal(late.commands.calls.length, 0);
+  assert.match(late.said[late.said.length - 1], /nothing to correct/);
+
+  // Read-only: withheld with the reason.
+  const locked = boot({ height: 1200, readOnly: true, commands: makeCommands({ capabilities: ALL_WEIGHTS }) });
+  locked.view.update(pumpedAt(60));
+  click(q(locked.view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  assert.equal(q(locked.view, "[data-slate-runout='apply']").getAttribute("data-able"), "false");
+  assert.match(q(locked.view, "[data-slate-runout='apply']").getAttribute("title"), /read-only/i);
+
+  // A refusal keeps the panel open with the application's words.
+  const refusing = boot({ height: 1200, commands: makeCommands({ capabilities: ALL_WEIGHTS, answer: () => ({ ok: false, code: "bad_argument", message: "No such hopper." }) }) });
+  refusing.view.update(pumpedAt(60));
+  click(q(refusing.view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  click(q(refusing.view, "[data-slate-runout='apply']"));
+  assert.ok(!q(refusing.view, ".slate-timeline__correct").hasAttribute("hidden"));
+  assert.equal(q(refusing.view, ".slate-timeline__correct-note").textContent, "No such hopper.");
+});
+
+test("without a recorded pump-off time the planned one is offered; the correction closes when the hopper goes back on", () => {
+  const { view } = boot({ height: 1200, commands: makeCommands({ capabilities: ALL_WEIGHTS }) });
+  view.update(withChangeover(NOW, 4));
+  click(q(view, ".slate-timeline__done [data-slate-ranout='B:1']"));
+  const off = q(view, "[data-slate-runout='off']");
+  assert.match(off.getAttribute("title"), /planned pump-off time/);
+  view.update(withChangeover(NOW, 4, snap => { snap.layers[1].hoppers[1].pumpOff = false; }));
+  assert.ok(q(view, ".slate-timeline__correct").hasAttribute("hidden"), "a correction stayed open for a hopper back on");
+  assert.equal(view.correction(), null);
+});
+
+test("neighbouring events - the only leaders that can run side by side - alternate colours down the axis: the accent, then the theme's foreground, for the dot, the leader and the card's edge", () => {
+  const { view } = boot({ height: 200 });
+  view.update(withChangeover(NOW, 4));
+  const leads = qa(view, ".slate-timeline__event").map(el => el.getAttribute("data-lead"));
+  assert.ok(leads.length >= 2);
+  leads.forEach((lead, index) => assert.equal(lead, index % 2 ? "alt" : "main", `event ${index} breaks the alternation`));
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/timeline.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  assert.match(rule(".slate-timeline__event"), /--slate-lead: var\(--slate-accent\);/);
+  assert.match(rule('.slate-timeline__event[data-lead="alt"]'), /--slate-lead: var\(--slate-text\);/);
+  assert.match(rule(".slate-timeline__dot"), /background: var\(--slate-lead, var\(--slate-accent\)\);/);
+  assert.match(rule(".slate-timeline__leader-path"), /stroke: color-mix\(in srgb, var\(--slate-lead, var\(--slate-accent\)\) 45%, transparent\);/);
+  assert.match(rule(".slate-timeline__card"), /box-shadow: inset 3px 0 0 var\(--slate-lead, transparent\);/);
+});
+
+test("a card's head says only when - no 'pump off by' - so it fits its narrow card; the full words are its title", () => {
+  const { view } = boot({ height: 1200 });
+  view.update(withChangeover(NOW, 4));
+  for (const when of qa(view, ".slate-timeline__events .slate-timeline__when")) {
+    assert.doesNotMatch(when.textContent, /pump off/, "the head repeats what the Timeline says");
+    assert.match(when.getAttribute("title"), /^pump off (by )?\d.* · (in |now)/);
+    assert.ok(when.textContent.length <= 26, `"${when.textContent}" is longer than a card's head holds`);
+  }
 });

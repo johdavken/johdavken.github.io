@@ -278,7 +278,9 @@
           weight: usable(runtime.effectiveWeight) ? runtime.effectiveWeight : 0,
           pct: usable(runtime.pct) ? runtime.pct : 0,
           layerPct: usable(share) ? share : 0,
-          lineRate: usable(job.lineRate) ? job.lineRate : 0
+          lineRate: usable(job.lineRate) ? job.lineRate : 0,
+          // When the pump went off, when the application recorded it.
+          pumpOffAt: runtime.pumpOff && Number(runtime.pumpOffAt) > 0 ? Number(runtime.pumpOffAt) : null
         }, projected));
       }
     }

@@ -36,9 +36,9 @@ test("a connected snapshot is live; none falls back to the demo, which is never 
 
 test("runtime state is keyed by slot and reduced to what the rows and run-down read", () => {
   const resolved = source.resolveSource({ snapshot: live() });
-  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, resinName: "HX204", pct: 60, effectiveWeight: 400, weight: 400, usableHeight: 0, usableGallons: 0, smartWeight: null });
-  assert.deepEqual(resolved.hopperState["B:1"], { track: true, pumpOff: true, resinName: "HD622", pct: 20, effectiveWeight: 260, weight: 260, usableHeight: 0, usableGallons: 0, smartWeight: null });
-  assert.deepEqual(resolved.hopperState["C:5"], { track: false, pumpOff: false, resinName: "", pct: 0, effectiveWeight: 0, weight: 0, usableHeight: 0, usableGallons: 0, smartWeight: null });
+  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, pumpOffAt: null, resinName: "HX204", pct: 60, effectiveWeight: 400, weight: 400, usableHeight: 0, usableGallons: 0, smartWeight: null });
+  assert.deepEqual(resolved.hopperState["B:1"], { track: true, pumpOff: true, pumpOffAt: null, resinName: "HD622", pct: 20, effectiveWeight: 260, weight: 260, usableHeight: 0, usableGallons: 0, smartWeight: null });
+  assert.deepEqual(resolved.hopperState["C:5"], { track: false, pumpOff: false, pumpOffAt: null, resinName: "", pct: 0, effectiveWeight: 0, weight: 0, usableHeight: 0, usableGallons: 0, smartWeight: null });
   assert.deepEqual(resolved.layerState, { A: { layerPct: 25 }, B: { layerPct: 50 }, C: { layerPct: 25 } });
   assert.deepEqual(resolved.smartHoppers, { enabled: false, geometryMode: null, circumference: 0 });
   assert.equal(resolved.job.lineRate, 850);
@@ -57,7 +57,7 @@ test("Smart Hoppers cross as the bridge carries them: the entered weight and geo
   snap.layers[0].hoppers[1].smartWeight = { value: 0, bulkDensity: 0, resinCode: "" };
   const resolved = source.resolveSource({ snapshot: snap });
   assert.deepEqual(resolved.smartHoppers, { enabled: true, geometryMode: "cylindrical", circumference: 30 });
-  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, resinName: "HX204", pct: 60, effectiveWeight: 412.4, weight: 400, usableHeight: 48, usableGallons: 0, smartWeight: { value: 412.4, bulkDensity: 44.9, resinCode: "HX204" } });
+  assert.deepEqual(resolved.hopperState["A:0"], { track: true, pumpOff: false, pumpOffAt: null, resinName: "HX204", pct: 60, effectiveWeight: 412.4, weight: 400, usableHeight: 48, usableGallons: 0, smartWeight: { value: 412.4, bulkDensity: 44.9, resinCode: "HX204" } });
   assert.equal(resolved.hopperState["A:1"].smartWeight, null, "a zero computation is a computation");
   assert.equal(resolved.hopperState["A:1"].usableHeight, 48);
   // Normalisation: anything the bridge does not say is at rest.

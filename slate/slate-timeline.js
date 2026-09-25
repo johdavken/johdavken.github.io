@@ -21,6 +21,15 @@
  * pinned block and the foot as the projection changes, so a tick never
  * takes the operator's focus off a button.
  *
+ * RAN OUT EARLY. A pumped-off row offers "Ran out": a panel in the foot
+ * takes when the pump went off (the application's record, else the planned
+ * time) and when the hopper ran dry (now), and shows what that says about
+ * the hopper's stored weight - or, with Smart Hoppers computing it, its
+ * measure (slate-runout.js). Apply sends that one change through
+ * slate-weight-actions.js and, if chosen, updates a weight profile through
+ * slate-profile-actions.js; nothing changes before Apply. Several hoppers
+ * short by about the same share are said to point at the line's output.
+ *
  * The LIST view (the Timeline preference, slate-display.js) is the same
  * rows without the clock: late first, then by mark, then those without
  * an estimate, each row saying its clock and countdown; the pumped-off
@@ -32,11 +41,14 @@
   const api = factory(
     pick("PolynStationRundown", "../station/station-rundown.js"),
     pick("PolynSlateTimelineLayout", "./slate-timeline-layout.js"),
-    pick("PolynSlateTracking", "./slate-tracking.js")
+    pick("PolynSlateTracking", "./slate-tracking.js"),
+    pick("PolynSlateRunout", "./slate-runout.js"),
+    pick("PolynSlateWeightActions", "./slate-weight-actions.js"),
+    pick("PolynSlateProfileActions", "./slate-profile-actions.js")
   );
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateTimeline = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule, layoutModule, trackingModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (rundownModule, layoutModule, trackingModule, runoutModule, weightActions, profileActions) {
   "use strict";
 
   const TICK_MS = 20000;
@@ -69,8 +81,9 @@
    * rail, the cards' left edge past the leaders' lane, and how far into
    * the card's top a leader lands. */
   const DOT_X = 59;
-  const CARD_LEFT = 80;
+  const CARD_LEFT = 72;
   const LEADER_INTO = 10;
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -108,11 +121,21 @@
     return CARD_PAD + CARD_HEAD + members * MEMBER_ROW + (members === 1 && !group.pinned ? CARD_FACTS : 0);
   }
 
-  /** The leader from a dot at `dotY` to a card whose top is at `cardY`: its length and its angle, degrees. */
+  /**
+   * The leader from a dot at `dotY` to a card whose top is at `cardY`, in
+   * the event's own coordinates: an S-curve leaving the dot to the right
+   * and entering the card's corner to the right. Every leader has the same
+   * handles, so its height at any point is the same blend of its two ends
+   * as every other's - dots and cards keep one order, so no two cross, and
+   * where one runs along the axis it passes behind the line (timeline.css).
+   * @returns {{ d: string, height: number, endY: number }}
+   */
   function leaderFor(dotY, cardY) {
-    const dx = CARD_LEFT - DOT_X;
-    const dy = (cardY + LEADER_INTO) - dotY;
-    return { length: Math.round(Math.hypot(dx, dy) * 100) / 100, angle: Math.round(Math.atan2(dy, dx) * 180 / Math.PI * 100) / 100 };
+    const endY = cardY + LEADER_INTO;
+    const handle = CARD_LEFT - DOT_X;
+    const r = value => Math.round(value * 100) / 100;
+    const d = `M ${DOT_X} ${r(dotY)} C ${DOT_X + handle} ${r(dotY)}, ${CARD_LEFT - handle} ${r(endY)}, ${CARD_LEFT} ${r(endY)}`;
+    return { d, height: r(Math.max(dotY, endY) + 2), endY: r(endY) };
   }
 
   /** "400 lb · 3h 10m run-down" for a single card's second line. */
@@ -172,6 +195,8 @@
     const onCommitted = typeof settings.onCommitted === "function" ? settings.onCommitted : () => {};
     const say = typeof settings.say === "function" ? settings.say : () => {};
     const guard = () => ({ readOnly: !!readOnly() });
+    const profiles = settings.weightProfiles || null;
+    const lastProfile = typeof settings.lastWeightProfile === "function" ? settings.lastWeightProfile : () => null;
 
     /* ---- The frame ---- */
 
@@ -264,6 +289,35 @@
     rootEl.appendChild(chips);
     // The pumped-off foot: its rows alone, no heading.
     const done = element(doc, "div", "slate-timeline__done", { hidden: "" });
+    // Ran out early: the correction, built once, over the rows it is about.
+    const correct = element(doc, "div", "slate-timeline__correct", { role: "group", "aria-label": "Ran out early", hidden: "" });
+    const correctTitle = text(doc, "p", "slate-timeline__correct-title", "");
+    const correctTimes = element(doc, "div", "slate-timeline__correct-times");
+    const offLabel = element(doc, "label", "slate-timeline__correct-time");
+    offLabel.appendChild(text(doc, "span", "slate-timeline__correct-word", "Pump off"));
+    const offInput = element(doc, "input", "slate-timeline__correct-input", { type: "time", "data-slate-runout": "off", "aria-label": "When the pump went off" });
+    offLabel.appendChild(offInput);
+    const outLabel = element(doc, "label", "slate-timeline__correct-time");
+    outLabel.appendChild(text(doc, "span", "slate-timeline__correct-word", "Ran out"));
+    const outInput = element(doc, "input", "slate-timeline__correct-input", { type: "time", "data-slate-runout": "out", "aria-label": "When the hopper ran out" });
+    outLabel.appendChild(outInput);
+    correctTimes.appendChild(offLabel);
+    correctTimes.appendChild(outLabel);
+    const correctFed = text(doc, "p", "slate-timeline__correct-fed", "");
+    const correctChange = text(doc, "p", "slate-timeline__correct-change", "");
+    const correctShared = text(doc, "p", "slate-timeline__correct-shared", "", { hidden: "" });
+    const profileLabel = element(doc, "label", "slate-timeline__correct-profile");
+    profileLabel.appendChild(text(doc, "span", "slate-timeline__correct-word", "Weight profile"));
+    const profileSelect = element(doc, "select", "slate-timeline__correct-select", { "data-slate-runout": "profile", "aria-label": "Also update a weight profile" });
+    profileLabel.appendChild(profileSelect);
+    const correctNote = text(doc, "p", "slate-timeline__correct-note", "", { role: "status", hidden: "" });
+    const correctActions = element(doc, "div", "slate-timeline__correct-actions");
+    const correctCancel = text(doc, "button", "slate-timeline__correct-button", "Cancel", { type: "button", "data-slate-runout": "cancel" });
+    const correctApply = text(doc, "button", "slate-timeline__correct-button slate-timeline__correct-button--apply", "Apply", { type: "button", "data-slate-runout": "apply", "data-able": "false" });
+    correctActions.appendChild(correctCancel);
+    correctActions.appendChild(correctApply);
+    for (const node of [correctTitle, correctTimes, correctFed, correctChange, correctShared, profileLabel, correctNote, correctActions]) correct.appendChild(node);
+    done.appendChild(correct);
     const doneList = element(doc, "div", "slate-timeline__done-list");
     done.appendChild(doneList);
     rootEl.appendChild(done);
@@ -284,7 +338,11 @@
       height: 0,
       rows: new Map(),
       events: new Map(),
-      resize: null
+      resize: null,
+      resolved: null,
+      // The open correction, and this session's early ratios (the line's clue).
+      correcting: null,
+      ratios: []
     };
 
     /* ---- Anchors and projection (the summary's, kept) ---- */
@@ -362,10 +420,14 @@
       button.appendChild(element(doc, "span", "slate-toggle__dot", { "aria-hidden": "true" }));
       const label = text(doc, "span", "slate-toggle__label", "Off");
       button.appendChild(label);
+      // Ran out early - offered on a pumped-off row only (timeline.css).
+      // No ellipsis: in a narrow row it reads as text cut off, not a button.
+      const ranOut = text(doc, "button", "slate-timeline__ranout", "Ran out", { type: "button", "data-slate-ranout": entry.key, title: `${entry.id} ran out early: correct its stored weight` });
       el.appendChild(name);
       el.appendChild(at);
+      el.appendChild(ranOut);
       el.appendChild(button);
-      built = { el, id, resin, next, at, button, label };
+      built = { el, id, resin, next, at, button, label, ranOut };
       state.rows.set(entry.key, built);
       return built;
     }
@@ -416,7 +478,13 @@
       const dot = element(doc, "span", "slate-timeline__dot", { "aria-hidden": "true" });
       // A line from the dot to its own card: dots and cards stand in the
       // same order, so no two leaders cross, however far a card is pushed.
-      const leader = element(doc, "span", "slate-timeline__leader", { "aria-hidden": "true" });
+      const leader = doc.createElementNS(SVG_NS, "svg");
+      leader.setAttribute("class", "slate-timeline__leader");
+      leader.setAttribute("aria-hidden", "true");
+      leader.setAttribute("focusable", "false");
+      const leaderPath = doc.createElementNS(SVG_NS, "path");
+      leaderPath.setAttribute("class", "slate-timeline__leader-path");
+      leader.appendChild(leaderPath);
       const card = element(doc, "div", "slate-timeline__card");
       const when = text(doc, "p", "slate-timeline__when", "");
       const members = element(doc, "div", "slate-timeline__members");
@@ -427,7 +495,7 @@
       el.appendChild(leader);
       el.appendChild(dot);
       el.appendChild(card);
-      built = { el, dot, leader, card, when, members, facts: factsLine, key };
+      built = { el, dot, leader, leaderPath, card, when, members, facts: factsLine, key };
       state.events.set(key, built);
       eventsEl.appendChild(el);
       return built;
@@ -443,21 +511,35 @@
 
     /* A single card: "pump off by 1:12 AM · in 1h 51m". A group's members
      * each carry their clock, so its head is the count and the countdown. */
+    /* A card's head, short: its minute - or, for a group, its span - and
+     * the countdown. With a changeover every card on the axis is a pump-off
+     * (the Timeline says so, and its pills), so the head says only when;
+     * without one the cards mark when hoppers run empty, and say "empty".
+     * The full words are the head's title (fullWhenText). */
     function whenText(group, at) {
-      const verb = group.kind === "empty" ? "empty at" : "pump off by";
-      const count = group.members.length;
       const until = group.at - at;
       const countdown = until < 0 ? "now" : `in ${rundownModule.formatRemaining(until)}`;
-      // A group says its minutes in its head - one clock when they share
-      // one, the span otherwise - so its rows keep their room for the resin.
-      if (count > 1) {
+      return `${group.kind === "empty" ? "empty " : ""}${clockOf(group)} · ${countdown}`;
+    }
+
+    function fullWhenText(group, at) {
+      const until = group.at - at;
+      const countdown = until < 0 ? "now" : `in ${rundownModule.formatRemaining(until)}`;
+      const clock = clockOf(group);
+      const verb = group.kind === "empty" ? (clock.includes("–") ? "empty" : "empty at") : (clock.includes("–") ? "pump off" : "pump off by");
+      return `${verb} ${clock} · ${countdown}`;
+    }
+
+    /* One clock when a group's minutes share one, the span otherwise - so
+     * a group's rows keep their room for the resin. */
+    function clockOf(group) {
+      if (group.members.length > 1) {
         const marks = group.members.map(member => member.markAt).filter(Number.isFinite);
         const first = rundownModule.formatClock(marks.length ? Math.min(...marks) : group.at);
         const last = rundownModule.formatClock(marks.length ? Math.max(...marks) : group.at);
-        if (first === last) return `${verb} ${first} · ${countdown}`;
-        return `${group.kind === "empty" ? "empty" : "pump off"} ${clockRange(first, last)} · ${countdown}`;
+        return first === last ? first : clockRange(first, last);
       }
-      return `${verb} ${rundownModule.formatClock(group.at)} · ${countdown}`;
+      return rundownModule.formatClock(group.at);
     }
 
     /* "8:17 PM" and "8:18 PM" read as "8:17–8:18 PM": the half of the day
@@ -578,6 +660,8 @@
         place(doneList, built);
       }
       pruneRows(keep);
+      // A correction whose hopper is no longer pumped off has nothing to say.
+      if (state.correcting && !off.some(entry => entry.key === state.correcting.key)) closeCorrection();
       applyAbilities();
 
       // A row moved to another card blurs in a real browser: give the
@@ -738,11 +822,14 @@
         // card's top corner.
         const top = Math.min(card.y0, card.y);
         built.el.style.top = px(top);
+        // Neighbours are the only leaders that can run side by side: they
+        // alternate in colour, down the axis in time order (timeline.css).
+        built.el.setAttribute("data-lead", placed.cards.indexOf(card) % 2 ? "alt" : "main");
         built.dot.style.top = px(card.y0 - top);
         const line = leaderFor(card.y0 - top, card.y - top);
-        built.leader.style.top = px(card.y0 - top);
-        built.leader.style.width = px(line.length);
-        built.leader.style.transform = `rotate(${line.angle}deg)`;
+        built.leader.setAttribute("width", String(CARD_LEFT));
+        built.leader.setAttribute("height", String(line.height));
+        built.leaderPath.setAttribute("d", line.d);
         built.card.style.top = px(card.y - top);
         built.card.classList.toggle("is-group", group.members.length > 1);
         built.card.classList.toggle("is-merged", !!group.merged);
@@ -751,6 +838,7 @@
         built.card.classList.toggle("is-clipped", !!card.clipped);
         built.card.classList.toggle("is-displaced", Math.abs(card.displacement) > 1);
         setText(built.when, whenText(group, at));
+        built.when.setAttribute("title", fullWhenText(group, at));
         const single = group.members.length === 1 ? group.members[0] : null;
         setText(built.facts, single ? facts(single) : "");
         show(built.facts, !!single);
@@ -878,7 +966,153 @@
       alarmButton.setAttribute("aria-checked", alarm && alarm.enabled ? "true" : "false");
     }
 
+    /* ---- Ran out early ---- */
+
+    /* "14:05" read as the latest such moment no later than `limit`. */
+    function momentFrom(value, limit) {
+      const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ""));
+      if (!match) return NaN;
+      const date = new Date(limit);
+      date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+      let at = date.getTime();
+      if (at > limit + 60 * 1000) at -= 24 * 60 * 60 * 1000;
+      return at;
+    }
+
+    function clockValue(at) {
+      const date = new Date(at);
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function measureNow() {
+      return weightActions.measureFor(weightActions.smartFrom(state.resolved));
+    }
+
+    function describe(correction, id) {
+      if (!correction.ok) return runoutModule.reasonText(correction.reason);
+      const what = correction.target === "geometry" ? `${correction.dimension === "volume" ? "Usable volume" : "Usable height"} (Smart Hoppers)` : "Receiver weight";
+      return `${what}: ${correction.from} ${correction.unit} → ${correction.to} ${correction.unit}`;
+    }
+
+    function paintCorrection() {
+      const open = state.correcting;
+      if (!open) return;
+      const at = now();
+      open.ranOutAt = momentFrom(outInput.value, at);
+      open.pumpedOffAt = momentFrom(offInput.value, Number.isFinite(open.ranOutAt) ? open.ranOutAt : at);
+      const runtime = state.inputs && state.inputs.hopperState ? (state.inputs.hopperState[open.key] || {}) : {};
+      open.correction = runoutModule.correctionFor({ entry: open.entry, runtime, measure: measureNow(), pumpedOffAt: open.pumpedOffAt, ranOutAt: open.ranOutAt });
+      const c = open.correction;
+      setText(correctFed, c.fedMs > 0 && c.expectedMs > 0
+        ? `Fed ${rundownModule.formatRemaining(c.fedMs)} of an expected ${rundownModule.formatRemaining(c.expectedMs)}${c.ratio < 1 ? ` (${Math.round((1 - c.ratio) * 100)}% short)` : ""}.`
+        : "");
+      setText(correctChange, describe(c, open.entry.id));
+      correctChange.classList.toggle("is-change", c.ok);
+      const shared = c.ok ? runoutModule.sharedShortfall(state.ratios.concat([c.ratio])) : null;
+      setText(correctShared, shared ? `Several hoppers ran out about ${Math.round(shared * 100)}% early this run: the line's output may be set too high, rather than these weights.` : "");
+      show(correctShared, !!shared);
+      const bridge = commands();
+      const able = weightActions.abilities(bridge, guard());
+      const can = c.ok && !!able[c.target === "geometry" ? "geometry" : "weight"];
+      correctApply.setAttribute("data-able", can ? "true" : "false");
+      correctApply.setAttribute("title", can ? "Correct the stored value" : (c.ok ? `Unavailable: ${weightActions.reason(bridge, c.target === "geometry" ? "geometry" : "weight", guard())}` : runoutModule.reasonText(c.reason)));
+    }
+
+    function paintProfiles(preferred) {
+      while (profileSelect.firstChild) profileSelect.removeChild(profileSelect.firstChild);
+      const none = text(doc, "option", "", "Don't update a profile", { value: "" });
+      profileSelect.appendChild(none);
+      const book = profileActions.bookOf(profiles);
+      const list = book && Array.isArray(book.profiles) ? book.profiles : [];
+      const canUpdate = !!profileActions.can(profiles, guard()).update;
+      for (const profile of list) profileSelect.appendChild(text(doc, "option", "", profile.name, { value: profile.id }));
+      profileSelect.value = canUpdate && preferred && list.some(profile => profile.id === preferred) ? preferred : "";
+      show(profileLabel, canUpdate && list.length > 0);
+    }
+
+    function openCorrection(key) {
+      const entry = (state.grouped ? state.grouped.done : []).find(one => one.key === key);
+      if (!entry) return;
+      const at = now();
+      // When the pump went off: the application's record, else the planned moment.
+      const pumpedOffAt = Number.isFinite(entry.pumpOffAt) ? entry.pumpOffAt : (Number.isFinite(entry.pumpOffBy) ? entry.pumpOffBy : at);
+      state.correcting = { key, entry: Object.assign({}, entry), pumpedOffAt, ranOutAt: at, correction: null, busy: false };
+      setText(correctTitle, `${entry.id} ${entry.resin || ""} ran out early`.replace(/\s+/g, " "));
+      offInput.value = clockValue(pumpedOffAt);
+      outInput.value = clockValue(at);
+      offInput.setAttribute("title", Number.isFinite(entry.pumpOffAt) ? "When the pump went off, as recorded" : "The planned pump-off time: correct it if the pump went off at another time");
+      setText(correctNote, "");
+      show(correctNote, false);
+      paintProfiles(lastProfile());
+      show(correct, true);
+      paintCorrection();
+    }
+
+    function closeCorrection() {
+      state.correcting = null;
+      show(correct, false);
+    }
+
+    async function applyCorrection() {
+      const open = state.correcting;
+      if (!open || open.busy) return;
+      paintCorrection();
+      const c = open.correction;
+      if (!c || !c.ok || correctApply.getAttribute("data-able") !== "true") { say(correctApply.getAttribute("title") || runoutModule.reasonText(c && c.reason)); return; }
+      const entry = open.entry;
+      const bridge = commands();
+      const result = c.target === "geometry"
+        ? weightActions.setGeometry(bridge, entry.layer, entry.index, c.dimension, c.to)
+        : weightActions.setWeight(bridge, entry.layer, entry.index, c.to);
+      if (!result || !result.ok) {
+        setText(correctNote, (result && result.message) || "The application refused the change.");
+        show(correctNote, true);
+        return;
+      }
+      if (result.changed) onCommitted(result);
+      state.ratios.push(c.ratio);
+      const profileId = profileSelect.value;
+      const said = `${entry.id}: ${c.target === "geometry" ? (c.dimension === "volume" ? "usable volume" : "usable height") : "receiver weight"} is now ${c.to} ${c.unit}.`;
+      if (!profileId) { closeCorrection(); say(said); return; }
+      open.busy = true;
+      correctApply.setAttribute("disabled", "");
+      let answer;
+      try {
+        answer = await profileActions.replace(profiles, profileId);
+      } finally {
+        open.busy = false;
+        correctApply.removeAttribute("disabled");
+      }
+      const book = profileActions.bookOf(profiles);
+      const profile = book && Array.isArray(book.profiles) ? book.profiles.find(one => one.id === profileId) : null;
+      const name = profile ? profile.name : "the weight profile";
+      if (answer && answer.ok) { closeCorrection(); say(`${said} “${name}” was updated with the line's weights.`); return; }
+      // The hopper is corrected; only the profile was refused.
+      setText(correctNote, `${said} “${name}” was not updated: ${(answer && answer.message) || "the application refused it."}`);
+      show(correctNote, true);
+    }
+
+    for (const input of [offInput, outInput]) input.addEventListener("input", () => paintCorrection());
+    correct.addEventListener("click", event => {
+      const target = event && event.target;
+      const button = target && typeof target.closest === "function" ? target.closest("[data-slate-runout]") : null;
+      if (!button) return;
+      const action = button.getAttribute("data-slate-runout");
+      if (action === "cancel") closeCorrection();
+      else if (action === "apply") applyCorrection();
+    });
+    correct.addEventListener("keydown", event => {
+      if (event && event.key === "Escape") { if (typeof event.stopPropagation === "function") event.stopPropagation(); closeCorrection(); }
+    });
+    doneList.addEventListener("click", event => {
+      const target = event && event.target;
+      const button = target && typeof target.closest === "function" ? target.closest("[data-slate-ranout]") : null;
+      if (!button || !doneList.contains(button)) return;
+      openCorrection(button.getAttribute("data-slate-ranout"));
+    });
+
     function update(resolved) {
+      state.resolved = resolved || null;
       state.alarm = resolved && resolved.alarm ? resolved.alarm : null;
       paintAlarm();
       const at = now();
@@ -903,6 +1137,7 @@
       element: rootEl,
       update,
       refresh,
+      correction: () => (state.correcting ? Object.assign({}, state.correcting.correction, { key: state.correcting.key }) : null),
       tick,
       wake,
       marks,
