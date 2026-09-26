@@ -58,6 +58,8 @@
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
   const phoneDrawerModule = root.PolynSlatePhoneDrawer || null;
+  /* The inputs that raise no keyboard: the grip stays up for these. */
+  const NO_KEYBOARD_INPUTS = new Set(["button", "checkbox", "radio", "range", "color", "file", "submit", "reset", "image", "hidden"]);
   const homeModule = root.PolynSlateHome || null;
   const lineModule = root.PolynSlateLine || null;
 
@@ -691,6 +693,24 @@
         settle: open => setRail(open)
       });
       mounts.grip.appendChild(phoneDrawer.element);
+      // Typing, the keyboard shortens the page (slate-host.js) and the grip
+      // would ride on top of it: it steps aside while a field that raises
+      // the keyboard has focus, and is back when focus leaves for anything
+      // else.
+      const typingIn = node => {
+        if (!node || !node.tagName) return false;
+        const tag = String(node.tagName).toUpperCase();
+        if (tag === "TEXTAREA") return true;
+        if (node.isContentEditable || node.getAttribute("contenteditable") === "true") return true;
+        if (tag !== "INPUT") return false;
+        return !NO_KEYBOARD_INPUTS.has(String(node.getAttribute("type") || "text").toLowerCase());
+      };
+      const paintTyping = typing => {
+        if (typing) mounts.grip.setAttribute("hidden", "");
+        else mounts.grip.removeAttribute("hidden");
+      };
+      container.addEventListener("focusin", event => paintTyping(typingIn(event && event.target)));
+      container.addEventListener("focusout", event => paintTyping(typingIn(event && event.relatedTarget)));
     }
 
     // The administrator's sections appear and vanish with the one session,

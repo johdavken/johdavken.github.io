@@ -1256,6 +1256,27 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.equal(executed.length, 0);
 });
 
+test("on a phone the grip steps aside while a field that raises the keyboard has focus, and comes back when focus leaves it", () => {
+  const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
+  const doc = hostEl.ownerDocument;
+  const dock = hostEl.querySelector("[data-slate-mount='grip']");
+  const fire = (type, detail) => { for (const handler of hostEl.listeners[type] || []) handler(Object.assign({ type }, detail)); };
+  const field = type => { const node = doc.createElement("input"); if (type) node.setAttribute("type", type); return node; };
+  assert.ok(!dock.hasAttribute("hidden"));
+  fire("focusin", { target: field() });
+  assert.ok(dock.hasAttribute("hidden"), "the grip rode on the keyboard");
+  fire("focusout", { relatedTarget: field("number") });
+  assert.ok(dock.hasAttribute("hidden"), "moving to the next field brought the grip back over the keyboard");
+  fire("focusout", { relatedTarget: doc.createElement("button") });
+  assert.ok(!dock.hasAttribute("hidden"), "the grip stayed away with the keyboard down");
+  fire("focusin", { target: field("checkbox") });
+  assert.ok(!dock.hasAttribute("hidden"), "a checkbox hid the grip");
+  fire("focusin", { target: doc.createElement("textarea") });
+  assert.ok(dock.hasAttribute("hidden"));
+  fire("focusout", { relatedTarget: null });
+  assert.ok(!dock.hasAttribute("hidden"));
+});
+
 test("the application's pump-off alert is Slate's to show: the event is taken, the alert says which hopper, and Dismiss or Back closes it and stops the vibration", () => {
   const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
   const doc = hostEl.ownerDocument;
