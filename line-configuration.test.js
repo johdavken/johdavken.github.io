@@ -315,3 +315,15 @@ test("the Edge Function is untouched - it never received an orientation to begin
   assert.doesNotMatch(edge, /orientation/i);
   assert.match(edge, /Identify layers by COLUMN POSITION, left to right/);
 });
+
+test("who built each line follows from its number: 1-8 Davis-Standard, 9-11 Reifenhäuser, 12 Alpine, 13-16 W&H", () => {
+  const expected = { 1:"davis-standard", 4:"davis-standard", 8:"davis-standard", 9:"reifenhauser", 11:"reifenhauser", 12:"alpine", 13:"windmoller-holscher", 16:"windmoller-holscher" };
+  for (const [line, id] of Object.entries(expected)) assert.equal(identity.lineManufacturer(Number(line))?.id, id, `Line ${line}`);
+  for (let line = 1; line <= 16; line += 1) assert.ok(identity.lineManufacturer(line), `Line ${line} has no maker`);
+  assert.deepEqual(identity.lineManufacturer(13), { id:"windmoller-holscher", name:"Windmöller & Hölscher", short:"W&H" });
+  assert.equal(identity.lineManufacturer(10).name, "Reifenhäuser");
+  assert.equal(identity.lineManufacturer("9").id, "reifenhauser");
+  for (const none of [0, 17, 999, -1, 2.5, null, undefined, "", "Line 4"]) assert.equal(identity.lineManufacturer(none), null, String(none));
+  // Derived, never stored: no definition carries it, and the built-ins are unchanged.
+  for (const definition of identity.getLineConfigurations()) assert.equal("lineManufacturer" in definition, false);
+});

@@ -361,6 +361,12 @@
     const connection = settings.connection || null;
     const identity = settings.lineIdentity || null;
     const say = typeof settings.say === "function" ? settings.say : () => {};
+    // Who built the line follows from its number (line-identity.js); it is
+    // shown, never chosen.
+    const manufacturerName = number => {
+      const found = identity && typeof identity.lineManufacturer === "function" ? identity.lineManufacturer(number) : null;
+      return found ? found.name : "None for this line number";
+    };
 
     const state = {
       lines: [],
@@ -637,6 +643,8 @@
       fields.appendChild(fieldRow("Line number", textField("lineNumber", draft.lineNumber, {
         inputmode: "numeric", pattern: "[0-9]*", maxlength: "3", "aria-label": "Line number", "data-width": "short"
       })));
+      fields.appendChild(fieldRow("Line manufacturer", text(doc, "span", "slate-lines__hoppers",
+        manufacturerName(draft.lineNumber), { "data-role": "line-manufacturer" })));
       fields.appendChild(fieldRow("Display name", textField("displayName", draft.displayName, { maxlength: "80", "aria-label": "Display name" })));
       fields.appendChild(fieldRow("Also known as", textField("aliases", draft.aliases, {
         maxlength: "400", "aria-label": "Additional names, comma-separated", placeholder: "Comma-separated"
@@ -781,6 +789,8 @@
       if (field === "lineNumber") {
         const number = String(value || "").replace(/[^0-9]/g, "");
         state.draft.lineNumber = number;
+        const maker = detailPane.querySelector("[data-role='line-manufacturer']");
+        if (maker) maker.textContent = manufacturerName(number);
         // A new line's name follows its number until it is given one of
         // its own - the floor UI panel's own convenience.
         if (adding() && (!state.draft.displayName || /^Line \d*$/.test(state.draft.displayName))) {

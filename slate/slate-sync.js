@@ -1,8 +1,10 @@
 /* RT Sync in Slate's header: the trigger at the right and the panel it
  * drops.
  *
- * The panel leads with the Line Identity - what line this device is, its
- * number, its workspace, the device's own label - then the sync status,
+ * The panel leads with the Line Identity - the line's number, large, with
+ * LINE up its side; under the line's name the line's maker and layers
+ * (line-identity.js, handed in), the device's role and its own label, and
+ * the sync status beside the logo's turning streams - then
  * the devices on the line, a join code when one is minted, the lines an
  * administrator may choose between, joining another line, and the
  * actions. Every action is one of the connection bridge's eight; this is
@@ -13,10 +15,13 @@
  * administrator is signed in) and never asked for anything.
  */
 (function (root, factory) {
-  const api = factory();
+  const logo = typeof require === "function"
+    ? require("./slate-logo.js")
+    : (root && root.PolynSlateLogo);
+  const api = factory(logo);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateSync = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule) {
   "use strict";
 
   /* A press outside, by the shared rule - a finger closes on a still
@@ -83,6 +88,25 @@
     return !!(access && access.access && access.access.signedIn);
   }
 
+  /* The words under the numeral: the line's own name when it is not just
+   * "Line N", who built the line, and how many layers it runs. Pure, and
+   * exported. */
+  function lineFacts(line, identity) {
+    if (!line) return [];
+    const facts = [];
+    const number = Number.isInteger(line.lineNumber) ? line.lineNumber : null;
+    const plain = number !== null && line.displayName === `Line ${number}`;
+    if (!plain && line.displayName) facts.push(line.displayName);
+    if (line.name && line.name !== line.displayName && !(number !== null && line.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === `line ${number}`)) facts.push(line.name);
+    if (identity && number !== null) {
+      const maker = typeof identity.lineManufacturer === "function" ? identity.lineManufacturer(number) : null;
+      if (maker) facts.push(maker.name);
+      const definition = typeof identity.definitionForLine === "function" ? identity.definitionForLine(number) : null;
+      if (definition && Number.isInteger(definition.layerCount)) facts.push(definition.layerCount === 1 ? "Mono-layer" : `${definition.layerCount}-layer`);
+    }
+    return facts;
+  }
+
   /* The lines section is on offer to an administrator with more than one
    * line to choose between. */
   function offersLines(status, admin) {
@@ -104,11 +128,14 @@
    * @param {object} ctx
    * @param {object|null} ctx.connection  the connection bridge
    * @param {object|null} [ctx.admin]     the admin bridge, read-only
+   * @param {object|null} [ctx.lineIdentity] line-identity.js, for the line's
+   *        maker and layer count under its number
    */
   function create(doc, ctx) {
     const settings = ctx || {};
     const connection = settings.connection || null;
     const admin = settings.admin || null;
+    const identityModule = settings.lineIdentity || null;
     // The conflict question (slate-conflict.js): registered with the
     // bridge here, since this is the one file that speaks to it.
     const conflict = settings.conflict && typeof settings.conflict.ask === "function" ? settings.conflict : null;
@@ -209,19 +236,29 @@
       const busy = !!state.pending || !!(status.busy && status.busy.active);
       const can = status.can || {};
 
-      // 1. Line Identity.
+      // 1. Line Identity: the number large, LINE up its side; then the
+      // line's facts, the role and this device, and the status.
+      const assignedLine = status.assigned && status.line ? status.line : null;
+      const number = assignedLine && Number.isInteger(assignedLine.lineNumber) ? assignedLine.lineNumber : null;
       const identity = element(doc, "section", "slate-sync__identity", { "aria-label": "Line identity" });
-      identity.appendChild(text(doc, "h2", "slate-sync__line", status.assigned && status.line ? status.line.displayName : NO_LINE));
+      if (number !== null) {
+        identity.classList.add("is-numbered");
+        const numeral = element(doc, "div", "slate-sync__numeral", { "aria-hidden": "true" });
+        numeral.appendChild(text(doc, "span", "slate-sync__numeral-word", "LINE"));
+        numeral.appendChild(text(doc, "span", "slate-sync__numeral-value", String(number)));
+        identity.appendChild(numeral);
+      }
+      const about = element(doc, "div", "slate-sync__about");
+      about.appendChild(text(doc, "h2", "slate-sync__line", assignedLine ? assignedLine.displayName : NO_LINE));
       const facts = element(doc, "p", "slate-sync__facts");
-      if (status.assigned && status.line) {
-        if (status.line.lineNumber !== null && status.line.lineNumber !== undefined) facts.appendChild(text(doc, "span", "slate-sync__fact", `Line ${status.line.lineNumber}`));
-        if (status.line.name && status.line.name !== status.line.displayName) facts.appendChild(text(doc, "span", "slate-sync__fact", status.line.name));
-        if (status.line.role) facts.appendChild(text(doc, "span", "slate-sync__role", status.line.role, { "data-role": status.line.role }));
+      if (assignedLine) {
+        for (const fact of lineFacts(assignedLine, identityModule)) facts.appendChild(text(doc, "span", "slate-sync__fact", fact));
       } else {
         facts.appendChild(text(doc, "span", "slate-sync__fact", guidance(status) || "Not assigned"));
       }
-      identity.appendChild(facts);
+      if (facts.children.length > 0) about.appendChild(facts);
       const device = element(doc, "p", "slate-sync__device");
+      if (assignedLine && assignedLine.role) device.appendChild(text(doc, "span", "slate-sync__role", assignedLine.role, { "data-role": assignedLine.role }));
       device.appendChild(text(doc, "span", "slate-sync__device-label", `This device: ${status.deviceLabel || "unnamed"}`));
       if (state.relabelling) {
         const form = element(doc, "span", "slate-sync__inline");
@@ -239,20 +276,34 @@
       } else {
         device.appendChild(button("Rename", "slate-sync__button--quiet", () => { state.relabelling = true; render(); }, { enabled: !!can.relabel && !busy, action: "relabel" }));
       }
-      identity.appendChild(device);
-      panel.appendChild(identity);
+      about.appendChild(device);
 
-      // 2. Status.
-      const statusEl = element(doc, "section", "slate-sync__status", { "aria-label": "Sync status", "data-state": status.status ? status.status.key : "" });
+      // 2. Status, beside the logo's streams: they turn slowly while the
+      // line is in step, quickly while changes move, and stand still off it.
+      const statusKey = state.pending ? "syncing" : (status.status ? status.status.key : "");
+      const statusEl = element(doc, "div", "slate-sync__status", { role: "group", "aria-label": "Sync status", "data-state": statusKey });
+      if (logoModule && typeof logoModule.rotor === "function") {
+        const turning = logoModule.rotor(doc, { className: "slate-sync__rotor" });
+        turning.setAttribute("data-state", statusKey);
+        // The panel is rebuilt on every status; a phase from the clock
+        // keeps the streams turning on through it rather than restarting.
+        const period = statusKey === "syncing" || statusKey === "connecting" || statusKey === "pending" ? 2.2 : 22;
+        if (turning.style && typeof turning.style.setProperty === "function") turning.style.setProperty("--slate-sync-phase", `${(-((Date.now() / 1000) % period)).toFixed(2)}s`);
+        statusEl.appendChild(turning);
+      }
+      const words = element(doc, "div", "slate-sync__status-words");
       const label = state.pending ? "Working…" : (status.status ? status.status.label : "");
-      statusEl.appendChild(text(doc, "p", "slate-sync__state", label));
-      if (status.status && status.status.message) statusEl.appendChild(text(doc, "p", "slate-sync__message", status.status.message));
-      if (status.status && status.status.pendingCount > 0) statusEl.appendChild(text(doc, "p", "slate-sync__pending", `${status.status.pendingCount} change${status.status.pendingCount === 1 ? "" : "s"} waiting to sync`));
+      words.appendChild(text(doc, "p", "slate-sync__state", label));
+      if (status.status && status.status.message) words.appendChild(text(doc, "p", "slate-sync__message", status.status.message));
+      if (status.status && status.status.pendingCount > 0) words.appendChild(text(doc, "p", "slate-sync__pending", `${status.status.pendingCount} change${status.status.pendingCount === 1 ? "" : "s"} waiting to sync`));
       const last = status.status ? formatWhen(status.status.lastSyncAt) : "";
-      if (last) statusEl.appendChild(text(doc, "p", "slate-sync__last", `Last sync ${last}`));
+      if (last) words.appendChild(text(doc, "p", "slate-sync__last", `Last sync ${last}`));
       const advice = status.assigned ? guidance(status) : "";
-      if (advice) statusEl.appendChild(text(doc, "p", "slate-sync__guidance", advice));
-      panel.appendChild(statusEl);
+      if (advice) words.appendChild(text(doc, "p", "slate-sync__guidance", advice));
+      statusEl.appendChild(words);
+      about.appendChild(statusEl);
+      identity.appendChild(about);
+      panel.appendChild(identity);
 
       // 3. Devices.
       if (status.assigned) {
@@ -327,8 +378,6 @@
           if (event && event.key === "Enter") { if (typeof event.preventDefault === "function") event.preventDefault(); join(codeInput.value, labelInput.value); }
         });
         joinSection.appendChild(form);
-      } else if (can.join) {
-        joinSection.appendChild(button("Join another line…", "slate-sync__button--quiet", () => { state.joining = true; render(); }, { enabled: !busy, action: "join" }));
       }
       if (joinSection.children.length > 0) panel.appendChild(joinSection);
 
@@ -340,6 +389,7 @@
         actions.appendChild(button("Refresh", "", () => simple("refresh", "The line could not be refreshed."), { enabled: !!can.refresh && !busy, action: "refresh" }));
         actions.appendChild(button("Add device", "", addDevice, { enabled: !!can.addDevice && !busy, action: "generateJoinCode" }));
       }
+      if (status.assigned && !state.joining && can.join) actions.appendChild(button("Join another line…", "slate-sync__button--quiet", () => { state.joining = true; render(); }, { enabled: !busy, action: "join" }));
       if (status.assigned) {
         const leave = button(state.leaving ? "Confirm leave" : "Leave line", "slate-sync__button--danger", async () => {
           if (!state.leaving) { state.leaving = true; render(); return; }
@@ -348,6 +398,7 @@
           if (result && !result.ok) { setNote("error", result.message || "The line could not be left."); render(); }
         }, { enabled: !!can.leave && !busy, action: "leaveWorkspace" });
         if (state.leaving) leave.setAttribute("data-armed", "");
+        leave.classList.add("slate-sync__button--end");
         actions.appendChild(leave);
       }
       actions.appendChild(button("Close", "slate-sync__button--quiet", () => close(true), { enabled: true, action: "close" }));
@@ -428,5 +479,5 @@
     return Object.freeze({ element: rootEl, panel, trigger, open, close, update, isOpen: () => state.open, status: () => state.status });
   }
 
-  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, offersLines, guidance, formatWhen, create });
+  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, lineFacts, offersLines, guidance, formatWhen, create });
 });

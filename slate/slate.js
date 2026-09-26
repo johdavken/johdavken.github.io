@@ -580,7 +580,9 @@
         const inputs = balanceModule && typeof balanceModule.inputsFor === "function" ? balanceModule.inputsFor(resolved) : null;
         return resinTotals && inputs ? resinTotals.compute(inputs).total : 0;
       },
-      clock: at => (rundown && typeof rundown.formatClock === "function" ? rundown.formatClock(at) : new Date(at).toLocaleTimeString())
+      clock: at => (rundown && typeof rundown.formatClock === "function" ? rundown.formatClock(at) : new Date(at).toLocaleTimeString()),
+      // RT Sync's status, read for the mark; the Home page asks nothing of it.
+      sync: () => (connection && typeof connection.getStatus === "function" ? connection.getStatus() : null)
     });
 
     const definitions = sectionDefinitions;
@@ -751,7 +753,7 @@
     const conflict = conflictModule ? conflictModule.create(doc) : null;
     if (conflict) container.appendChild(conflict.element);
     sync = syncModule.create(doc, {
-      connection, admin, conflict,
+      connection, admin, conflict, lineIdentity,
       // Opened from the menu's sheet, the panel takes the sheet's place:
       // the sheet stays up behind it, unseen, and is back when it closes.
       onToggle: open => { if (mounts.rail) mounts.rail.classList.toggle("is-covered", open && syncInSheet && railOpen); }

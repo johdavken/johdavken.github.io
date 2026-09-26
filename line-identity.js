@@ -63,6 +63,25 @@
   const HOPPER_MANUFACTURERS = Object.freeze(["plast-control","tsm"]);
   const DEFAULT_HOPPER_MANUFACTURER = "plast-control";
 
+  // Who built the line itself - the extruders, die and tower - which is
+  // not who built its hopper system (above). It is fixed by the line's
+  // number, not chosen: Lines 1-8 are Davis-Standard, 9-11 Reifenhäuser,
+  // 12 Alpine and 13-16 Windmöller & Hölscher. Any other number has none.
+  const LINE_MANUFACTURERS = Object.freeze([
+    Object.freeze({ id:"davis-standard", name:"Davis-Standard", short:"Davis-Standard", from:1, to:8 }),
+    Object.freeze({ id:"reifenhauser", name:"Reifenhäuser", short:"Reifenhäuser", from:9, to:11 }),
+    Object.freeze({ id:"alpine", name:"Alpine", short:"Alpine", from:12, to:12 }),
+    Object.freeze({ id:"windmoller-holscher", name:"Windmöller & Hölscher", short:"W&H", from:13, to:16 })
+  ]);
+
+  function lineManufacturer(lineNumber){
+    if (lineNumber === null || lineNumber === undefined || lineNumber === "") return null;
+    const number = Number(lineNumber);
+    if (!Number.isInteger(number)) return null;
+    const found = LINE_MANUFACTURERS.find(item=>number >= item.from && number <= item.to);
+    return found ? { id:found.id, name:found.name, short:found.short } : null;
+  }
+
   const BUILT_IN_LINE_CONFIGURATIONS = Object.freeze([
     ...[1,2,3,4].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:1, layerAPosition:null, hopperGeometry:"volume", hopperNamingMode:"standard", isActive:true, metadata:{} })),
     ...[5,6].map(lineNumber => ({ lineNumber, displayName:`Line ${lineNumber}`, aliases:[], layerCount:3, layerAPosition:"inside", hopperGeometry:"cylindrical", hopperNamingMode:"standard", isActive:true, metadata:{} })),
@@ -347,7 +366,7 @@
     LAYER_A_POSITION_BY_LINE, layerAPosition, getLineConfiguration, getLineConfigurationForSync,
     VOLUME_GEOMETRY_LINES, getSmartHopperGeometryMode, getSmartHopperGeometryModeForSync,
     LINE_CONFIGURATION_CACHE_KEY, BUILT_IN_LINE_CONFIGURATIONS, MAX_HOPPERS_PER_LAYER, defaultHopperCounts,
-    HOPPER_MANUFACTURERS, DEFAULT_HOPPER_MANUFACTURER, normalizedDefinition,
+    HOPPER_MANUFACTURERS, DEFAULT_HOPPER_MANUFACTURER, LINE_MANUFACTURERS, lineManufacturer, normalizedDefinition,
     validateLineConfigurations, setConfiguredLineConfigurations, loadCachedLineConfigurations,
     getLineConfigurations, definitionForLine, configuredLineNumberForName
   };

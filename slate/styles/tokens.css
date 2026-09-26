@@ -25,6 +25,9 @@
 
   /* ---- Type ---- */
   --slate-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* A condensed face for a figure that leads - the RT Sync panel's line
+     number. System faces only: Slate loads no web fonts. */
+  --slate-font-display: "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", "Liberation Sans Narrow", ui-sans-serif, system-ui, sans-serif;
   --slate-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   --slate-text-xs: 11px;
   --slate-text-sm: 12px;

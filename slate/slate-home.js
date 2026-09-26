@@ -1,6 +1,8 @@
 /* Home: a phone's first page, as the floor UI's phone opens on one.
  *
- * The mark, large and turning (slate-logo.js), the line's name, the job's
+ * The mark, large and turning (slate-logo.js) - its confluence alive to
+ * RT Sync: the line's number where the die sits, a lit tick per device,
+ * the streams and a spark moving with the sync - the line's name, the job's
  * two figures a glance is for - the changeover with its countdown, and the
  * output - and three numbered steps with a line each on how they stand:
  * the Recipe (how many hoppers change resin at the changeover), the Timeline
@@ -54,6 +56,29 @@
 
   /* ---- The lines, pure ---- */
 
+  /**
+   * RT Sync's status (the connection bridge's) as the live mark shows it:
+   * a state of the mark's own, the line's number, and the devices. Pure.
+   */
+  function syncMark(status) {
+    if (!status || !status.enabled || !status.assigned || !status.line) {
+      return { state: "none", lineNumber: null, devices: [], label: "" };
+    }
+    const key = status.status ? status.status.key : "";
+    let state;
+    if (status.status && status.status.adminRequired) state = "error";
+    else if (!status.linked) state = "warn";
+    else if (key === "synced") state = "synced";
+    else if (key === "syncing" || key === "connecting" || key === "pending") state = "busy";
+    else if (key === "error") state = "error";
+    else if (key === "offline" || key === "conflict") state = "warn";
+    else state = "synced";
+    const lineNumber = Number.isInteger(status.line.lineNumber) ? status.line.lineNumber : null;
+    const devices = (Array.isArray(status.devices) ? status.devices : []).map(one => ({ thisDevice: !!(one && one.thisDevice) }));
+    const words = [status.line.displayName, status.status ? status.status.label : ""].filter(Boolean).join(", ");
+    return { state, lineNumber, devices, label: words };
+  }
+
   /** The Recipe step's line: how many hoppers change resin at the changeover. */
   function recipeLine(facts) {
     const f = facts || {};
@@ -88,7 +113,8 @@
    * @param {object} ctx.home   { line(resolved), readout(field) -> {value, sub}, open(field),
    *                              go(id), recipe(resolved) -> {line, planned, resinChanges},
    *                              timeline() -> entries, balance(resolved) -> total pounds,
-   *                              clock(at) -> "5:20 PM" }
+   *                              clock(at) -> "5:20 PM",
+   *                              sync() -> the connection bridge's status, for the mark }
    * @param {function} [ctx.now]
    */
   function create(doc, ctx) {
@@ -99,7 +125,13 @@
 
     const rootEl = element(doc, "div", "slate-home");
     const brand = element(doc, "div", "slate-home__brand");
-    if (logoModule && typeof logoModule.create === "function") brand.appendChild(logoModule.create(doc, { label: "Resin.Tools" }));
+    // The mark alive to RT Sync where the logo module offers it; the plain
+    // mark otherwise.
+    const mark = logoModule && typeof logoModule.createLive === "function"
+      ? logoModule.createLive(doc, { label: "Resin.Tools" })
+      : null;
+    if (mark) brand.appendChild(mark.element);
+    else if (logoModule && typeof logoModule.create === "function") brand.appendChild(logoModule.create(doc, { label: "Resin.Tools" }));
     rootEl.appendChild(brand);
     const lineEl = text(doc, "p", "slate-home__line", "");
     rootEl.appendChild(lineEl);
@@ -139,6 +171,7 @@
     let resolvedNow = null;
 
     function paint() {
+      if (mark) mark.update(syncMark(call("sync")));
       setText(lineEl, call("line", resolvedNow) || "");
       for (const [field, figure] of figures) {
         const shown = call("readout", field) || { value: "", sub: "" };
@@ -159,5 +192,5 @@
     return Object.freeze({ element: rootEl, update, refresh: paint });
   }
 
-  return Object.freeze({ TITLE, READOUTS, STEPS, recipeLine, timelineLine, balanceLine, create });
+  return Object.freeze({ TITLE, READOUTS, STEPS, syncMark, recipeLine, timelineLine, balanceLine, create });
 });

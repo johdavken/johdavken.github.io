@@ -92,3 +92,57 @@ test("on a phone Home is one screen that never scrolls: it takes the page cell's
   assert.match(css, /\n\.slate-home__brand \.slate-logo \{[^}]*max-height: 100%;/);
   assert.match(css, new RegExp(`\\.slate-home__steps \\{\\s*flex: none;`), "the steps give instead of the mark");
 });
+
+test("the mark's confluence follows RT Sync: the line's number where the die sits, a tick per device, the state as the mark's own", () => {
+  const status = (over) => Object.assign({
+    enabled: true, assigned: true, linked: true,
+    line: { lineNumber: 4, displayName: "Line 4" },
+    status: { key: "synced", label: "Synced", adminRequired: false },
+    devices: [{ thisDevice: true }, { thisDevice: false }, { thisDevice: false }]
+  }, over || {});
+  assert.deepEqual(homeModule.syncMark(status()), { state: "synced", lineNumber: 4, devices: [{ thisDevice: true }, { thisDevice: false }, { thisDevice: false }], label: "Line 4, Synced" });
+  assert.equal(homeModule.syncMark(status({ status: { key: "pending", label: "Pending" } })).state, "busy");
+  assert.equal(homeModule.syncMark(status({ status: { key: "syncing", label: "Syncing" } })).state, "busy");
+  assert.equal(homeModule.syncMark(status({ status: { key: "offline", label: "Offline" } })).state, "warn");
+  assert.equal(homeModule.syncMark(status({ linked: false })).state, "warn");
+  assert.equal(homeModule.syncMark(status({ status: { key: "error", label: "Error" } })).state, "error");
+  assert.equal(homeModule.syncMark(status({ status: { key: "synced", label: "", adminRequired: true } })).state, "error");
+  for (const none of [null, status({ enabled: false }), status({ assigned: false }), status({ line: null })]) {
+    assert.deepEqual(homeModule.syncMark(none), { state: "none", lineNumber: null, devices: [], label: "" });
+  }
+
+  let current = status();
+  const doc = makeDocument();
+  const view = homeModule.create(doc, { home: { sync: () => current }, now: () => NOW });
+  view.update(null);
+  const svg = view.element.querySelector(".slate-logo");
+  assert.ok(svg.classList.contains("slate-logo--live"));
+  assert.equal(svg.getAttribute("data-sync"), "synced");
+  assert.equal(svg.querySelector(".slate-logo__line-number").textContent, "4");
+  assert.equal(svg.getAttribute("aria-label"), "Resin.Tools — Line 4, Synced");
+  const dots = svg.querySelectorAll(".slate-logo__device");
+  assert.equal(dots.length, 3);
+  assert.equal(dots.filter(dot => dot.classList.contains("is-this-device")).length, 1);
+  // The first device stands at the top of the ring.
+  assert.equal(dots[0].getAttribute("cx"), "0.00");
+  assert.equal(dots[0].getAttribute("cy"), "-40.00");
+  // RT, the five output strokes and SLATE are the plain mark's.
+  assert.equal(svg.querySelectorAll(".slate-logo__output").length, 5);
+  assert.equal(svg.querySelector(".slate-logo__word").textContent, "SLATE");
+  assert.equal(svg.querySelectorAll(".slate-logo__stream").length, 5);
+
+  current = status({ line: { lineNumber: 12, displayName: "Line 12" }, status: { key: "offline", label: "Offline" }, devices: [{ thisDevice: true }] });
+  view.refresh();
+  assert.equal(svg.getAttribute("data-sync"), "warn");
+  assert.equal(svg.querySelector(".slate-logo__line-number").textContent, "12");
+  assert.equal(svg.querySelectorAll(".slate-logo__device").length, 1);
+  assert.ok(view.element.querySelector(".slate-logo") === svg, "the mark was rebuilt rather than updated");
+
+  // No line: the die and film are back, the number and ticks gone.
+  current = null;
+  view.refresh();
+  assert.equal(svg.getAttribute("data-sync"), "none");
+  assert.ok(svg.querySelector(".slate-logo__line").hasAttribute("hidden"));
+  assert.equal(svg.querySelectorAll(".slate-logo__device").length, 0);
+  assert.equal(svg.getAttribute("aria-label"), "Resin.Tools");
+});
