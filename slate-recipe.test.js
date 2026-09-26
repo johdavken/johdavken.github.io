@@ -2068,6 +2068,29 @@ test("a desktop: the badge picks for the fill and the grab strip lifts; with cha
   assert.ok(view.bulk() && view.bulk().auto && view.bulk().recipe === "next", "Next is not a draft");
 });
 
+test("a desktop: an idle draft opens the share's editor and sends setLayerShare; Escape closes the editor, not the draft; waiting changes refuse it", () => {
+  const { view, commands, said } = boot({ desktop: true });
+  view.update(withPlan(), { kind: "structural" });
+  click(head(view, "B").querySelector(".slate-layer__share"));
+  assert.deepEqual(view.editing(), { slot: "share", recipe: "current", layer: "B", index: null }, "an idle draft refused the share");
+  const input = head(view, "B").querySelector(".slate-layer__input");
+  input.value = "40";
+  key(input, "Enter");
+  assert.deepEqual(commands.calls, [{ command: "setLayerShare", args: { recipe: "current", layer: "B", pct: "40" } }]);
+  assert.ok(view.bulk() && view.bulk().auto, "the draft did not survive the share");
+
+  click(head(view, "C").querySelector(".slate-layer__share"));
+  key(head(view, "C").querySelector(".slate-layer__input"), "Escape");
+  assert.equal(view.editing(), null, "Escape left the share's editor open");
+  assert.ok(view.bulk() && view.bulk().auto, "Escape reached the draft past the editor");
+
+  typedInto(draftResin(view, "A1"), "HX999");
+  click(head(view, "B").querySelector(".slate-layer__share"));
+  assert.equal(view.editing(), null, "the share opened over waiting changes");
+  assert.match(said[said.length - 1], /Apply or discard the recipe changes first/);
+  assert.equal(commands.calls.length, 1);
+});
+
 test("a desktop: Apply sends ONE setHopperAssignments and the tab is a fresh draft; Cancel arms and discards into a fresh draft", () => {
   const { view, commands, said, timers } = boot({ desktop: true });
   view.update(withPlan(), { kind: "structural" });
