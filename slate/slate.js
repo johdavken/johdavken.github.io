@@ -97,8 +97,8 @@
   const TIMELINE = "timeline";
   /* A phone's first page (slate-home.js), listed only there. */
   const HOME = "home";
-  /* Listed on the rail under a finger; a desktop opens each in the
-   * Recipe - the Book under its tabs, Weights as its third tab. */
+  /* Defined, never listed: the Recipe opens each itself - the Book under
+   * its tabs, Weights as its third tab - on every tier. */
   const BOOK = "recipe-book";
   const WEIGHTS = "weights";
   const SCRAP = "scrap";
@@ -131,6 +131,15 @@
   let sync = null;
   let themeController = null;
   let displayController = null;
+
+  /* The Weights page lives in the Recipe, as its third tab: whoever wants
+   * it shows the Recipe and turns the tab (slate-recipe.js showWeights). */
+  function openWeightsTab() {
+    if (!sections) return false;
+    sections.show(DEFAULT_SECTION);
+    const recipeView = sections.section(DEFAULT_SECTION);
+    return !!(recipeView && typeof recipeView.showWeights === "function" && recipeView.showWeights());
+  }
 
   function hosted() {
     const body = root.document ? root.document.body : null;
@@ -193,9 +202,9 @@
     // when the screen stops being one.
     if (railView) railView.setListed(HOME, page());
     if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
-    // A desktop opens the Recipe Book under the Recipe's tabs
-    // (slate-recipe.js); the rail lists it under a finger only.
-    if (railView) { railView.setListed(BOOK, tier.input === "touch"); railView.setListed(WEIGHTS, tier.input === "touch"); }
+    // The Recipe holds both (slate-recipe.js): the Book under its tabs,
+    // Weights as its third. Neither is ever the rail's.
+    if (railView) { railView.setListed(BOOK, false); railView.setListed(WEIGHTS, false); }
     // A mouse or a finger arrived: the Recipe changes its ways with it
     // (a preference change refreshes every section itself).
     if (tier.input !== lastInput) {
@@ -204,11 +213,10 @@
       if (recipeView && typeof recipeView.refresh === "function") recipeView.refresh();
     }
     const shownId = sections && sections.current() ? sections.current().id : null;
-    if (tier.input !== "touch" && (shownId === BOOK || shownId === WEIGHTS)) {
-      sections.show(DEFAULT_SECTION);
+    if (shownId === BOOK || shownId === WEIGHTS) {
       // Weights was showing: the Recipe's Weights tab takes its place.
-      const recipeView = shownId === WEIGHTS ? sections.section(DEFAULT_SECTION) : null;
-      if (recipeView && typeof recipeView.showWeights === "function") recipeView.showWeights();
+      if (shownId === WEIGHTS) openWeightsTab();
+      else sections.show(DEFAULT_SECTION);
     }
     paintBar();
   }
@@ -301,9 +309,10 @@
   function paintBar() {
     paintTitle();
     if (!phoneBar || !panes.aside || !sections) return;
-    // The pages Home leads to (the Recipe, the Timeline, Resin Balance)
-    // light Home; a tool lights Tools; what only Menu lists lights Menu.
-    const fromHome = new Set([HOME, DEFAULT_SECTION, TIMELINE, "resin-balance"]);
+    // The pages Home leads to that have no key of their own (the Timeline,
+    // Resin Balance) light Home; the Recipe has its own key; a tool lights
+    // Tools; what only Menu lists lights Menu.
+    const fromHome = new Set([HOME, TIMELINE, "resin-balance"]);
     const tools = new Set(sectionDefinitions.filter(one => one.group === "tools").map(one => one.id));
     let id;
     if (asideOpen) {
@@ -573,11 +582,9 @@
       lineRate: lineRateEstimate,
       lineRateStorage,
       tier: tierNow,
-      // A desktop's Recipe: the always-open form, Compare always on (slate-recipe.js).
-      desktop: () => tierNow().input !== "touch",
       scan: scanner(),
-      // The Timeline's "No weight" on a phone: the Weights page, over it.
-      openWeights: () => { setAside(false); if (sections) sections.show("weights"); }
+      // The Timeline's "No weight" on a phone: the Recipe's Weights tab.
+      openWeights: () => { setAside(false); openWeightsTab(); }
     });
 
     stats = statCards.create(doc, ctx);

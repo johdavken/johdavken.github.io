@@ -20,16 +20,16 @@ function boot() {
   return { doc, bar, asked, keys: bar.element.querySelectorAll("[data-bar-key]") };
 }
 
-test("five keys, left to right - Weights, Tools, Home in the middle, Settings, Menu - each a button with the rail's glyph and a word", () => {
+test("five keys, left to right - Recipe, Tools, Home in the middle, Settings, Menu - each a button with the rail's glyph and a word", () => {
   const { keys } = boot();
-  assert.deepEqual(keys.map(key => key.getAttribute("data-bar-key")), ["weights", "tools", "home", "settings", "menu"]);
-  assert.deepEqual(keys.map(key => key.querySelector(".slate-bar__label").textContent), ["Weights", "Tools", "Home", "Settings", "Menu"]);
+  assert.deepEqual(keys.map(key => key.getAttribute("data-bar-key")), ["recipe", "tools", "home", "settings", "menu"]);
+  assert.deepEqual(keys.map(key => key.querySelector(".slate-bar__label").textContent), ["Recipe", "Tools", "Home", "Settings", "Menu"]);
   for (const key of keys) {
     assert.equal(key.tagName, "BUTTON");
     assert.equal(key.getAttribute("type"), "button");
     assert.ok(key.querySelector("svg.slate-bar__glyph"));
   }
-  assert.equal(keys[0].querySelector("path").getAttribute("d"), rail.GLYPHS.weights);
+  assert.equal(keys[0].querySelector("path").getAttribute("d"), rail.GLYPHS.recipe);
   assert.equal(keys[2].querySelector("path").getAttribute("d"), rail.GLYPHS.home);
   assert.equal(keys[1].getAttribute("aria-haspopup"), "dialog", "Tools raises a sheet");
   assert.equal(keys[4].getAttribute("aria-haspopup"), "dialog");
@@ -39,11 +39,11 @@ test("five keys, left to right - Weights, Tools, Home in the middle, Settings, M
 test("a key only asks: its id goes to onSelect, and nothing is marked until the boot says so", () => {
   const { bar, asked, keys } = boot();
   for (const key of keys) click(key);
-  assert.deepEqual(asked, ["weights", "tools", "home", "settings", "menu"]);
+  assert.deepEqual(asked, ["recipe", "tools", "home", "settings", "menu"]);
   assert.ok(keys.every(key => !key.classList.contains("is-active")));
-  bar.setActive("weights");
-  assert.deepEqual(keys.filter(key => key.classList.contains("is-active")).map(key => key.getAttribute("data-bar-key")), ["weights"]);
-  assert.equal(bar.key("weights").getAttribute("aria-current"), "page");
+  bar.setActive("recipe");
+  assert.deepEqual(keys.filter(key => key.classList.contains("is-active")).map(key => key.getAttribute("data-bar-key")), ["recipe"]);
+  assert.equal(bar.key("recipe").getAttribute("aria-current"), "page");
   bar.setActive(null);
   assert.ok(keys.every(key => !key.hasAttribute("aria-current")));
 });

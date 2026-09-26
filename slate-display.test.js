@@ -988,23 +988,20 @@ test("input is always automatic: no preference, no Settings group, and a record 
   assert.doesNotMatch(boot, /getInputMode/);
 });
 
-test("under a finger the rail lists Weights and Recipe Book; with a mouse neither - and Weights showing when the mouse arrives becomes the Recipe's Weights tab", () => {
+test("the rail lists neither Weights nor Recipe Book on any tier - the Recipe holds both - and the tab stays the Recipe's whichever pointer arrives", () => {
   const media = fakeMedia({ coarse: true, width: 1280 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media });
   const item = id => hostEl.querySelector(`.slate-rail__sections [data-section='${id}']`);
-  assert.ok(!item("weights").hasAttribute("hidden") && !item("recipe-book").hasAttribute("hidden"));
-  item("weights").dispatchEvent({ type: "click", target: item("weights"), stopPropagation() {} });
-  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Weights");
+  assert.ok(item("weights").hasAttribute("hidden") && item("recipe-book").hasAttribute("hidden"), "the rail listed the Recipe's own pages");
+  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
+  // The Recipe's third tab is the way to the Weights page, under a finger as under a mouse.
+  const tab = hostEl.querySelector(".slate-recipe__weights-tab");
+  tab.dispatchEvent({ type: "click", target: tab, stopPropagation() {} });
+  assert.equal(tab.getAttribute("aria-selected"), "true", "the Weights tab did not turn");
+  assert.ok(!hostEl.querySelector(".slate-recipe__weights").hasAttribute("hidden"));
   media.change({ coarse: false });
   assert.ok(item("weights").hasAttribute("hidden") && item("recipe-book").hasAttribute("hidden"));
-  assert.equal(hostEl.querySelector(".slate-header__title").textContent, "Recipe");
-  assert.equal(hostEl.querySelector(".slate-recipe__weights-tab").getAttribute("aria-selected"), "true", "the Recipe did not open on its Weights tab");
-  assert.ok(!hostEl.querySelector(".slate-recipe__weights").hasAttribute("hidden"));
-  // Back under a finger: the tab is put away and the rail lists Weights again.
-  media.change({ coarse: true });
-  assert.ok(!item("weights").hasAttribute("hidden"));
-  assert.ok(hostEl.querySelector(".slate-recipe__weights").hasAttribute("hidden"));
-  assert.equal(hostEl.querySelector(".slate-tabs__tab[data-recipe='current']").getAttribute("aria-selected"), "true");
+  assert.equal(tab.getAttribute("aria-selected"), "true", "a mouse put the Weights tab away");
   assert.equal(executed.length, 0);
 });
 
@@ -1119,7 +1116,7 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   const tools = hostEl.querySelector(".slate-toolsheet");
   const title = () => hostEl.querySelector(".slate-header__title").textContent;
   const keys = [...hostEl.querySelectorAll("[data-slate-mount='bar'] [data-bar-key]")];
-  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["weights", "tools", "home", "settings", "menu"]);
+  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["recipe", "tools", "home", "settings", "menu"]);
   const bar = id => keys.find(one => one.getAttribute("data-bar-key") === id);
   const step = id => hostEl.querySelector(`[data-home-step='${id}']`);
   const active = () => keys.filter(one => one.classList.contains("is-active")).map(one => one.getAttribute("data-bar-key"));
@@ -1132,20 +1129,20 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   // A phone opens on Home.
   assert.deepEqual(active(), ["home"]);
   assert.equal(shown().getAttribute("data-section"), "home");
-  // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance; all light Home.
+  // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance; the Timeline and Resin Balance light Home, the Recipe its own key.
   click(step("recipe"));
   assert.equal(shown().getAttribute("data-section"), "recipe");
-  assert.deepEqual(active(), ["home"]);
+  assert.deepEqual(active(), ["recipe"]);
   click(bar("home"));
   click(step("timeline"));
   assert.ok(aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"), "the Timeline's page raised a scrim");
   assert.deepEqual(active(), ["home"]);
   assert.equal(title(), "Timeline");
-  click(bar("weights"));
+  click(bar("recipe"));
   assert.ok(!aside.classList.contains("is-open"));
-  assert.deepEqual(active(), ["weights"]);
-  assert.equal(shown().getAttribute("data-section"), "weights");
+  assert.deepEqual(active(), ["recipe"]);
+  assert.equal(shown().getAttribute("data-section"), "recipe");
   click(bar("settings"));
   assert.deepEqual(active(), ["settings"]);
   assert.equal(shown().getAttribute("data-section"), "settings");
@@ -1161,15 +1158,18 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.ok(tools.hasAttribute("hidden"));
   assert.ok(aside.classList.contains("is-open"));
   assert.deepEqual(active(), ["tools"]);
-  // Menu raises the rail with everything; the Book, which the bar does not name, lights Menu.
+  // Menu raises the rail with everything; what the bar does not name - How to
+  // Use here - lights Menu. The Recipe's own pages (the Book, Weights) are
+  // not on it: they stand in the Recipe (slate-recipe.js).
   click(bar("menu"));
   assert.ok(rail.classList.contains("is-open"));
   assert.ok(!scrim.hasAttribute("hidden"));
-  // Under a finger the rail lists the Book; a desktop opens it under the Recipe's tabs.
-  assert.ok(!hostEl.querySelector(".slate-rail__item[data-section='recipe-book']").hasAttribute("hidden"), "the phone's rail does not list the Recipe Book");
-  click(hostEl.querySelector(".slate-rail__item[data-section='recipe-book']"));
+  for (const id of ["recipe-book", "weights"]) {
+    assert.ok(hostEl.querySelector(`.slate-rail__item[data-section='${id}']`).hasAttribute("hidden"), `the phone's rail lists ${id}`);
+  }
+  click(hostEl.querySelector(".slate-rail__item[data-section='guide']"));
   assert.ok(!rail.classList.contains("is-open"));
-  assert.ok(!aside.classList.contains("is-open"));
+  assert.ok(aside.classList.contains("is-open"));
   assert.deepEqual(active(), ["menu"]);
   // The scrim lowers a sheet.
   click(bar("tools"));

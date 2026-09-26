@@ -58,7 +58,6 @@ function boot(options) {
     timers,
     print: printer,
     recipes: settings.recipes === undefined ? null : settings.recipes,
-    desktop: settings.desktop === undefined ? undefined : (typeof settings.desktop === "function" ? settings.desktop : () => !!settings.desktop),
     tier: settings.tier || (settings.phone ? () => ({ input: "touch", width: "phone" }) : (settings.touch ? () => ({ input: "touch", width: "wide" }) : undefined)),
     scan: settings.scan
   });
@@ -120,9 +119,9 @@ test("a structural update lists every layer in recipe order with its role, share
   assert.equal(a1.querySelector("[data-slate-control='tracking']").getAttribute("aria-pressed"), "true");
   assert.ok(a1.classList.contains("is-tracked"));
   // Pump-off is the timeline's: the row shows the state, carries no toggle.
-  assert.equal(a1.querySelector("[data-slate-control='pump']"), null, "the recipe row still carries a pump toggle");
+  assert.ok(a1.querySelector("[data-slate-control='pump']") === null, "the recipe row still carries a pump toggle");
   assert.equal(view.element.querySelectorAll("[data-slate-control]").length, view.element.querySelectorAll("[data-slate-control='tracking']").length);
-  assert.ok(a1.querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), "the badge is not the drag handle");
+  assert.ok(!a1.querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), "the badge is the drag handle, not the fill's pick");
   assert.equal(a1.style.getPropertyValue("--slate-row-i"), "0");
 
   const empty = row(view, "A4");
@@ -132,8 +131,10 @@ test("a structural update lists every layer in recipe order with its role, share
   assert.ok(row(view, "B2").classList.contains("is-pump-off"));
 });
 
+/* Read-only: no form can open, so the cells are the plain ones the section
+   draws when the line cannot be assigned. */
 test("a values update rewrites only the cells that moved, keeps every row's element, and flashes unless the change was our own", () => {
-  const { view } = boot();
+  const { view } = boot({ readOnly: true });
   view.update(resolvedFrom(), { kind: "structural" });
   const a1 = row(view, "A1");
   const resinCell = a1.querySelector(".slate-hopper__resin");
@@ -219,7 +220,7 @@ test("the bar offers Current | Next; Next's rows carry no weight or toggles, no 
   // No weight: only the empty line that keeps the cell as tall as Current's.
   const weightLine = b1.querySelector(".slate-hopper__weight");
   assert.ok(weightLine && weightLine.hasAttribute("data-spacer") && weightLine.textContent === "", "a Next row carries a weight");
-  assert.equal(b1.querySelector("[data-slate-control]"), null);
+  assert.ok(b1.querySelector("[data-slate-control]") === null);
   // No heading row over either tab's layers: the values say what they are.
   assert.equal(view.element.querySelectorAll(".slate-recipe__columns, .slate-recipe__column").length, 0);
   assert.equal(view.setRecipe("nonsense"), "next");
@@ -262,13 +263,14 @@ test("with a plan, a row whose resin changes carries the band on either tab, Com
   assert.ok(!row(view, "A1").classList.contains("is-differs"), "no plan, yet a band");
 
   view.update(planWithChanges(), { kind: "structural" });
+  // The switch's own state stays off; with a plan the section compares anyway.
   assert.equal(view.getCompare(), false);
+  assert.ok(view.element.classList.contains("is-comparing"), "a plan without comparing");
   for (const id of ["A1", "A4", "B3"]) assert.ok(row(view, id).classList.contains("is-differs"), `${id}: a resin change without its band`);
   for (const id of ["A2", "A3", "B1"]) assert.ok(!row(view, id).classList.contains("is-differs"), `${id}: banded without a resin change`);
   assert.ok(row(view, "A1", "next").classList.contains("is-differs"), "the Next body is not banded");
   assert.ok(!row(view, "A3", "next").classList.contains("is-differs"));
-  assert.ok(row(view, "A1").querySelector(".slate-hopper__other").hasAttribute("hidden"), "a compare line without Compare");
-  assert.ok(head(view, "B").querySelector(".slate-layer__share-other").hasAttribute("hidden"));
+  assert.ok(!row(view, "A1").querySelector(".slate-hopper__other").hasAttribute("hidden"), "the compare line is drawn only by the switch");
 
   // A values publish that reverts the swap takes the band away.
   view.update(planWithChanges(snap => { snap.nextRecipe.layers[0].hoppers[0].resinName = "HX204"; }), { kind: "values" });
@@ -328,7 +330,9 @@ test("Compare is unable without a plan; with one it writes what moves under each
   click(compare);
   assert.equal(view.getCompare(), false);
   assert.ok(nextA1.classList.contains("is-differs"), "Compare off took the band with it");
-  assert.ok(nextA1.querySelector(".slate-hopper__other").hasAttribute("hidden"));
+  // With a plan the lines stand whatever the switch says: comparing is the
+  // section's own now (slate-recipe.js comparing()).
+  assert.ok(!nextA1.querySelector(".slate-hopper__other").hasAttribute("hidden"));
 
   // The plan going away forces Compare off.
   view.setCompare(true);
@@ -519,7 +523,7 @@ test("the blend cell opens an inline field; Enter commits one setHopperBlend as 
   assert.equal(committed.length, 1);
   assert.equal(view.editing(), null);
   assert.ok(!cell.hasAttribute("hidden"));
-  assert.equal(a2.querySelector(".slate-hopper__input"), null, "the field was left behind");
+  assert.ok(a2.querySelector(".slate-hopper__input") === null, "the field was left behind");
   assert.equal(cell.focused, true);
 
   click(cell);
@@ -601,7 +605,7 @@ test("the resin cell opens the catalog search; a match commits setHopperResin, a
   assert.deepEqual(commands.calls, [{ command: "setHopperResin", args: { recipe: "current", layer: "A", index: 1, resin: "LL318" } }]);
   assert.equal(committed.length, 1);
   assert.equal(view.editing(), null);
-  assert.equal(a2.querySelector(".slate-combobox"), null);
+  // The row still holds a combobox - the standing form's own resin field.
 
   click(a2.querySelector(".slate-hopper__resin"));
   a2.querySelector(".slate-combobox__input").value = "";
@@ -659,8 +663,12 @@ test("a refused resin reopens the search on that code with the note; on the Next
  *   Publishes under an open editor
  * -------------------------------------------------------------------- */
 
+/* A line whose application offers every command but the bulk one: no form
+   stands over the cells, so the in-place editors are the way in. */
+const noBulk = () => makeCommands({ capabilities: ALL.filter(name => name !== "setHopperAssignments") });
+
 test("a values publish never touches the open field: our own echo is silent, another device's change marks the row and says what moved", () => {
-  const { view } = boot();
+  const { view } = boot({ commands: noBulk() });
   view.update(resolvedFrom(), { kind: "structural" });
   const a2 = row(view, "A2");
   click(a2.querySelector(".slate-hopper__pct"));
@@ -687,7 +695,7 @@ test("a values publish never touches the open field: our own echo is silent, ano
 });
 
 test("a structural publish abandons an open edit and a drag; another device's is said, our own is not", () => {
-  const first = boot();
+  const first = boot({ commands: noBulk() });
   first.view.update(resolvedFrom(), { kind: "structural" });
   click(row(first.view, "A2").querySelector(".slate-hopper__pct"));
   first.view.update(resolvedFrom(snap => { snap.line.hopperCounts = [2, 2, 2]; }), { kind: "structural", own: false });
@@ -695,7 +703,7 @@ test("a structural publish abandons an open edit and a drag; another device's is
   assert.deepEqual(first.said, [recipe.ABANDONED]);
   assert.equal(first.commands.calls.length, 0);
 
-  const second = boot();
+  const second = boot({ commands: noBulk() });
   second.view.update(resolvedFrom(), { kind: "structural" });
   click(row(second.view, "A2").querySelector(".slate-hopper__resin"));
   second.view.update(resolvedFrom(snap => { snap.line.hopperCounts = [2, 2, 2]; }), { kind: "structural", own: true });
@@ -777,7 +785,7 @@ test("dropping one badge on another row sends exactly one moveHopper for the sho
   pointer("pointermove", h2, { clientX: 5, clientY: a2._rect.top + 30 });
   assert.ok(a2.classList.contains("is-dragging"));
   view.update(withPlan(snap => { snap.line.hopperCounts = [3, 3, 3]; }), { kind: "structural", own: false });
-  assert.equal(view.element.querySelector(".slate-drag-proxy"), null);
+  assert.ok(view.element.querySelector(".slate-drag-proxy") === null);
   assert.equal(commands.calls.length, 1);
   void said;
 });
@@ -823,7 +831,7 @@ test("the plan's moves: Copy current → Next from the bar or the empty state; P
   view.update(withPlan(), { kind: "structural" });
   view.setRecipe("next");
   assert.ok(!promote.closest(".slate-recipe__plan").hasAttribute("hidden"));
-  assert.equal(view.element.querySelector(".slate-section__bar [data-slate-plan]"), null, "the bar still carries the plan's moves");
+  assert.ok(view.element.querySelector(".slate-section__bar [data-slate-plan]") === null, "the bar still carries the plan's moves");
   assert.equal(promote.getAttribute("data-able"), "true");
   click(promote);
   assert.ok(promote.hasAttribute("data-armed"));
@@ -878,7 +886,11 @@ test("a toggle click dispatches one command with the state wanted; the reset arm
   const reset = view.body("current").querySelector(".slate-recipe__reset");
   click(reset);
   assert.ok(reset.hasAttribute("data-armed"));
+  // Escape is the standing form's (slate-recipe.js): the arm disarms by
+  // waiting, not by the key.
   key(reset, "Escape");
+  assert.ok(reset.hasAttribute("data-armed"));
+  timers.advance(recipe.RESET_ARM_MS);
   assert.ok(!reset.hasAttribute("data-armed"));
   click(reset);
   timers.advance(recipe.RESET_ARM_MS);
@@ -921,9 +933,9 @@ test("read-only withholds every edit, drag, menu item, history and plan move - C
   const handle = a2.querySelector("[data-slate-handle]");
   pointer("pointerdown", handle, { clientX: 5, clientY: a2._rect.top + 5 });
   pointer("pointermove", handle, { clientX: 5, clientY: a2._rect.top + 30 });
-  assert.equal(view.element.querySelector(".slate-drag-proxy"), null, "a drag started under read-only");
+  assert.ok(view.element.querySelector(".slate-drag-proxy") === null, "a drag started under read-only");
   pointer("pointerup", handle, { clientX: 5, clientY: a2._rect.top + 30 });
-  assert.equal(view.element.querySelector("[data-slate-history]"), null, "the bar still carries history buttons");
+  assert.ok(view.element.querySelector("[data-slate-history]") === null, "the bar still carries history buttons");
   view.setRecipe("next");
   assert.equal(view.element.querySelector("[data-slate-plan='promote']").getAttribute("data-able"), "false");
   const menu = head(view, "A", "next").querySelector(".slate-layer-menu");
@@ -1176,12 +1188,11 @@ test("with a mouse Recipe Book opens the line's Book under the tab - Save Curren
   assert.equal(view.book(), null);
   // Closing put the confirm away.
   click(bookToggle(view, "next"));
-  assert.equal(panel.querySelector(".slate-book__confirm"), null, "a closed Book kept its confirm");
+  assert.ok(panel.querySelector(".slate-book__confirm") === null, "a closed Book kept its confirm");
 });
 
-test("the Book closes on a hide, on Escape inside it, on Bulk edit (which withholds it) and on a move to the touch tier", () => {
-  let input = "pointer";
-  const { view, said } = boot({ recipes: makeRecipes(), tier: () => ({ input, width: "wide" }) });
+test("the Book closes on a hide, on Escape inside it, and on Bulk edit (which withholds it)", () => {
+  const { view, said } = boot({ recipes: makeRecipes() });
   view.update(withPlan(), { kind: "structural" });
   const panel = bookPanel(view);
   const toggle = bookToggle(view, "current");
@@ -1209,16 +1220,16 @@ test("the Book closes on a hide, on Escape inside it, on Bulk edit (which withho
 
   click(toggle);
   assert.ok(!panel.hasAttribute("hidden"));
-  input = "touch";
   view.refresh();
-  assert.ok(panel.hasAttribute("hidden"), "the touch tier kept the desktop's Book open");
+  assert.ok(!panel.hasAttribute("hidden"), "a refresh closed the Book");
 });
 
-test("the sheets give a mouse Recipe Book and a finger Save as recipe - each hidden where the other stands - with no rule of the pointer tier's own", () => {
+test("the sheets give every tier Recipe Book in the foot and draw the inline Save as recipe nowhere: no rule of a tier's own stands over either", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   assert.match(css, /\.slate-root \.slate-recipe__save \{\s*display: none;/);
-  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-recipe__save \{\s*display: inline-block;/);
-  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-recipe__book-toggle,\s*\.slate-root\[data-input="touch"\] \.slate-recipe__book \{\s*display: none;/);
+  assert.doesNotMatch(css, /\[data-input="touch"\] \.slate-recipe__save \{/);
+  assert.doesNotMatch(css, /\[data-input="touch"\] \.slate-recipe__book-toggle/);
+  assert.doesNotMatch(css, /\[data-input="touch"\] \.slate-recipe__weights-tab/);
 });
 
 /* ----------------------------------------------------------------------
@@ -1288,27 +1299,23 @@ test("with a mouse the third tab shows the Weights page in the bodies' place - t
   assert.ok(!view.body("next").hasAttribute("hidden"));
 });
 
-test("a bulk edit holding changes keeps the Weights tab from turning; one without changes closes; hiding the section and the touch tier put Weights away", () => {
-  let input = "pointer";
-  const { view, said } = boot({ tier: () => ({ input, width: "wide" }) });
+test("a bulk edit holding changes keeps the Weights tab from turning; one without changes gives way to it; a hide keeps the tab", () => {
+  const { view, said } = boot();
   view.update(withPlan(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "pct"), "35");
   click(weightsTab(view));
-  assert.equal(view.weights(), null, "the tab turned over a bulk edit's changes");
+  assert.ok(view.weights() === null, "the tab turned over a bulk edit's changes");
   assert.ok(view.bulk());
   assert.equal(said[said.length - 1], recipe.BULK_SWITCH);
   typedInto(field(view, "A2", "pct"), "30");
   click(weightsTab(view));
   assert.ok(view.weights());
-  assert.equal(view.bulk(), null, "an unchanged bulk edit stayed open under Weights");
+  assert.ok(view.bulk() === null, "an unchanged bulk edit stayed open under Weights");
 
   view.onHide();
   assert.ok(view.weights(), "a hide turned the tab (the Weights tab is kept, as Current or Next is)");
-  input = "touch";
   view.refresh();
-  assert.equal(view.weights(), null, "the touch tier kept the desktop's Weights tab");
-  assert.ok(!view.body("current").hasAttribute("hidden"));
+  assert.ok(view.weights(), "a refresh put the Weights tab away");
 });
 
 test("the Weights page's changes hold the tab as the recipe's bulk edit does: with changes Current will not turn; without, it turns", () => {
@@ -1329,9 +1336,9 @@ test("the Weights page's changes hold the tab as the recipe's bulk edit does: wi
   assert.equal(commands.calls.length, 0);
 });
 
-test("the sheets keep the Weights tab off the touch tier, set the recipe's switches aside under it keeping their room, and draw no bar of the page's own", () => {
+test("the sheets give the Weights tab to every tier, set the recipe's switches aside under it keeping their room, and draw no bar of the page's own", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
-  assert.match(css, /\.slate-root\[data-input="touch"\] \.slate-recipe__weights-tab,\s*\.slate-root\[data-input="touch"\] \.slate-recipe__weights \{\s*display: none;/);
+  assert.doesNotMatch(css, /\[data-input="touch"\] \.slate-recipe__weights/, "a tier's rule still hides the Weights tab");
   // Unseen but keeping their room: the tabs must not shift along the bar when Weights is chosen.
   assert.match(css, /\.slate-recipe\[data-view="weights"\] \.slate-recipe__only \{\s*visibility: hidden;/);
   assert.doesNotMatch(css, /\.slate-recipe\[data-view="weights"\] \.slate-recipe__only \{\s*display: none;/);
@@ -1348,28 +1355,23 @@ const bulkFoot = (view, which) => view.element.querySelector(`.slate-recipe__bod
 const field = (view, id, kind, which) => row(view, id, which).querySelector(`.slate-hopper__draft-${kind}`);
 const typedInto = (input, value) => { input.value = value; input.dispatchEvent({ type: "input" }); };
 
-test("Bulk edit opens the shown tab as a form: it closes the inline editor and the save entry, swaps the foot, presses the bar button, and withholds every other recipe edit - Track stays", () => {
+test("the shown tab stands as a form: the fill bar under the layers with the foot still below, the switch pressed, and - once a change waits - every other recipe edit withheld, Track staying", () => {
   const { view, commands, said } = boot({ recipes: makeRecipes() });
   view.update(withPlan(), { kind: "structural" });
   const button = bulkButton(view);
-  assert.equal(button.getAttribute("data-able"), "true");
-  assert.equal(button.getAttribute("aria-pressed"), "false");
-  click(row(view, "A2").querySelector(".slate-hopper__pct"));
-  assert.ok(view.editing());
-  click(saveButton(view, "current"));
-  assert.ok(view.saving());
-  click(button);
-  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: false });
-  assert.equal(view.editing(), null, "the inline editor stayed open under the form");
-  assert.equal(view.saving(), null, "the save entry stayed open under the form");
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true });
   assert.equal(button.getAttribute("aria-pressed"), "true");
   assert.ok(!bulkFoot(view).hasAttribute("hidden"));
-  assert.ok(plainFoot(view, "current").hasAttribute("hidden"), "the normal foot stayed");
-  assert.equal(bulkFoot(view).querySelector(".slate-recipe__bulk-summary").textContent, "Nothing changes");
-  assert.equal(bulkFoot(view).querySelector("[data-slate-bulk-do='apply']").getAttribute("data-able"), "false");
+  assert.ok(!plainFoot(view, "current").hasAttribute("hidden"), "the foot went with the standing form");
+  // Idle, the form holds nothing back.
+  assert.equal(head(view, "A").querySelector(".slate-layer__share").getAttribute("data-able"), "true");
   assert.equal(field(view, "A2", "resin").value, "LD105");
   assert.equal(field(view, "A2", "pct").value, "30");
   assert.equal(field(view, "A1", "h1").textContent, "60%");
+  // A change waiting is what withholds the rest; H1 follows it.
+  typedInto(field(view, "A3", "pct"), "35");
+  assert.equal(bulkFoot(view).querySelector("[data-slate-bulk-do='apply']").getAttribute("data-able"), "true");
+  assert.equal(field(view, "A1", "h1").textContent, "35%", "H1 did not follow the draft");
   // Withheld, each with the reason.
   const a2 = row(view, "A2");
   assert.ok(a2.querySelector(".slate-hopper__resin").hasAttribute("hidden"));
@@ -1377,19 +1379,21 @@ test("Bulk edit opens the shown tab as a form: it closes the inline editor and t
   assert.ok(!a2.classList.contains("is-movable"));
   const share = head(view, "A").querySelector(".slate-layer__share");
   assert.equal(share.getAttribute("data-able"), "false");
-  assert.match(share.getAttribute("title"), /Apply or cancel the bulk edit first/);
+  assert.match(share.getAttribute("title"), /Apply or discard the recipe changes first/);
   click(share);
   assert.equal(view.editing(), null);
-  assert.match(said[said.length - 1], /Apply or cancel the bulk edit first/);
+  assert.match(said[said.length - 1], /Apply or discard the recipe changes first/);
   const menu = head(view, "A").querySelector(".slate-layer-menu");
   click(menu.querySelector(".slate-layer-menu__button"));
   assert.ok(menu.querySelectorAll(".slate-layer-menu__item").every(item => item.getAttribute("aria-disabled") === "true"), "a layer menu item stayed able");
+  // The foot's own controls keep the bulk edit's words for the wait
+  // (slate-recipe.js BULK_BUSY); the cells say the draft's.
   for (const selector of [".slate-recipe__reset", ".slate-recipe__save[data-slate-save='current']"]) {
     const control = view.element.querySelector(selector);
     assert.equal(control.getAttribute("data-able"), "false", selector);
-    assert.match(control.getAttribute("title"), /bulk edit/, selector);
+    assert.match(control.getAttribute("title"), /Apply or cancel the bulk edit first/, selector);
   }
-  assert.equal(commands.calls.length, 0, "opening the form dispatched");
+  assert.equal(commands.calls.length, 0, "the standing form dispatched");
   // The job's tracking is not the recipe's: the toggle still works.
   click(row(view, "A2").querySelector(".slate-toggle--tracking"));
   assert.equal(commands.calls.length, 1);
@@ -1401,7 +1405,6 @@ test("Bulk edit opens the shown tab as a form: it closes the inline editor and t
 test("Apply sends exactly one setHopperAssignments naming only what changed, for the shown recipe; the form closes, the cells show the line again, and the section says how many", () => {
   const { view, commands, committed, said } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "resin"), "LL318");
   typedInto(field(view, "A3", "pct"), "15");
   typedInto(field(view, "B2", "resin"), "");
@@ -1424,15 +1427,13 @@ test("Apply sends exactly one setHopperAssignments naming only what changed, for
   ] } }]);
   assert.equal(committed.length, 1);
   assert.equal(said[said.length - 1], "4 hoppers changed.");
-  assert.equal(view.bulk(), null);
-  assert.equal(bulkButton(view).getAttribute("aria-pressed"), "false");
-  assert.ok(foot.hasAttribute("hidden"));
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
+  assert.equal(bulkButton(view).getAttribute("aria-pressed"), "true", "the standing form lost its press");
+  assert.ok(!foot.hasAttribute("hidden"));
   assert.ok(!plainFoot(view, "current").hasAttribute("hidden"));
-  const a2 = row(view, "A2");
-  assert.equal(a2.querySelector(".slate-hopper__draft-resin"), null);
-  assert.ok(!a2.querySelector(".slate-hopper__resin").hasAttribute("hidden"));
-  assert.equal(a2.querySelector(".slate-hopper__resin").textContent, "LD105", "the cell shows the draft, not the line, before the echo");
-  assert.equal(a2.querySelector(".slate-hopper__resin").getAttribute("data-able"), "true");
+  // A fresh draft, built from the line: the echo has not arrived yet.
+  assert.equal(field(view, "A2", "resin").value, "LD105");
+  assert.equal(bulkFoot(view).querySelector(".slate-recipe__bulk-summary").textContent, recipe.DRAFT_IDLE);
 });
 
 test("with nothing changed Apply is withheld and says so, and Cancel closes at once; a refusal keeps every field as typed with the application's words in the foot", () => {
@@ -1440,13 +1441,12 @@ test("with nothing changed Apply is withheld and says so, and Cancel closes at o
   const commands = makeCommands({ capabilities: ALL, answer: () => answers.shift() });
   const { view, said, committed } = boot({ commands });
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   const foot = bulkFoot(view);
   click(foot.querySelector("[data-slate-bulk-do='apply']"));
   assert.equal(commands.calls.length, 0);
   assert.equal(said[said.length - 1], "Nothing changes yet");
   click(foot.querySelector("[data-slate-bulk-do='cancel']"));
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(said.length, 1, "closing an unchanged form said something");
 
   click(bulkButton(view));
@@ -1462,14 +1462,13 @@ test("with nothing changed Apply is withheld and says so, and Cancel closes at o
   assert.equal(committed.length, 0);
   click(foot.querySelector("[data-slate-bulk-do='apply']"));
   assert.equal(commands.calls.length, 2);
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(committed.length, 1);
 });
 
 test("Cancel arms while there are changes and disarms after a moment; a second press or a second Escape discards and says what was lost; Escape closes an open list first", () => {
   const { view, commands, timers, said } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "pct"), "35");
   typedInto(field(view, "A3", "pct"), "20");
   const cancel = bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']");
@@ -1484,7 +1483,7 @@ test("Cancel arms while there are changes and disarms after a moment; a second p
   key(field(view, "A2", "pct"), "Escape");
   assert.ok(view.bulk().armed);
   click(bulkButton(view));
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(said[said.length - 1], "The bulk edit was closed; 2 changes were not applied.");
   assert.equal(commands.calls.length, 0);
   assert.equal(timers.pending(), 0);
@@ -1497,14 +1496,13 @@ test("Cancel arms while there are changes and disarms after a moment; a second p
   key(resin, "Escape");
   assert.ok(view.bulk().armed);
   key(resin, "Escape");
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(said[said.length - 1], "The bulk edit was closed; 1 change was not applied.");
 });
 
 test("a layer whose hoppers 2-6 would exceed 100 is said on its head and withholds Apply until it is put right", () => {
   const { view, commands } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "B3", "pct"), "90");
   const note = head(view, "B").querySelector(".slate-layer__note");
   assert.equal(note.textContent, "Hopper percentages 2–6 cannot total more than 100%.");
@@ -1526,7 +1524,6 @@ test("a layer whose hoppers 2-6 would exceed 100 is said on its head and withhol
 test("a values publish under the form: our own echo is silent; another device's change marks the row, keeps the field, and rebases its diff; a structural publish abandons the form", () => {
   const { view, said } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "resin"), "LL318");
   typedInto(field(view, "B2", "pct"), "25");
   // Our own: nothing marked.
@@ -1544,20 +1541,19 @@ test("a values publish under the form: our own echo is silent; another device's 
   assert.equal(row(view, "A2").querySelector(".slate-hopper__resin").textContent, "LD105", "a hidden cell was rewritten under the form");
   // Structural: gone, and said.
   view.update(resolvedFrom(snap => { snap.layers.pop(); }), { kind: "structural" });
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(said[said.length - 1], recipe.BULK_ABANDONED);
   click(bulkButton(view));
   typedInto(field(view, "A2", "pct"), "35");
   const heard = said.length;
   view.update(resolvedFrom(), { kind: "structural", own: true });
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.equal(said.length, heard, "our own structural publish was said");
 });
 
 test("read-only turning on, or the bridge going away, closes the form and says so; without the command Bulk edit is unable with the reason", () => {
   const { view, said, setReadOnly } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "pct"), "35");
   setReadOnly(true);
   view.refresh();
@@ -1590,7 +1586,6 @@ test("read-only turning on, or the bridge going away, closes the form and says s
 test("a tab switch is refused while the form holds changes and closes it otherwise; hiding the section discards and says; the Next tab's form names the plan and needs one", () => {
   const { view, commands, said } = boot();
   view.update(withPlan(), { kind: "structural" });
-  click(bulkButton(view));
   typedInto(field(view, "A2", "pct"), "35");
   assert.equal(view.setRecipe("next"), "current");
   assert.equal(said[said.length - 1], recipe.BULK_SWITCH);
@@ -1598,13 +1593,13 @@ test("a tab switch is refused while the form holds changes and closes it otherwi
   typedInto(field(view, "A2", "pct"), "30");
   assert.equal(view.bulk().changes, 0);
   assert.equal(view.setRecipe("next"), "next");
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "next", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   // Next: the plan's rows, the plan named.
   click(bulkButton(view));
-  assert.deepEqual(view.bulk(), { recipe: "next", changes: 0, armed: false, picked: [], auto: false });
+  assert.deepEqual(view.bulk(), { recipe: "next", changes: 0, armed: false, picked: [], auto: true });
   assert.equal(row(view, "A2", "next").querySelector(".slate-hopper__draft-pct").value, "30");
   typedInto(row(view, "A3", "next").querySelector(".slate-hopper__draft-resin"), "HX204");
-  assert.ok(view.element.querySelector(".slate-recipe__plan").hasAttribute("hidden"), "the plan strip stayed under the form");
+  assert.ok(!view.element.querySelector(".slate-recipe__plan").hasAttribute("hidden"), "the plan strip went with the standing form");
   click(bulkFoot(view, "next").querySelector("[data-slate-bulk-do='apply']"));
   assert.deepEqual(commands.calls, [{ command: "setHopperAssignments", args: { recipe: "next", hoppers: [{ layer: "A", index: 2, resin: "HX204" }] } }]);
   assert.ok(!view.element.querySelector(".slate-recipe__plan").hasAttribute("hidden"));
@@ -1626,10 +1621,10 @@ test("a tab switch is refused while the form holds changes and closes it otherwi
 test("under the form a hopper id picks its row, Shift picks a run within the layer, the layer's name picks the layer; the fill strip shows for a selection and Clear selection empties it", () => {
   const { view, commands } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   const foot = bulkFoot(view);
   const strip = foot.querySelector(".slate-recipe__fill");
-  assert.ok(strip.hasAttribute("hidden"));
+  assert.ok(!strip.hasAttribute("hidden"), "the fill bar waits for a pick");
+  assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, recipe.NONE_PICKED);
   assert.ok(!foot.querySelector(".slate-recipe__bulk-hint").hasAttribute("hidden"));
   click(row(view, "A2").querySelector(".slate-hopper__id"));
   assert.deepEqual(view.bulk().picked, ["A:1"]);
@@ -1655,20 +1650,21 @@ test("under the form a hopper id picks its row, Shift picks a run within the lay
   assert.equal(view.bulk().picked.filter(key => key.startsWith("C")).length, 0);
   click(strip.querySelector("[data-slate-fill='clear']"));
   assert.deepEqual(view.bulk().picked, []);
-  assert.ok(strip.hasAttribute("hidden"));
+  assert.ok(!strip.hasAttribute("hidden"), "the fill bar went with the selection");
+  assert.equal(strip.querySelector(".slate-recipe__fill-count").textContent, recipe.NONE_PICKED);
   assert.ok(!clearSelection.classList.contains("is-lit"), "an empty selection left Clear selection lit");
   assert.equal(commands.calls.length, 0, "picking dispatched");
-  // Ids do nothing outside the form.
+  // Cancel leaves a fresh form with nothing picked, and the ids pick into it again.
   click(bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']"));
-  assert.equal(view.bulk(), null);
-  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
   assert.ok(!row(view, "A2").classList.contains("is-picked"));
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  assert.deepEqual(view.bulk().picked, ["A:1"]);
 });
 
 test("Fill writes one resin and/or one blend into every picked row's fields - blank means no change there, H1 takes the resin only - and it is still the draft: one Apply, one command", () => {
   const { view, commands, said } = boot();
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
   const strip = bulkFoot(view).querySelector(".slate-recipe__fill");
   for (const id of ["A1", "A3", "A4", "A5"]) click(row(view, id).querySelector(".slate-hopper__id"));
   // Nothing entered: said, nothing moved.
@@ -1695,7 +1691,7 @@ test("Fill writes one resin and/or one blend into every picked row's fields - bl
   assert.equal(field(view, "A3", "pct").value, "10");
   typedInto(strip.querySelector(".slate-recipe__fill-pct"), "20");
   click(strip.querySelector("[data-slate-fill='fill']"));
-  assert.equal(strip.querySelector(".slate-recipe__fill-pct").getAttribute("aria-invalid"), null);
+  assert.ok(strip.querySelector(".slate-recipe__fill-pct").getAttribute("aria-invalid") === null);
   assert.equal(field(view, "A3", "pct").value, "20");
   assert.equal(field(view, "A4", "pct").value, "20");
   assert.equal(field(view, "A5", "pct").value, "20");
@@ -1715,7 +1711,7 @@ test("Fill writes one resin and/or one blend into every picked row's fields - bl
     { layer: "A", index: 3, resin: "LL318", pct: 20 },
     { layer: "A", index: 4, resin: "LL318", pct: 20 }
   ]);
-  assert.equal(view.bulk(), null);
+  assert.deepEqual(view.bulk(), { recipe: "current", changes: 0, armed: false, picked: [], auto: true }, "the form did not come back fresh");
 });
 
 /* ----------------------------------------------------------------------
@@ -1740,7 +1736,7 @@ test("under a finger the blend field carries a Cancel that wins over the blur: p
   click(cancel);
   assert.deepEqual(commands.calls, [], "Cancel under a finger dispatched the draft");
   assert.equal(view.editing(), null);
-  assert.equal(a2.querySelector(".slate-editor-field"), null, "the field's wrapper was left behind");
+  assert.ok(a2.querySelector(".slate-editor-field") === null, "the field's wrapper was left behind");
 
   // A blur without Cancel still commits, as with a mouse.
   click(a2.querySelector(".slate-hopper__pct"));
@@ -1755,8 +1751,8 @@ test("with a mouse the blend field stands alone, as before: no wrapper, no Cance
   view.update(resolvedFrom(), { kind: "structural" });
   const a2 = row(view, "A2");
   click(a2.querySelector(".slate-hopper__pct"));
-  assert.equal(a2.querySelector(".slate-editor-field"), null);
-  assert.equal(a2.querySelector("[data-slate-cancel]"), null);
+  assert.ok(a2.querySelector(".slate-editor-field") === null);
+  assert.ok(a2.querySelector("[data-slate-cancel]") === null);
   assert.ok(a2.querySelector(".slate-hopper__input").parentNode === a2);
 });
 
@@ -1775,12 +1771,11 @@ test("under a finger the resin search opens with the touch rules, and a blur lea
   assert.deepEqual(commands.calls, []);
 });
 
-test("Bulk edit focuses its first field with a mouse, and none under a finger - the keyboard would cover the form's foot", () => {
+test("the standing form takes no focus - with a mouse or a finger - so nothing is typed into and no keyboard covers its foot", () => {
   const mouse = boot();
   mouse.view.update(withPlan(), { kind: "structural" });
-  click(bulkButton(mouse.view));
   const firstMouse = mouse.view.element.querySelector(".slate-recipe__body[data-recipe='current'] [data-slate-draft='resin']");
-  assert.equal(firstMouse.focused, true, "the mouse form lost its first-field focus");
+  assert.notEqual(firstMouse.focused, true, "the standing form took the focus");
 
   const finger = boot({ touch: true });
   finger.view.update(withPlan(), { kind: "structural" });
@@ -1916,19 +1911,22 @@ test("on a phone the layer's name keeps its letter apart from the word, and the 
   assert.equal(view.body("current").querySelector(".slate-recipe__layers").style.getPropertyValue("--slate-layers"), "3");
 });
 
-test("on a phone Bulk edit picks a whole cell - its drafts are values there, not fields to tap - and says so in its hint; the layer's name still picks the layer", () => {
+test("on a phone the badge picks its row - the rest of the cell stays Track's - and the hint says so; the layer's name still picks the layer", () => {
   const { view, commands } = boot({ phone: true });
   view.update(resolvedFrom(), { kind: "structural" });
-  click(bulkButton(view));
-  assert.match(bulkFoot(view).querySelector(".slate-recipe__bulk-hint").textContent, /^Tap hoppers/);
-  click(row(view, "A2"));
-  click(row(view, "B3").querySelector(".slate-hopper__weight"));
+  assert.match(bulkFoot(view).querySelector(".slate-recipe__bulk-hint").textContent, /^Tap a hopper id/);
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
+  click(row(view, "B3").querySelector(".slate-hopper__id"));
   assert.deepEqual(view.bulk().picked.sort(), ["A:1", "B:2"]);
-  click(row(view, "A2"));
+  click(row(view, "A2").querySelector(".slate-hopper__id"));
   assert.deepEqual(view.bulk().picked, ["B:2"]);
   click(head(view, "C").querySelector(".slate-layer__name"));
   assert.equal(view.bulk().picked.filter(key => key.startsWith("C")).length, 6);
   assert.equal(commands.calls.length, 0, "a pick tracked or dispatched");
+  // The cell itself is still the job's Track, the standing form notwithstanding.
+  click(row(view, "A2").querySelector(".slate-hopper__weight"));
+  assert.ok(!view.bulk().picked.includes("A:1"), "a tap on the cell picked it");
+  assert.equal(commands.calls[commands.calls.length - 1].command, "setHopperTracking");
   // With a mouse the hint is the id's, as before.
   const mouse = boot();
   mouse.view.update(resolvedFrom(), { kind: "structural" });
@@ -1963,9 +1961,8 @@ test("on a phone a cell holds the hopper, its blend and its resin; Compare adds 
   view.update(planWithChanges(), { kind: "structural" });
   const next = (id, which) => row(view, id, which).querySelector(".slate-hopper__next");
   assert.equal(view.element.querySelectorAll(".slate-hopper__pct-to, .slate-hopper__delta").length, 0);
-  // Without Compare, nothing but the recipe.
-  assert.ok(next("A1").hasAttribute("hidden"));
-  click(view.element.querySelector("[data-slate-compare]"));
+  // With a plan the band stands without the switch.
+  assert.ok(!next("A1").hasAttribute("hidden"));
   // The resin it becomes, and its blend (the Grid layout shows it; a phone's sheet leaves it out).
   assert.equal(next("A1").querySelector(".slate-hopper__next-resin").textContent, "ZZ1");
   assert.equal(next("A1").querySelector(".slate-hopper__next-pct").textContent, "60%");
@@ -1989,15 +1986,16 @@ test("on a phone a cell holds the hopper, its blend and its resin; Compare adds 
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
   assert.equal(next("A1", "next").getAttribute("data-way"), "from");
   click(view.element.querySelector("[data-slate-compare]"));
-  assert.ok(next("A1", "next").hasAttribute("hidden"));
-  // Vacant: a position empty in every layer, in both recipes (the demo line's fifth and sixth; layer B has four).
-  const vacant = which => view.body(which).querySelectorAll(".slate-hopper.is-vacant").map(one => one.getAttribute("data-hopper")).sort();
-  assert.deepEqual(vacant("current"), ["A5", "A6", "C5", "C6"]);
+  assert.ok(!next("A1", "next").hasAttribute("hidden"), "the switch took the plan's band away");
+  // Vacant - a position empty in every layer and in both recipes (the demo
+  // line's fifth and sixth; layer B has four) - is the read-only page's:
+  // under the standing form every position is drawn, waiting to be filled.
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
-  click(bulkButton(view));
-  assert.deepEqual(vacant("current"), []);
-  click(bulkFoot(view).querySelector("[data-slate-bulk-do='cancel']"));
-  assert.deepEqual(vacant("current"), ["A5", "A6", "C5", "C6"]);
+  const vacant = one => one.body("current").querySelectorAll(".slate-hopper.is-vacant").map(cell => cell.getAttribute("data-hopper")).sort();
+  assert.deepEqual(vacant(view), []);
+  const still = boot({ phone: true, readOnly: true });
+  still.view.update(planWithChanges(), { kind: "structural" });
+  assert.deepEqual(vacant(still.view), ["A5", "A6", "C5", "C6"]);
 });
 
 /* ----------------------------------------------------------------------
@@ -2005,17 +2003,18 @@ test("on a phone a cell holds the hopper, its blend and its resin; Compare adds 
  * -------------------------------------------------------------------- */
 
 const draftResin = (view, id, which) => row(view, id, which).querySelector(".slate-hopper__draft-resin");
+const draftPct = (view, id, which) => row(view, id, which).querySelector(".slate-hopper__draft-pct");
 const grip = (view, id, which) => row(view, id, which).querySelector(".slate-hopper__grip");
 const bulkFootOf = (view, which) => view.element.querySelector(`.slate-recipe__body[data-recipe='${which || "current"}'] .slate-recipe__bulk-foot`);
 const planWithA2 = code => withPlan(snap => { snap.nextRecipe.layers[0].hoppers[1].resinName = code; });
 
-test("a desktop: the shown tab is always a draft - no focus taken - with the fill bar up under the layers, the foot still below, Cancel only with changes, and Compare on with no switch", () => {
-  const { view, commands } = boot({ desktop: true, recipes: makeRecipes() });
+test("the shown tab is always a draft - no focus taken - with the fill bar up under the layers, the foot still below, Cancel only with changes, and Compare on with no switch", () => {
+  const { view, commands } = boot({ recipes: makeRecipes() });
   view.update(planWithA2("ZZ999"), { kind: "structural" });
   const bulk = view.bulk();
   assert.ok(bulk && bulk.auto && bulk.recipe === "current", "the desktop's tab is not a draft");
   assert.notEqual(draftResin(view, "A1").focused, true, "the draft took the focus on a publish");
-  assert.ok(view.element.classList.contains("is-desk"));
+  assert.ok(view.element.classList.contains("is-form"));
   const foot = bulkFootOf(view);
   assert.ok(!foot.hasAttribute("hidden"));
   assert.ok(!plainFoot(view).hasAttribute("hidden"), "the Book / Reset foot went with the draft");
@@ -2037,8 +2036,8 @@ test("a desktop: the shown tab is always a draft - no focus taken - with the fil
   assert.equal(commands.calls.length, 0);
 });
 
-test("a desktop: the badge picks for the fill and the grab strip lifts; with changes waiting a drag, a share, the plan's moves and a tab switch wait, and they free again when the change is put back", () => {
-  const { view, said } = boot({ desktop: true, recipes: makeRecipes() });
+test("the badge picks for the fill and the grab strip lifts; with changes waiting a drag, a share, the plan's moves and a tab switch wait, and they free again when the change is put back", () => {
+  const { view, said } = boot({ recipes: makeRecipes() });
   view.update(planWithA2("ZZ999"), { kind: "structural" });
   assert.equal(row(view, "A1").querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), false, "the badge still lifts");
   assert.equal(grip(view, "A1").hasAttribute("data-slate-handle"), true);
@@ -2068,8 +2067,8 @@ test("a desktop: the badge picks for the fill and the grab strip lifts; with cha
   assert.ok(view.bulk() && view.bulk().auto && view.bulk().recipe === "next", "Next is not a draft");
 });
 
-test("a desktop: an idle draft opens the share's editor and sends setLayerShare; Escape closes the editor, not the draft; waiting changes refuse it", () => {
-  const { view, commands, said } = boot({ desktop: true });
+test("an idle draft opens the share's editor and sends setLayerShare; Escape closes the editor, not the draft; waiting changes refuse it", () => {
+  const { view, commands, said } = boot({});
   view.update(withPlan(), { kind: "structural" });
   click(head(view, "B").querySelector(".slate-layer__share"));
   assert.deepEqual(view.editing(), { slot: "share", recipe: "current", layer: "B", index: null }, "an idle draft refused the share");
@@ -2091,8 +2090,8 @@ test("a desktop: an idle draft opens the share's editor and sends setLayerShare;
   assert.equal(commands.calls.length, 1);
 });
 
-test("a desktop: Apply sends ONE setHopperAssignments and the tab is a fresh draft; Cancel arms and discards into a fresh draft", () => {
-  const { view, commands, said, timers } = boot({ desktop: true });
+test("Apply sends ONE setHopperAssignments and the tab is a fresh draft; Cancel arms and discards into a fresh draft", () => {
+  const { view, commands, said, timers } = boot({});
   view.update(withPlan(), { kind: "structural" });
   typedInto(draftResin(view, "A2"), "LD999");
   click(bulkFootOf(view).querySelector("[data-slate-bulk-do='apply']"));
@@ -2111,9 +2110,9 @@ test("a desktop: Apply sends ONE setHopperAssignments and the tab is a fresh dra
   timers.advance(10000);
 });
 
-test("a desktop: a publish reaches every field not typed in and marks one that is; a structural publish leaves a fresh draft; a finger closes it and gives the badge back", () => {
+test("a publish reaches every field not typed in and marks one that is; a structural publish leaves a fresh draft, under a finger as under a mouse", () => {
   let input = "pointer";
-  const { view, said } = boot({ desktop: () => input === "pointer", tier: () => ({ input, width: "wide" }) });
+  const { view, said } = boot({ tier: () => ({ input, width: "wide" }) });
   view.update(withPlan(), { kind: "structural" });
   typedInto(draftResin(view, "A1"), "HX999");
   view.update(withPlan(snap => { snap.layers[0].hoppers[1].resinName = "LD777"; snap.layers[0].hoppers[0].resinName = "HX777"; }), { kind: "values" });
@@ -2126,31 +2125,28 @@ test("a desktop: a publish reaches every field not typed in and marks one that i
   assert.ok(view.bulk() && view.bulk().auto && view.bulk().changes === 0);
   input = "touch";
   view.refresh();
-  assert.equal(view.bulk(), null, "the desktop's draft stayed under a finger");
-  assert.ok(!view.element.classList.contains("is-desk"));
-  assert.equal(row(view, "A1").querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), true);
-  input = "pointer";
-  view.refresh();
-  assert.ok(view.bulk() && view.bulk().auto);
+  assert.ok(view.bulk() && view.bulk().auto, "a finger closed the draft");
+  assert.ok(view.element.classList.contains("is-form"));
+  assert.equal(row(view, "A1").querySelector(".slate-hopper__id").hasAttribute("data-slate-handle"), false, "a finger took the badge back as the handle");
 });
 
-test("a desktop without the command or read-only is no draft; the sheets set the switches and the weight aside and draw the grab strip only there", () => {
-  const { view, setReadOnly } = boot({ desktop: true, readOnly: true });
+test("without the command, or read-only, there is no draft; the sheets set the switches and the weight aside and draw the grab strip only there", () => {
+  const { view, setReadOnly } = boot({ readOnly: true });
   view.update(withPlan(), { kind: "structural" });
   assert.equal(view.bulk(), null, "a read-only desktop opened a draft");
   setReadOnly(false);
   view.refresh();
   assert.ok(view.bulk() && view.bulk().auto);
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
-  assert.match(css, /\.slate-recipe\.is-desk \.slate-recipe__bulk,\s*\.slate-recipe\.is-desk \.slate-recipe__compare \{\s*display: none;/);
-  assert.match(css, /\.slate-recipe\.is-desk \.slate-hopper__weight \{\s*visibility: hidden;/);
+  assert.match(css, /\.slate-recipe\.is-form \.slate-recipe__bulk,\s*\.slate-recipe\.is-form \.slate-recipe__compare \{\s*display: none;/);
+  assert.match(css, /\.slate-recipe\.is-form \.slate-hopper__weight \{\s*visibility: hidden;/);
   assert.match(css, /\n\.slate-hopper__grip \{\s*display: none;/);
-  assert.match(css, /\.slate-recipe\.is-desk \.slate-hopper__grip \{[^}]*grid-area: grip;/);
+  assert.match(css, /\.slate-recipe\.is-form \.slate-hopper__grip \{[^}]*grid-area: grip;/);
   assert.match(css, /"note note"\s*"grip grip";/);
 });
 
 test("a desktop's layer menu waits only while the draft has changes; a Next cell keeps an empty weight line so it stands as tall as a Current one", () => {
-  const { view } = boot({ desktop: true });
+  const { view } = boot({});
   view.update(withPlan(), { kind: "structural" });
   const clearItem = head(view, "A").querySelector("[data-menu-clear]");
   assert.ok(clearItem, "no layer menu");
@@ -2209,7 +2205,7 @@ test("the share's bar follows the share: set on build, moved by a patch, clamped
 });
 
 test("Empty blanks only the selected hoppers into the draft - nothing sent, the selection kept - and Apply sends them as ONE setHopperAssignments", () => {
-  const { view, commands, said } = boot({ desktop: true });
+  const { view, commands, said } = boot({});
   view.update(withPlan(), { kind: "structural" });
   const strip = bulkFootOf(view).querySelector(".slate-recipe__fill");
   const empty = strip.querySelector("[data-slate-fill='empty']");
@@ -2236,7 +2232,7 @@ test("Empty blanks only the selected hoppers into the draft - nothing sent, the 
 });
 
 test("Clear recipe blanks every hopper of the shown tab into the draft - nothing sent - Apply sends it as ONE setHopperAssignments, and Cancel puts it all back; on Next it clears the plan", () => {
-  const { view, commands } = boot({ desktop: true });
+  const { view, commands } = boot({});
   view.update(withPlan(), { kind: "structural" });
   const clear = bulkFootOf(view).querySelector("[data-slate-bulk-do='clear']");
   assert.equal(clear.textContent, recipe.CLEAR_LABEL);
@@ -2268,7 +2264,7 @@ test("Clear recipe blanks every hopper of the shown tab into the draft - nothing
   assert.equal(commands.calls[1].args.recipe, "next");
 
   // An empty tab says so and changes nothing.
-  const empty = boot({ desktop: true });
+  const empty = boot({});
   empty.view.update(withPlan(snap => { for (const layer of snap.layers) for (const hopper of layer.hoppers) { hopper.resinName = ""; hopper.pct = 0; } }), { kind: "structural" });
   click(bulkFootOf(empty.view).querySelector("[data-slate-bulk-do='clear']"));
   assert.equal(empty.said[empty.said.length - 1], recipe.CLEAR_EMPTY);
