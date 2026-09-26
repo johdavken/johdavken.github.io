@@ -2,8 +2,10 @@
  *
  * Four pure functions over station-rundown.js's projected entries:
  *
- *   windowFor      how much time the axis spans - fitted to the changeover
- *                  when there is a usable one, a fixed 6 or 12 hours otherwise
+ *   windowFor      how much time the axis spans - the scale the operator
+ *                  chose: a fixed 3, 6 or 12 hours, or Scaled, which fits
+ *                  the axis to the changeover and stands at the chosen
+ *                  hours while there is no usable one to fit
  *   verticalTicks  the wall-clock marks down the axis, labelled as densely
  *                  as the height allows
  *   groupEvents    who is overdue, who is on the axis (in groups within
@@ -12,7 +14,12 @@
  *   spanNeeded     the shortest axis on which every card fits without a
  *                  merge - so only hoppers within five minutes share a card
  *                  and every dot stands at its own instant; the Timeline
- *                  grows to it and scrolls when the window is shorter
+ *                  grows to it and scrolls when the window is shorter.
+ *                  `endRoom` keeps the cards after a mark under the axis's
+ *                  end, which a fitted axis wants (its end is the
+ *                  changeover) and a chosen span does not: an hour chosen
+ *                  is an hour shown, and a card near the end is lifted to
+ *                  fit rather than stretching the axis to make room
  *   placeCards     where each card sits so that none overlap and none leave
  *                  the axis, while every dot stays at its exact instant
  *
@@ -31,8 +38,16 @@
 
   const MINUTE = rundownModule.MINUTE;
   const HOUR = rundownModule.HOUR;
-  const WINDOWS = rundownModule.WINDOWS;
-  const DEFAULT_WINDOW = rundownModule.DEFAULT_WINDOW;
+  /* Slate's own scale ladder. Station's run-down row offers six or twelve
+   * hours (station-rundown.js WINDOWS) and keeps them; a tall, narrow axis
+   * reads a short shift well, so Slate adds three - and names the fitted
+   * axis, which until now happened to the operator rather than being
+   * chosen. DEFAULT_HOURS is where a fitted axis stands while there is no
+   * changeover to fit, and Station's default is the same six hours. */
+  const SCALED = "scaled";
+  const HOURS = Object.freeze([3, 6, 12]);
+  const DEFAULT_HOURS = rundownModule.DEFAULT_WINDOW;
+  const DEFAULT_SCALE = SCALED;
 
   /* A fitted window keeps this much room under the changeover for its
    * label, and is never shorter than an hour. */
@@ -50,22 +65,46 @@
 
   /* ---- The window ---- */
 
+  /** The scale as offered: 3, 6, 12 or "scaled", anything else the default. */
+  function scaleFrom(value) {
+    if (value === SCALED) return SCALED;
+    return HOURS.includes(value) ? value : DEFAULT_SCALE;
+  }
+
+  /** The hours a fixed axis stands at, and a fitted one falls back to. */
+  function hoursFrom(value) {
+    return HOURS.includes(value) ? value : DEFAULT_HOURS;
+  }
+
   /**
-   * @param {object} options  { now, changeover: {at, stale} | null, horizonHours }
-   * @returns {{ mode: "fit"|"fixed", windowMs: number, horizonHours: number, endAt: number }}
+   * How far the axis reaches.
+   *
+   * `scale` is the operator's choice and is obeyed: a number of hours is
+   * that many hours, whatever the changeover does. "Scaled" fits the axis
+   * to a usable changeover, and while there is none - unset, stale or
+   * passed - stands at `hours` (the hours last chosen), which is where a
+   * fitted axis has always stood. So `fitted` says whether Scaled is
+   * fitting anything at the moment, which is what the scale's control
+   * reports.
+   *
+   * @param {object} options  { now, changeover: {at, stale} | null, scale, hours }
+   * @returns {{ mode, windowMs, scale, hours, fitted, endAt }}  `hours` is
+   *          the hours the axis stands at, which a fitted axis has none of
    */
   function windowFor(options) {
     const settings = options || {};
     const now = Number.isFinite(settings.now) ? settings.now : Date.now();
     const changeover = settings.changeover || null;
-    const horizonHours = WINDOWS.includes(settings.horizonHours) ? settings.horizonHours : DEFAULT_WINDOW;
+    const scale = scaleFrom(settings.scale);
+    const hours = hoursFrom(settings.hours);
     const usable = !!(changeover && Number.isFinite(changeover.at) && !changeover.stale && changeover.at > now);
-    if (usable) {
+    if (scale === SCALED && usable) {
       const windowMs = Math.max((changeover.at - now) * FIT_MARGIN, MIN_WINDOW_MS);
-      return { mode: "fit", windowMs, horizonHours, endAt: now + windowMs };
+      return { mode: "fit", windowMs, scale, hours, fitted: true, endAt: now + windowMs };
     }
-    const windowMs = horizonHours * HOUR;
-    return { mode: "fixed", windowMs, horizonHours, endAt: now + windowMs };
+    const standing = scale === SCALED ? hours : scale;
+    const windowMs = standing * HOUR;
+    return { mode: "fixed", windowMs, scale, hours: standing, fitted: false, endAt: now + windowMs };
   }
 
   /* ---- The ticks ---- */
@@ -93,7 +132,7 @@
   function verticalTicks(options) {
     const settings = options || {};
     const now = Number.isFinite(settings.now) ? settings.now : Date.now();
-    const windowMs = Number.isFinite(settings.windowMs) && settings.windowMs > 0 ? settings.windowMs : DEFAULT_WINDOW * HOUR;
+    const windowMs = Number.isFinite(settings.windowMs) && settings.windowMs > 0 ? settings.windowMs : DEFAULT_HOURS * HOUR;
     const height = Number.isFinite(settings.height) && settings.height > 0 ? settings.height : 0;
     const minLabelGapPx = Number.isFinite(settings.minLabelGapPx) ? settings.minLabelGapPx : LABEL_MIN_PX;
     const edgePx = Number.isFinite(settings.edgePx) ? settings.edgePx : LABEL_EDGE_PX;
@@ -153,7 +192,7 @@
   function groupEvents(entries, options) {
     const settings = options || {};
     const now = Number.isFinite(settings.now) ? settings.now : Date.now();
-    const windowMs = Number.isFinite(settings.windowMs) && settings.windowMs > 0 ? settings.windowMs : DEFAULT_WINDOW * HOUR;
+    const windowMs = Number.isFinite(settings.windowMs) && settings.windowMs > 0 ? settings.windowMs : DEFAULT_HOURS * HOUR;
     const groupMs = Number.isFinite(settings.groupMs) ? settings.groupMs : GROUP_MS;
     const list = Array.isArray(entries) ? entries : [];
     const done = [];
@@ -210,10 +249,18 @@
    * greater of: every card stacked from the floor, and any card's instant
    * plus the cards after it. Both must end by the span's end.
    *
+   * `endRoom` is the second of those two: a fitted axis ends at the
+   * changeover, so what stands after a mark must fit above it and the axis
+   * stretches until it does. A chosen span has no such end - three hours
+   * chosen is three hours shown - so it asks only that the cards stack,
+   * and a card near the end is lifted to fit (placeCards) rather than
+   * stretching the axis by twenty times to hold the last few pixels.
+   *
    * @param {Array} groups       groupEvents' groups (each with its fraction)
    * @param {object} options     { cardHeight(group), gap, floorOffset (the
    *                             pinned block's room above the first card),
-   *                             minSpan (what the window shows), maxSpan }
+   *                             minSpan (what the window shows), maxSpan,
+   *                             endRoom (default true) }
    * @returns {{ span: number, needed: number, grows: boolean, fits: boolean }}
    */
   function spanNeeded(groups, options) {
@@ -223,17 +270,20 @@
     const floorOffset = Number.isFinite(settings.floorOffset) ? Math.max(settings.floorOffset, 0) : 0;
     const minSpan = Number.isFinite(settings.minSpan) ? Math.max(settings.minSpan, 0) : 0;
     const maxSpan = Number.isFinite(settings.maxSpan) && settings.maxSpan > 0 ? settings.maxSpan : Infinity;
+    const endRoom = settings.endRoom !== false;
     const list = Array.isArray(groups) ? groups : [];
     const heights = list.map(group => Math.max(Number(cardHeight(group)) || 0, 0));
     let needed = 0;
     if (list.length) {
       const stacked = heights.reduce((sum, height) => sum + height, 0) + gap * (list.length - 1);
       needed = floorOffset + stacked;
-      let tail = -gap;
-      for (let index = list.length - 1; index >= 0; index -= 1) {
-        tail += heights[index] + gap;
-        const fraction = Math.max(0, Math.min(1, Number(list[index].fraction) || 0));
-        needed = Math.max(needed, tail / Math.max(1 - fraction, MIN_END_ROOM));
+      if (endRoom) {
+        let tail = -gap;
+        for (let index = list.length - 1; index >= 0; index -= 1) {
+          tail += heights[index] + gap;
+          const fraction = Math.max(0, Math.min(1, Number(list[index].fraction) || 0));
+          needed = Math.max(needed, tail / Math.max(1 - fraction, MIN_END_ROOM));
+        }
       }
     }
     const span = Math.min(Math.max(minSpan, needed), Math.max(maxSpan, minSpan));
@@ -327,6 +377,7 @@
 
   return Object.freeze({
     FIT_MARGIN, MIN_WINDOW_MS, GROUP_MS, MINOR_LADDER, LABEL_LADDER, MINOR_MIN_PX, LABEL_MIN_PX, LABEL_EDGE_PX, MIN_END_ROOM,
-    windowFor, tickPlan, verticalTicks, groupEvents, spanNeeded, placeCards
+    SCALED, HOURS, DEFAULT_HOURS, DEFAULT_SCALE,
+    windowFor, scaleFrom, hoursFrom, tickPlan, verticalTicks, groupEvents, spanNeeded, placeCards
   });
 });

@@ -204,6 +204,39 @@ test("Settings offers the eight handlings as radios after Layout, withheld on a 
   click(inert.handling("glow"));
 });
 
+/* ----------------------------------------------------------------------
+ *   Tracked and pumped off: how a card says so
+ * -------------------------------------------------------------------- */
+
+test("a tracked or pumped-off card is raised and inks its id, and nothing paints the card itself", () => {
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "recipe.css"), "utf8");
+  const rule = selector => {
+    const at = css.lastIndexOf(`${selector} {`);
+    assert.ok(at > -1, `no rule for ${selector}`);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  // The state names the colour its id takes, and nothing else.
+  assert.match(css, /\.slate-hopper\.is-tracked \{\s*--slate-status-ink: var\(--slate-tracking\);/);
+  assert.match(css, /\.slate-hopper\.is-pump-off \{\s*--slate-status-ink: var\(--slate-pump-off\);/);
+  // The id's own rules resolve it, so Compare's and a pick's id colours
+  // are still decided where they were.
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper__id'), /color: var\(--slate-status-ink, var\(--slate-text-muted\)\);/);
+  assert.match(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__id'), /color: var\(--slate-status-ink, var\(--slate-text-muted\)\);/);
+  // The Grid's card stands a little above the page, on the page's own
+  // shadow - the colour is the id's job - and a `translate`, so a picked
+  // card's scale survives. A card being carried leaves its place flat.
+  const raised = rule('.slate-root[data-layers="grid"] .slate-hopper.is-tracked,\n.slate-root[data-layers="grid"] .slate-hopper.is-pump-off');
+  assert.match(raised, /translate: 0 -2px;/);
+  assert.match(raised, /box-shadow: var\(--slate-shadow-card\), 0 4px 9px -2px color-mix\(in srgb, var\(--slate-scrim\)/);
+  assert.doesNotMatch(raised, /transform:/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper.is-dragging'), /translate: none;/);
+  // Nothing tints a card any more, on either tier, and no preference
+  // chooses between ways of saying it.
+  assert.doesNotMatch(css, /--slate-status-fill|--slate-status-edge|--slate-status-pip|--slate-status-tint/);
+  assert.doesNotMatch(css, /data-hopper-status/);
+  assert.doesNotMatch(css, /@keyframes slate-status-/);
+});
+
 test("hosted, the root carries the handling as data-drag-motion, and a switch flips it alone", () => {
   const { hostEl, executed, controller } = bootHosted({ linked: false, stored: { handling: "tilt" } });
   assert.equal(hostEl.getAttribute("data-drag-motion"), "tilt");
@@ -538,9 +571,9 @@ test("the Grid layout: a row per layer, the head a tile at its start and one cel
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__rows'), /display: contents;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper[data-recipe]'), /grid-column: calc\(var\(--slate-hopper-slot, 0\) \+ 2\);[^}]*border: var\(--slate-stroke\) solid light-dark\(transparent, var\(--slate-border\)\);/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper.is-empty'), /--slate-grid-unset: hidden;[^}]*--slate-grid-plus: "\+";/);
-  // Outlined on a dark theme only: a light theme's tiles are their fill; a dark theme's need the edge.
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper.is-tracked'), /border-color: light-dark\(transparent, /);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper.is-pump-off'), /border-color: light-dark\(transparent, var\(--slate-pump-off\)\);/);
+  // A tracked or pumped-off tile is not painted at all: it is raised, and
+  // its id takes the colour (its own test below).
+  assert.doesNotMatch(css, /\.slate-hopper\.is-tracked \{[^}]*background:/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper.is-empty'), /background: light-dark\([^;]*, transparent\);/);
   for (const theme of fs.readdirSync(path.join(__dirname, "slate", "styles", "themes"))) {
     assert.match(fs.readFileSync(path.join(__dirname, "slate", "styles", "themes", theme), "utf8"), /--slate-color-scheme: (light|dark);/, `${theme} does not say whether it is light or dark`);

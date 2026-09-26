@@ -5,9 +5,14 @@
  * set, the estimated empty otherwise. Cards within five minutes share one
  * card; what is already late pins under the Now line; what has no estimate
  * lists beneath the axis; what is pumped off collects at the foot with a
- * way back on. The scale fits the job: the axis stretches to the
- * changeover when there is a usable one, and offers six or twelve hours
- * when there is not.
+ * way back on.
+ *
+ * THE SCALE, under the changeover line: 3H, 6H, 12H or Scaled. Scaled - the
+ * shift's own scale, and the one a Timeline opens on - stretches the axis
+ * to the changeover, and while there is none to fit stands at the hours
+ * last chosen, saying so by echoing them softly. A chosen span is obeyed
+ * whatever the changeover does: at 3H a changeover eight hours out is
+ * simply not on the axis, and what is due past the end says so as a chip.
  *
  * The arithmetic is station-rundown.js's - the projection the application's
  * own formula is pinned to; the geometry is slate-timeline-layout.js's,
@@ -35,7 +40,7 @@
  * The LIST view (the Timeline preference, slate-display.js) is the same
  * rows without the clock: late first, then by mark, then those without
  * an estimate, each row saying its clock and countdown; the pumped-off
- * foot stays. The axis, its cards and the horizon switch are withheld.
+ * foot stays. The axis, its cards and the scale are withheld.
  * The rows are the same elements in either view.
  */
 (function (root, factory) {
@@ -64,6 +69,9 @@
   // tracks a hopper once a plan changes its resin.
   const NONE_TRACKED_AUTOMATIC = "No hoppers tracked. Plan a Next Recipe; hoppers whose resin changes are tracked automatically.";
   const STALE_CHANGEOVER = "Changeover needs confirming";
+  /* Scaled's hint: what the axis does, and what it does when there is no
+   * changeover to fit - the hours beside it, marked as the standing one. */
+  const SCALED_HINT = "Fit the axis to the changeover, or stand at the chosen hours while none is set";
   /* On a phone the scale stretches for crowded cards, up to this. */
   const MAX_PHONE_SPAN = 4000;
   /* A desktop's or a tablet's axis grows past its window to keep every
@@ -144,6 +152,28 @@
     return { d, height: r(Math.max(dotY, endY) + 2), endY: r(endY) };
   }
 
+  /* Scaled's mark: a dimension between two ends - Now and the changeover -
+   * which is what a fitted axis is. Drawn plainly, because nine pixels
+   * hold no detail: two end bars and the span between them. */
+  function fitGlyph(doc) {
+    const svg = doc.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "slate-timeline__range-glyph");
+    svg.setAttribute("viewBox", "0 0 10 12");
+    svg.setAttribute("width", "9");
+    svg.setAttribute("height", "11");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", "M1.5 1.6H8.5M1.5 10.4H8.5M5 1.6V10.4");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+    return svg;
+  }
+
   /** "400 lb · 3h 10m run-down" for a single card's second line. */
   function facts(entry) {
     const parts = [];
@@ -211,19 +241,39 @@
     head.appendChild(text(doc, "h2", "slate-timeline__title", "Timeline"));
     const clock = text(doc, "span", "slate-timeline__clock", "");
     head.appendChild(clock);
-    const scale = element(doc, "div", "slate-timeline__scale", { role: "group", "aria-label": "Horizon" });
-    const rangeButtons = new Map();
-    for (const hours of rundownModule.WINDOWS) {
-      const button = text(doc, "button", "slate-timeline__range", `${hours}H`, { type: "button", "data-window": String(hours), "aria-pressed": hours === rundownModule.DEFAULT_WINDOW ? "true" : "false" });
-      rangeButtons.set(hours, button);
-      scale.appendChild(button);
-    }
-    head.appendChild(scale);
     rootEl.appendChild(head);
     const changeoverLine = text(doc, "p", "slate-timeline__changeover-line", "");
     rootEl.appendChild(changeoverLine);
     const counts = text(doc, "p", "slate-timeline__counts", "");
     rootEl.appendChild(counts);
+    /* The scale, on a line of its own under the counts. It stood in the
+     * head and was withheld whenever the axis fitted the changeover -
+     * which is most of a shift, so the operator had no say in it. Scaled
+     * is now one of the four choices and the control stays; four choices
+     * and a title do not share 300px of aside, and a line of its own is
+     * a height that never moves as the counts grow. */
+    const scaleRow = element(doc, "div", "slate-timeline__scale-row");
+    const scale = element(doc, "div", "slate-timeline__scale", { role: "group", "aria-label": "How far ahead the timeline looks" });
+    const rangeButtons = new Map();
+    for (const hours of layoutModule.HOURS) {
+      const button = element(doc, "button", "slate-timeline__range", { type: "button", "data-window": String(hours), "aria-pressed": "false" });
+      button.appendChild(text(doc, "span", "slate-timeline__range-num", String(hours)));
+      button.appendChild(text(doc, "span", "slate-timeline__range-unit", "H"));
+      rangeButtons.set(hours, button);
+      scale.appendChild(button);
+    }
+    const scaledButton = element(doc, "button", "slate-timeline__range is-scaled", {
+      type: "button",
+      "data-window": layoutModule.SCALED,
+      "aria-pressed": "false",
+      title: SCALED_HINT
+    });
+    scaledButton.appendChild(fitGlyph(doc));
+    scaledButton.appendChild(text(doc, "span", "slate-timeline__range-word", "Scaled"));
+    rangeButtons.set(layoutModule.SCALED, scaledButton);
+    scale.appendChild(scaledButton);
+    scaleRow.appendChild(scale);
+    rootEl.appendChild(scaleRow);
     // The pump-off alarm: this device's own sound, vibration and
     // notifications (the application's), switched through the tracking
     // seam. Offered under a finger (timeline.css), where the floor UI
@@ -351,7 +401,12 @@
       window: null,
       grouped: null,
       placed: null,
-      horizon: rundownModule.DEFAULT_WINDOW,
+      /* The scale: 3, 6, 12 or "scaled" - the axis fitted to the
+       * changeover, as it always was, and so the scale a shift starts on.
+       * `hours` is the last hours chosen, which Scaled stands at while
+       * there is no changeover to fit. */
+      scale: layoutModule.DEFAULT_SCALE,
+      hours: layoutModule.DEFAULT_HOURS,
       view: "realtime",
       timer: null,
       height: 0,
@@ -710,11 +765,11 @@
       const focused = focusedKey();
 
       setText(clock, rundownModule.formatClock(at));
-      state.window = layoutModule.windowFor({ now: at, changeover: state.changeover, horizonHours: state.horizon });
+      state.window = layoutModule.windowFor({ now: at, changeover: state.changeover, scale: state.scale, hours: state.hours });
       const fit = state.window.mode === "fit";
       rootEl.setAttribute("data-mode", state.window.mode);
-      show(scale, !fit);
-      for (const [hours, button] of rangeButtons) button.setAttribute("aria-pressed", hours === state.horizon ? "true" : "false");
+      rootEl.setAttribute("data-scale", String(state.window.scale));
+      paintScale();
       setText(changeoverLine, changeoverText(state.changeover, at));
       rootEl.classList.toggle("is-stale", !!state.changeover.stale);
       rootEl.classList.toggle("is-unset", state.changeover.at === null);
@@ -731,7 +786,8 @@
       show(axis, !listing);
       show(viewport, !listing);
       show(listEl, listing);
-      if (listing) show(scale, false);
+      // The list has no axis, so no scale to choose.
+      show(scaleRow, !listing);
       if (listing) {
         renderList(entries, at, keep);
       } else {
@@ -802,6 +858,20 @@
       }
     }
 
+    /* The scale's control: the chosen scale lit, and - while Scaled has no
+     * changeover to fit - the hours it is standing at echoed softly, so the
+     * axis never spans a length nothing on screen accounts for. */
+    function paintScale() {
+      const chosen = state.window ? state.window.scale : state.scale;
+      const standing = state.window && !state.window.fitted ? state.window.hours : null;
+      for (const [value, button] of rangeButtons) {
+        button.setAttribute("aria-pressed", value === chosen ? "true" : "false");
+        const echo = chosen === layoutModule.SCALED && value === standing;
+        if (echo) button.setAttribute("data-standing", "true");
+        else button.removeAttribute("data-standing");
+      }
+    }
+
     /* The axis: the clock, the cards at their marks, the pinned block,
      * the chips beyond the horizon. */
     function renderAxis(entries, at, keep, fit) {
@@ -823,15 +893,20 @@
         // axis's end): the scale is stretched until the most crowded run
         // fits, within reason.
         const windowMs = state.window.windowMs;
-        const changeoverAt = state.changeover && Number.isFinite(state.changeover.at) && !state.changeover.stale ? state.changeover.at : null;
-        const endFraction = changeoverAt !== null && changeoverAt > at && changeoverAt <= at + windowMs ? (changeoverAt - at) / windowMs : 1;
         let span = cards;
-        let tail = 0;
-        for (let index = early.groups.length - 1; index >= 0; index -= 1) {
-          const group = early.groups[index];
-          tail += cardHeight(group) + GAP;
-          const fraction = Math.max(0, Math.min(1, group.fraction || 0));
-          span = Math.max(span, tail / Math.max(endFraction - fraction, 0.05));
+        // Only a fitted axis stretches for the run that must end by the
+        // changeover; a chosen span shows its hours and lifts what would
+        // hang past the end (the desktop's rule, spanNeeded's endRoom).
+        if (fit) {
+          const changeoverAt = state.changeover && Number.isFinite(state.changeover.at) && !state.changeover.stale ? state.changeover.at : null;
+          const endFraction = changeoverAt !== null && changeoverAt > at && changeoverAt <= at + windowMs ? (changeoverAt - at) / windowMs : 1;
+          let tail = 0;
+          for (let index = early.groups.length - 1; index >= 0; index -= 1) {
+            const group = early.groups[index];
+            tail += cardHeight(group) + GAP;
+            const fraction = Math.max(0, Math.min(1, group.fraction || 0));
+            span = Math.max(span, tail / Math.max(endFraction - fraction, 0.05));
+          }
         }
         span = Math.min(span, MAX_PHONE_SPAN);
         axis.style.minHeight = px(origin + bottomInsetFor + span + GAP);
@@ -850,7 +925,10 @@
           gap: GAP,
           floorOffset: overdue ? cardHeight(overdue) + 2 * GAP : 0,
           minSpan: Math.max(state.visible - TOP_INSET - bottomInsetFor, 0),
-          maxSpan: MAX_SPAN
+          maxSpan: MAX_SPAN,
+          // A chosen span is shown whole: only a fitted axis stretches to
+          // keep what stands after a late mark above its end.
+          endRoom: fit
         });
         if (need.grows) {
           grown = TOP_INSET + need.span + bottomInsetFor;
@@ -873,7 +951,13 @@
       show(changeoverMark, usable);
       if (usable) {
         changeoverMark.style.top = px(origin + changeoverY);
-        setText(changeoverLabel, `Changeover ${rundownModule.formatClock(state.changeover.at)}`);
+        // A fitted axis ends at the changeover, where the word has the
+        // room to stand; on a chosen span it is a mark among the cards, so
+        // its time rides the clock's own gutter (the tick label at that
+        // instant stands down for it, paintTicks) and nothing is covered.
+        const clock = rundownModule.formatClock(state.changeover.at);
+        setText(changeoverLabel, fit ? `Changeover ${clock}` : clock);
+        changeoverMark.setAttribute("title", `Changeover ${clock}`);
       }
       paintTicks(layoutModule.verticalTicks({ now: at, windowMs, height: span }).marks, changeoverY, origin);
 
@@ -986,7 +1070,7 @@
       const target = event && event.target;
       if (!target || typeof target.closest !== "function") return;
       const range = target.closest("[data-window]");
-      if (range && rootEl.contains(range)) { setWindow(Number(range.getAttribute("data-window"))); return; }
+      if (range && rootEl.contains(range)) { setWindow(range.getAttribute("data-window")); return; }
       const toggle = target.closest("[data-slate-control]");
       if (!toggle || !rootEl.contains(toggle) || toggle.hasAttribute("disabled")) return;
       const request = trackingModule.requestFrom(toggle);
@@ -1042,11 +1126,21 @@
 
     /* ---- API ---- */
 
-    function setWindow(hours) {
-      if (!rundownModule.WINDOWS.includes(hours) || hours === state.horizon) return state.horizon;
-      state.horizon = hours;
+    /**
+     * The scale, by the operator or by a caller: 3, 6, 12 or "scaled"
+     * ("3" and 3 alike, so the control's own attribute can be handed
+     * straight back). Anything else is no choice and changes nothing.
+     * Choosing hours remembers them as the hours Scaled stands at.
+     * @returns {number|string} the scale as it now stands
+     */
+    function setWindow(value) {
+      const asked = value === layoutModule.SCALED ? layoutModule.SCALED : Number(value);
+      if (asked !== layoutModule.SCALED && !layoutModule.HOURS.includes(asked)) return state.scale;
+      if (asked === state.scale) return state.scale;
+      state.scale = asked;
+      if (asked !== layoutModule.SCALED) state.hours = asked;
       render();
-      return state.horizon;
+      return state.scale;
     }
 
     /** New state: re-anchor, re-project, redraw. */
@@ -1261,6 +1355,7 @@
       marks,
       setWindow,
       getWindow: () => state.window,
+      scale: () => state.scale,
       destroy,
       entries: () => state.entries.slice(),
       grouped: () => state.grouped,

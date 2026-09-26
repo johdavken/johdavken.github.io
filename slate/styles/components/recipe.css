@@ -1154,19 +1154,11 @@
   box-shadow: none;
 }
 
-.slate-root[data-layers="grid"] .slate-hopper.is-tracked {
-  border-color: light-dark(transparent, color-mix(in srgb, var(--slate-tracking) 55%, var(--slate-border)));
-  background: color-mix(in srgb, var(--slate-tracking) 14%, var(--slate-surface-raised));
-}
-
-.slate-root[data-layers="grid"] .slate-hopper.is-pump-off {
-  border-color: light-dark(transparent, var(--slate-pump-off));
-  background: var(--slate-pump-off-soft);
-}
-
 .slate-root[data-layers="grid"] .slate-hopper__id {
   grid-area: id;
-  color: var(--slate-text-muted);
+  /* --slate-status-ink is set only on a card that is tracked or pumped
+     off (the sheet's foot); every other id keeps the muted colour. */
+  color: var(--slate-status-ink, var(--slate-text-muted));
   font-size: var(--slate-text-sm);
   font-weight: 700;
 }
@@ -1445,7 +1437,7 @@
   display: block;
   align-self: baseline;
   min-width: 0;
-  color: var(--slate-text-muted);
+  color: var(--slate-status-ink, var(--slate-text-muted));
   font-size: var(--slate-text-xs);
   font-weight: 700;
 }
@@ -1549,14 +1541,6 @@
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-empty {
   background: var(--slate-surface);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-tracked {
-  background: color-mix(in srgb, var(--slate-tracking) 18%, var(--slate-surface-raised));
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-pump-off {
-  background: var(--slate-pump-off-soft);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-picked {
@@ -1794,4 +1778,40 @@
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper[data-recipe] {
   grid-column: 1;
   grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+}
+
+/* ---- Tracked and pumped off ----
+   A hopper that is tracked, or whose pump is off, says so twice and
+   quietly: its id takes the state's colour, and its card stands a little
+   above the page. Nothing is painted - a line of thirty hoppers is read
+   by its resins, not by its colour, which a filled card made hard.
+
+   The id's own rules resolve --slate-status-ink, so a card with no state
+   keeps the muted id it always had, and what Compare and a pick say about
+   an id is still decided where they always decided it. Every theme's
+   tracking and pump-off tones clear 4.5:1 on both card surfaces
+   (slate-theme.test.js pins the floor), so the id stays legible.
+
+   The rise is the Grid's alone: a phone's cells are packed edge to edge
+   with no radius or shadow of their own, and lifting one would break the
+   seams. There the id's colour says it. It is a `translate`, never a
+   transform, so a picked card's `scale` and a dragged one's survive. */
+
+.slate-hopper.is-tracked {
+  --slate-status-ink: var(--slate-tracking);
+}
+
+.slate-hopper.is-pump-off {
+  --slate-status-ink: var(--slate-pump-off);
+}
+
+.slate-root[data-layers="grid"] .slate-hopper.is-tracked,
+.slate-root[data-layers="grid"] .slate-hopper.is-pump-off {
+  translate: 0 -2px;
+  box-shadow: var(--slate-shadow-card), 0 4px 9px -2px color-mix(in srgb, var(--slate-scrim) 45%, transparent);
+}
+
+/* A card lifted off the page to be carried leaves its place flat. */
+.slate-root[data-layers="grid"] .slate-hopper.is-dragging {
+  translate: none;
 }

@@ -183,13 +183,17 @@ test("with nothing tracked or no line the pane says so; with a job the head carr
   assert.match(q(view, ".slate-timeline__counts").textContent, /1 off$/);
 });
 
-test("a usable changeover fits the axis: the mark stands at its instant, the scale hides, every tracked hopper is a member somewhere", () => {
+test("a usable changeover fits the axis: the mark stands at its instant, Scaled is lit, every tracked hopper is a member somewhere", () => {
   const { view, axis } = boot({ height: 700 });
   const placed = view.update(withChangeover(NOW, 4));
   assert.equal(view.element.getAttribute("data-mode"), "fit");
   const window = view.getWindow();
   assert.equal(window.windowMs, 4 * HOUR * 1.1);
-  assert.ok(q(view, ".slate-timeline__scale").hasAttribute("hidden"));
+  // The scale stays on offer, with Scaled lit and no hours echoed - it is
+  // fitting a changeover, not standing at a span.
+  assert.ok(!q(view, ".slate-timeline__scale-row").hasAttribute("hidden"));
+  assert.equal(q(view, "[data-window='scaled']").getAttribute("aria-pressed"), "true");
+  assert.equal(qa(view, "[data-standing]").length, 0);
   const mark = q(view, ".slate-timeline__changeover");
   assert.ok(!mark.hasAttribute("hidden"));
   const span = 700 - timelineModule.TOP_INSET - timelineModule.CHANGEOVER_INSET;
@@ -267,12 +271,98 @@ test("without a changeover the axis is a fixed horizon: 6H by default, 12H on th
   assert.match(later[0].textContent, /^B1 → 17h/);
   assert.equal(qa(view, "[data-slate-control='pump']").length, 1, "a chip is not a card: no toggle beyond the horizon");
 
+  // Scaled with no changeover to fit stands at six hours and says so.
+  assert.equal(q(view, "[data-window='scaled']").getAttribute("aria-pressed"), "true");
+  assert.equal(q(view, "[data-window='6']").getAttribute("data-standing"), "true");
+  assert.equal(q(view, "[data-window='12']").getAttribute("data-standing"), null);
+
   click(q(view, "[data-window='12']"));
   assert.equal(view.getWindow().windowMs, 12 * HOUR);
   assert.equal(q(view, "[data-window='12']").getAttribute("aria-pressed"), "true");
   assert.equal(q(view, "[data-window='6']").getAttribute("aria-pressed"), "false");
+  assert.equal(q(view, "[data-window='scaled']").getAttribute("aria-pressed"), "false");
+  assert.equal(qa(view, "[data-standing]").length, 0, "a chosen span echoes nothing");
+  assert.equal(view.element.getAttribute("data-scale"), "12");
   assert.equal(qa(view, ".slate-timeline__chip.is-later").length, 1, "17h is still beyond 12h");
-  assert.equal(view.setWindow(9), 12, "an unknown horizon was taken");
+  assert.equal(view.setWindow(9), 12, "an unknown scale was taken");
+  assert.equal(view.setWindow("3"), 3, "the control's own attribute reads as a scale");
+  assert.equal(view.getWindow().windowMs, 3 * HOUR);
+  // Back to Scaled: with no changeover it stands at the last hours chosen.
+  assert.equal(view.setWindow("scaled"), "scaled");
+  assert.equal(view.getWindow().windowMs, 3 * HOUR);
+  assert.equal(view.getWindow().fitted, false);
+  assert.equal(q(view, "[data-window='3']").getAttribute("data-standing"), "true");
+});
+
+test("the scale offers three spans and Scaled; a chosen span is obeyed while the changeover is a mark on it or beyond its end", () => {
+  const { view } = boot({ height: 700 });
+  view.update(withChangeover(NOW, 4));
+  const options = qa(view, "[data-window]");
+  assert.deepEqual(options.map(option => option.getAttribute("data-window")), ["3", "6", "12", "scaled"]);
+  assert.deepEqual(options.map(option => option.textContent), ["3H", "6H", "12H", "Scaled"]);
+  assert.ok(q(view, "[data-window='scaled'] .slate-timeline__range-glyph"), "Scaled has its mark");
+  assert.equal(view.element.getAttribute("data-scale"), "scaled");
+
+  // 12H over a changeover four hours out: the axis is twelve hours and the
+  // changeover a mark a third of the way down it, not the axis's end.
+  click(q(view, "[data-window='12']"));
+  assert.equal(view.element.getAttribute("data-mode"), "fixed");
+  assert.equal(view.getWindow().windowMs, 12 * HOUR);
+  const mark = q(view, ".slate-timeline__changeover");
+  assert.ok(!mark.hasAttribute("hidden"), "the changeover is still on a fixed axis");
+  const span = 700 - timelineModule.TOP_INSET - timelineModule.BOTTOM_INSET;
+  assert.ok(Math.abs(topOf(mark) - (timelineModule.TOP_INSET + span / 3)) < 0.2, `changeover at ${mark.style.top}`);
+  // Among the cards its time stands in the clock's gutter, wordless; the
+  // word is the mark's title, and the head line above says it in full.
+  const label = q(view, ".slate-timeline__changeover-label").textContent;
+  assert.match(label, /^\d{1,2}:\d{2}/, `the changeover label is not a clock (${label})`);
+  assert.doesNotMatch(label, /Changeover/);
+  assert.match(mark.getAttribute("title"), /^Changeover \d/);
+
+  // 3H: the changeover is past the end of the axis, so it is not on it.
+  click(q(view, "[data-window='3']"));
+  assert.equal(view.getWindow().windowMs, 3 * HOUR);
+  assert.ok(q(view, ".slate-timeline__changeover").hasAttribute("hidden"), "a changeover beyond the axis was drawn on it");
+  assert.ok(qa(view, ".slate-timeline__event").length > 0, "the cards due within three hours still stand");
+
+  // And Scaled fits it again - the axis ends there, so the word comes back.
+  click(q(view, "[data-window='scaled']"));
+  assert.equal(view.element.getAttribute("data-mode"), "fit");
+  assert.equal(view.getWindow().windowMs, 4 * HOUR * 1.1);
+  assert.equal(view.scale(), "scaled");
+  assert.match(q(view, ".slate-timeline__changeover-label").textContent, /^Changeover \d/);
+});
+
+test("a chosen span is shown whole: a card near its end is lifted to fit rather than stretching the axis, and every dot keeps its instant", () => {
+  const { view, axis } = boot({ height: 700 });
+  // A1 empty in about 20 minutes, B1 in about 2h 50m - the last mark at
+  // 95% of a three-hour axis, where room for its card below it would ask
+  // for an axis many times the pane's.
+  view.update(resolvedAt(NOW, snap => {
+    snap.job.changeoverTime = "";
+    snap.job.changeoverSetAt = null;
+    snap.job.lineRate = 100;
+    for (const layer of snap.layers) for (const hopper of layer.hoppers) { hopper.track = false; hopper.pumpOff = false; }
+    snap.layers[0].hoppers[0].track = true;   // A1: 15 lb/hr
+    snap.layers[0].hoppers[0].effectiveWeight = 5;
+    snap.layers[1].hoppers[0].track = true;   // B1: 35 lb/hr
+    snap.layers[1].hoppers[0].effectiveWeight = 100;
+  }));
+  click(q(view, "[data-window='3']"));
+  const placed = view.placed();
+  const last = placed.cards[placed.cards.length - 1];
+  assert.ok(last.group.fraction > 0.9, `the last card is not near the end (${last.group.fraction})`);
+  assert.equal(axis.style.minHeight || "", "", "a chosen span grew the axis");
+  assert.ok(!view.element.classList.contains("is-scrolling"));
+  assert.ok(placed.cards.every(card => !card.group.merged && !card.clipped), "a card merged on a chosen span");
+  assert.ok(last.displacement < 0, "the last card was not lifted to fit");
+  for (const card of placed.cards) assert.ok(Math.abs(card.y0 - (timelineModule.TOP_INSET + card.group.fraction * placed.span)) < 1e-6, "a dot left its instant");
+  // Scaled has no changeover to fit here, so it stands at three hours -
+  // the hours last chosen - and the axis stays as it is.
+  click(q(view, "[data-window='scaled']"));
+  assert.equal(view.element.getAttribute("data-mode"), "fixed");
+  assert.equal(view.getWindow().windowMs, 3 * HOUR);
+  assert.equal(q(view, "[data-window='3']").getAttribute("data-standing"), "true");
 });
 
 test("what is late pins under Now in one block, most late first; what has no estimate is a chip", () => {
@@ -471,7 +561,7 @@ test("the list view lists every tracked hopper as a row in time order - late fir
   }));
   assert.equal(view.element.getAttribute("data-view"), "list");
   assert.ok(q(view, ".slate-timeline__axis").hasAttribute("hidden"));
-  assert.ok(q(view, ".slate-timeline__scale").hasAttribute("hidden"));
+  assert.ok(q(view, ".slate-timeline__scale-row").hasAttribute("hidden"));
   assert.ok(q(view, ".slate-timeline__chips").hasAttribute("hidden"));
   assert.ok(!q(view, ".slate-timeline__list").hasAttribute("hidden"));
   assert.equal(qa(view, ".slate-timeline__event").length, 0);

@@ -22,19 +22,75 @@
   font-variant-numeric: tabular-nums;
 }
 
-.slate-timeline__scale {
+/* ---- The scale: 3H, 6H, 12H, Scaled ----
+   A line of its own under the counts, so its height never moves as the
+   counts grow, and right-aligned with the clock above it. The track is the
+   house segmented control (the recipe's tabs, recipe.css): a sunken bed
+   with one pill lit. Scaled stands apart from the three spans - a hairline,
+   then its mark and its word - because it is a different kind of choice:
+   not a length, but the axis taking the length the changeover asks for. */
+
+.slate-timeline__scale-row {
   display: flex;
-  margin-left: auto;
-  border: var(--slate-stroke) solid var(--slate-border);
-  border-radius: var(--slate-radius-sm);
-  overflow: hidden;
+  justify-content: flex-end;
+}
+
+.slate-timeline__scale {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 2px;
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+  /* A hairline bed: on a theme whose sunken surface is close to the
+     panel's, the choices would otherwise read as loose words. */
+  box-shadow: inset 0 0 0 var(--slate-stroke) var(--slate-border-subtle);
 }
 
 .slate-root .slate-timeline__range {
-  padding: 2px var(--slate-space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
   color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+/* The unit is not the number: it rides smaller and quieter, so a glance
+   reads 3 · 6 · 12 down the track and the H is only there to say what. */
+.slate-timeline__range-unit {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  /* Its cap sits a shade high beside the numeral's: drop it to the eye. */
+  transform: translateY(0.5px);
+  opacity: 0.6;
+}
+
+.slate-timeline__range-glyph {
+  flex: none;
+  margin-right: 1px;
+  opacity: 0.85;
+}
+
+/* Scaled's hairline. */
+.slate-root .slate-timeline__range.is-scaled {
+  position: relative;
+  margin-left: 7px;
+}
+
+.slate-timeline__range.is-scaled::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: -4px;
+  width: var(--slate-stroke);
+  background: var(--slate-border-subtle);
 }
 
 @media (hover: hover) {
@@ -44,7 +100,8 @@
   }
 }
 
-/* The scale clips its rounded corners, so draw keyboard focus inward. */
+/* The choices stand shoulder to shoulder in the bed, so keyboard focus is
+   drawn inward: a ring at the base offset would cross its neighbours. */
 .slate-root .slate-timeline__range:focus-visible {
   position: relative;
   z-index: 1;
@@ -55,13 +112,28 @@
   background: var(--slate-surface-selected);
 }
 
+/* The chosen scale. */
 .slate-root .slate-timeline__range[aria-pressed="true"] {
   background: var(--slate-accent);
   color: var(--slate-text-on-accent);
+  box-shadow: var(--slate-shadow-card);
+}
+
+.slate-timeline__range[aria-pressed="true"] .slate-timeline__range-unit,
+.slate-timeline__range[aria-pressed="true"] .slate-timeline__range-glyph {
+  opacity: 0.8;
 }
 
 .slate-root .slate-timeline__range[aria-pressed="true"]:active {
   background: var(--slate-accent-active);
+}
+
+/* Scaled with nothing to fit - no changeover, or one still to confirm -
+   stands at the hours last chosen, and says which by echoing them: the
+   axis never spans a length nothing on the control accounts for. */
+.slate-root .slate-timeline__range[data-standing="true"]:not([aria-pressed="true"]) {
+  background: var(--slate-accent-soft);
+  color: var(--slate-accent-text);
 }
 
 .slate-timeline__changeover-line {
@@ -281,6 +353,23 @@
   font-size: var(--slate-text-xs);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* A fitted axis ends at the changeover, with the cards above it and the
+   word beside it. A chosen span carries it as a mark like any other
+   instant, with cards on both sides - so there the dashed line crosses
+   them, and its time stands in the clock's gutter (slate-timeline.js drops
+   the word; paintTicks stands the tick label at that instant down for it)
+   rather than being read over a card. */
+.slate-timeline[data-mode="fixed"] .slate-timeline__changeover {
+  z-index: 2;
+}
+
+.slate-timeline[data-mode="fixed"] .slate-timeline__changeover-label {
+  right: auto;
+  left: 0;
+  width: 46px;
+  text-align: right;
 }
 
 /* ---- Cards ---- */
@@ -694,13 +783,15 @@
 
 .slate-root[data-input="touch"] .slate-timeline__range {
   position: relative;
+  justify-content: center;
   min-width: var(--slate-tap);
+  min-height: var(--slate-tap-cell);
 }
 
 .slate-root[data-input="touch"] .slate-timeline__range::after {
   content: "";
   position: absolute;
-  inset: -12px 0;
+  inset: -6px 0;
 }
 
 .slate-root[data-input="touch"] .slate-timeline__pump {

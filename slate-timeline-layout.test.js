@@ -22,9 +22,11 @@ function entry(key, markAt, extra) {
  *   windowFor
  * -------------------------------------------------------------------- */
 
-test("windowFor fits a usable changeover with a tenth of margin and never under an hour; otherwise a fixed 6 or 12 hours", () => {
+test("Scaled fits a usable changeover with a tenth of margin and never under an hour, and stands at the chosen hours when there is none to fit", () => {
   const fit = layout.windowFor({ now: NOW, changeover: { at: NOW + 4 * HOUR, stale: false } });
   assert.equal(fit.mode, "fit");
+  assert.equal(fit.scale, layout.SCALED, "Scaled is the scale a Timeline opens on");
+  assert.equal(fit.fitted, true);
   assert.equal(fit.windowMs, 4 * HOUR * 1.1);
   assert.equal(fit.endAt, NOW + 4 * HOUR * 1.1);
   const near = layout.windowFor({ now: NOW, changeover: { at: NOW + 10 * MINUTE, stale: false } });
@@ -32,13 +34,36 @@ test("windowFor fits a usable changeover with a tenth of margin and never under 
   for (const changeover of [null, { at: null, stale: false }, { at: NOW + 4 * HOUR, stale: true }, { at: NOW - MINUTE, stale: false }]) {
     const fixed = layout.windowFor({ now: NOW, changeover });
     assert.equal(fixed.mode, "fixed");
+    assert.equal(fixed.scale, layout.SCALED, "Scaled stays the scale it cannot fit");
+    assert.equal(fixed.fitted, false);
     assert.equal(fixed.windowMs, 6 * HOUR);
-    assert.equal(fixed.horizonHours, 6);
+    assert.equal(fixed.hours, 6, "the hours it is standing at are said");
   }
-  assert.equal(layout.windowFor({ now: NOW, changeover: null, horizonHours: 12 }).windowMs, 12 * HOUR);
-  assert.equal(layout.windowFor({ now: NOW, changeover: null, horizonHours: 7 }).windowMs, 6 * HOUR, "an unknown horizon is the default");
-  // A usable changeover ignores the horizon.
-  assert.equal(layout.windowFor({ now: NOW, changeover: { at: NOW + 4 * HOUR, stale: false }, horizonHours: 12 }).mode, "fit");
+  // Scaled stands at the hours last chosen, not always at six.
+  const standing = layout.windowFor({ now: NOW, changeover: null, scale: layout.SCALED, hours: 3 });
+  assert.equal(standing.windowMs, 3 * HOUR);
+  assert.equal(standing.hours, 3);
+});
+
+test("a chosen span is obeyed: three, six or twelve hours, whatever the changeover does", () => {
+  const changeover = { at: NOW + 4 * HOUR, stale: false };
+  for (const hours of layout.HOURS) {
+    const fixed = layout.windowFor({ now: NOW, changeover, scale: hours });
+    assert.equal(fixed.mode, "fixed", `${hours}H fitted the changeover anyway`);
+    assert.equal(fixed.fitted, false);
+    assert.equal(fixed.scale, hours);
+    assert.equal(fixed.windowMs, hours * HOUR);
+    assert.equal(fixed.endAt, NOW + hours * HOUR);
+  }
+  assert.deepEqual(layout.HOURS.slice(), [3, 6, 12]);
+  assert.equal(layout.DEFAULT_HOURS, 6);
+  assert.equal(layout.DEFAULT_SCALE, layout.SCALED);
+  // Anything that is not on offer is no choice at all.
+  for (const value of [undefined, null, 7, "12", 0, NaN, "fit"]) {
+    assert.equal(layout.scaleFrom(value), layout.SCALED, `${String(value)} was taken for a scale`);
+  }
+  for (const value of [undefined, null, 7, "6", 0]) assert.equal(layout.hoursFrom(value), 6, `${String(value)} was taken for hours`);
+  assert.equal(layout.windowFor({ now: NOW, changeover: null, scale: 7 }).windowMs, 6 * HOUR, "an unknown scale is the default");
 });
 
 /* ----------------------------------------------------------------------
@@ -240,6 +265,25 @@ test("spanNeeded: a crowded run grows the axis exactly enough that placeCards me
   // And it is the least: a pixel less and the last card no longer fits without a merge.
   const tight = layout.placeCards(groups, Object.assign({ height: 18 + need.span - 1 + 28 }, options));
   assert.ok(tight.cards.length < groups.length || tight.cards.some(card => card.displacement < 0), "the span asked for more than it needs");
+});
+
+test("spanNeeded: a chosen span asks only that the cards stack - endRoom off, a card near the end is not allowed to stretch the axis", () => {
+  const groups = [
+    { fraction: 0.2, members: [entry("A:1", NOW + HOUR)] },
+    { fraction: 0.96, members: [entry("B:1", NOW + 2 * HOUR)] }
+  ];
+  const options = { cardHeight: () => 80, gap: 8, minSpan: 600, maxSpan: 8000 };
+  const fitted = layout.spanNeeded(groups, options);
+  assert.ok(fitted.span > 1500, `an axis ending at the changeover makes room for the last card (${fitted.span})`);
+  const chosen = layout.spanNeeded(groups, Object.assign({ endRoom: false }, options));
+  assert.equal(chosen.span, 600, "a chosen span grew for room below the last mark");
+  assert.equal(chosen.grows, false);
+  // It still grows for cards that cannot stack in the window at all.
+  const crowded = [];
+  for (let index = 0; index < 10; index += 1) crowded.push({ fraction: index / 20, members: [entry(`H:${index}`, NOW + index * HOUR)] });
+  const stacked = layout.spanNeeded(crowded, Object.assign({ endRoom: false }, options));
+  assert.equal(stacked.span, 10 * 80 + 9 * 8);
+  assert.equal(stacked.grows, true);
 });
 
 test("spanNeeded: the pinned block's room counts; a card near the axis's end cannot ask for an endless axis; the cap is kept and says it does not fit", () => {
