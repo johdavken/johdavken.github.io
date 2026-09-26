@@ -1256,6 +1256,56 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.equal(executed.length, 0);
 });
 
+test("on a phone RT Sync stands at the foot of the menu beside Settings, its panel takes the menu's place until it closes, and wider it is back in the header", () => {
+  const media = fakeMedia({ coarse: true, width: 412 });
+  const { hostEl } = bootHosted({ linked: true, env: media });
+  const rail = hostEl.querySelector("[data-slate-mount='rail']");
+  const foot = rail.querySelector(".slate-rail__foot");
+  const header = hostEl.querySelector("[data-slate-mount='sync']");
+  const syncEl = hostEl.querySelector(".slate-sync");
+  const trigger = syncEl.querySelector(".slate-sync__trigger");
+  const panel = syncEl.querySelector(".slate-sync__panel");
+  const grip = hostEl.querySelector(".slate-grip");
+  const back = () => {
+    const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
+    for (const handler of hostEl.ownerDocument.listeners["polyn:android-back"] || []) handler(event);
+    return event;
+  };
+  assert.ok(syncEl.parentNode === foot, "RT Sync is not in the menu's foot");
+  assert.equal(header.querySelector(".slate-sync"), null, "RT Sync is still in the header");
+  assert.ok(foot.querySelector(".slate-rail__item[data-section='settings']"), "Settings left the foot");
+  click(grip);
+  click(trigger);
+  assert.ok(!panel.hasAttribute("hidden"));
+  assert.ok(rail.classList.contains("is-open"), "the menu was lowered under the panel");
+  assert.ok(rail.classList.contains("is-covered"), "the menu shows beside the panel");
+  // Its own Escape (Close's path: this harness has no status to render
+  // its buttons), then Back: the menu is back each time.
+  for (const handler of syncEl.listeners.keydown || []) handler({ type: "keydown", key: "Escape", stopPropagation() {} });
+  assert.ok(panel.hasAttribute("hidden"));
+  assert.ok(rail.classList.contains("is-open") && !rail.classList.contains("is-covered"), "closing the panel did not bring the menu back");
+  click(trigger);
+  back();
+  assert.ok(panel.hasAttribute("hidden"), "Back left the panel up");
+  assert.ok(rail.classList.contains("is-open") && !rail.classList.contains("is-covered"), "Back did not return to the menu");
+  // The menu lowered with the panel up takes the panel with it.
+  click(trigger);
+  back();
+  back();
+  assert.ok(!rail.classList.contains("is-open"));
+  click(grip);
+  click(trigger);
+  click(hostEl.querySelector("[data-slate-scrim]"));
+  assert.ok(!rail.classList.contains("is-open"), "the scrim left the menu up");
+  assert.ok(panel.hasAttribute("hidden"), "the panel outlived its menu");
+  assert.ok(!rail.classList.contains("is-covered"));
+
+  media.change({ width: 1280 });
+  assert.ok(syncEl.parentNode === header, "wider, RT Sync did not return to the header");
+  media.change({ width: 412 });
+  assert.ok(syncEl.parentNode === foot);
+});
+
 test("on a phone the grip steps aside while a field that raises the keyboard has focus, and comes back when focus leaves it", () => {
   const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
   const doc = hostEl.ownerDocument;

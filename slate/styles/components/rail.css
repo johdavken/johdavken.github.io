@@ -360,7 +360,7 @@
 
 /* Scrolled to its top, the sheet leaves the browser the upward pans alone:
    a downward swipe there is the push that lowers it. */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-at-top {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-at-top:not(.is-covered) {
   touch-action: pan-up;
 }
 
@@ -415,8 +415,22 @@
   box-shadow: none;
 }
 
+/* The foot: Settings, and RT Sync's readout beside it at the right
+   (slate.js moves it here from the header). */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: var(--slate-space-3);
   margin-top: var(--slate-space-3);
+}
+
+/* RT Sync's panel open from the foot takes the sheet's place: the sheet
+   stays up, unseen, and the panel - a sheet of its own (phone.css), seen
+   through its hidden parent - stands where it stood. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-covered {
+  visibility: hidden;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

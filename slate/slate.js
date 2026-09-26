@@ -203,6 +203,7 @@
     // and no rail sheet to raise.
     if (asideOpen && !drawer() && !page()) setAside(false);
     if (railOpen && !page()) setRail(false);
+    placeSync();
     // Home is a phone's alone: listed there, and left for the Recipe
     // when the screen stops being one.
     if (railView) railView.setListed(HOME, page());
@@ -314,11 +315,29 @@
   let statsOffStack = null;
   function setRail(open) {
     railOpen = !!open && page();
+    if (!railOpen && sync && sync.isOpen() && syncInSheet) sync.close(false);
     if (railOpen && !railOffStack && dismissModule) railOffStack = dismissModule.register(() => setRail(false));
     if (!railOpen && railOffStack) { const off = railOffStack; railOffStack = null; off(); }
     if (mounts.rail) mounts.rail.classList.toggle("is-open", railOpen);
     if (phoneDrawer) phoneDrawer.setExpanded(railOpen);
     paintScrim();
+  }
+
+  /* RT SYNC'S PLACE
+   *
+   * In the header's corner - and on a phone, where the header gives its
+   * row to the page, at the foot of the menu's sheet beside Settings. A
+   * move closes the panel: a node moved while focused loses its focus. */
+  let syncInSheet = false;
+  function placeSync() {
+    if (!sync) return;
+    const foot = railView && railView.element && typeof railView.element.querySelector === "function" ? railView.element.querySelector(".slate-rail__foot") : null;
+    const inSheet = page() && !!foot;
+    if (inSheet === syncInSheet && sync.element.parentNode) return;
+    if (sync.isOpen()) sync.close(false);
+    syncInSheet = inSheet;
+    if (inSheet) foot.appendChild(sync.element);
+    else if (mounts.sync) mounts.sync.appendChild(sync.element);
   }
 
   /* The header names the centre's section - or, on a phone, the page laid
@@ -680,7 +699,7 @@
       const sheet = mounts.rail;
       phoneDrawer = phoneDrawerModule.create(doc, {
         sheet,
-        enabled: () => page(),
+        enabled: () => page() && !(sync && sync.isOpen()),
         isOpen: () => railOpen,
         height: () => (typeof sheet.getBoundingClientRect === "function" ? sheet.getBoundingClientRect().height : 0),
         // The sheet under the finger: shown, without its slide, at the
@@ -731,8 +750,13 @@
     // tokens reach it; the sync module registers it with the bridge.
     const conflict = conflictModule ? conflictModule.create(doc) : null;
     if (conflict) container.appendChild(conflict.element);
-    sync = syncModule.create(doc, { connection, admin, conflict });
-    if (mounts.sync) mounts.sync.appendChild(sync.element);
+    sync = syncModule.create(doc, {
+      connection, admin, conflict,
+      // Opened from the menu's sheet, the panel takes the sheet's place:
+      // the sheet stays up behind it, unseen, and is back when it closes.
+      onToggle: open => { if (mounts.rail) mounts.rail.classList.toggle("is-covered", open && syncInSheet && railOpen); }
+    });
+    placeSync();
 
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 

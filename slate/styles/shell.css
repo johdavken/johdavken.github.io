@@ -139,7 +139,8 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-header {
   flex-wrap: wrap;
   row-gap: 0;
-  min-height: var(--slate-header-height-phone);
+  /* Nothing on the row but a notice: RT Sync is in the menu's sheet. */
+  min-height: 0;
   padding: 0 var(--slate-space-3);
 }
 
