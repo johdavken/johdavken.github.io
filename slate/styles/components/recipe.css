@@ -1337,11 +1337,7 @@
   display: grid;
   grid-auto-flow: column;
   grid-template-columns: repeat(var(--slate-layers, 3), minmax(0, 1fr));
-  gap: var(--slate-stroke);
-  overflow: hidden;
-  border: var(--slate-stroke) solid var(--slate-border-subtle);
-  border-radius: var(--slate-radius-lg);
-  background: var(--slate-border-subtle);
+  gap: 5px;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer,
@@ -1356,13 +1352,15 @@
   align-items: center;
   gap: 0 var(--slate-space-1);
   min-height: var(--slate-tap);
-  padding: 0 0 0 var(--slate-space-2);
-  border-width: 0 0 0 3px;
+  padding: 0 2px;
+  border-width: 0;
   border-radius: 0;
-  background: var(--slate-surface);
+  background: none;
 }
 
+/* The layer is said by its letter, in its tone: no stripe, no panel. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__name {
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
   font-size: var(--slate-text-lg);
   font-weight: 700;
 }
@@ -1392,23 +1390,29 @@
   font-size: var(--slate-text-xs);
 }
 
-/* The attribute out-specifies the Top layout's and the container's rows. */
+/* Each hopper its own tile (the attribute out-specifies the Top layout's
+   and the container's rows): the id, the resin under it, and the blend
+   large at the tile's foot, where a row of tiles lines its numbers up;
+   Compare's line and the grab strip under that. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
   grid-column: calc(var(--slate-layer-i, 0) + 1);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto auto;
   grid-template-areas:
-    "id pct"
-    "resin resin"
-    "next next";
-  align-content: start;
+    "id"
+    "resin"
+    "pct"
+    "next"
+    "grip";
   align-items: baseline;
-  column-gap: 3px;
   row-gap: 0;
-  min-height: 56px;
-  padding: 6px 5px 5px 6px;
-  border: 0;
-  border-radius: 0;
+  min-height: 84px;
+  /* The next resin's size follows the tile's width (cqi, below). */
+  container-type: inline-size;
+  padding: 6px 7px 5px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
   background: var(--slate-surface-raised);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -1430,11 +1434,15 @@
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct {
   grid-area: pct;
+  align-self: end;
+  justify-self: start;
   min-height: 0;
+  margin-top: var(--slate-space-1);
   padding: 0;
-  font-size: var(--slate-text-md);
+  font-size: var(--slate-text-xl);
   font-weight: 700;
-  letter-spacing: -0.04em;
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 /* Hopper 1's blend reads as the others do, as on the floor UI's phone. */
@@ -1455,20 +1463,25 @@
   white-space: nowrap;
 }
 
-/* Compare's band: the resin the hopper becomes (or replaces), small. */
+/* Compare's line: the resin the hopper becomes (or replaces), small,
+   under the blend, in the layer's tone. Sized to the tile so the arrow
+   and six characters always fit (about 5.4em of them, two wide letters
+   included): the xs size where the tile allows it, smaller where five
+   layers share a narrow screen. A longer code is clipped, not ended in
+   an ellipsis, which would take the sixth character's room. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next:not([hidden]) {
   grid-area: next;
   display: block;
   min-width: 0;
-  margin: var(--slate-space-1) -5px -5px -6px;
-  padding: 1px 3px 2px 4px;
+  margin: var(--slate-space-1) 0 0;
+  padding: 0;
   letter-spacing: -0.02em;
   overflow: hidden;
-  background: var(--slate-accent-soft);
-  color: var(--slate-accent-text);
-  font-size: var(--slate-text-xs);
+  background: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 70%, var(--slate-text));
+  font-size: min(var(--slate-text-xs), 100cqi / 5.4);
   font-weight: 600;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -1526,7 +1539,8 @@
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-empty {
-  background: var(--slate-surface);
+  border-style: dashed;
+  background: transparent;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-picked {
@@ -1550,11 +1564,33 @@
   font-size: var(--slate-text-sm);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct,
+/* The draft's blend reads as the plain one: large at the tile's foot, at
+   its left, the "%" small beside it. The field is as wide as its figure
+   (field-sizing), so the "%" follows the number. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pctwrap,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-h1 {
   grid-area: pct;
-  width: 5ch;
+  align-self: end;
+  justify-self: start;
+  justify-content: flex-start;
+  margin-top: var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-h1 {
+  --slate-field-width: auto;
+  field-sizing: content;
+  min-width: 1ch;
+  font-size: var(--slate-text-xl);
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: left;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-unit {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
 }
 
 /* ---- Layers the other way round ----
