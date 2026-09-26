@@ -7,6 +7,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { makeDocument, click, key, pointer, makeTimers, makeCommands } = require("./tools/slate-test/fake-dom.js");
 const recipe = require("./slate/slate-recipe.js");
@@ -1934,17 +1936,31 @@ test("on a phone the badge picks its row - the rest of the cell stays Track's - 
   assert.match(bulkFoot(mouse.view).querySelector(".slate-recipe__bulk-hint").textContent, /^Click a hopper id/);
 });
 
-test("on a phone turning to the other tab lets its cells rise again; with a mouse nothing replays", () => {
+test("on a phone turning to the other tab flips its tiles over, each from its back to the face shown, and back again; with a mouse nothing replays", () => {
   const { view } = boot({ phone: true });
   view.update(withPlan(), { kind: "structural" });
-  for (const one of view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
+  const tiles = which => view.body(which).querySelectorAll(".slate-hopper");
+  for (const one of tiles("next")) one.classList.remove("slate-row-enter");
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
-  assert.ok(view.body("next").querySelectorAll(".slate-hopper").every(one => one.classList.contains("slate-row-enter")));
+  assert.ok(tiles("next").every(one => one.classList.contains("is-flipping")), "Next's tiles did not flip");
+  assert.ok(tiles("next").every(one => !one.classList.contains("slate-row-enter")), "a tile both rose and flipped");
+  // The flip ends: the mark goes with it, ready for the next turn.
+  for (const one of tiles("next")) for (const fn of one.listeners.animationend || []) fn({ type: "animationend" });
+  assert.ok(tiles("next").every(one => !one.classList.contains("is-flipping")));
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
+  assert.ok(tiles("current").every(one => one.classList.contains("is-flipping")), "Current's tiles did not flip back");
   const mouse = boot();
   mouse.view.update(withPlan(), { kind: "structural" });
   for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
   click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
-  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter")));
+  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter") && !one.classList.contains("is-flipping")));
+  // Next turns the tiles one way, Current back the other, and the back
+  // covers the face until the tile is edge-on - on a phone alone.
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "recipe.css"), "utf8");
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-hopper\.is-flipping \{[^}]*animation: slate-card-flip-next/);
+  assert.match(css, /\.slate-hopper\.is-flipping\[data-recipe="current"\] \{[^}]*animation-name: slate-card-flip-current;/);
+  assert.match(css, /@keyframes slate-card-flip-next \{\s*from \{\s*transform: perspective\(600px\) rotateY\(-180deg\);/);
+  assert.match(css, /@keyframes slate-card-flip-current \{\s*from \{\s*transform: perspective\(600px\) rotateY\(180deg\);/);
 });
 
 test("the section says how many rows the layers share - the deepest layer's - for the Grid layout's columns, with a mouse too", () => {

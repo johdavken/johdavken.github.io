@@ -1552,6 +1552,79 @@
   }
 }
 
+/* Current and Next are two faces of the same tiles: turning from one to
+   the other flips each tile over (slate-recipe.js marks it is-flipping),
+   from a blank back in the layer's tone to the face now shown, one
+   position after another, the wave running down and across the grid as
+   the band's does. Next turns them one way and Current back the other.
+   The back is the tile's ::after, over the face - mirrored while it is
+   turned away - until the tile stands edge-on, halfway. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping {
+  position: relative;
+  animation: slate-card-flip-next calc(var(--slate-motion-move) * 2) var(--slate-motion-ease) both;
+  animation-delay: calc((var(--slate-hopper-slot, 0) + var(--slate-layer-i, 0)) * var(--slate-motion-lead));
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping[data-recipe="current"] {
+  animation-name: slate-card-flip-current;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--slate-stroke));
+  z-index: 1;
+  border: var(--slate-stroke) solid color-mix(in srgb, var(--slate-layer-tone) 45%, var(--slate-border-subtle));
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--slate-layer-tone) 16%, var(--slate-surface-raised));
+  animation: slate-card-back calc(var(--slate-motion-move) * 2) linear both;
+  animation-delay: inherit;
+}
+
+@keyframes slate-card-flip-next {
+  from {
+    transform: perspective(600px) rotateY(-180deg);
+  }
+
+  to {
+    transform: perspective(600px) rotateY(0deg);
+  }
+}
+
+@keyframes slate-card-flip-current {
+  from {
+    transform: perspective(600px) rotateY(180deg);
+  }
+
+  to {
+    transform: perspective(600px) rotateY(0deg);
+  }
+}
+
+/* The back shows until the tile is edge-on, then is gone: held, not
+   faded, over the first half (a step), and gone for the second. */
+@keyframes slate-card-back {
+  from {
+    opacity: 1;
+    animation-timing-function: steps(1, end);
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping::after {
+    animation: none;
+  }
+}
+
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next[data-way="to"]::before {
   content: "\2192\2009";
 }
@@ -1602,6 +1675,9 @@
   --slate-field-bg: transparent;
   --slate-field-min-height: 0;
   pointer-events: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-resin {
   font-size: var(--slate-text-sm);
 }
 
