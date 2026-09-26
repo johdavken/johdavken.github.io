@@ -670,13 +670,41 @@
       });
     }
 
-    /* A phone's face turned: each tile's contents slide in over the ones
-     * they replace (recipe.css). Reading the width between remove and add
-     * restarts a slide still running, as flash() restarts its flash. */
-    function slide(row) {
+    /* The tab turned: each tile's contents slide in over the ones they
+     * replace (recipe.css), from the side of the tab turned to - the right
+     * going on along Current, Next, Weights, the left coming back. Reading
+     * the width between remove and add restarts a slide still running, as
+     * flash() restarts its flash. A Weights cell has no listener of the
+     * Recipe's, so it is given the one that ends its slide, once. */
+    const TAB_ORDER = Object.freeze(["current", "next", "weights"]);
+    const slideEnds = new WeakSet();
+    function tabNow() {
+      return weightsShown ? "weights" : recipe;
+    }
+
+    function slide(row, from) {
+      if (!slideEnds.has(row)) {
+        slideEnds.add(row);
+        if (!row.classList.contains("slate-hopper")) {
+          row.addEventListener("animationend", event => {
+            if (event && typeof event.animationName === "string" && event.animationName.startsWith("slate-slide-")) row.classList.remove("is-sliding");
+          });
+        }
+      }
       row.classList.remove("slate-row-enter", "is-sliding");
+      row.setAttribute("data-slide-from", from);
       void row.offsetWidth;
       row.classList.add("is-sliding");
+    }
+
+    function slideFrom(before) {
+      const now = tabNow();
+      if (now === before) return;
+      const from = TAB_ORDER.indexOf(now) > TAB_ORDER.indexOf(before) ? "right" : "left";
+      const rows = now === "weights"
+        ? weightsPanel.querySelectorAll(".slate-weights__row[data-key]")
+        : [...bodies[now].rows.values()].map(entry => entry.row);
+      for (const row of rows) slide(row, from);
     }
 
     function flash(row) {
@@ -1225,6 +1253,7 @@
 
     function showWeights() {
       if (weightsShown) return true;
+      const before = tabNow();
       if (!weightsView) return false;
       if (form && form.view.changes().length > 0) { say(BULK_SWITCH); return false; }
       closeForm();
@@ -1240,6 +1269,7 @@
       for (const key of RECIPES) show(bodies[key].el, false);
       show(weightsPanel, true);
       paintTabs();
+      slideFrom(before);
       return true;
     }
 
@@ -1257,6 +1287,7 @@
       // The Weights page's bulk edit holds the tab as the recipe's does.
       const weightsBulk = weightsShown && weightsView && typeof weightsView.bulk === "function" ? weightsView.bulk() : null;
       if (weightsBulk && weightsBulk.changes > 0) { say(BULK_SWITCH); return recipe; }
+      const before = tabNow();
       hideWeights();
       if (id !== recipe) {
         if (form && form.view.changes().length > 0) { say(BULK_SWITCH); return recipe; }
@@ -1271,9 +1302,9 @@
         rootEl.setAttribute("data-recipe", recipe);
         for (const [key, tab] of tabButtons) tab.setAttribute("aria-selected", key === recipe ? "true" : "false");
         for (const key of RECIPES) show(bodies[key].el, key === recipe);
-        // On a phone the contents of the face turned slide in, in turn.
-        if (phone()) for (const entry of bodies[recipe].rows.values()) slide(entry.row);
       }
+      // The contents of the tab turned to slide in, in turn.
+      slideFrom(before);
       applyAbilities();
       paintCompare();
       ensureForm();

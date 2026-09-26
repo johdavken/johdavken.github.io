@@ -548,12 +548,11 @@ test("the Weights Grid: a row per layer, the head a tile at its start and one ce
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__rows'), /display: contents;/);
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]'), /grid-column: calc\(var\(--slate-hopper-slot, 0\) \+ 2\);/);
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row.is-empty'), /border-style: dashed;/);
-  // Lined up with the Recipe's cell so a switch of tab moves nothing: the id's line as tall as the blend's,
-  // the Recipe's resin line kept empty under it (no resin here), the field the room under the Recipe's resin.
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /min-height: calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\)\);/);
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /padding-bottom: calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\) \+ 2px\);/);
+  // Lined up with the Recipe's cell so a switch of tab moves nothing: its lines are the Recipe's
+  // (slate-weights.test.js has the tile's layout), and a field no taller than the line it stands on.
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /grid-area: id;/);
   assert.doesNotMatch(css, /\.slate-weights__resin/, "the Weights page shows no resin");
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind]'), /--slate-field-min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\) \+ 4px\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind]'), /--slate-field-min-height: 0;\s*line-height: 1;/);
   const container = css.indexOf("@container slate-weights");
   assert.ok(container > -1);
   assert.ok(css.indexOf('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]') > container, "the Grid's cells stand before the touch tier's narrow rows, which would win");

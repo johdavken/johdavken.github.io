@@ -675,8 +675,8 @@
       let geometryInput = null;
       let computed = null;
       if (m) {
-        // A measured row: the Grid sets the two fields side by side, the
-        // readout on the line the Recipe's grab strip takes (weights.css).
+        // A measured row: in the Grid the measure takes the line the
+        // Recipe's resin does, the readout its band's (weights.css).
         row.setAttribute("data-measured", "");
         const geometryWrap = element(doc, "span", "slate-weights__wrap slate-weights__geometry");
         geometryInput = element(doc, "input", "slate-weights__field", {

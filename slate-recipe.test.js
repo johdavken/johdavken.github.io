@@ -1936,34 +1936,62 @@ test("on a phone the badge picks its row - the rest of the cell stays Track's - 
   assert.match(bulkFoot(mouse.view).querySelector(".slate-recipe__bulk-hint").textContent, /^Click a hopper id/);
 });
 
-test("on a phone turning to the other tab slides each tile's contents in over the ones they replace, and back again; with a mouse nothing replays", () => {
+test("turning to the other tab slides each tile's contents in over the ones they replace, from the right going on and from the left coming back, on a phone and with a mouse alike", () => {
   const { view } = boot({ phone: true });
   view.update(withPlan(), { kind: "structural" });
   const tiles = which => view.body(which).querySelectorAll(".slate-hopper");
   for (const one of tiles("next")) one.classList.remove("slate-row-enter");
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
   assert.ok(tiles("next").every(one => one.classList.contains("is-sliding")), "Next's contents did not slide in");
+  assert.ok(tiles("next").every(one => one.getAttribute("data-slide-from") === "right"), "Next did not come from the right");
   assert.ok(tiles("next").every(one => !one.classList.contains("slate-row-enter")), "a tile both rose and slid");
   // The band's drop ending first leaves the slide running; the slide's end takes the mark.
   const end = name => { for (const one of tiles("next")) for (const fn of one.listeners.animationend || []) fn({ type: "animationend", animationName: name }); };
   end("slate-band-drop");
   assert.ok(tiles("next").every(one => one.classList.contains("is-sliding")), "the band's drop cut the slide short");
-  end("slate-slide-next");
+  end("slate-slide-from-right");
   assert.ok(tiles("next").every(one => !one.classList.contains("is-sliding")));
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
-  assert.ok(tiles("current").every(one => one.classList.contains("is-sliding")), "Current's contents did not slide back");
+  assert.ok(tiles("current").every(one => one.classList.contains("is-sliding") && one.getAttribute("data-slide-from") === "left"), "Current's contents did not slide back from the left");
   const mouse = boot();
   mouse.view.update(withPlan(), { kind: "structural" });
   for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
   click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
-  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter") && !one.classList.contains("is-sliding")));
-  // Next comes in from the right, Current from the left, a tile's width, clipped by the tile.
+  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => one.classList.contains("is-sliding")), "a desktop's contents did not slide in");
+  // The same tab again slides nothing.
+  for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("is-sliding");
+  click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
+  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("is-sliding")), "the tab shown slid again");
+  // Clipped by the tile: each part's own width, and on a phone the tile's.
   const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "recipe.css"), "utf8");
-  assert.match(css, /\.slate-hopper\.is-sliding \{\s*overflow: hidden;/);
-  assert.match(css, /\.slate-hopper\.is-sliding > \* \{[^}]*animation: slate-slide-next/);
-  assert.match(css, /\.slate-hopper\.is-sliding\[data-recipe="current"\] > \* \{[^}]*animation-name: slate-slide-current;/);
-  assert.match(css, /@keyframes slate-slide-next \{\s*from \{[^}]*transform: translateX\(100cqi\);/);
-  assert.match(css, /@keyframes slate-slide-current \{\s*from \{[^}]*transform: translateX\(-100cqi\);/);
+  assert.match(css, /\.slate-hopper\.is-sliding,\s*\.slate-weights__row\.is-sliding \{[^}]*--slate-slide-distance: 100%;[^}]*overflow: clip;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-weights__row\.is-sliding \{\s*--slate-slide-distance: 100cqi;/);
+  assert.match(css, /\.slate-weights__row\.is-sliding > \* \{[^}]*animation: slate-slide-from-right/);
+  assert.match(css, /\.slate-weights__row\.is-sliding\[data-slide-from="left"\] > \* \{[^}]*animation-name: slate-slide-from-left;/);
+  assert.match(css, /@keyframes slate-slide-from-right \{\s*from \{[^}]*transform: translateX\(var\(--slate-slide-distance, 100%\)\);/);
+  assert.match(css, /@keyframes slate-slide-from-left \{\s*from \{[^}]*transform: translateX\(calc\(-1 \* var\(--slate-slide-distance, 100%\)\)\);/);
+});
+
+test("the Weights tab slides its cells in from the right, and Current or Next slides back in from the left - the recipe shown before included", () => {
+  const { view } = boot({ recipes: makeRecipes() });
+  view.update(withPlan(), { kind: "structural" });
+  click(weightsTab(view));
+  const cells = () => weightsPanel(view).querySelectorAll(".slate-weights__row[data-key]");
+  assert.ok(cells().length > 0);
+  assert.ok(cells().every(one => one.classList.contains("is-sliding") && one.getAttribute("data-slide-from") === "right"), "the Weights cells did not slide in from the right");
+  // Its own end, once, and not a glow's.
+  const end = name => { for (const one of cells()) for (const fn of one.listeners.animationend || []) fn({ type: "animationend", animationName: name }); };
+  end("slate-pick-glow");
+  assert.ok(cells().every(one => one.classList.contains("is-sliding")), "another animation ended the slide");
+  end("slate-slide-from-right");
+  assert.ok(cells().every(one => !one.classList.contains("is-sliding")));
+  for (const one of view.body("current").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter", "is-sliding");
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
+  assert.ok(view.body("current").querySelectorAll(".slate-hopper").every(one => one.classList.contains("is-sliding") && one.getAttribute("data-slide-from") === "left"), "Current did not slide back in from the left");
+  // Back to Weights: its cells slide again, each still with the one end.
+  click(weightsTab(view));
+  assert.ok(cells().every(one => one.classList.contains("is-sliding")));
+  assert.ok(cells().every(one => (one.listeners.animationend || []).length === 1), "a cell was given its end twice");
 });
 
 test("the section says how many rows the layers share - the deepest layer's - for the Grid layout's columns, with a mouse too", () => {

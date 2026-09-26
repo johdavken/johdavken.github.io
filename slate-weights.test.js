@@ -1020,7 +1020,7 @@ test("the layer's head reads as the Recipe's - the word apart from the letter - 
   assert.match(css, /\.slate-weights\.is-always-draft \.slate-weights__field\.is-changed-underneath \{\s*--slate-field-border: var\(--slate-stroke\) solid var\(--slate-info\);/);
 });
 
-test("in the Grid a measured cell sets its weight and measure side by side and its readout on the line the Recipe's grab strip takes, so it is as tall as any other cell", () => {
+test("in the Grid a cell is laid out as the Recipe's tile: the weight large beside the id, the measure on the resin's line, the readout as the band, each line as tall as the Recipe's", () => {
   const { view } = boot({ alwaysDraft: true });
   view.update(resolvedFrom(snap => smartLine(snap)), { kind: "structural" });
   const a1 = rowOf(view, "A:0");
@@ -1032,10 +1032,16 @@ test("in the Grid a measured cell sets its weight and measure side by side and i
   assert.equal(rowOf(plain.view, "A:0").hasAttribute("data-measured"), false);
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/weights.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]'), /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/);
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__weight'), /grid-column: 1;/);
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__geometry'), /grid-column: 2;/);
-  // The readout takes the grab strip's room: one line at its height, the measured cell's own bottom room reduced by it.
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__computed'), /line-height: var\(--slate-grid-grip\);[^}]*white-space: nowrap;/);
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured]'), /padding-bottom: calc\(var\(--slate-space-2\) - var\(--slate-space-1\)\);/);
+  const cell = rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]');
+  assert.match(cell, /grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(cell, /"id weight"\s*"geometry geometry"\s*"computed computed"\s*"note note";/);
+  // The Recipe's lines, kept when empty (no Smart Hoppers), and its grab strip's room.
+  assert.match(cell, /grid-template-rows:\s*calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\)\)\s*calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\)\)\s*calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\)\)/);
+  assert.match(cell, /padding-bottom: calc\(var\(--slate-space-2\) \+ var\(--slate-grid-grip\) \+ 2px\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__weight'), /grid-area: weight;[^}]*justify-content: flex-end;/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__geometry'), /grid-area: geometry;/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind="weight"]'), /font-size: var\(--slate-text-lg\);\s*font-weight: 700;/);
+  // The readout as the Recipe's band: one line, a soft band of its own colour.
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__computed'), /grid-area: computed;[^}]*background: color-mix\(in srgb, currentColor 12%, transparent\);[^}]*white-space: nowrap;/);
+  assert.equal(css.indexOf('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured] {'), -1, "a measured cell still keeps a height of its own");
 });
