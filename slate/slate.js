@@ -57,7 +57,6 @@
   const displayModule = root.PolynSlateDisplay || null;
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
-  const drawerDragModule = root.PolynSlateDrawerDrag || null;
   const phoneBarModule = root.PolynSlatePhoneBar || null;
   const homeModule = root.PolynSlateHome || null;
   const lineModule = root.PolynSlateLine || null;
@@ -97,8 +96,8 @@
   const TIMELINE = "timeline";
   /* A phone's first page (slate-home.js), listed only there. */
   const HOME = "home";
-  /* Listed on the rail under a finger; a desktop opens each in the
-   * Recipe - the Book under its tabs, Weights as its third tab. */
+  /* Defined, never listed: the Recipe opens each itself - the Book under
+   * its tabs, Weights as its third tab - on every tier. */
   const BOOK = "recipe-book";
   const WEIGHTS = "weights";
   const SCRAP = "scrap";
@@ -131,6 +130,15 @@
   let sync = null;
   let themeController = null;
   let displayController = null;
+
+  /* The Weights page lives in the Recipe, as its third tab: whoever wants
+   * it shows the Recipe and turns the tab (slate-recipe.js showWeights). */
+  function openWeightsTab() {
+    if (!sections) return false;
+    sections.show(DEFAULT_SECTION);
+    const recipeView = sections.section(DEFAULT_SECTION);
+    return !!(recipeView && typeof recipeView.showWeights === "function" && recipeView.showWeights());
+  }
 
   function hosted() {
     const body = root.document ? root.document.body : null;
@@ -175,7 +183,12 @@
     const phoneTier = tier.input === "touch" && tier.width === "phone";
     container.setAttribute("data-layers", phoneTier ? "top" : "grid");
     container.setAttribute("data-weights-layers", phoneTier ? "top" : "grid");
-    container.setAttribute("data-grid-heads", layout === "grid-top" ? "top" : "start");
+    // Under a finger held upright (a tablet, the Fold open) the heads
+    // always stand on top: a row of six cells across has no room there,
+    // and Settings withholds the choice. Turned (the Fold's Spread) the
+    // choice is the operator's again, Grid Left by default, as a mouse's.
+    const uprightTouch = tier.input === "touch" && tier.orientation !== "landscape";
+    container.setAttribute("data-grid-heads", uprightTouch || layout === "grid-top" ? "top" : "start");
     container.setAttribute("data-layer-order", order);
     // How a dragged hopper's card moves (components/recipe-edit.css).
     container.setAttribute("data-drag-motion", displayController && typeof displayController.getHandling === "function" ? displayController.getHandling() : "lift");
@@ -193,9 +206,13 @@
     // when the screen stops being one.
     if (railView) railView.setListed(HOME, page());
     if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
-    // A desktop opens the Recipe Book under the Recipe's tabs
-    // (slate-recipe.js); the rail lists it under a finger only.
-    if (railView) { railView.setListed(BOOK, tier.input === "touch"); railView.setListed(WEIGHTS, tier.input === "touch"); }
+    // The Recipe holds both (slate-recipe.js): the Book under its tabs,
+    // Weights as its third. Neither is ever the rail's.
+    if (railView) { railView.setListed(BOOK, false); railView.setListed(WEIGHTS, false); }
+    // The Timeline is a rail item where the aside is a drawer (a tablet),
+    // the way it opens there; beside the page it is always in view, and a
+    // phone reaches it from Home and the bar.
+    if (railView) railView.setListed(TIMELINE, drawer());
     // A mouse or a finger arrived: the Recipe changes its ways with it
     // (a preference change refreshes every section itself).
     if (tier.input !== lastInput) {
@@ -204,11 +221,10 @@
       if (recipeView && typeof recipeView.refresh === "function") recipeView.refresh();
     }
     const shownId = sections && sections.current() ? sections.current().id : null;
-    if (tier.input !== "touch" && (shownId === BOOK || shownId === WEIGHTS)) {
-      sections.show(DEFAULT_SECTION);
+    if (shownId === BOOK || shownId === WEIGHTS) {
       // Weights was showing: the Recipe's Weights tab takes its place.
-      const recipeView = shownId === WEIGHTS ? sections.section(DEFAULT_SECTION) : null;
-      if (recipeView && typeof recipeView.showWeights === "function") recipeView.showWeights();
+      if (shownId === WEIGHTS) openWeightsTab();
+      else sections.show(DEFAULT_SECTION);
     }
     paintBar();
   }
@@ -241,9 +257,10 @@
    *
    * On a narrow touch screen the aside - the Timeline, or a tool in its
    * place - is a drawer over the page's right edge (components/panel.css).
-   * Its open state is the boot's: the header's button and a rail item for
-   * an aside section open it; that button, the scrim behind it and Escape
-   * close it. Nothing is re-parented and nothing rebuilt: the drawer is the
+   * Its open state is the boot's: the rail's Timeline (listed there alone)
+   * and Resin Balance open it on themselves, and the item already open, the
+   * scrim behind it, Escape and Back close it. It has no handle: a pull at
+   * the screen's right edge is the system's Back there. Nothing is re-parented and nothing rebuilt: the drawer is the
    * same aside, moved by the sheet. */
   let asideOpen = false;
   let asideOffStack = null;
@@ -272,11 +289,18 @@
     if (mounts.aside) mounts.aside.classList.toggle("is-open", asideOpen);
     paintScrim();
     paintBar();
-    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
-    if (handle) {
-      handle.setAttribute("aria-expanded", asideOpen ? "true" : "false");
-      handle.classList.toggle("is-open", asideOpen);
-    }
+    paintAsideMark();
+  }
+
+  /* Which rail item the aside lights. In a drawer, what it holds while it
+   * is open - the Timeline too - and nothing while it is shut; beside the
+   * page, a tool in the Timeline's place, as every other pane marks. */
+  function paintAsideMark() {
+    if (!railView || !panes.aside) return;
+    const showing = panes.aside.swap.current();
+    const id = showing ? showing.id : null;
+    if (drawer()) railView.setActivePane("aside", asideOpen ? id : null);
+    else railView.setActivePane("aside", id === TIMELINE ? null : id);
   }
 
   /* THE RAIL AS A SHEET (phone)
@@ -301,9 +325,10 @@
   function paintBar() {
     paintTitle();
     if (!phoneBar || !panes.aside || !sections) return;
-    // The pages Home leads to (the Recipe, the Timeline, Resin Balance)
-    // light Home; a tool lights Tools; what only Menu lists lights Menu.
-    const fromHome = new Set([HOME, DEFAULT_SECTION, TIMELINE, "resin-balance"]);
+    // The pages Home leads to that have no key of their own (the Timeline,
+    // Resin Balance) light Home; the Recipe has its own key; a tool lights
+    // Tools; what only Menu lists lights Menu.
+    const fromHome = new Set([HOME, TIMELINE, "resin-balance"]);
     const tools = new Set(sectionDefinitions.filter(one => one.group === "tools").map(one => one.id));
     let id;
     if (asideOpen) {
@@ -383,31 +408,13 @@
     if (homeView && typeof homeView.refresh === "function") homeView.refresh();
   }
 
-  /* A drag's position (px from open), or null when it ends: written on the
-   * root for the drawer, its panel and the handle to read together
-   * (components/panel.css). */
-  function followDrawer(shift) {
-    if (!container || !container.style || typeof container.style.setProperty !== "function") return;
-    const aside = mounts.aside;
-    const handle = container.querySelector("[data-slate-aside-handle]");
-    const dragging = shift !== null && shift !== undefined;
-    if (dragging) container.style.setProperty("--slate-drawer-shift", `${Math.round(shift)}px`);
-    else if (typeof container.style.removeProperty === "function") container.style.removeProperty("--slate-drawer-shift");
-    if (aside) aside.classList.toggle("is-dragging", dragging);
-    if (handle) handle.classList.toggle("is-dragging", dragging);
-  }
-
-  /* The handle's dot: a hopper past its mark and still running. */
-  function paintHandle() {
-    const handle = container ? container.querySelector("[data-slate-aside-handle]") : null;
-    const dot = handle ? handle.querySelector(".slate-shell__handle-dot") : null;
+  /* The overdue dot: a hopper past its mark and still running. On a
+   * tablet it is the rail's Timeline's; on a phone Home's, the Timeline
+   * being one of its steps. */
+  function paintOverdue() {
     const overdue = !!(summary && typeof summary.entries === "function") && summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
-    // On a phone the dot is Home's: the Timeline is one of its steps.
     if (phoneBar) phoneBar.setDot(HOME, overdue);
-    if (!dot || !summary || typeof summary.entries !== "function") return;
-    if (overdue) dot.removeAttribute("hidden");
-    else dot.setAttribute("hidden", "");
-    handle.classList.toggle("is-overdue", overdue);
+    if (railView) railView.setAlert(TIMELINE, overdue);
   }
 
   /* TIER
@@ -489,7 +496,7 @@
     // Home reads the Timeline, which the aside's swap has just updated.
     refreshHome();
     if (summary) applyMarks(summary.marks());
-    paintHandle();
+    paintOverdue();
     renderNotice(resolved);
   }
 
@@ -507,7 +514,7 @@
     if (stats) stats.refresh();
     refreshHome();
     applyMarks(marks);
-    paintHandle();
+    paintOverdue();
   }
 
   /* ---- Mount ---- */
@@ -573,11 +580,9 @@
       lineRate: lineRateEstimate,
       lineRateStorage,
       tier: tierNow,
-      // A desktop's Recipe: the always-open form, Compare always on (slate-recipe.js).
-      desktop: () => tierNow().input !== "touch",
       scan: scanner(),
-      // The Timeline's "No weight" on a phone: the Weights page, over it.
-      openWeights: () => { setAside(false); if (sections) sections.show("weights"); }
+      // The Timeline's "No weight" on a phone: the Recipe's Weights tab.
+      openWeights: () => { setAside(false); openWeightsTab(); }
     });
 
     stats = statCards.create(doc, ctx);
@@ -618,6 +623,12 @@
       { id: "recipe", label: "Recipe", group: "sections", icon: "recipe", create: (d, c) => recipeModule.create(d, Object.assign({}, c, { validate })) },
       { id: BOOK, label: "Recipe Book", group: "sections", icon: "book", create: (d, c) => bookModule.create(d, c) },
       { id: WEIGHTS, label: weightsModule.TITLE, group: "sections", icon: "weights", create: (d, c) => weightsModule.create(d, c) },
+      // The timeline keeps the clock every readout follows; it is handed
+      // the same context as a section so Pump off goes through the
+      // tracking seam. It is what the aside shows by default; the rail
+      // lists it only where the aside is a drawer (`drawer`, a tablet's),
+      // beside Resin Balance, as the way to open it.
+      { id: TIMELINE, label: "Timeline", group: "sections", pane: "aside", drawer: true, icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, {
         totals: resinTotals,
         back: () => home("aside"),
@@ -651,10 +662,6 @@
       { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
       { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
-      // The timeline keeps the clock every readout follows; it is handed
-      // the same context as a section so Pump off goes through the
-      // tracking seam. No rail item: it is what the aside shows by default.
-      { id: TIMELINE, label: "Timeline", group: "aside", pane: "aside", icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) },
       // The Scrap card, already built and painted by the job's cards: the
       // stats row's home, the way the Timeline is the aside's.
       { id: SCRAP, label: "Scrap", group: "stats", pane: "stats", create: () => ({ element: stats.card(SCRAP).card }) }
@@ -676,17 +683,14 @@
     for (const [name, mount, homeId] of [["aside", mounts.aside, TIMELINE], ["stats", stats.slot(SCRAP), SCRAP]]) {
       const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
         onChange(definition) {
-          if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
-          if (name === "aside") paintBar();
+          if (name === "aside") { paintAsideMark(); paintBar(); }
+          else if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
           // A tool in the Scrap card's place is a sheet on a phone
           // (components/phone.css): Back closes it, as its own close does.
           if (name === "stats") {
             if (definition.id !== homeId && page() && !statsOffStack && dismissModule) statsOffStack = dismissModule.register(() => home("stats"));
             if (definition.id === homeId && statsOffStack) { const off = statsOffStack; statsOffStack = null; off(); }
           }
-          // The drawer's handle names what the drawer holds.
-          const handle = name === "aside" ? container.querySelector("[data-slate-aside-handle]") : null;
-          if (handle) { handle.setAttribute("aria-label", definition.label); handle.setAttribute("title", definition.label); }
         }
       });
       panes[name] = { swap, home: homeId };
@@ -712,8 +716,10 @@
         if (name === rail.CENTRE) { sections.show(id); return; }
         const showing = panes[name].swap.current();
         // A closed drawer opens on what was asked for, rather than the tool
-        // being closed behind it.
-        if (name === "aside" && drawer() && !asideOpen) {
+        // being closed behind it; the item of what it holds, chosen again,
+        // shuts it, and another turns it to that.
+        if (name === "aside" && drawer()) {
+          if (asideOpen && showing && showing.id === id) { setAside(false); return; }
           if (!showing || showing.id !== id) panes[name].swap.show(id);
           setAside(true);
           return;
@@ -771,18 +777,6 @@
 
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
-    const asideHandle = container.querySelector("[data-slate-aside-handle]");
-    if (asideHandle && drawerDragModule && mounts.aside) {
-      drawerDragModule.create(doc, {
-        handle: asideHandle,
-        drawer: mounts.aside,
-        enabled: drawer,
-        isOpen: () => asideOpen,
-        width: () => (typeof mounts.aside.getBoundingClientRect === "function" ? mounts.aside.getBoundingClientRect().width : 0),
-        follow: followDrawer,
-        settle: open => setAside(open)
-      });
-    }
     const scrim = container.querySelector("[data-slate-scrim]");
     if (scrim) scrim.addEventListener("click", () => { if (toolsOpen) setTools(false); else if (railOpen) setRail(false); else setAside(false); });
     container.addEventListener("keydown", event => {

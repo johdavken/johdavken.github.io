@@ -114,7 +114,18 @@
         if (!slot.preview) continue;
         const derived = draftModule.derivedH1(base, draft, base[key].layer);
         const assigned = String(draft[key].resin || "").trim() !== "";
-        slot.preview.textContent = assigned ? formatPct(derived.value) : EMPTY;
+        const shown = assigned ? formatPct(derived.value) : EMPTY;
+        // The "%" in its own span, as the other blends' is (a phone sets it small).
+        slot.preview.textContent = shown;
+        if (shown.endsWith("%")) {
+          slot.preview.textContent = "";
+          slot.preview.appendChild(doc.createTextNode(shown.slice(0, -1)));
+          const unit = doc.createElement("span");
+          unit.className = "slate-hopper__draft-unit";
+          unit.setAttribute("aria-hidden", "true");
+          unit.textContent = "%";
+          slot.preview.appendChild(unit);
+        }
         slot.preview.classList.toggle("is-over", derived.over);
       }
     }

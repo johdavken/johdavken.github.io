@@ -29,7 +29,7 @@
    * the word under it, and the rail's glyph for it. */
   const TOOLS = "tools";
   const KEYS = Object.freeze([
-    Object.freeze({ id: "weights", label: "Weights", icon: "weights" }),
+    Object.freeze({ id: "recipe", label: "Recipe", icon: "recipe" }),
     Object.freeze({ id: TOOLS, label: "Tools", icon: "tools" }),
     Object.freeze({ id: "home", label: "Home", icon: "home" }),
     Object.freeze({ id: "settings", label: "Settings", icon: "settings" }),

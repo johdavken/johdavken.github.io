@@ -139,7 +139,7 @@
   const BULK_NO_BRIDGE = "The application stopped offering the bulk edit; it was closed and nothing was applied.";
   const BULK_SWITCH = "Apply or cancel the bulk edit before switching tabs.";
   const BULK_HINT = "Click a hopper id to select rows and fill them at once.";
-  const BULK_HINT_PHONE = "Tap hoppers to select them, then fill them at once.";
+  const BULK_HINT_TOUCH = "Tap a hopper id to select rows and fill them at once.";
   const DRAFT_IDLE = "No changes. Nothing is sent until Apply.";
   const DRAFT_BUSY = "Apply or discard the recipe changes first.";
   const NONE_PICKED = "Select hoppers to fill";
@@ -265,13 +265,10 @@
       }
     };
     const view = doc.defaultView || null;
-    // A desktop (slate.js hands the pointer tier's answer): the always-open
-    // form, Compare always on, no weight in the cell, the grab strip.
-    const desktop = () => {
-      try { return typeof settings.desktop === "function" && !!settings.desktop(); } catch (error) { return false; }
-    };
 
-    const rootEl = element(doc, "div", "slate-recipe", { "data-recipe": "current", "data-view": "recipe" });
+    /* is-form: the section is always a draft (recipe.css). Every tier has
+     * it - a mouse and a finger alike - so it is set once, here. */
+    const rootEl = element(doc, "div", "slate-recipe is-form", { "data-recipe": "current", "data-view": "recipe" });
 
     /* ---- The bar ---- */
 
@@ -538,11 +535,10 @@
       return entry;
     }
 
-    /* Which part lifts the assignment: the grab strip on a desktop, where
-     * the badge picks for the fill; the badge under a finger. */
+    /* The grab strip lifts the assignment; the badge picks for the fill,
+     * so it is never the handle. */
     function paintHandle(entry) {
-      if (desktop()) entry.idCell.removeAttribute("data-slate-handle");
-      else entry.idCell.setAttribute("data-slate-handle", "");
+      entry.idCell.removeAttribute("data-slate-handle");
     }
 
     function paintRow(entry, cells, skip) {
@@ -772,15 +768,14 @@
     // slate-tracking.js's offersToggle). The Compare switch adds the
     // lines that say what the other recipe holds; the blend alone moving
     // is a line, no band.
-    /* Compare as it stands now: the switch's, or always on a desktop with a plan. */
+    /* Compare as it stands now: always on where there is a plan. */
     function comparing() {
-      return compare || (desktop() && !!(current && current.plan && current.plan.planned));
+      return compare || !!(current && current.plan && current.plan.planned);
     }
 
     function paintCompare() {
       const compare = comparing();
       rootEl.classList.toggle("is-comparing", compare);
-      rootEl.classList.toggle("is-desk", desktop());
       const mode = modeNow();
       for (const id of RECIPES) {
         const body = bodies[id];
@@ -1177,7 +1172,8 @@
       // The field and its Cancel stand together, before the field has focus
       // (moving a focused field would blur it, and the blur commits).
       if (touch()) {
-        const wrap = element(doc, "div", "slate-editor-field");
+        // A share's field names its layer (a phone floats it over every head).
+        const wrap = element(doc, "div", "slate-editor-field", target.entry ? {} : { "data-layer": target.layer });
         const cancel = text(doc, "button", "slate-editor-cancel", "×", { type: "button", "aria-label": "Cancel", title: "Cancel", "data-slate-cancel": "" });
         const hold = event => { target.cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
         cancel.addEventListener("pointerdown", hold);
@@ -1631,11 +1627,11 @@
       if (!form.view.fill(values)) say(FILL_NONE);
     }
 
-    /* A desktop's form: opened whenever the shown tab has rows and the
-     * command, and none is open - quietly, taking no focus and closing
-     * nothing the operator has open (a share editor, the Book). */
+    /* The form: opened whenever the shown tab has rows and the command,
+     * and none is open - quietly, taking no focus and closing nothing the
+     * operator has open (a share editor, the Book). */
     function ensureForm() {
-      if (!desktop() || form || weightsShown || !current || !current.line) return;
+      if (form || weightsShown || !current || !current.line) return;
       if (!bodies[recipe].rows.size) return;
       if (!actionsModule.abilities(commands(), guard()).assign) return;
       openForm({ auto: true });
@@ -1677,7 +1673,7 @@
       // Empty hoppers come back to be filled.
       paintCompare();
       resetFill(body);
-      body.bulk.hint.textContent = phone() ? BULK_HINT_PHONE : BULK_HINT;
+      body.bulk.hint.textContent = touch() ? BULK_HINT_TOUCH : BULK_HINT;
       show(body.bulk.hint, true);
       // Always open, the foot (the Book, Reset, the plan's moves) stays.
       if (!auto) show(body.foot, false);
@@ -1838,9 +1834,10 @@
         const target = event && event.target;
         if (!target || typeof target.closest !== "function") return;
         if (form && form.recipe === id) {
-          // On a phone the whole cell is the pick target (its drafts stand
-          // in it as values, not as fields to type in: recipe.css).
-          const idCell = target.closest(".slate-hopper__id") || (phone() ? target.closest(".slate-hopper") : null);
+          // The badge picks, on every tier. On a phone the rest of the cell
+          // is Track's (below): the form is always open there now, so a
+          // cell-wide pick would leave the job's own toggle unreachable.
+          const idCell = target.closest(".slate-hopper__id");
           if (idCell && body.layersEl.contains(idCell)) {
             const picked = idCell.closest(".slate-hopper");
             form.view.pick(`${picked.getAttribute("data-layer")}:${picked.getAttribute("data-index")}`, { range: !!event.shiftKey });
@@ -1854,8 +1851,8 @@
         }
         // On a phone a tap on a hopper's cell is its Track: on Current,
         // where Track is offered; the plan's cells track nothing. Only the
-        // layer's share keeps its own editor there.
-        if (phone() && !form && !target.closest("[data-slate-edit='share']")) {
+        // layer's share keeps its own editor there, and the badge picks.
+        if (phone() && !target.closest("[data-slate-edit='share']")) {
           const cell = target.closest(".slate-hopper");
           if (!cell || !body.layersEl.contains(cell)) return;
           const cellToggle = cell.querySelector("[data-slate-control]");
@@ -1932,11 +1929,7 @@
     // moment to ask again.
     function refresh() {
       declined.clear();
-      // The tier moved: each keeps only its own way to the Book.
-      if (touch()) { setBook(false); hideWeights(); }
-      else closeSave();
-      // The tier moved: a desktop's always-open form is not a finger's.
-      if (form && form.auto && !desktop()) discardForm();
+      closeSave();
       for (const id of RECIPES) for (const entry of bodies[id].rows.values()) paintHandle(entry);
       if (bookView) bookView.refresh();
       if (weightsView) weightsView.refresh();

@@ -225,8 +225,9 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is
   // not drawn.
-  // A phone's Home is built and unlisted too, on a screen that is not one.
-  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "recipe-book", "weights", "workspaces", "line-config", "resins"]);
+  // A phone's Home is built and unlisted too, on a screen that is not one,
+  // and a tablet's Timeline, where the aside stands beside the page.
+  assert.deepEqual(railItems.filter(item => item.hasAttribute("hidden")).map(item => item.getAttribute("data-section")), ["home", "recipe-book", "weights", "timeline", "workspaces", "line-config", "resins"]);
   assert.ok(hostEl.querySelector(".slate-rail__divider").hasAttribute("hidden"), "the administrator's rule is drawn with nobody signed in");
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);

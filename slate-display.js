@@ -63,7 +63,10 @@
  * boot writes the Grid onto the root as data-layers / data-weights-layers
  * and the head's place as data-grid-heads; the sheets do the rest and
  * nothing is rebuilt, so an open editor or a drag in flight outlives the
- * switch. A phone keeps its own layout whatever is chosen.
+ * switch. A phone keeps its own layout whatever is chosen, and a tablet
+ * held upright is always `grid-top` - six cells across a row has no room
+ * there - whatever is kept; turned (the Fold's Spread) it follows the
+ * choice again, `grid` by default, as a desktop does.
  *
  * The Left and Top layouts were once chosen here too, per page (the
  * retired `layers` and `weightsLayers` keys). A record holding them reads

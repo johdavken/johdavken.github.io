@@ -71,13 +71,9 @@
     root.appendChild(shell);
     // Behind the aside's drawer: a press on it closes the drawer.
     root.appendChild(element(doc, "div", "slate-shell__scrim", { "data-slate-scrim": "", hidden: "" }));
-    // The drawer's handle, floating low on the right edge of a narrow touch
-    // screen (components/panel.css; slate-drawer-drag.js pulls it). A dot
-    // on it says a hopper is overdue before the drawer is opened.
-    const handle = element(doc, "button", "slate-shell__handle", { type: "button", "data-slate-aside-handle": "", "aria-expanded": "false", "aria-controls": "slate-aside", "aria-label": "Timeline", title: "Timeline" });
-    handle.appendChild(element(doc, "span", "slate-shell__grip", { "aria-hidden": "true" }));
-    handle.appendChild(element(doc, "span", "slate-shell__handle-dot", { "aria-hidden": "true", hidden: "" }));
-    root.appendChild(handle);
+    // No handle on the drawer: a pull at the screen's right edge is the
+    // system's Back there, and a tablet opens the drawer from the rail's
+    // Timeline and Resin Balance (slate.js) instead.
     // The offer to open Slate every time, on a visit (slate-host.js, slate.js).
     const offer = element(doc, "div", "slate-offer", { "data-slate-offer": "", role: "region", "aria-label": "Open Slate every time", hidden: "" });
     offer.appendChild(text(doc, "p", "slate-offer__text", "Open Slate every time on this device?"));

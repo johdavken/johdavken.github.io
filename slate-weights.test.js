@@ -182,7 +182,9 @@ test("off: every hopper has a weight field and nothing else; the switch is withh
   assert.equal(field(view, "A:0").value, "400");
   assert.equal(field(view, "A:3").value, "", "an empty hopper shows a zero");
   assert.ok(rowOf(view, "A:3").classList.contains("is-empty"));
-  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__resin").textContent, "HX204");
+  // No resin: a weight belongs to the hopper, not the recipe (the Recipe owns assignments).
+  assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__resin"), null);
+  assert.ok(!rowOf(view, "A:0").textContent.includes("HX204"));
   assert.equal(rowOf(view, "A:0").getAttribute("data-hopper"), "A1");
   // No heading row: each field carries its unit, and its name as its label.
   assert.equal(view.element.querySelectorAll(".slate-weights__columns, .slate-weights__column").length, 0);
@@ -685,7 +687,7 @@ test("a hopper empty in both recipes is marked vacant (a phone leaves it out), u
   const before = vacant();
   assert.ok(before.length > 0, "the demo line has no empty hopper");
   assert.ok(!before.includes("A:5"), "a hopper the plan fills was left out");
-  for (const key of before) assert.equal(rowOf(view, key).querySelector(".slate-weights__resin").textContent, "—");
+  for (const key of before) assert.ok(rowOf(view, key).classList.contains("is-empty"), `${key} is marked empty`);
   assert.ok(!button.hasAttribute("hidden"));
   assert.equal(button.textContent, `Show empty hoppers (${before.length})`);
   click(button);

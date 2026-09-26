@@ -544,25 +544,16 @@
   margin-top: var(--slate-space-4);
 }
 
-/* "Save as recipe" leads each foot, quiet, and pushes the rest right
-   (the base layer zeroes every button's margin, hence the scope). On a
-   desktop (the pointer tier) Recipe Book stands in its place; under a
-   finger the Book is the rail's, and Save as recipe stays. */
+/* Recipe Book leads each foot, quiet, and pushes the rest right (the base
+   layer zeroes every button's margin, hence the scope). It stands in
+   "Save as recipe"'s place on every tier - the Book carries Save Current
+   and Save Next itself - so the inline Save is drawn nowhere. */
 .slate-root .slate-recipe__save,
 .slate-root .slate-recipe__book-toggle {
   margin-right: auto;
 }
 
 .slate-root .slate-recipe__save {
-  display: none;
-}
-
-.slate-root[data-input="touch"] .slate-recipe__save {
-  display: inline-block;
-}
-
-.slate-root[data-input="touch"] .slate-recipe__book-toggle,
-.slate-root[data-input="touch"] .slate-recipe__book {
   display: none;
 }
 
@@ -587,18 +578,13 @@
   transform: translateY(0.1em) rotate(-135deg);
 }
 
-/* The Weights tab, a desktop's third (slate-recipe.js): the Weights page
+/* The Weights tab, the third (slate-recipe.js): the Weights page
    in the bodies' place. The recipe's own switches stand aside while it
    shows - unseen but keeping their room, so the tabs never shift along
    the bar. The page's own bar is not drawn - its switches stand in its
    fill window (weights.css), and the Recipe's line says the line - nor
    the switch's line of words, so the layers start where the recipe's do
    (the switch's title still says why it is unable). */
-.slate-root[data-input="touch"] .slate-recipe__weights-tab,
-.slate-root[data-input="touch"] .slate-recipe__weights {
-  display: none;
-}
-
 .slate-recipe[data-view="weights"] .slate-recipe__only {
   visibility: hidden;
 }
@@ -911,6 +897,12 @@
 .slate-root[data-input="touch"] .slate-layer__share {
   min-height: var(--slate-tap);
   padding: var(--slate-space-1) 0;
+}
+
+/* The share's height, for what must stand as tall as it (Grid Top's head
+   row, which it holds while the share is put away to be typed). */
+.slate-root[data-input="touch"] .slate-layer__head {
+  --slate-share-floor: var(--slate-tap);
 }
 
 .slate-root[data-input="touch"] .slate-toggle--tracking {
@@ -1351,11 +1343,7 @@
   display: grid;
   grid-auto-flow: column;
   grid-template-columns: repeat(var(--slate-layers, 3), minmax(0, 1fr));
-  gap: var(--slate-stroke);
-  overflow: hidden;
-  border: var(--slate-stroke) solid var(--slate-border-subtle);
-  border-radius: var(--slate-radius-lg);
-  background: var(--slate-border-subtle);
+  gap: 5px;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer,
@@ -1370,13 +1358,15 @@
   align-items: center;
   gap: 0 var(--slate-space-1);
   min-height: var(--slate-tap);
-  padding: 0 0 0 var(--slate-space-2);
-  border-width: 0 0 0 3px;
+  padding: 0 2px;
+  border-width: 0;
   border-radius: 0;
-  background: var(--slate-surface);
+  background: none;
 }
 
+/* The layer is said by its letter, in its tone: no stripe, no panel. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__name {
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
   font-size: var(--slate-text-lg);
   font-weight: 700;
 }
@@ -1401,28 +1391,69 @@
   display: none;
 }
 
+/* A share being typed: a column is too narrow for the field and its
+   Cancel, so the pair floats over the whole row of heads - named by its
+   layer's letter, in its tone - and the grid under it does not move. The
+   layers are its containing block, so its grid-column spans them all (the
+   touch rule's 2 / -1 would start it at the second); its top stays where
+   the head puts it. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__layers {
+  position: relative;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-editor-field[data-layer] {
+  grid-column: 1 / -1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding: 0 0 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-editor-field[data-layer]::before {
+  content: "Layer " attr(data-layer);
+  flex: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
+  font-size: var(--slate-text-md);
+  font-weight: 700;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__input {
+  flex: 1 1 auto;
+}
+
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__note {
   flex: 1 0 100%;
   font-size: var(--slate-text-xs);
 }
 
-/* The attribute out-specifies the Top layout's and the container's rows. */
+/* Each hopper its own tile (the attribute out-specifies the Top layout's
+   and the container's rows): the id, the resin under it, and the blend
+   large at the tile's foot, where a row of tiles lines its numbers up;
+   Compare's line and the grab strip under that. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper[data-recipe] {
   grid-column: calc(var(--slate-layer-i, 0) + 1);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto auto;
   grid-template-areas:
-    "id pct"
-    "resin resin"
-    "next next";
-  align-content: start;
+    "id"
+    "resin"
+    "pct"
+    "next"
+    "grip";
   align-items: baseline;
-  column-gap: 3px;
   row-gap: 0;
-  min-height: 56px;
-  padding: 6px 5px 5px 6px;
-  border: 0;
-  border-radius: 0;
+  min-height: 84px;
+  /* The next resin's size follows the tile's width (cqi, below). */
+  container-type: inline-size;
+  padding: 6px 7px 5px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
   background: var(--slate-surface-raised);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -1444,11 +1475,15 @@
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__pct {
   grid-area: pct;
+  align-self: end;
+  justify-self: start;
   min-height: 0;
+  margin-top: var(--slate-space-1);
   padding: 0;
-  font-size: var(--slate-text-md);
+  font-size: var(--slate-text-xl);
   font-weight: 700;
-  letter-spacing: -0.04em;
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 /* Hopper 1's blend reads as the others do, as on the floor UI's phone. */
@@ -1469,20 +1504,25 @@
   white-space: nowrap;
 }
 
-/* Compare's band: the resin the hopper becomes (or replaces), small. */
+/* Compare's line: the resin the hopper becomes (or replaces), small,
+   under the blend, in the layer's tone. Sized to the tile so the arrow
+   and six characters always fit (about 5.4em of them, two wide letters
+   included): the xs size where the tile allows it, smaller where five
+   layers share a narrow screen. A longer code is clipped, not ended in
+   an ellipsis, which would take the sixth character's room. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__next:not([hidden]) {
   grid-area: next;
   display: block;
   min-width: 0;
-  margin: var(--slate-space-1) -5px -5px -6px;
-  padding: 1px 3px 2px 4px;
+  margin: var(--slate-space-1) 0 0;
+  padding: 0;
   letter-spacing: -0.02em;
   overflow: hidden;
-  background: var(--slate-accent-soft);
-  color: var(--slate-accent-text);
-  font-size: var(--slate-text-xs);
+  background: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 70%, var(--slate-text));
+  font-size: min(var(--slate-text-xs), 100cqi / 5.4);
   font-weight: 600;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -1540,7 +1580,8 @@
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-empty {
-  background: var(--slate-surface);
+  border-style: dashed;
+  background: transparent;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-picked {
@@ -1564,11 +1605,33 @@
   font-size: var(--slate-text-sm);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct,
+/* The draft's blend reads as the plain one: large at the tile's foot, at
+   its left, the "%" small beside it. The field is as wide as its figure
+   (field-sizing), so the "%" follows the number. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pctwrap,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-h1 {
   grid-area: pct;
-  width: 5ch;
+  align-self: end;
+  justify-self: start;
+  justify-content: flex-start;
+  margin-top: var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-pct,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-h1 {
+  --slate-field-width: auto;
+  field-sizing: content;
+  min-width: 1ch;
+  font-size: var(--slate-text-xl);
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: left;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper__draft-unit {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
 }
 
 /* ---- Layers the other way round ----
@@ -1596,18 +1659,18 @@
   text-decoration: none;
 }
 
-/* ---- A desktop's Recipe (slate-recipe.js `desktop`: is-desk) ----
+/* ---- The Recipe, always a form (slate-recipe.js: is-form) ----
    Always a draft and always comparing, so neither switch is drawn; a
    cell's weight is the Weights tab's, so its line stays, unseen, and a
    cell is as tall with or without one; the assignment is lifted by the
    grab strip at the cell's foot, below Compare's band, the badge being
    the fill's pick. */
-.slate-recipe.is-desk .slate-recipe__bulk,
-.slate-recipe.is-desk .slate-recipe__compare {
+.slate-recipe.is-form .slate-recipe__bulk,
+.slate-recipe.is-form .slate-recipe__compare {
   display: none;
 }
 
-.slate-recipe.is-desk .slate-hopper__weight {
+.slate-recipe.is-form .slate-hopper__weight {
   visibility: hidden;
 }
 
@@ -1615,7 +1678,7 @@
   display: none;
 }
 
-.slate-recipe.is-desk .slate-hopper__grip {
+.slate-recipe.is-form .slate-hopper__grip {
   display: flex;
   grid-area: grip;
   align-items: center;
@@ -1654,8 +1717,8 @@
    cell is the same height drafting or not, and lines up with the Weights
    tab's (weights.css). A hover shows the field is there; what differs
    from the line is written in the accent; an empty resin keeps the "+". */
-.slate-recipe.is-desk .slate-hopper__draft-resin,
-.slate-recipe.is-desk .slate-hopper__draft-pct {
+.slate-recipe.is-form .slate-hopper__draft-resin,
+.slate-recipe.is-form .slate-hopper__draft-pct {
   --slate-field-border: var(--slate-stroke) solid transparent;
   --slate-field-bg: transparent;
   --slate-field-padding: 0;
@@ -1666,21 +1729,21 @@
   line-height: calc(var(--slate-text-lg) * var(--slate-line-normal) - 2 * var(--slate-stroke));
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-resin {
+.slate-recipe.is-form .slate-hopper__draft-resin {
   font-weight: 600;
   text-align: left;
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-resin:placeholder-shown {
+.slate-recipe.is-form .slate-hopper__draft-resin:placeholder-shown {
   text-align: center;
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-resin::placeholder {
+.slate-recipe.is-form .slate-hopper__draft-resin::placeholder {
   color: var(--slate-text-faint);
   font-weight: 400;
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-pctwrap {
+.slate-recipe.is-form .slate-hopper__draft-pctwrap {
   grid-area: pct;
   display: inline-flex;
   align-items: baseline;
@@ -1688,7 +1751,7 @@
   min-width: 0;
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-pct {
+.slate-recipe.is-form .slate-hopper__draft-pct {
   --slate-field-width: 2.6em;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1705,7 +1768,7 @@
   visibility: hidden;
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-h1 {
+.slate-recipe.is-form .slate-hopper__draft-h1 {
   color: inherit;
   font-size: var(--slate-text-lg);
   font-weight: 700;
@@ -1713,19 +1776,19 @@
 }
 
 @media (hover: hover) {
-  .slate-recipe.is-desk .slate-hopper__draft-resin:hover,
-  .slate-recipe.is-desk .slate-hopper__draft-pct:hover {
+  .slate-recipe.is-form .slate-hopper__draft-resin:hover,
+  .slate-recipe.is-form .slate-hopper__draft-pct:hover {
     --slate-field-bg: var(--slate-surface-hover);
   }
 }
 
-.slate-recipe.is-desk .slate-hopper__draft-resin.is-drafted,
-.slate-recipe.is-desk .slate-hopper__draft-pct.is-drafted {
+.slate-recipe.is-form .slate-hopper__draft-resin.is-drafted,
+.slate-recipe.is-form .slate-hopper__draft-pct.is-drafted {
   color: var(--slate-accent-text);
 }
 
 /* The badge picks for the fill on a desktop, so it reads as a pick. */
-.slate-recipe.is-desk .slate-hopper__id {
+.slate-recipe.is-form .slate-hopper__id {
   cursor: pointer;
   user-select: none;
 }
@@ -1742,6 +1805,8 @@
    the columns round, auto-placement honouring it. */
 
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-recipe__layers {
+  /* The share editor's containing block under a finger (below). */
+  position: relative;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, var(--slate-grid-top-width));
@@ -1756,13 +1821,110 @@
   grid-template-rows: subgrid;
   padding: 0 var(--slate-space-2) var(--slate-space-2);
   background: linear-gradient(180deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+  /* The type follows the column. At its full width (--slate-grid-top-width,
+     168px inside the padding) every size is the token's own; a column the
+     page squeezes (five layers on a tablet held upright, a narrow window)
+     scales its type with it, each size stopping at a floor so the small
+     words stay legible and the large ones give the most. The column is the
+     container; the sizes resolve on whatever uses them inside it. */
+  container: slate-column / inline-size;
+  --slate-text-xs: clamp(10px, 6.55cqi, 11px);
+  --slate-text-sm: clamp(10.5px, 7.15cqi, 12px);
+  --slate-text-md: clamp(12px, 8.34cqi, 14px);
+  --slate-text-lg: clamp(13px, 9.53cqi, 16px);
+  --slate-text-xl: clamp(15px, 11.91cqi, 20px);
+  --slate-text-2xl: clamp(18px, 16.67cqi, 28px);
 }
 
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head {
+  /* The letter and share's row keeps the share's height while the share is
+     put away to be typed: a column's cells follow its head, and a shorter
+     head would lift them out of line with the other layers'. */
+  grid-template-rows: minmax(var(--slate-share-floor, 0px), auto);
   grid-row: 1;
   grid-column: 1;
   padding: var(--slate-space-2) var(--slate-space-1) calc(var(--slate-space-2) + var(--slate-grid-foot));
   border-radius: var(--slate-radius) var(--slate-radius) 0 0;
+}
+
+/* A column's head: the letter beside the share, both large, and the role
+   on its own line under them - a column has no room for "B · Outside
+   subskin" on one line beside anything. The role gives way at the edge
+   rather than running into the next column. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__name {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: baseline;
+  margin-right: var(--slate-space-1);
+  font-size: var(--slate-text-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__share {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: baseline;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__role {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__role::before {
+  content: none;
+}
+
+/* The share being typed. With a mouse the field takes the share's place
+   beside the letter. Under a finger the field comes with a Cancel, and a
+   column cannot hold both: the pair floats over the whole row of heads,
+   named "Layer B" in its tone, as a phone's does. Its head steps aside
+   while it is open - no longer the pair's containing block, so the
+   layers are, and unseen under it (the pair shows itself again) - which
+   only a head holding the pair does, so a mouse's head keeps its own. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__input {
+  --slate-field-padding: 0 var(--slate-space-1);
+  --slate-field-min-height: 0;
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  /* No taller than the share it stands in for, so the head keeps its
+     height while it is typed. */
+  height: calc(var(--slate-text-2xl) * 1.1);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head:has(.slate-editor-field) {
+  position: static;
+  visibility: hidden;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-editor-field[data-layer] {
+  --slate-field-width: 100%;
+  position: absolute;
+  /* No placement: the columns are implicit, so a line past the first
+     means nothing, and unplaced the pair spans the layers' whole box. */
+  grid-area: auto;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  visibility: visible;
+  padding: 0 0 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-editor-field[data-layer]::before {
+  content: "Layer " attr(data-layer);
+  flex: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
+  font-size: var(--slate-text-md);
+  font-weight: 700;
 }
 
 /* The foot on Grid Top's narrower padding: the dots and the other share
@@ -1778,6 +1940,13 @@
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper[data-recipe] {
   grid-column: 1;
   grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+}
+
+/* Compare's band set a little closer in a column, so a six-character
+   resin and its blend both fit one the page has squeezed. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper__next:not([hidden]) {
+  gap: 2px;
+  letter-spacing: -0.03em;
 }
 
 /* ---- Tracked and pumped off ----
