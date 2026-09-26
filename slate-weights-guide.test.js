@@ -51,9 +51,18 @@ test("it starts simple and works up: split, time, weight, Smart Hoppers, density
   ]);
   const all = JSON.stringify(wguide.sections());
   assert.match(all, /from the floor of the receiver to the fill valve/);
+  // Resin does stand above the valve - the loader calls below it - but an
+  // unknown amount, so the weight counts the least: never "resin never reaches".
+  assert.doesNotMatch(all, /never reaches|where the loader stops|runs dry right at the changeover/);
+  assert.match(all, /calls for resin when the level falls below the valve/);
+  assert.match(all, /the least the (hopper|receiver) holds/);
   assert.match(all, /0\.7854 × D² × h/);
   assert.match(all, /C² × h ÷ \(4π\)/);
   assert.match(all, /inside wall to inside wall/);
+  // The two ways by Line Configuration's own names: both are a volume.
+  const lineConfig = require("./slate/slate-line-config.js");
+  for (const label of lineConfig.GEOMETRIES.map(one => one.label)) assert.ok(all.includes(label), `the guide does not name "${label}"`);
+  assert.doesNotMatch(all, /measure their hoppers by volume|Cylindrical/);
   assert.match(all, /bulk density = resin lb ÷ water lb × 62\.43/);
   assert.match(all, /H1 = 100 − /);
   assert.doesNotMatch(all, /pump (it|that hopper) off|tablet/i, "the floor's words: turn the pump off; phones scan");

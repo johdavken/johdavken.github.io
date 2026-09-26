@@ -97,13 +97,13 @@
           { p: "With the pump off, a hopper feeds only what is already in its receiver. How long that lasts is its weight over its rate." },
           { formula: ["hours to empty = weight ÷ hopper lb/hr", "turn the pump off at = changeover − hours to empty"],
             worked: `${round(w.weight)} lb ÷ ${round(w.hopperLbHr)} lb/hr = ${clock(w.hours)}. With the changeover at ${e.changeover}, turn B2's pump off about ${clock(w.hours)} before it.` },
-          { p: "So the receiver runs dry right at the changeover, and nothing of the old resin is left to mix into the new job. The weight is the one number the whole schedule hangs on." }
+          { p: "So the receiver runs out at the changeover, not before it: the weight counts only what the receiver is sure to hold (section 3), so any more feeds a little past. The weight is the one number the whole schedule hangs on." }
         ]
       },
       {
         title: "3. The weight",
         blocks: [
-          { p: "It is the resin a full receiver holds - full meaning filled to its fill valve, where the loader stops. Enter it on the Weights page, or let Smart Hoppers work it out." },
+          { p: "It is the resin a receiver is sure to hold: filled to its fill valve. The loader calls for resin when the level falls below the valve, so there is usually more above it, but how much is never known - the weight counts only up to the valve, the least the receiver holds. Enter it on the Weights page, or let Smart Hoppers work it out." },
           { p: "An entered weight is right for one resin. The same receiver holds more of a heavy-packing resin and less of a light one, so on a line that changes resins often a single weight drifts wrong." }
         ]
       },
@@ -112,17 +112,18 @@
         blocks: [
           { p: "Smart Hoppers measures the hopper once and weighs the resin by what it is: the space the resin fills, times how many pounds of that resin fill a cubic foot." },
           { formula: ["weight = volume (ft³) × bulk density (lb/ft³)"] },
-          { p: "On a line of round receivers, the volume comes from the receiver's size - one figure for the line, since its receivers match - and each hopper's height." },
+          { p: "Where the volume comes from is set per line, in Line Configuration: Diameter & height, or Capacity. Both end in a volume; they differ in what you measure." },
+          { p: "Diameter & height, for a line of round receivers: the receiver's size - one figure for the line, since its receivers match - and each hopper's height." },
           { drawing: "hopper" },
           { list: [
             "Diameter (D): with the lid off, from inside wall to inside wall across the centre, in inches - swing the tape and take the widest reading. Inside is what the resin fills, so no wall to allow for.",
             "Or circumference (C): a tape around the outside. It includes the steel wall, so it reads a little large - about 0.8 in on an ⅛ in wall, some 3% more volume. The Weights page takes either: choose Diameter or Circumference beside the field.",
-            "Height (h): from the floor of the receiver to the fill valve, in inches - the column resin actually fills. Not the outside of the hopper, and not above the valve, where resin never reaches."
+            "Height (h): from the floor of the receiver to the fill valve, in inches. Resin usually stands above the valve too, but that amount is unknown, so the height stops at the valve: the least the hopper holds."
           ] },
           { formula: ["volume (in³) = 0.7854 × D² × h", "  or with C: C² × h ÷ (4π)", "volume (ft³) = in³ ÷ 1,728"],
             worked: `0.7854 × ${e.diameter}² × ${e.height} = ${round(w.cubicInches)} in³ = ${round(w.cubicFeet, 2)} ft³; × ${e.bulkDensity} lb/ft³ = ${round(w.weight)} lb.` },
           { p: `(Both are the circle's area times the height: πr², the radius being D ÷ 2 - or C ÷ 2π. A ${e.diameter} in diameter is a ${round(w.circumference, 1)} in circumference; the line stores the circumference either way.)` },
-          { p: "Some lines measure their hoppers by volume instead - the line's configuration says which. There, each hopper carries its usable gallons:" },
+          { p: "Capacity, for receivers of any shape: each hopper carries its capacity in gallons up to the fill valve - the maker's figure, or measured - and the volume is that:" },
           { formula: ["volume (ft³) = gallons × 0.1337"],
             worked: `${e.gallons} gal × 0.1337 = ${round(w.gallonFeet, 2)} ft³; × ${e.bulkDensity} lb/ft³ = ${round(w.gallonWeight)} lb.` },
           { p: "Where Smart Hoppers cannot work a weight out - no height or diameter yet, or a resin with no measured bulk density - it uses the entered weight. The Weights page shows which one each hopper is using." }

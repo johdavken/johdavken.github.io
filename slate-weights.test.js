@@ -138,7 +138,7 @@ test("the subtitle names the line, its hoppers and the switch; the switch's line
   const smart = { enabled: true, geometryMode: "cylindrical", circumference: 30 };
   assert.equal(weights.computedHint({ resinName: "", usableHeight: 48 }, smart, m), "no resin");
   assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 0 }, smart, m), "no height");
-  assert.equal(weights.computedHint({ resinName: "HX204", usableGallons: 0 }, smart, actions.MEASURE.volume), "no volume");
+  assert.equal(weights.computedHint({ resinName: "HX204", usableGallons: 0 }, smart, actions.MEASURE.volume), "no capacity");
   assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 48 }, { enabled: true, geometryMode: "cylindrical", circumference: 0 }, m), "no hopper size", "the hint names neither diameter nor circumference: either may be how it is entered");
   assert.equal(weights.computedHint({ resinName: "HX204", usableHeight: 48 }, smart, m), "no bulk density");
   assert.equal(weights.computedHint({ resinName: "HX204", usableGallons: 12 }, { enabled: true, geometryMode: "volume", circumference: 0 }, actions.MEASURE.volume), "no bulk density");
@@ -231,9 +231,9 @@ test("smart:cylindrical: a height field and a computed readout per row, the circ
   assert.equal(view.element.getAttribute("data-shape"), "smart:volume");
   assert.equal(field(view, "A:0", "geometry").value, "12");
   assert.equal(rowOf(view, "A:0").querySelector(".slate-weights__geometry .slate-weights__unit").textContent, "gal");
-  assert.equal(rowOf(view, "A:1").querySelector(".slate-weights__computed").textContent, "no volume");
+  assert.equal(rowOf(view, "A:1").querySelector(".slate-weights__computed").textContent, "no capacity");
   assert.ok(circumference.hasAttribute("hidden"), "a volume line has no shared circumference");
-  assert.match(field(view, "A:0", "geometry").getAttribute("aria-label"), /usable volume, gallons/i, "the geometry field lost its name");
+  assert.match(field(view, "A:0", "geometry").getAttribute("aria-label"), /capacity, gallons/i, "the geometry field lost its name");
 });
 
 test("a shape change rebuilds the rows; a values change patches the same field in place", () => {

@@ -36,7 +36,7 @@
    * unit, which dimension the command names. */
   const MEASURE = Object.freeze({
     cylindrical: Object.freeze({ dimension: "height", unit: "in", unitWord: "inches", noun: "usable height", field: "usableHeight" }),
-    volume: Object.freeze({ dimension: "volume", unit: "gal", unitWord: "gallons", noun: "usable volume", field: "usableGallons" })
+    volume: Object.freeze({ dimension: "volume", unit: "gal", unitWord: "gallons", noun: "capacity", field: "usableGallons" })
   });
   const SMART_ON_TEXT = "Weights are computed from each hopper's geometry and its resin's measured bulk density; the entered weight stands where nothing can be computed.";
   const SMART_OFF_TEXT = "Weights are the entered receiver weights.";
