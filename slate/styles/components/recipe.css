@@ -1553,74 +1553,52 @@
 }
 
 /* Current and Next are two faces of the same tiles: turning from one to
-   the other flips each tile over (slate-recipe.js marks it is-flipping),
-   from a blank back in the layer's tone to the face now shown, one
-   position after another, the wave running down and across the grid as
-   the band's does. Next turns them one way and Current back the other.
-   The back is the tile's ::after, over the face - mirrored while it is
-   turned away - until the tile stands edge-on, halfway. */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping {
-  position: relative;
-  animation: slate-card-flip-next calc(var(--slate-motion-move) * 2) var(--slate-motion-ease) both;
+   the other slides each tile's contents in over the ones they replace
+   (slate-recipe.js marks it is-sliding, on a phone alone), the frame
+   standing still and clipping them, one position after another, the
+   wave running down and across the grid as the band's does. Next comes
+   in from the right, Current back from the left - the way the tabs
+   stand. The distance is the tile's width (it is a container: cqi). The
+   band keeps its own drop beside the slide. */
+.slate-hopper.is-sliding {
+  overflow: hidden;
+}
+
+.slate-hopper.is-sliding > * {
+  animation: slate-slide-next var(--slate-motion-band) var(--slate-motion-ease) both;
   animation-delay: calc((var(--slate-hopper-slot, 0) + var(--slate-layer-i, 0)) * var(--slate-motion-lead));
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping[data-recipe="current"] {
-  animation-name: slate-card-flip-current;
+.slate-hopper.is-sliding[data-recipe="current"] > * {
+  animation-name: slate-slide-current;
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping::after {
-  content: "";
-  position: absolute;
-  inset: calc(-1 * var(--slate-stroke));
-  z-index: 1;
-  border: var(--slate-stroke) solid color-mix(in srgb, var(--slate-layer-tone) 45%, var(--slate-border-subtle));
-  border-radius: inherit;
-  background: color-mix(in srgb, var(--slate-layer-tone) 16%, var(--slate-surface-raised));
-  animation: slate-card-back calc(var(--slate-motion-move) * 2) linear both;
-  animation-delay: inherit;
-}
-
-@keyframes slate-card-flip-next {
+@keyframes slate-slide-next {
   from {
-    transform: perspective(600px) rotateY(-180deg);
+    opacity: 0;
+    transform: translateX(100cqi);
   }
 
   to {
-    transform: perspective(600px) rotateY(0deg);
-  }
-}
-
-@keyframes slate-card-flip-current {
-  from {
-    transform: perspective(600px) rotateY(180deg);
-  }
-
-  to {
-    transform: perspective(600px) rotateY(0deg);
-  }
-}
-
-/* The back shows until the tile is edge-on, then is gone: held, not
-   faded, over the first half (a step), and gone for the second. */
-@keyframes slate-card-back {
-  from {
     opacity: 1;
-    animation-timing-function: steps(1, end);
+    transform: none;
   }
+}
 
-  50% {
+@keyframes slate-slide-current {
+  from {
     opacity: 0;
+    transform: translateX(-100cqi);
   }
 
   to {
-    opacity: 0;
+    opacity: 1;
+    transform: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping,
-  .slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-flipping::after {
+  .slate-hopper.is-sliding > * {
     animation: none;
   }
 }
