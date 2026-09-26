@@ -21,6 +21,9 @@
 
 .slate-home__brand .slate-logo {
   width: min(72%, 300px);
+  /* No taller than the room the brand is given: on a short phone it is
+     the mark that gives (below). */
+  max-height: 100%;
 }
 
 .slate-home__line {
@@ -160,4 +163,35 @@
   .slate-root .slate-home__readout:hover {
     background: var(--slate-surface-hover);
   }
+}
+
+/* ---- Fitting the screen ----
+   Home is one screen, never a page that scrolls: it takes the page cell's
+   height exactly (shell.css: the space between the header and the bar).
+   The mark stands at its own size and is the one thing that gives: on a
+   short screen (a Fold's cover) it shrinks to fit, never below a glance;
+   on a tall one the parts keep together and stand centred, the spare
+   height above and below them. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-section[data-section="home"] {
+  height: 100%;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home {
+  box-sizing: border-box;
+  justify-content: center;
+  height: 100%;
+  gap: var(--slate-space-3);
+  padding-bottom: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__brand {
+  flex: 0 1 auto;
+  align-items: center;
+  min-height: 72px;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__line,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__readouts,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__steps {
+  flex: none;
 }
