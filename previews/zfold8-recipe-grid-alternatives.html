@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fold Cover Recipe Grids</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --page:#eceee9;--page-ink:#1e2a2e;--page-mut:#5d6a6c;--page-line:#cfd4cd;--page-card:#f7f8f4;--frame:#20282b;
+  /* app: gruvbox light, as in the current build */
+  --a-bg:#f4ecce;--a-surf:#fbf4da;--a-surf2:#ebdfb6;--a-ink:#3c3836;--a-mut:#7c6f64;--a-line:#d9c9a3;--a-accent:#2f6474;--a-on:#fbf4da;
+  --la:#076678;--lb:#427b58;--lc:#af3a03;--ld:#79740e;--le:#8f3f71;
+  --c-swap:#b57614;--c-load:#427b58;--c-clear:#9d0006;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --cond:"IBM Plex Sans Condensed","Roboto Condensed",sans-serif-condensed,"Arial Narrow",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --page:#131719;--page-ink:#e3e6e1;--page-mut:#98a3a3;--page-line:#2d3538;--page-card:#1a1f21;--frame:#050607;
+  --a-bg:#282828;--a-surf:#32302f;--a-surf2:#3c3836;--a-ink:#ebdbb2;--a-mut:#a89984;--a-line:#4a4541;--a-accent:#83a598;--a-on:#1d2021;
+  --la:#83a598;--lb:#8ec07c;--lc:#fe8019;--ld:#b8bb26;--le:#d3869b;
+  --c-swap:#fabd2f;--c-load:#8ec07c;--c-clear:#fb4934;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --page:#131719;--page-ink:#e3e6e1;--page-mut:#98a3a3;--page-line:#2d3538;--page-card:#1a1f21;--frame:#050607;
+  --a-bg:#282828;--a-surf:#32302f;--a-surf2:#3c3836;--a-ink:#ebdbb2;--a-mut:#a89984;--a-line:#4a4541;--a-accent:#83a598;--a-on:#1d2021;
+  --la:#83a598;--lb:#8ec07c;--lc:#fe8019;--ld:#b8bb26;--le:#d3869b;
+  --c-swap:#fabd2f;--c-load:#8ec07c;--c-clear:#fb4934;}
+
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--page-ink);font:14px/1.45 var(--sans)}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:32px 72px}
+header.intro h1{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em;text-wrap:balance}
+header.intro p{max-width:64ch;margin:0 0 8px;color:var(--page-mut)}
+.controls{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:20px 0 8px;padding:10px 12px;border:1px solid var(--page-line);border-radius:12px;background:color-mix(in srgb,var(--page-card) 92%,transparent);backdrop-filter:blur(8px)}
+.controls label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--page-mut)}
+.pseg{display:inline-flex;border:1px solid var(--page-line);border-radius:999px;padding:2px;background:var(--page)}
+.pseg button{border:0;background:transparent;color:var(--page-ink);font:500 13px var(--sans);padding:5px 12px;border-radius:999px;cursor:pointer}
+.pseg button[aria-pressed="true"]{background:var(--page-ink);color:var(--page)}
+.pseg button:focus-visible,.jump a:focus-visible{outline:2px solid var(--a-accent);outline-offset:2px}
+.jump{display:flex;flex-wrap:wrap;gap:4px}
+.jump a{font:600 12px var(--cond);color:var(--page-ink);text-decoration:none;border:1px solid var(--page-line);border-radius:6px;padding:2px 7px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--page-mut);margin:4px 0 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+section.design{padding-top:36px;margin-top:36px;border-top:1px solid var(--page-line);scroll-margin-top:80px}
+.dhead{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;margin-bottom:16px}
+.dnum{font:600 13px var(--mono);color:var(--page-mut)}
+.dhead h2{margin:0;font-size:21px;letter-spacing:-.01em}
+.dhead p{grid-column:2;margin:0;max-width:66ch;color:var(--page-mut)}
+.stage{overflow-x:auto;padding-bottom:6px}
+.pair{display:flex;gap:28px;width:max-content;zoom:var(--z,1)}
+.pair figure{margin:0}
+.pair figcaption{font:600 12px var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--page-mut);margin:0 0 8px 6px}
+.pair figcaption span{font-weight:400;text-transform:none;letter-spacing:0}
+
+/* ---------- phone shell: 412 x 900 CSS px, the folded Z Fold cover screen ---------- */
+.ph{width:428px;height:916px;border:8px solid var(--frame);border-radius:38px;background:var(--a-bg);color:var(--a-ink);display:flex;flex-direction:column;overflow:hidden;font-family:var(--sans);font-variant-numeric:tabular-nums;box-shadow:0 20px 50px -24px rgba(0,0,0,.45)}
+.sb{display:flex;justify-content:space-between;padding:8px 22px 0;font-size:13px;font-weight:500;height:30px;flex:none}
+.sb b{font-weight:600;padding:0 6px;border-radius:8px;background:var(--a-ink);color:var(--a-bg);font-size:11px;line-height:17px}
+.top{display:flex;justify-content:flex-end;padding:6px 12px 8px;flex:none}
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;padding:6px 12px;border:1px solid var(--a-line);border-radius:999px;background:var(--a-surf)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--c-swap)}
+.tb{display:flex;gap:6px;align-items:center;padding:0 12px 10px;flex:none}
+.seg{display:inline-flex;padding:2px;border-radius:10px;background:var(--a-surf2)}
+.seg b{font-weight:500;font-size:13px;padding:6px 11px;border-radius:8px;color:var(--a-mut)}
+.seg b.on{background:var(--a-accent);color:var(--a-on)}
+.tbtn{font-size:13px;font-weight:500;padding:6px 10px;border-radius:10px;border:1px solid var(--a-line);color:var(--a-ink)}
+.tb .grow{flex:1}
+.nav{flex:none;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 4px 0;border-top:1px solid var(--a-line);background:var(--a-bg)}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--a-mut);padding:4px 0}
+.nav span.on{color:var(--a-accent);font-weight:600}
+.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.handle{flex:none;height:18px;display:grid;place-items:center}
+.handle::before{content:"";width:120px;height:4px;border-radius:2px;background:var(--a-mut);opacity:.6}
+.cols{flex:1;min-height:0;display:flex;justify-content:center;padding:0 var(--pad) 8px}
+.set{display:flex;gap:var(--gap)}
+.col{width:var(--cw);flex:none;display:flex;flex-direction:column;gap:var(--rgap);min-height:0}
+.lh{flex:none;display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.lt{font-weight:700;font-size:19px;line-height:1}
+.lp{font-size:12.5px;font-weight:500;border-bottom:1px dotted currentColor;line-height:1.2}
+.cell{flex:1 1 0;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.r1{display:flex;justify-content:space-between;align-items:baseline;gap:2px}
+.hid{font-size:11px;font-weight:600;color:var(--a-mut)}
+.pct{font-weight:700;font-size:14px}
+.rz,.nx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rz{font-family:var(--cond);font-weight:600;font-size:14.5px;line-height:1.2}
+.em{color:var(--a-mut);font-weight:400;font-style:normal}
+.nx{font-family:var(--cond);font-size:11.5px;font-weight:600;line-height:1.25}
+.ar{opacity:.75;margin-right:2px}
+.minilegend{flex:none;display:flex;gap:10px;padding:0 14px 8px;font-size:10.5px;color:var(--a-mut)}
+.minilegend span{display:inline-flex;align-items:center;gap:4px}
+.minilegend i{width:8px;height:8px;border-radius:2px}
+
+/* 01 Soft Tiles */
+.d1 .lh{padding:2px 2px 7px;border-bottom:3px solid var(--l)}
+.d1 .lp{color:var(--a-mut)}
+.d1 .cell{background:var(--a-surf);border:1px solid var(--a-line);border-radius:12px;padding:7px 7px 6px}
+.d1 .hid{display:inline-flex;align-items:center;gap:4px}
+.d1 .trk .hid::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--l)}
+.d1 .rz{margin-top:5px}
+.d1 .nx{margin-top:auto;padding:3px 5px;border-radius:6px;background:color-mix(in srgb,var(--l) 15%,transparent);color:color-mix(in srgb,var(--l) 75%,var(--a-ink))}
+.d1 .s-same .nx{background:transparent;color:var(--a-mut);font-weight:500;padding-left:0}
+.d1 .s-clear .nx{background:transparent;box-shadow:inset 0 0 0 1px var(--a-line);color:var(--a-mut)}
+.d1 .emp{background:transparent;border-style:dashed}
+
+/* 02 Hairline Ledger */
+.d2 .set{border:1px solid var(--a-line);border-radius:12px;overflow:hidden;background:var(--a-surf)}
+.d2 .col+.col{border-left:1px solid var(--a-line)}
+.d2 .lh{padding:9px 7px 8px;box-shadow:inset 0 3px 0 var(--l);background:var(--a-surf2)}
+.d2 .cell{border-top:1px solid var(--a-line);padding:7px 7px 6px}
+.d2 .trk{background:color-mix(in srgb,var(--l) 8%,var(--a-surf))}
+.d2 .rz{margin-top:4px}
+.d2 .nx{margin-top:auto;color:var(--a-mut);font-weight:500}
+.d2 .s-swap .nx,.d2 .s-load .nx{color:var(--a-accent);font-weight:600}
+.d2 .s-clear .nx{color:var(--c-clear)}
+
+/* 03 Fill Gauge */
+.d3 .lh{padding:0 2px 6px}
+.d3 .lt{color:var(--l)}
+.d3 .cell{border-radius:10px;border:1px solid var(--a-line);padding:6px 7px;background:linear-gradient(to top,color-mix(in srgb,var(--l) 24%,var(--a-surf)) var(--f),var(--a-surf) var(--f))}
+.d3 .emp{background:transparent;border-style:dashed}
+.d3 .big{margin-top:auto;font-size:22px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.d3 .big small{font-size:12px;font-weight:600;margin-left:1px}
+.d3 .rz{margin-top:2px}
+.d3 .nx{margin-top:4px;color:color-mix(in srgb,var(--l) 70%,var(--a-ink))}
+.d3 .s-same .nx{color:var(--a-mut);font-weight:500}
+
+/* 04 Split Now / Next */
+.d4 .lh{padding:0 2px 6px;border-bottom:2px solid var(--l);margin-bottom:1px}
+.d4 .cell{border-radius:10px;background:var(--a-surf);border:1px solid var(--a-line)}
+.d4 .now{flex:1;min-height:0;padding:6px 7px;display:flex;flex-direction:column}
+.d4 .now .rz{margin-top:auto}
+.d4 .nb{flex:none;height:27px;display:flex;align-items:center;padding:0 7px;font-family:var(--cond);font-size:12px;font-weight:600;border-top:1px solid var(--a-line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d4 .s-swap .nb{background:color-mix(in srgb,var(--c-swap) 20%,var(--a-surf));color:color-mix(in srgb,var(--c-swap) 55%,var(--a-ink))}
+.d4 .s-load .nb{background:color-mix(in srgb,var(--c-load) 20%,var(--a-surf));color:color-mix(in srgb,var(--c-load) 55%,var(--a-ink))}
+.d4 .s-clear .nb{background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--c-clear) 12%,transparent) 5px 10px);color:var(--c-clear)}
+.d4 .s-same .nb,.d4 .s-idle .nb{color:var(--a-mut);font-weight:500}
+.d4 .emp{background:transparent;border-style:dashed}
+
+/* 05 Layer Cards */
+.d5 .col{background:var(--a-surf);border:1px solid var(--a-line);border-radius:14px;overflow:hidden;gap:0}
+.d5 .lh{background:var(--l);color:var(--a-on);padding:9px 7px 8px}
+.d5 .cell{padding:7px 7px 6px}
+.d5 .cell+.cell{border-top:1px solid var(--a-line)}
+.d5 .trk{box-shadow:inset 3px 0 0 var(--l)}
+.d5 .rz{margin-top:3px}
+.d5 .nx{margin-top:auto;color:color-mix(in srgb,var(--l) 75%,var(--a-ink))}
+.d5 .s-same .nx{color:var(--a-mut);font-weight:500}
+.d5 .s-clear .nx{color:var(--c-clear)}
+.d5 .emp .hid{opacity:.7}
+
+/* 06 Change Codes */
+.d6 .lh{padding:0 2px 6px}
+.d6 .lh::after{content:"";flex:1;height:3px;border-radius:2px;background:var(--l);align-self:center;margin-left:2px}
+.d6 .cell{background:var(--a-surf);border:1px solid var(--a-line);border-left:4px solid var(--st,var(--a-line));border-radius:8px;padding:6px 6px 6px 6px}
+.d6 .s-swap{--st:var(--c-swap)}.d6 .s-load{--st:var(--c-load)}.d6 .s-clear{--st:var(--c-clear)}
+.d6 .rz{margin-top:4px}
+.d6 .nx{margin-top:auto;display:flex;align-items:center;gap:4px}
+.d6 .g{flex:none;display:grid;place-items:center;width:15px;height:15px;border-radius:4px;background:var(--st,var(--a-surf2));color:var(--a-on);font:700 10px var(--sans)}
+.d6 .s-same .g{color:var(--a-mut)}
+.d6 .s-same .nx,.d6 .s-idle .nx{color:var(--a-mut);font-weight:500}
+.d6 .emp{background:transparent}
+
+/* 07 Row Gutter */
+.d7 .set{gap:0}
+.d7 .col{gap:0}
+.d7 .gut{width:22px}
+.d7 .gut .cell{align-items:center;justify-content:center;font:600 13px var(--mono);color:var(--a-mut)}
+.d7 .lh{height:34px;align-items:center;padding:0 7px;box-shadow:inset 0 -3px 0 var(--l)}
+.d7 .gut .lh{box-shadow:none}
+.d7 .cell{border-top:1px solid var(--a-line);padding:7px}
+.d7 .rw1,.d7 .rw3,.d7 .rw5{background:color-mix(in srgb,var(--a-surf2) 45%,transparent)}
+.d7 .col:not(.gut)+.col{border-left:1px solid color-mix(in srgb,var(--a-line) 60%,transparent)}
+.d7 .pct{align-self:flex-end;font-size:13px}
+.d7 .rz{margin-top:1px}
+.d7 .nx{margin-top:auto;color:var(--a-mut);font-weight:500}
+.d7 .s-swap .nx,.d7 .s-load .nx{color:var(--a-ink);font-weight:600}
+.d7 .s-swap .ar,.d7 .s-load .ar{color:var(--l);opacity:1}
+.d7 .trk .pct{color:var(--l)}
+.d7 .col:last-child .cell:last-child,.d7 .col:last-child .lh{border-right:0}
+
+/* 08 Big Numerals */
+.d8 .col{background:color-mix(in srgb,var(--l) 8%,var(--a-bg));border-radius:14px;padding:4px;gap:3px}
+.d8 .lh{padding:6px 4px 4px;color:var(--l)}
+.d8 .lp{color:var(--a-ink)}
+.d8 .cell{padding:5px 5px 6px;border-radius:10px}
+.d8 .trk{background:color-mix(in srgb,var(--a-surf) 80%,transparent)}
+.d8 .hid{font-size:10px}
+.d8 .big{font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-top:1px}
+.d8 .big small{font-size:13px;font-weight:500;letter-spacing:0}
+.d8 .emp .big{color:var(--a-mut);opacity:.45;font-weight:400}
+.d8 .rz{font-size:12.5px;letter-spacing:.02em;margin-top:auto}
+.d8 .nx{font-size:11px;color:var(--a-mut);font-weight:500}
+.d8 .s-swap .nx,.d8 .s-load .nx{color:color-mix(in srgb,var(--l) 80%,var(--a-ink));font-weight:600}
+
+/* 09 Night Tiles: single dark look on purpose, for dim control rooms */
+.ph.d9{--a-bg:#0f1214;--a-surf:#191e21;--a-surf2:#232a2e;--a-ink:#e7e2d6;--a-mut:#8c948f;--a-line:#2b3337;--a-accent:#e8b04b;--a-on:#0f1214;
+  --la:#6cb3c6;--lb:#86c28e;--lc:#f08a4b;--ld:#c8c45a;--le:#d58ab3;--c-swap:#e8b04b;--c-load:#86c28e;--c-clear:#ef6a5a;color-scheme:dark}
+.d9 .lh{padding:0 2px 7px}
+.d9 .lt{color:var(--l)}
+.d9 .lp{color:var(--a-mut)}
+.d9 .cell{background:var(--a-surf);border-radius:6px;border-top:2px solid var(--l);padding:6px 6px 5px}
+.d9 .emp{background:transparent;border:1px solid var(--a-line);border-top:2px solid color-mix(in srgb,var(--l) 35%,transparent)}
+.d9 .pct{color:var(--l);font-family:var(--mono);font-weight:600;font-size:13px}
+.d9 .rz{font-family:var(--mono);font-weight:500;font-size:12px;margin-top:6px}
+.d9 .nx{font-family:var(--mono);font-weight:400;font-size:10.5px;margin-top:auto;color:var(--a-mut)}
+.d9 .s-swap .nx,.d9 .s-load .nx{color:var(--c-swap)}
+.d9 .s-clear .nx{color:var(--c-clear)}
+.d9 .trk::after{content:"";position:absolute;top:7px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--l);box-shadow:0 0 6px var(--l)}
+.d9 .trk .pct{margin-right:9px}
+
+/* 10 H1 Bento */
+.d10 .lh{padding:0 2px 6px}
+.d10 .lt{color:var(--l)}
+.d10 .cell{background:var(--a-surf);border:1px solid var(--a-line);border-radius:10px;padding:5px 7px}
+.d10 .h1{flex-grow:1.75;background:color-mix(in srgb,var(--l) 16%,var(--a-surf));border-color:color-mix(in srgb,var(--l) 40%,var(--a-line));padding:7px}
+.d10 .h1 .big{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:6px}
+.d10 .h1 .big small{font-size:14px;font-weight:600;letter-spacing:0}
+.d10 .auto{font:600 9px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb,var(--l) 70%,var(--a-ink))}
+.d10 .h1 .rz{font-size:16px;margin-top:auto}
+.d10 .rz{margin-top:1px}
+.d10 .nx{margin-top:auto;color:color-mix(in srgb,var(--l) 75%,var(--a-ink))}
+.d10 .s-same .nx{color:var(--a-mut);font-weight:500}
+.d10 .s-clear .nx{color:var(--c-clear)}
+.d10 .emp{background:transparent;border-style:dashed}
+.d10 .cell:not(.h1) .pct{font-size:13px}
+
+@media (prefers-reduced-motion:no-preference){.pseg button{transition:background .15s,color .15s}}
+@media (max-width:560px){.dhead{grid-template-columns:1fr}.dhead p{grid-column:1}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Fold cover recipe grids</h1>
+    <p>Ten layouts for the Home recipe grid on the folded Galaxy Z Fold 8 cover screen (412 × 900 CSS px). Each design is shown for a 5-layer line and a 3-layer line, with identical cell sizes in both. The 3-layer grid keeps the same column width and centres itself instead of stretching.</p>
+    <p>The 5-layer data is the Line 10 job from your screenshot. The 3-layer job is made-up example data built from layers A, C and E. The status bar, sync pill, toolbar and footer stay the same across designs so only the grid is compared.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Preview controls">
+    <label for="m-cmp">View</label>
+    <div class="pseg" id="modeSeg"><button id="m-cur" data-mode="cur" aria-pressed="false">Current</button><button id="m-cmp" data-mode="cmp" aria-pressed="true">Compare</button></div>
+    <label for="z-fit">Size</label>
+    <div class="pseg" id="zoomSeg"><button id="z-fit" data-z="fit" aria-pressed="true">Fit</button><button id="z-act" data-z="1" aria-pressed="false">Actual</button></div>
+    <nav class="jump" aria-label="Jump to design" id="jump"></nav>
+  </div>
+  <div class="legend"><span><i style="background:var(--c-swap)"></i>Swap: next resin replaces current</span><span><i style="background:var(--c-load)"></i>Load: empty hopper gets a resin</span><span><i style="background:var(--c-clear)"></i>Clear: hopper runs out, nothing next</span><span><i style="background:var(--a-line)"></i>Same: no change</span></div>
+
+  <main id="designs"></main>
+</div>
+
+<script>
+(function(){
+  // [pct, current resin, next resin]; '' = empty
+  var L5 = [
+    {id:'A',pct:'17.5',c:'a',h:[[95,'MS1307','MS0400'],[0,'','A0301'],[4,'A0700','A0700'],[0,'','MS1201'],[1,'A0450','A0450/AB'],[0,'','MS0120']]},
+    {id:'B',pct:'17.5',c:'b',h:[[62,'MS1307','MS1201'],[0,'','A0301'],[13,'CCWHITE50','CCWHITE50'],[10,'MS0100','MS0710B'],[0,'','MS0200'],[15,'Erema','']]},
+    {id:'C',pct:'30',c:'c',h:[[77,'MS1502','MS1201'],[0,'','A0301'],[13,'CCWHITE50','CCWHITE50'],[10,'MS0100','MS0710B'],[0,'','MS0200'],[0,'','']]},
+    {id:'D',pct:'17.5',c:'d',h:[[62,'MS1100','MS1201'],[0,'','A0301'],[13,'CCWHITE50','CCWHITE50'],[10,'MS0100','MS0710B'],[0,'','MS0200'],[15,'Erema','']]},
+    {id:'E',pct:'17.5',c:'e',h:[[95,'MS1100','MS0400'],[0,'','A0301'],[4,'A0700','A0700'],[0,'','MS1201'],[1,'A0450','A0450/AB'],[0,'','MS0120']]}
+  ];
+  var L3 = [
+    {id:'A',pct:'25',c:'a',h:L5[0].h},
+    {id:'B',pct:'50',c:'b',h:L5[2].h},
+    {id:'C',pct:'25',c:'c',h:L5[4].h}
+  ];
+  var PHONE_W = 412;
+
+  function state(c,n){ if(!c&&!n) return 'idle'; if(c===n) return 'same'; if(!c) return 'load'; if(!n) return 'clear'; return 'swap'; }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function info(L,i){
+    var h=L.h[i], c=h[1], n=h[2], s=state(c,n);
+    return {hid:L.id+(i+1), pct:h[0], cur:c, next:n, s:s, emp:!c, trk:!!c && i!==2, i:i};
+  }
+  function cls(x,extra){ return 'cell s-'+x.s+(x.emp?' emp':'')+(x.trk?' trk':'')+' rw'+x.i+(extra?' '+extra:''); }
+  function pctTxt(x){ return x.emp ? '<span class="em">–</span>' : x.pct+'%'; }
+  function rzTxt(x){ return x.emp ? '<span class="em">empty</span>' : esc(x.cur); }
+  function nxTxt(x){
+    if(x.s==='idle') return '&nbsp;';
+    if(x.s==='same') return '= same';
+    if(x.s==='clear') return '<span class="ar">→</span>clear';
+    return '<span class="ar">→</span>'+esc(x.next);
+  }
+  function nx(x,mode){ return mode==='cmp' ? '<div class="nx">'+nxTxt(x)+'</div>' : ''; }
+  function stdCell(x,mode,extra){
+    return '<div class="'+cls(x,extra)+'"><div class="r1"><span class="hid">'+x.hid+'</span><span class="pct">'+pctTxt(x)+'</span></div><div class="rz">'+rzTxt(x)+'</div>'+nx(x,mode)+'</div>';
+  }
+  function bigPct(x){ return x.emp ? '–' : x.pct+'<small>%</small>'; }
+
+  var GLYPH = {swap:'↻',load:'+',clear:'×',same:'=',idle:''};
+
+  var DESIGNS = [
+    {name:'Soft tiles', pad:12, gap:6, rgap:6,
+     note:'Separate rounded tiles with the next resin in a small tinted chip. Empty hoppers drop to a dashed outline, so the hoppers in use stand out without any extra colour.',
+     cell:stdCell},
+    {name:'Hairline ledger', pad:10, gap:0, rgap:0,
+     note:'One panel ruled with hairlines, closest to today’s grid but calmer. Tracked hoppers get a faint layer tint. Changes read in the accent colour, and no-change rows go quiet.',
+     cell:stdCell},
+    {name:'Fill gauge', pad:12, gap:5, rgap:5,
+     note:'Each tile fills from the bottom by its blend share, so 95% against 1% is visible before you read a number. The percentage is the largest text in the cell.',
+     cell:function(x,mode){
+       var f = x.emp?0:Math.max(x.pct,5);
+       return '<div class="'+cls(x)+'" style="--f:'+f+'%"><span class="hid">'+x.hid+'</span><div class="rz">'+rzTxt(x)+'</div><div class="big">'+(x.emp?'':bigPct(x))+'</div>'+nx(x,mode)+'</div>';
+     }},
+    {name:'Split now / next', pad:12, gap:5, rgap:5,
+     note:'The top of each tile is what’s running now; the bottom band is what comes next, coloured by change type. In Current view the band disappears and the tile keeps its size.',
+     cell:function(x,mode){
+       var band = mode==='cmp' ? '<div class="nb">'+(x.s==='idle'?'':nxTxt(x))+'</div>' : '';
+       return '<div class="'+cls(x)+'"><div class="now"><div class="r1"><span class="hid">'+x.hid+'</span><span class="pct">'+pctTxt(x)+'</span></div><div class="rz">'+rzTxt(x)+'</div></div>'+band+'</div>';
+     }},
+    {name:'Layer cards', pad:10, gap:5, rgap:0,
+     note:'Each layer is one card with a solid colour cap, so the layer structure reads first and hoppers become rows inside it. A left edge marks tracked hoppers.',
+     cell:stdCell},
+    {name:'Change codes', pad:12, gap:5, rgap:5, legend:true,
+     note:'Built for changeovers. A coloured left edge and a glyph (↻ swap, + load, × clear, = same) tell you what to do at each hopper without reading the resin names.',
+     cell:function(x,mode){
+       var n = mode==='cmp' ? '<div class="nx">'+(x.s==='idle'?'&nbsp;':'<span class="g">'+GLYPH[x.s]+'</span>'+(x.s==='same'?'same':x.s==='clear'?'clear':esc(x.next)))+'</div>' : '';
+       return '<div class="'+cls(x)+'"><div class="r1"><span class="hid">'+x.hid+'</span><span class="pct">'+pctTxt(x)+'</span></div><div class="rz">'+rzTxt(x)+'</div>'+n+'</div>';
+     }},
+    {name:'Row gutter', pad:8, gap:0, rgap:0, gutter:22,
+     note:'Hopper numbers move to a single left gutter, so cells drop the repeated “A1, B1…” labels and give the width to the resin code. Zebra rows keep each hopper position aligned across layers.',
+     cell:function(x,mode){
+       return '<div class="'+cls(x)+'"><span class="pct">'+pctTxt(x)+'</span><div class="rz">'+rzTxt(x)+'</div>'+nx(x,mode)+'</div>';
+     }},
+    {name:'Big numerals', pad:12, gap:4, rgap:3,
+     note:'Percentages set large, like a gauge readout, for reading from arm’s length. Each layer sits on its own faint colour column, and the resin code goes to a smaller second line.',
+     cell:function(x,mode){
+       return '<div class="'+cls(x)+'"><span class="hid">'+x.hid+'</span><div class="big">'+bigPct(x)+'</div><div class="rz">'+(x.emp?'':esc(x.cur))+'</div>'+nx(x,mode)+'</div>';
+     }},
+    {name:'Night tiles', pad:10, gap:5, rgap:5, night:true,
+     note:'A fixed dark look with monospaced codes and a layer-coloured top edge. Pending changes glow amber. The small lit dot marks tracked hoppers. It is meant for low light and does not follow the theme.',
+     cell:stdCell},
+    {name:'H1 bento', pad:12, gap:5, rgap:5,
+     note:'Hopper 1 is usually 60–95% of the layer, so it gets a taller tinted tile with an “auto” tag, since H1 is calculated. H2–H6 stay compact underneath.',
+     cell:function(x,mode){
+       if(x.i===0){
+         return '<div class="'+cls(x,'h1')+'"><div class="r1"><span class="hid">'+x.hid+'</span><span class="auto">auto</span></div><div class="big">'+bigPct(x)+'</div><div class="rz">'+rzTxt(x)+'</div>'+nx(x,mode)+'</div>';
+       }
+       return stdCell(x,mode);
+     }}
+  ];
+
+  var ICONS = {
+    Weights:'<path d="M6 20h12l-1.5-11h-9z"/><path d="M9 9a3 3 0 0 1 6 0"/>',
+    Tools:'<path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/>',
+    Home:'<path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/>',
+    Settings:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+    Menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'
+  };
+  function nav(){
+    return '<nav class="nav">'+Object.keys(ICONS).map(function(k){
+      return '<span'+(k==='Home'?' class="on"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg>'+k+'</span>';
+    }).join('')+'</nav><div class="handle"></div>';
+  }
+
+  function cellWidth(d){
+    var g = d.gutter ? d.gutter + d.gap : 0;
+    return Math.floor((PHONE_W - 2*d.pad - g - 4*d.gap) / 5);
+  }
+
+  function phone(d, idx, layers, mode){
+    var cw = cellWidth(d);
+    var cols = layers.map(function(L){
+      var cells = L.h.map(function(_,i){ return d.cell(info(L,i),mode); }).join('');
+      return '<div class="col" style="--l:var(--l'+L.c+')"><div class="lh"><span class="lt">'+L.id+'</span><span class="lp">'+L.pct+'%</span></div>'+cells+'</div>';
+    }).join('');
+    if(d.gutter){
+      var g = '<div class="col gut"><div class="lh"></div>';
+      for(var i=0;i<6;i++) g += '<div class="cell rw'+i+'">'+(i+1)+'</div>';
+      cols = g+'</div>'+cols;
+    }
+    var legend = d.legend && mode==='cmp' ? '<div class="minilegend"><span><i style="background:var(--c-swap)"></i>swap</span><span><i style="background:var(--c-load)"></i>load</span><span><i style="background:var(--c-clear)"></i>clear</span><span><i style="background:var(--a-line)"></i>same</span></div>' : '';
+    return '<div class="ph d'+(idx+1)+'">'+
+      '<div class="sb"><span>1:13 Sat, Sep 26</span><b>51</b></div>'+
+      '<div class="top"><span class="sync"><i></i>Line 10 · Pending · 1 device</span></div>'+
+      '<div class="tb"><div class="seg"><b'+(mode==='cur'?' class="on"':'')+'>Current</b><b'+(mode==='cmp'?' class="on"':'')+'>Compare</b></div><span class="grow"></span><span class="tbtn">Bulk edit</span><span class="tbtn">Scan</span></div>'+
+      legend+
+      '<div class="cols" style="--pad:'+d.pad+'px;--gap:'+d.gap+'px;--rgap:'+d.rgap+'px;--cw:'+cw+'px"><div class="set">'+cols+'</div></div>'+
+      nav()+'</div>';
+  }
+
+  var mode = 'cmp', zoomMode = 'fit';
+  var host = document.getElementById('designs');
+  var jump = document.getElementById('jump');
+
+  function render(){
+    host.innerHTML = DESIGNS.map(function(d,i){
+      var n = String(i+1).padStart(2,'0');
+      return '<section class="design" id="d'+(i+1)+'"><div class="dhead"><span class="dnum">'+n+'</span><h2>'+d.name+'</h2><p>'+d.note+'</p></div>'+
+        '<div class="stage"><div class="pair">'+
+        '<figure><figcaption>5 layer <span>· cell '+cellWidth(d)+' px wide</span></figcaption>'+phone(d,i,L5,mode)+'</figure>'+
+        '<figure><figcaption>3 layer <span>· same cell size</span></figcaption>'+phone(d,i,L3,mode)+'</figure>'+
+        '</div></div></section>';
+    }).join('');
+    applyZoom();
+  }
+  jump.innerHTML = DESIGNS.map(function(d,i){ return '<a href="#d'+(i+1)+'" title="'+d.name+'">'+String(i+1).padStart(2,'0')+'</a>'; }).join('');
+
+  function applyZoom(){
+    var stage = host.querySelector('.stage'); if(!stage) return;
+    var need = 2*428 + 28;
+    var z = zoomMode==='fit' ? Math.min(1, stage.clientWidth / need) : 1;
+    document.documentElement.style.setProperty('--z', z.toFixed(3));
+  }
+  function seg(id, attr, cb){
+    var el = document.getElementById(id);
+    el.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      el.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x===b)); });
+      cb(b.getAttribute(attr));
+    });
+  }
+  seg('modeSeg','data-mode',function(v){ mode=v; render(); });
+  seg('zoomSeg','data-z',function(v){ zoomMode=v; applyZoom(); });
+  window.addEventListener('resize', applyZoom);
+  render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyZoom);
+})();
+</script>
+</body>
+</html>
