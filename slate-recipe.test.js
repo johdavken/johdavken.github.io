@@ -2146,16 +2146,18 @@ test("a desktop's layer menu waits only while the draft has changes; a Next cell
   assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-hopper__weight\[data-spacer\] \{\s*min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\)\);/);
 });
 
-test("the Grid head is share first: a small toned label over the share (a long role wrapping, never cut short), Compare's other share beside it, never under it, and a bar under both", () => {
+test("the Grid head is share first: a small toned label over the share (on one line, never wrapped or cut: the menu moves to the share's line), Compare's other share beside it, never under it, and a bar under both", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
-  assert.match(tokens, /--slate-grid-head-width: 136px;/);
+  assert.match(tokens, /--slate-grid-head-width: 164px;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__head'), /display: grid;[^}]*grid-template-rows: auto auto auto;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 2;\s*grid-column: 1 \/ 3;[^}]*font-size: var\(--slate-text-2xl\);/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share-other'), /grid-row: 2;\s*grid-column: 3;[^}]*white-space: nowrap;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /grid-row: 1;[^}]*var\(--slate-layer-tone\)[^}]*text-transform: uppercase;/);
-  assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-layer__role \{\s*grid-column: 2 \/ -1;[^}]*overflow-wrap: anywhere;/, "a subskin role is cut short, not wrapped");
+  assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-layer__role \{\s*grid-column: 2 \/ -1;\s*\}/, "the role is wrapped, clipped or padded for a menu");
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /white-space: nowrap;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer-menu'), /grid-row: 2;\s*grid-column: 4;/, "the menu is back over the label");
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__word'), /display: none;/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__bar'), /display: block;\s*grid-row: 3;[^}]*var\(--slate-layer-share, 0%\)/);
   assert.match(css, /\n\.slate-layer__bar \{\s*display: none;/, "the bar shows outside the Grid layout");
