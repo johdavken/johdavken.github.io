@@ -2165,6 +2165,28 @@ test("a desktop's layer menu waits only while the draft has changes; a Next cell
   assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-hopper__weight\[data-spacer\] \{\s*min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\)\);/);
 });
 
+test("Grid Top's type follows its column: every size the token's own at the full column, scaled down with a squeezed one to a floor, and Compare's band set closer", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
+  const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  const column = rule('.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer');
+  assert.match(column, /container: slate-column \/ inline-size;/);
+  // The full column: --slate-grid-top-width less the layer's two space-2 paddings.
+  assert.match(tokens, /--slate-grid-top-width: 184px;/);
+  assert.match(tokens, /--slate-space-2: 8px;/);
+  const inside = 184 - 2 * 8;
+  const own = { xs: 11, sm: 12, md: 14, lg: 16, xl: 20, "2xl": 28 };
+  for (const [size, px] of Object.entries(own)) {
+    const match = column.match(new RegExp(`--slate-text-${size}: clamp\\((\\d+(?:\\.\\d+)?)px, (\\d+(?:\\.\\d+)?)cqi, (\\d+(?:\\.\\d+)?)px\\);`));
+    assert.ok(match, `${size} does not follow the column`);
+    const [floor, per, cap] = match.slice(1).map(Number);
+    assert.equal(cap, px, `${size} is not capped at the token's own ${px}px`);
+    assert.ok(per * inside / 100 >= px, `${size} is under its own size at the full column`);
+    assert.ok(floor < px && floor >= 10, `${size}'s floor is ${floor}px`);
+  }
+  assert.match(rule('.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper__next:not([hidden])'), /gap: 2px;\s*letter-spacing: -0\.03em;/);
+});
+
 test("the Grid head is share first and keeps its width: a toned label over the share, a bar, and a foot with the menu at its start and Compare's other share at its end", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");

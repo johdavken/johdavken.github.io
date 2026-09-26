@@ -1813,6 +1813,19 @@
   grid-template-rows: subgrid;
   padding: 0 var(--slate-space-2) var(--slate-space-2);
   background: linear-gradient(180deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+  /* The type follows the column. At its full width (--slate-grid-top-width,
+     168px inside the padding) every size is the token's own; a column the
+     page squeezes (five layers on a tablet held upright, a narrow window)
+     scales its type with it, each size stopping at a floor so the small
+     words stay legible and the large ones give the most. The column is the
+     container; the sizes resolve on whatever uses them inside it. */
+  container: slate-column / inline-size;
+  --slate-text-xs: clamp(10px, 6.55cqi, 11px);
+  --slate-text-sm: clamp(10.5px, 7.15cqi, 12px);
+  --slate-text-md: clamp(12px, 8.34cqi, 14px);
+  --slate-text-lg: clamp(13px, 9.53cqi, 16px);
+  --slate-text-xl: clamp(15px, 11.91cqi, 20px);
+  --slate-text-2xl: clamp(18px, 16.67cqi, 28px);
 }
 
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head {
@@ -1835,6 +1848,13 @@
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper[data-recipe] {
   grid-column: 1;
   grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+}
+
+/* Compare's band set a little closer in a column, so a six-character
+   resin and its blend both fit one the page has squeezed. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper__next:not([hidden]) {
+  gap: 2px;
+  letter-spacing: -0.03em;
 }
 
 /* ---- Tracked and pumped off ----
