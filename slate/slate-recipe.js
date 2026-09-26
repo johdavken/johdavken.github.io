@@ -655,7 +655,12 @@
           entry.row.style.setProperty("--slate-row-i", String(position));
           // Its position in the layer, for a wave across a phone's grid.
           entry.row.style.setProperty("--slate-hopper-slot", String(hopper.index));
-          entry.row.addEventListener("animationend", () => entry.row.classList.remove("slate-row-enter", "is-updated"));
+          entry.row.addEventListener("animationend", event => {
+            // A slide is its contents' - it ends when theirs does, not
+            // when the band's drop, which rides beside it, ends.
+            if (event && typeof event.animationName === "string" && event.animationName.startsWith("slate-slide-")) { entry.row.classList.remove("is-sliding"); return; }
+            entry.row.classList.remove("slate-row-enter", "is-updated");
+          });
           position += 1;
           body.rows.set(key, entry);
           list.appendChild(entry.row);
@@ -665,11 +670,13 @@
       });
     }
 
-    function rise(row) {
-      // Restart the arrival, as flash() restarts the highlight.
-      row.classList.remove("slate-row-enter");
+    /* A phone's face turned: each tile's contents slide in over the ones
+     * they replace (recipe.css). Reading the width between remove and add
+     * restarts a slide still running, as flash() restarts its flash. */
+    function slide(row) {
+      row.classList.remove("slate-row-enter", "is-sliding");
       void row.offsetWidth;
-      row.classList.add("slate-row-enter");
+      row.classList.add("is-sliding");
     }
 
     function flash(row) {
@@ -1264,8 +1271,8 @@
         rootEl.setAttribute("data-recipe", recipe);
         for (const [key, tab] of tabButtons) tab.setAttribute("aria-selected", key === recipe ? "true" : "false");
         for (const key of RECIPES) show(bodies[key].el, key === recipe);
-        // On a phone the cells of the face turned to rise again, in turn.
-        if (phone()) for (const entry of bodies[recipe].rows.values()) rise(entry.row);
+        // On a phone the contents of the face turned slide in, in turn.
+        if (phone()) for (const entry of bodies[recipe].rows.values()) slide(entry.row);
       }
       applyAbilities();
       paintCompare();

@@ -7,6 +7,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { makeDocument, click, key, pointer, makeTimers, makeCommands } = require("./tools/slate-test/fake-dom.js");
 const recipe = require("./slate/slate-recipe.js");
@@ -1934,17 +1936,34 @@ test("on a phone the badge picks its row - the rest of the cell stays Track's - 
   assert.match(bulkFoot(mouse.view).querySelector(".slate-recipe__bulk-hint").textContent, /^Click a hopper id/);
 });
 
-test("on a phone turning to the other tab lets its cells rise again; with a mouse nothing replays", () => {
+test("on a phone turning to the other tab slides each tile's contents in over the ones they replace, and back again; with a mouse nothing replays", () => {
   const { view } = boot({ phone: true });
   view.update(withPlan(), { kind: "structural" });
-  for (const one of view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
+  const tiles = which => view.body(which).querySelectorAll(".slate-hopper");
+  for (const one of tiles("next")) one.classList.remove("slate-row-enter");
   click(view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
-  assert.ok(view.body("next").querySelectorAll(".slate-hopper").every(one => one.classList.contains("slate-row-enter")));
+  assert.ok(tiles("next").every(one => one.classList.contains("is-sliding")), "Next's contents did not slide in");
+  assert.ok(tiles("next").every(one => !one.classList.contains("slate-row-enter")), "a tile both rose and slid");
+  // The band's drop ending first leaves the slide running; the slide's end takes the mark.
+  const end = name => { for (const one of tiles("next")) for (const fn of one.listeners.animationend || []) fn({ type: "animationend", animationName: name }); };
+  end("slate-band-drop");
+  assert.ok(tiles("next").every(one => one.classList.contains("is-sliding")), "the band's drop cut the slide short");
+  end("slate-slide-next");
+  assert.ok(tiles("next").every(one => !one.classList.contains("is-sliding")));
+  click(view.element.querySelector(".slate-tabs__tab[data-recipe='current']"));
+  assert.ok(tiles("current").every(one => one.classList.contains("is-sliding")), "Current's contents did not slide back");
   const mouse = boot();
   mouse.view.update(withPlan(), { kind: "structural" });
   for (const one of mouse.view.body("next").querySelectorAll(".slate-hopper")) one.classList.remove("slate-row-enter");
   click(mouse.view.element.querySelector(".slate-tabs__tab[data-recipe='next']"));
-  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter")));
+  assert.ok(mouse.view.body("next").querySelectorAll(".slate-hopper").every(one => !one.classList.contains("slate-row-enter") && !one.classList.contains("is-sliding")));
+  // Next comes in from the right, Current from the left, a tile's width, clipped by the tile.
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "recipe.css"), "utf8");
+  assert.match(css, /\.slate-hopper\.is-sliding \{\s*overflow: hidden;/);
+  assert.match(css, /\.slate-hopper\.is-sliding > \* \{[^}]*animation: slate-slide-next/);
+  assert.match(css, /\.slate-hopper\.is-sliding\[data-recipe="current"\] > \* \{[^}]*animation-name: slate-slide-current;/);
+  assert.match(css, /@keyframes slate-slide-next \{\s*from \{[^}]*transform: translateX\(100cqi\);/);
+  assert.match(css, /@keyframes slate-slide-current \{\s*from \{[^}]*transform: translateX\(-100cqi\);/);
 });
 
 test("the section says how many rows the layers share - the deepest layer's - for the Grid layout's columns, with a mouse too", () => {
