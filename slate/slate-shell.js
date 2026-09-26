@@ -19,7 +19,7 @@
 
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists. */
-  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside", "bar"]);
+  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside", "grip"]);
 
   const TOO_SMALL = "Slate needs a window at least 1100px wide. Use Resin.Tools (Legacy) on this screen.";
 
@@ -65,8 +65,9 @@
     shell.appendChild(element(doc, "section", "slate-stats", { "data-slate-mount": "stats", "aria-label": "Job" }));
     shell.appendChild(element(doc, "section", "slate-centre", { "data-slate-mount": "centre", "aria-label": "Workspace" }));
     shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline", id: "slate-aside" }));
-    // A phone's bar along the foot (slate-phone-bar.js): seen only there.
-    shell.appendChild(element(doc, "nav", "slate-bar", { "data-slate-mount": "bar", "aria-label": "Pages" }));
+    // A phone's grip floating at the foot, which slides the rail up as a
+    // sheet (slate-phone-drawer.js): seen only there.
+    shell.appendChild(element(doc, "div", "slate-grip-dock", { "data-slate-mount": "grip" }));
 
     root.appendChild(shell);
     // Behind the aside's drawer: a press on it closes the drawer.

@@ -1147,7 +1147,7 @@ test("a tablet's rail Timeline carries the dot while a hopper is overdue and run
   assert.match(railCss, /\.slate-root\[data-input="touch"\] \.slate-rail__item\.is-alert::after \{[^}]*background: var\(--slate-overdue\);/);
 });
 
-test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home and the bar move between pages, Tools and Menu raise sheets, and Back walks back Home before it lets the app go", () => {
+test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home leads to its pages, the grip slides up the menu, and Back walks back Home before it lets the app go", () => {
   const media = fakeMedia({ coarse: true, width: 412 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media, stored: { layout: "grid-top" } });
   const doc = hostEl.ownerDocument;
@@ -1157,13 +1157,14 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   const aside = hostEl.querySelector("[data-slate-mount='aside']");
   const rail = hostEl.querySelector("[data-slate-mount='rail']");
   const scrim = hostEl.querySelector("[data-slate-scrim]");
-  const tools = hostEl.querySelector(".slate-toolsheet");
   const title = () => hostEl.querySelector(".slate-header__title").textContent;
-  const keys = [...hostEl.querySelectorAll("[data-slate-mount='bar'] [data-bar-key]")];
-  assert.deepEqual(keys.map(one => one.getAttribute("data-bar-key")), ["recipe", "tools", "home", "settings", "menu"]);
-  const bar = id => keys.find(one => one.getAttribute("data-bar-key") === id);
+  // No bar along the foot, and no Tools sheet: one grip.
+  assert.equal(hostEl.querySelector("[data-bar-key]"), null, "the bar is still built");
+  assert.equal(hostEl.querySelector(".slate-toolsheet"), null, "the Tools sheet is still built");
+  const grip = hostEl.querySelector("[data-slate-mount='grip'] .slate-grip");
+  assert.ok(grip, "no grip at the foot");
   const step = id => hostEl.querySelector(`[data-home-step='${id}']`);
-  const active = () => keys.filter(one => one.classList.contains("is-active")).map(one => one.getAttribute("data-bar-key"));
+  const item = id => hostEl.querySelector(`.slate-rail__item[data-section='${id}']`);
   const shown = () => hostEl.querySelector("[data-slate-mount='centre']").querySelectorAll(".slate-section").find(one => !one.hasAttribute("hidden"));
   const back = () => {
     const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
@@ -1171,76 +1172,80 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
     return event;
   };
   // A phone opens on Home.
-  assert.deepEqual(active(), ["home"]);
   assert.equal(shown().getAttribute("data-section"), "home");
-  // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance; the Timeline and Resin Balance light Home, the Recipe its own key.
+  // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance.
   click(step("recipe"));
   assert.equal(shown().getAttribute("data-section"), "recipe");
-  assert.deepEqual(active(), ["recipe"]);
-  click(bar("home"));
+  back();
+  assert.equal(shown().getAttribute("data-section"), "home", "Back did not come home from the Recipe");
   click(step("timeline"));
   assert.ok(aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"), "the Timeline's page raised a scrim");
-  assert.deepEqual(active(), ["home"]);
   assert.equal(title(), "Timeline");
-  click(bar("recipe"));
-  assert.ok(!aside.classList.contains("is-open"));
-  assert.deepEqual(active(), ["recipe"]);
-  assert.equal(shown().getAttribute("data-section"), "recipe");
-  click(bar("settings"));
-  assert.deepEqual(active(), ["settings"]);
-  assert.equal(shown().getAttribute("data-section"), "settings");
-  assert.equal(hostEl.querySelector(".slate-settings__legacy-link"), null, "Settings still links to the floor UI");
 
-  // Tools raises its sheet over the scrim; a choice opens the tool and lights Tools.
-  click(bar("tools"));
-  assert.ok(!tools.hasAttribute("hidden"));
-  assert.ok(!scrim.hasAttribute("hidden"));
-  assert.equal(bar("tools").getAttribute("aria-expanded"), "true");
-  assert.deepEqual(tools.querySelectorAll("[data-tool]").map(one => one.getAttribute("data-tool")), ["pressure", "winding-tension"]);
-  click(tools.querySelector("[data-tool='winding-tension']"));
-  assert.ok(tools.hasAttribute("hidden"));
-  assert.ok(aside.classList.contains("is-open"));
-  assert.deepEqual(active(), ["tools"]);
-  // Menu raises the rail with everything; what the bar does not name - How to
-  // Use here - lights Menu. The Recipe's own pages (the Book, Weights) are
-  // not on it: they stand in the Recipe (slate-recipe.js).
-  click(bar("menu"));
+  // The grip slides the rail up over the scrim, with everything; a choice
+  // lowers it and takes the screen from the Timeline's page. The Recipe's
+  // own pages (the Book, Weights) are not on it: they stand in the Recipe
+  // (slate-recipe.js).
+  click(grip);
   assert.ok(rail.classList.contains("is-open"));
   assert.ok(!scrim.hasAttribute("hidden"));
-  for (const id of ["recipe-book", "weights"]) {
-    assert.ok(hostEl.querySelector(`.slate-rail__item[data-section='${id}']`).hasAttribute("hidden"), `the phone's rail lists ${id}`);
-  }
-  click(hostEl.querySelector(".slate-rail__item[data-section='guide']"));
+  assert.equal(grip.getAttribute("aria-expanded"), "true");
+  for (const id of ["recipe-book", "weights"]) assert.ok(item(id).hasAttribute("hidden"), `the phone's rail lists ${id}`);
+  for (const id of ["home", "recipe", "settings", "pressure", "winding-tension"]) assert.ok(!item(id).hasAttribute("hidden"), `the phone's rail leaves out ${id}`);
+  click(item("recipe"));
+  assert.ok(!rail.classList.contains("is-open"));
+  assert.equal(grip.getAttribute("aria-expanded"), "false");
+  assert.ok(!aside.classList.contains("is-open"));
+  assert.equal(shown().getAttribute("data-section"), "recipe");
+  click(grip);
+  click(item("settings"));
+  assert.equal(shown().getAttribute("data-section"), "settings");
+  assert.equal(hostEl.querySelector(".slate-settings__legacy-link"), null, "Settings still links to the floor UI");
+  click(grip);
+  click(item("winding-tension"));
   assert.ok(!rail.classList.contains("is-open"));
   assert.ok(aside.classList.contains("is-open"));
-  assert.deepEqual(active(), ["menu"]);
-  // The scrim lowers a sheet.
-  click(bar("tools"));
+  assert.equal(title(), "Winding Tension");
+  click(grip);
+  click(item("home"));
+  assert.equal(shown().getAttribute("data-section"), "home");
+  assert.ok(!aside.classList.contains("is-open"));
+  // The scrim, the grip again and Escape lower the sheet.
+  click(grip);
   click(scrim);
-  assert.ok(tools.hasAttribute("hidden"));
+  assert.ok(!rail.classList.contains("is-open"), "the scrim left the sheet up");
+  click(grip);
+  click(grip);
+  assert.ok(!rail.classList.contains("is-open"), "the grip left the sheet up");
 
-  // Back: a sheet, the page, then the section, then the app.
-  click(bar("tools"));
+  // Back: the sheet, the page, then the section, then the app.
+  click(grip);
   let event = back();
-  assert.ok(tools.hasAttribute("hidden"), "Back left the Tools sheet up");
+  assert.ok(!rail.classList.contains("is-open"), "Back left the sheet up");
   assert.equal(event.detail.minimize, false);
-  click(step("timeline")); // not on screen, but the step stays wired
+  click(step("timeline"));
   event = back();
   assert.ok(!aside.classList.contains("is-open"), "Back left the page up");
+  click(step("recipe"));
   event = back();
   assert.equal(event.detail.minimize, false);
-  assert.deepEqual(active(), ["home"], "Back did not come home");
+  assert.equal(shown().getAttribute("data-section"), "home", "Back did not come home");
   event = back();
   assert.equal(event.defaultPrevented, true);
   assert.equal(event.detail.minimize, true);
 
-  // A phone's rail sheet does not list the Timeline: Home and the bar reach it.
+  // The overdue dot rides the grip, and Home in the sheet, with the Timeline's.
+  const overdue = hostEl.querySelector(".slate-timeline").classList.contains("is-overdue");
+  assert.equal(!grip.querySelector(".slate-grip__dot").hasAttribute("hidden"), overdue, "the grip's dot disagrees with the Timeline");
+  assert.equal(item("home").classList.contains("is-alert"), overdue);
+
+  // A phone's rail sheet does not list the Timeline: Home reaches it.
   assert.ok(hostEl.querySelector(".slate-rail__item[data-section='timeline']").hasAttribute("hidden"));
 
   // Wider again: no page, no sheet, the operator's layout back, Home unlisted.
   click(step("timeline"));
-  click(bar("menu"));
+  click(grip);
   media.change({ width: 1280 });
   assert.equal(hostEl.getAttribute("data-viewport"), "wide");
   assert.equal(hostEl.getAttribute("data-layers"), "grid");
