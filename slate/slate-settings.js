@@ -1,6 +1,7 @@
 /* The Settings section: the theme, the background, the tracking mode, the
- * layout, the handling of a drag, the layer order, the timeline's view, and room for what
- * comes after them - with the administrator's way in at the very bottom.
+ * layout, the handling of a drag, the layer order, the timeline's view,
+ * and room for what comes after them - with the administrator's way in at
+ * the very bottom.
  *
  * The theme picker drives the controller slate-host.js (or the harness)
  * created on the root; the controller writes the attribute and the

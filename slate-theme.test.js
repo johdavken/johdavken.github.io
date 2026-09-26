@@ -263,6 +263,21 @@ test("focus rings and dark control borders remain distinct from every control su
   }
 });
 
+test("the hopper's status colours carry small text: tracking and pump-off clear 4.5:1 on both card surfaces", () => {
+  // The Ink hopper status (slate-display.js) draws a hopper's id in these,
+  // and Dot and Edge mark a card with them. 12px bold is small text.
+  for (const id of GALLERY_ORDER) {
+    const tokens = tokensOf(fs.readFileSync(path.join(THEMES_DIR, `${id}.css`), "utf8"));
+    const get = name => tokens.get(`--slate-${name}`);
+    for (const role of ["tracking", "pump-off"]) {
+      for (const surface of ["surface", "surface-raised"]) {
+        const ratio = contrastRatio(get(role), get(surface));
+        assert.ok(ratio >= 4.5, `${id}: ${role} on ${surface}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+  }
+});
+
 test("enabled controls own pressed states and disabled controls do not own hover states", () => {
   const component = file => fs.readFileSync(path.join(ROOT, "slate/styles/components", file), "utf8");
   const base = fs.readFileSync(path.join(ROOT, "slate/styles/base.css"), "utf8");
