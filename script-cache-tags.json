@@ -80,8 +80,8 @@
     "hash": "c23b9108d431b1e9"
   },
   "slate-host.js": {
-    "v": "0.53.9",
-    "hash": "f1b0e5885ffd3ff9"
+    "v": "0.54.0",
+    "hash": "5626bff8bd5ddbee"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -160,8 +160,8 @@
     "hash": "b42cb2f8f9337170"
   },
   "line-identity.js": {
-    "v": "0.7.0",
-    "hash": "29100dcd932cf3f7"
+    "v": "0.8.0",
+    "hash": "f4a53322066dbb2a"
   },
   "line-configurations-service.js": {
     "v": "0.3.0",

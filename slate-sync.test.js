@@ -49,7 +49,7 @@ function boot(status, options) {
   const settings = options || {};
   const doc = makeDocument();
   const connection = status === null ? null : makeConnection(status, settings.answers);
-  const view = sync.create(doc, { connection, admin: settings.admin || null });
+  const view = sync.create(doc, { connection, admin: settings.admin || null, lineIdentity: settings.lineIdentity || null });
   doc.body.appendChild(view.element);
   return { doc, connection, view };
 }
@@ -89,7 +89,13 @@ test("the panel opens on the trigger, leads with the Line Identity, and closes o
   const first = view.panel.children[0];
   assert.ok(first.classList.contains("slate-sync__identity"), "the panel does not lead with the Line Identity");
   assert.equal(first.querySelector(".slate-sync__line").textContent, "Line 5");
-  assert.deepEqual(first.querySelectorAll(".slate-sync__fact").map(node => node.textContent), ["Line 5", "line-5"]);
+  // The number leads, LINE up its side; the name is then said, not shown twice.
+  assert.ok(first.classList.contains("is-numbered"));
+  assert.equal(first.querySelector(".slate-sync__numeral-value").textContent, "5");
+  assert.equal(first.querySelector(".slate-sync__numeral-word").textContent, "LINE");
+  assert.equal(first.querySelector(".slate-sync__numeral").getAttribute("aria-hidden"), "true");
+  // Without line-identity there is nothing to add under a plain "Line 5".
+  assert.deepEqual(first.querySelectorAll(".slate-sync__fact").map(node => node.textContent), []);
   assert.equal(first.querySelector(".slate-sync__role").textContent, "member");
   assert.equal(first.querySelector(".slate-sync__device-label").textContent, "This device: Floor PC");
   assert.equal(view.panel.querySelector(".slate-sync__state").textContent, "Synced");
@@ -122,7 +128,7 @@ test("the can flags gate the buttons, and the guidance names the situation", () 
   const live = boot(statusOf());
   click(live.view.trigger);
   assert.deepEqual(buttons(live.view).filter(one => one[1] !== "close").map(one => [one[1], one[2]]),
-    [["relabel", false], ["join", false], ["refresh", false], ["generateJoinCode", false], ["leaveWorkspace", false]]);
+    [["relabel", false], ["refresh", false], ["generateJoinCode", false], ["join", false], ["leaveWorkspace", false]]);
 
   // Disconnected: Reconnect leads.
   const off = boot(statusOf({ linked: false, status: { key: "offline", label: "Offline", pendingCount: 2, message: "No connection." }, can: { reconnect: true } }));
@@ -247,4 +253,41 @@ test("every one of the bridge's eight actions is reachable from the panel", () =
   for (const action of sync.ACTIONS) assert.ok(src.includes(`"${action}"`), `${action} is never requested`);
   const bridge = require("./station-connection-bridge.js");
   assert.deepEqual([...sync.ACTIONS].sort(), [...bridge.ACTIONS].sort());
+});
+
+test("under the numeral: the line's own name when it is not just its number, its maker and its layers", () => {
+  const identity = {
+    lineManufacturer: n => (n === 10 ? { id: "reifenhauser", name: "Reifenhäuser", short: "Reifenhäuser" } : null),
+    definitionForLine: n => (n === 10 ? { lineNumber: 10, layerCount: 5 } : n === 2 ? { lineNumber: 2, layerCount: 1 } : null)
+  };
+  assert.deepEqual(sync.lineFacts({ lineNumber: 10, displayName: "Line 10", name: "Line 10" }, identity), ["Reifenhäuser", "5-layer"]);
+  assert.deepEqual(sync.lineFacts({ lineNumber: 10, displayName: "Big Blue", name: "line-10" }, identity), ["Big Blue", "Reifenhäuser", "5-layer"]);
+  assert.deepEqual(sync.lineFacts({ lineNumber: 2, displayName: "Line 2", name: "Mono two" }, identity), ["Mono two", "Mono-layer"]);
+  assert.deepEqual(sync.lineFacts({ lineNumber: null, displayName: "Pilot", name: "pilot" }, identity), ["Pilot", "pilot"]);
+  assert.deepEqual(sync.lineFacts(null, identity), []);
+
+  const { view } = boot(statusOf({ line: { workspaceId: "ws-1", name: "line-10", lineNumber: 10, displayName: "Line 10", role: "owner" } }), { lineIdentity: identity });
+  click(view.trigger);
+  assert.deepEqual(view.panel.querySelectorAll(".slate-sync__fact").map(node => node.textContent), ["Reifenhäuser", "5-layer"]);
+  assert.equal(view.panel.querySelector(".slate-sync__numeral-value").textContent, "10");
+  assert.equal(view.panel.querySelector(".slate-sync__role").textContent, "owner");
+});
+
+test("the status stands beside the logo's streams, which carry its key", () => {
+  const { view, connection } = boot(statusOf());
+  click(view.trigger);
+  const rotor = view.panel.querySelector(".slate-sync__rotor");
+  assert.ok(rotor, "no rotor beside the status");
+  assert.equal(rotor.getAttribute("data-state"), "synced");
+  assert.equal(rotor.getAttribute("aria-hidden"), "true");
+  assert.equal(view.panel.querySelectorAll(".slate-sync__rotor .slate-logo__stream").length, 5);
+  connection.set(statusOf({ status: { key: "pending", label: "Pending", pendingCount: 2 } }));
+  assert.equal(view.panel.querySelector(".slate-sync__rotor").getAttribute("data-state"), "pending");
+  assert.match(view.panel.querySelector(".slate-sync__rotor").style.getPropertyValue("--slate-sync-phase"), /^-\d+\.\d\ds$/);
+
+  // No line: no numeral, and the name says so.
+  const none = boot(statusOf({ assigned: false, line: null, devices: [], deviceCount: 0 }));
+  click(none.view.trigger);
+  assert.equal(none.view.panel.querySelector(".slate-sync__numeral"), null);
+  assert.ok(!none.view.panel.children[0].classList.contains("is-numbered"));
 });

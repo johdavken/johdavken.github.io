@@ -65,14 +65,19 @@
   background: var(--slate-danger);
 }
 
-/* ---- Panel ---- */
+/* ---- Panel ----
+ * The line's number leads, large, with LINE up its side (study 01 of the
+ * RT Sync studies). Every section runs the panel's full width, a rule
+ * between each; the panel's own padding is taken back by each section's
+ * margin, so the phone's sheet (phone.css), which pads the same, reads
+ * the same. */
 
 .slate-sync__panel {
   position: absolute;
   top: calc(100% + var(--slate-space-2));
   right: 0;
   z-index: 10;
-  width: 380px;
+  width: 420px;
   max-height: calc(100vh - var(--slate-header-height) - var(--slate-space-5));
   overflow: auto;
   padding: var(--slate-space-4);
@@ -83,46 +88,130 @@
   animation: slate-menu-drop var(--slate-motion-drop) var(--slate-motion-ease);
 }
 
-.slate-sync__identity,
-.slate-sync__status,
-.slate-sync__devices,
-.slate-sync__join-code,
-.slate-sync__lines,
-.slate-sync__join {
-  padding-bottom: var(--slate-space-3);
-  margin-bottom: var(--slate-space-3);
-  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
+.slate-sync__panel > * {
+  margin-inline: calc(-1 * var(--slate-space-4));
+  padding: var(--slate-space-4);
+}
+
+.slate-sync__panel > :first-child {
+  margin-top: calc(-1 * var(--slate-space-4));
+}
+
+.slate-sync__panel > :last-child {
+  margin-bottom: calc(-1 * var(--slate-space-4));
+}
+
+.slate-sync__panel > :not(:first-child) {
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+/* The Line Identity: the numeral in its own column, spanning the name,
+   the facts, the device and the status beside it. */
+.slate-sync__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-4);
+}
+
+.slate-sync__numeral {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  color: var(--slate-text);
+  font-family: var(--slate-font-display);
+  font-stretch: semi-condensed;
+  font-size: 112px;
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-sync__numeral-word {
+  margin: var(--slate-space-1) var(--slate-space-1) 0 0;
+  color: var(--slate-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.slate-sync__about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  min-width: 0;
 }
 
 .slate-sync__line {
+  font-family: var(--slate-font-display);
+  font-stretch: semi-condensed;
   font-size: var(--slate-text-xl);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--slate-line-tight);
+}
+
+/* With the number standing beside it, the name is the numeral's words:
+   said to assistive tech, not shown twice. */
+.slate-sync__identity.is-numbered .slate-sync__line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .slate-sync__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--slate-space-2);
-  margin-top: var(--slate-space-1);
+  gap: 0 var(--slate-space-2);
+  color: var(--slate-text);
+  font-family: var(--slate-font-display);
+  font-stretch: semi-condensed;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
+.slate-sync__fact + .slate-sync__fact::before {
+  content: "·";
+  margin-right: var(--slate-space-2);
+  color: var(--slate-text-faint);
+}
+
+.slate-sync__identity:not(.is-numbered) .slate-sync__facts {
   color: var(--slate-text-muted);
+  font-family: var(--slate-font);
   font-size: var(--slate-text-sm);
+  font-weight: 400;
 }
 
 .slate-sync__role {
-  padding: 0 var(--slate-space-2);
+  padding: 1px var(--slate-space-2);
   border-radius: 999px;
   background: var(--slate-surface-sunken);
+  color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
   text-transform: capitalize;
 }
 
 .slate-sync__device {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--slate-space-2);
-  margin-top: var(--slate-space-2);
+  color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
+}
+
+/* The device's label on its own line, the role and Rename under it: beside
+   a two-digit number there is no room for all three on one. */
+.slate-sync__device-label {
+  flex-basis: 100%;
+  order: -1;
 }
 
 .slate-sync__inline {
@@ -136,19 +225,87 @@
   font-size: var(--slate-text-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+}
+
+/* The status, beside the logo's streams. */
+.slate-sync__status {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  margin-top: var(--slate-space-1);
+  --slate-sync-tone: var(--slate-text);
+}
+
+.slate-sync__status[data-state="synced"] {
+  --slate-sync-tone: var(--slate-success);
+}
+
+.slate-sync__status[data-state="syncing"],
+.slate-sync__status[data-state="connecting"],
+.slate-sync__status[data-state="pending"] {
+  --slate-sync-tone: var(--slate-info);
+}
+
+.slate-sync__status[data-state="offline"],
+.slate-sync__status[data-state="conflict"] {
+  --slate-sync-tone: var(--slate-warning);
+}
+
+.slate-sync__status[data-state="error"] {
+  --slate-sync-tone: var(--slate-danger);
+}
+
+.slate-sync__rotor {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  color: var(--slate-text);
+}
+
+/* The rotor carries the status's key too (slate-sync.js). In step the
+   streams turn slowly; while changes move, quickly; off the line they
+   stand still, drained of colour. */
+.slate-sync__rotor .slate-logo__rotor {
+  animation-duration: 22s;
+  animation-delay: var(--slate-sync-phase, 0s);
+  animation-play-state: paused;
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.slate-sync__rotor[data-state="synced"] .slate-logo__rotor,
+.slate-sync__rotor[data-state="syncing"] .slate-logo__rotor,
+.slate-sync__rotor[data-state="connecting"] .slate-logo__rotor,
+.slate-sync__rotor[data-state="pending"] .slate-logo__rotor {
+  animation-play-state: running;
+  filter: none;
+  opacity: 1;
+}
+
+.slate-sync__rotor[data-state="syncing"] .slate-logo__rotor,
+.slate-sync__rotor[data-state="connecting"] .slate-logo__rotor,
+.slate-sync__rotor[data-state="pending"] .slate-logo__rotor {
+  animation-duration: 2.2s;
+}
+
+.slate-sync__status-words {
+  min-width: 0;
 }
 
 .slate-sync__state {
+  color: var(--slate-sync-tone);
   font-weight: 600;
 }
 
-.slate-sync__status[data-state="error"] .slate-sync__state {
-  color: var(--slate-danger);
+/* The devices, this one tinted. */
+.slate-sync__devices .slate-sync__item {
+  padding: 6px var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
 }
 
-.slate-sync__status[data-state="synced"] .slate-sync__state {
-  color: var(--slate-success);
+.slate-sync__devices .slate-sync__item.is-this-device {
+  background: var(--slate-accent-soft);
 }
 
 .slate-sync__message,
@@ -163,7 +320,7 @@
 .slate-sync__list {
   display: flex;
   flex-direction: column;
-  gap: var(--slate-space-1);
+  gap: 2px;
 }
 
 .slate-sync__item {
@@ -180,8 +337,9 @@
 
 .slate-sync__item-meta {
   margin-left: auto;
-  color: var(--slate-text-faint);
-  font-size: var(--slate-text-xs);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -227,16 +385,27 @@
 .slate-sync__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--slate-space-2);
+  gap: 6px;
+}
+
+/* With a mouse: Leave line at the far end, and no Close - Escape and a
+   press outside close the panel. A finger keeps Close (touch, below). */
+.slate-root .slate-sync__button--end {
+  margin-left: auto;
+}
+
+.slate-root .slate-sync__button[data-action="close"] {
+  display: none;
 }
 
 .slate-root .slate-sync__button {
-  padding: var(--slate-space-1) var(--slate-space-3);
-  border: var(--slate-stroke) solid var(--slate-border);
-  border-radius: var(--slate-radius-sm);
+  padding: 6px 10px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
   color: var(--slate-text);
   font-size: var(--slate-text-sm);
-  font-weight: 500;
+  font-weight: 600;
   transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
 }
 
@@ -272,7 +441,6 @@
 }
 
 .slate-root .slate-sync__button--danger {
-  border-color: var(--slate-danger);
   color: var(--slate-danger);
 }
 
@@ -287,6 +455,7 @@
 
 .slate-root .slate-sync__button--quiet {
   border-color: transparent;
+  background: none;
   color: var(--slate-text-muted);
 }
 
@@ -300,7 +469,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slate-sync__panel {
+  .slate-sync__panel,
+  .slate-sync__rotor .slate-logo__rotor {
     animation: none;
   }
 }
@@ -335,6 +505,11 @@
 /* Leave line is kept away from Close. */
 .slate-root[data-input="touch"] .slate-sync__button--danger {
   margin-right: auto;
+  margin-left: 0;
+}
+
+.slate-root[data-input="touch"] .slate-sync__button[data-action="close"] {
+  display: inline-block;
 }
 
 /* On a narrow touch screen the panel stands off the screen's edge, not

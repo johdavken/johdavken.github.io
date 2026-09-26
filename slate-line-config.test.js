@@ -271,6 +271,9 @@ test("choosing a line fills the editor from it: the fields, the layer rows, the 
   assert.equal(view.q("[data-role='hoppers']").textContent, "A1–A6 · B1–B4 · C1–C6");
   assert.equal(view.chip("hopperGeometry", "cylindrical").getAttribute("aria-checked"), "true");
   assert.equal(view.chip("hopperManufacturer", "tsm").getAttribute("aria-checked"), "false");
+  // Who built the line follows from its number, and is shown, not chosen.
+  assert.equal(view.q("[data-role='line-manufacturer']").textContent, "Davis-Standard");
+  assert.equal(view.q("[data-choice='lineManufacturer']"), null);
   // Save and Discard are withheld until something changes.
   assert.equal(view.action("save").getAttribute("data-able"), "false");
   assert.match(view.action("save").getAttribute("title"), /nothing has changed/);
@@ -668,4 +671,17 @@ test("a row tapped while a request is out is turned away and says so, rather tha
   assert.match(view.said[view.said.length - 1], /Still working on the last request/);
   admin.release();
   await settle();
+});
+
+test("the line's maker follows its number as it is typed, and a number no maker covers says so", async () => {
+  const view = boot();
+  await view.open();
+  click(view.row("l-5"));
+  await settle();
+  view.type("lineNumber", "12");
+  assert.equal(view.q("[data-role='line-manufacturer']").textContent, "Alpine");
+  view.type("lineNumber", "14");
+  assert.equal(view.q("[data-role='line-manufacturer']").textContent, "Windmöller & Hölscher");
+  view.type("lineNumber", "99");
+  assert.equal(view.q("[data-role='line-manufacturer']").textContent, "None for this line number");
 });

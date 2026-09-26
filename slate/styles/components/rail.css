@@ -217,11 +217,97 @@
   }
 }
 
+/* The live mark (slate-logo.js createLive, Cover's Home): its confluence
+   says how RT Sync stands. The tone is the status colour; the streams
+   turn at the plain mark's pace in step, quickly while changes move, and
+   stand still, drained, off the line. */
+.slate-logo--live {
+  --slate-logo-tone: var(--slate-border-strong);
+  --slate-logo-orbit: 3.2s;
+}
+
+.slate-logo--live[data-sync="synced"] {
+  --slate-logo-tone: var(--slate-success);
+}
+
+.slate-logo--live[data-sync="busy"] {
+  --slate-logo-tone: var(--slate-info);
+  --slate-logo-orbit: 0.9s;
+}
+
+.slate-logo--live[data-sync="warn"] {
+  --slate-logo-tone: var(--slate-warning);
+}
+
+.slate-logo--live[data-sync="error"] {
+  --slate-logo-tone: var(--slate-danger);
+}
+
+.slate-logo--live[data-sync="busy"] .slate-logo__rotor {
+  animation-duration: 3s;
+}
+
+.slate-logo--live[data-sync="warn"] .slate-logo__rotor,
+.slate-logo--live[data-sync="error"] .slate-logo__rotor {
+  animation-play-state: paused;
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.slate-logo--live[data-sync="warn"] .slate-logo__glint,
+.slate-logo--live[data-sync="error"] .slate-logo__glint {
+  animation-play-state: paused;
+  visibility: hidden;
+}
+
+/* The spark orbits the ring only while the line is reached. */
+.slate-logo__spark {
+  stroke: var(--slate-logo-tone);
+  opacity: 0;
+}
+
+.slate-logo--live[data-sync="synced"] .slate-logo__spark,
+.slate-logo--live[data-sync="busy"] .slate-logo__spark {
+  opacity: 0.9;
+  animation: slate-logo-orbit var(--slate-logo-orbit) linear infinite;
+}
+
+@keyframes slate-logo-orbit {
+  to {
+    stroke-dashoffset: -251.3;
+  }
+}
+
+.slate-logo__line-word {
+  fill: var(--slate-text-muted);
+  font-family: var(--slate-font-display);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
+
+.slate-logo__line-number {
+  font-family: var(--slate-font-display);
+  font-stretch: semi-condensed;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.slate-logo__device {
+  fill: var(--slate-logo-tone);
+}
+
+.slate-logo__device.is-this-device {
+  fill: var(--slate-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slate-rail__menu,
   .slate-logo__rotor,
   .slate-logo__glint,
-  .slate-logo__output {
+  .slate-logo__output,
+  .slate-logo--live .slate-logo__spark {
     animation: none;
   }
 

@@ -136,5 +136,95 @@
     return svg;
   }
 
-  return Object.freeze({ SVG_NS, VIEW_BOX, VIEW_BOX_WITH_WORD, WORD, PATHS, STREAMS, create });
+  /**
+   * The confluence alone - the five streams turning about the die - small,
+   * as a status glyph (the RT Sync panel's). Its turning is the caller's
+   * to set by class; it carries no name of its own.
+   */
+  function rotor(doc, options) {
+    const settings = options || {};
+    const svg = svgNode(doc, "svg", { class: settings.className || "slate-logo-rotor", viewBox: "-40 -40 80 80", "aria-hidden": "true", focusable: "false" });
+    const turning = svgNode(doc, "g", { class: "slate-logo__rotor" });
+    for (let index = 0; index < STREAMS.length; index += 1) turning.appendChild(channel(doc, index));
+    svg.appendChild(turning);
+    svg.appendChild(svgNode(doc, "path", { d: PATHS.die, fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linejoin": "round" }));
+    return svg;
+  }
+
+  /* The live mark's states, from RT Sync's (slate-home.js maps them). */
+  const LIVE_STATES = Object.freeze(["none", "synced", "busy", "warn", "error"]);
+  /* The ring's circumference, for the spark that orbits it. */
+  const RING_LENGTH = 2 * Math.PI * 40;
+  /* Twenty ticks round the ring; a device lights one. */
+  const TICKS = 20;
+
+  /**
+   * The mark with its confluence alive to RT Sync (Cover's Home): where
+   * the die sits, the line's number under LINE; round the ring a lit tick
+   * for each device on the line, this one in the accent; a spark orbiting
+   * the ring while the line is reached. The streams turn slowly in step,
+   * quickly while changes move, and stand still, drained, off the line.
+   * With no line the die and film are back, as the plain mark has them.
+   * The letterforms, the output strokes and the word are the plain mark's.
+   *
+   * @returns {{ element: SVGElement, update(mark) }} where mark is
+   *   { state: LIVE_STATES, lineNumber: number|null, devices: [{ thisDevice }], label }
+   */
+  function createLive(doc, options) {
+    const settings = options || {};
+    const svg = create(doc, settings);
+    svg.classList.add("slate-logo--live");
+    const confluence = svg.children[1];
+    // The plain centre - the die and the film - shown only with no line.
+    const plainCentre = [confluence.children[1], confluence.children[2]];
+
+    const spark = svgNode(doc, "circle", { class: "slate-logo__spark", r: "40", fill: "none", "stroke-width": "2.4", "stroke-dasharray": `3 ${(RING_LENGTH - 3).toFixed(1)}`, "stroke-linecap": "round" });
+    confluence.insertBefore(spark, confluence.firstChild);
+
+    const number = svgNode(doc, "g", { class: "slate-logo__line", "aria-hidden": "true" });
+    const word = svgNode(doc, "text", { class: "slate-logo__line-word", x: "0.9", y: "-7", "text-anchor": "middle" });
+    word.textContent = "LINE";
+    const value = svgNode(doc, "text", { class: "slate-logo__line-number", y: "12.5", "text-anchor": "middle", fill: "currentColor" });
+    number.appendChild(word);
+    number.appendChild(value);
+    confluence.appendChild(number);
+
+    const devices = svgNode(doc, "g", { class: "slate-logo__devices", "aria-hidden": "true" });
+    confluence.appendChild(devices);
+
+    const baseLabel = settings.label || "Resin.Tools Slate";
+
+    function update(mark) {
+      const m = mark || {};
+      const state = LIVE_STATES.includes(m.state) ? m.state : "none";
+      const lineNumber = Number.isInteger(m.lineNumber) ? m.lineNumber : null;
+      svg.setAttribute("data-sync", state);
+      const numbered = lineNumber !== null;
+      svg.setAttribute("data-line", numbered ? String(lineNumber) : "");
+      if (value.textContent !== (numbered ? String(lineNumber) : "")) value.textContent = numbered ? String(lineNumber) : "";
+      for (const node of plainCentre) {
+        if (numbered) node.setAttribute("hidden", "");
+        else node.removeAttribute("hidden");
+      }
+      if (numbered) number.removeAttribute("hidden");
+      else number.setAttribute("hidden", "");
+
+      while (devices.firstChild) devices.removeChild(devices.firstChild);
+      const list = numbered && Array.isArray(m.devices) ? m.devices.slice(0, TICKS) : [];
+      const step = list.length ? Math.max(1, Math.floor(TICKS / list.length)) : 0;
+      list.forEach((device, index) => {
+        const angle = (-90 + index * step * (360 / TICKS)) * Math.PI / 180;
+        devices.appendChild(svgNode(doc, "circle", {
+          class: device && device.thisDevice ? "slate-logo__device is-this-device" : "slate-logo__device",
+          cx: (Math.cos(angle) * 40).toFixed(2), cy: (Math.sin(angle) * 40).toFixed(2), r: "3.2"
+        }));
+      });
+      svg.setAttribute("aria-label", m.label ? `${baseLabel} — ${m.label}` : baseLabel);
+    }
+
+    update(settings.mark);
+    return Object.freeze({ element: svg, update });
+  }
+
+  return Object.freeze({ SVG_NS, VIEW_BOX, VIEW_BOX_WITH_WORD, WORD, PATHS, STREAMS, LIVE_STATES, create, createLive, rotor });
 });
