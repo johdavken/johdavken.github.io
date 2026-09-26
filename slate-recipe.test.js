@@ -2206,6 +2206,27 @@ test("Grid Top's head: the letter beside the share and the role under them; the 
   assert.match(rule(`${top} .slate-recipe__layers`), /position: relative;/);
 });
 
+test("the Weights page's Grid Top head is the Recipe's: the letter beside the word Layer in the share's place, the role under them, and the type following the column", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/weights.css"), "utf8");
+  const recipeCss = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
+  const rule = (sheet, selector) => { const at = sheet.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return sheet.slice(at, sheet.indexOf("}", at)); };
+  const top = '.slate-root[data-weights-layers="grid"][data-grid-heads="top"]';
+  // "Layer A" is written; drawn letter first, the word where the share stands.
+  assert.match(rule(css, `${top} .slate-weights__layer-name`), /display: inline-flex;\s*flex-direction: row-reverse;[^}]*font-size: var\(--slate-text-2xl\);\s*font-weight: 800;/);
+  assert.match(rule(css, `${top} .slate-weights__layer-word`), /color: var\(--slate-text\);\s*font-size: inherit;/);
+  assert.match(rule(css, `${top} .slate-weights__layer-role`), /text-overflow: ellipsis;\s*white-space: nowrap;/);
+  // The same scale as the Recipe's column, value for value.
+  const scale = sheet => rule(sheet, sheet === css ? `${top} .slate-weights__layer` : '.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer').match(/--slate-text-[a-z0-9]+: clamp\([^)]*\);/g);
+  assert.ok(scale(css) && scale(css).length === 6, "the Weights column's type does not follow it");
+  assert.deepEqual(scale(css), scale(recipeCss));
+  // As tall as the Recipe's head: its first row at the share's height, and
+  // the room of the share bar and the foot line under the role.
+  assert.match(rule(css, `${top} .slate-weights__head`), /padding: var\(--slate-space-2\) var\(--slate-space-1\) calc\(var\(--slate-space-2\) \+ 28px \+ 2px \+ 4px \+ var\(--slate-space-1\)\);/);
+  assert.match(rule(recipeCss, '.slate-root[data-layers="grid"] .slate-layer__head'), /--slate-grid-foot: 28px;/, "the Recipe's foot line moved; the Weights head's room follows it");
+  assert.match(rule(css, `${top} .slate-weights__layer-name`), /min-height: var\(--slate-share-floor, 0px\);/);
+  assert.match(rule(css, '.slate-root[data-input="touch"] .slate-weights__head'), /--slate-share-floor: var\(--slate-tap\);/);
+});
+
 test("the Grid head is share first and keeps its width: a toned label over the share, a bar, and a foot with the menu at its start and Compare's other share at its end", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");

@@ -397,6 +397,12 @@
   --slate-field-min-height: var(--slate-tap-cell);
 }
 
+/* The Recipe's share height (recipe.css), for the Grid Top head's first
+   row to match. */
+.slate-root[data-input="touch"] .slate-weights__head {
+  --slate-share-floor: var(--slate-tap);
+}
+
 /* The section's width decides the row format, as the recipe's does. */
 .slate-root[data-input="touch"] .slate-weights {
   container: slate-weights / inline-size;
@@ -894,13 +900,61 @@
   grid-template-rows: subgrid;
   padding: 0 var(--slate-space-2) var(--slate-space-2);
   background: linear-gradient(180deg, color-mix(in srgb, var(--slate-layer-tone) 22%, transparent), color-mix(in srgb, var(--slate-layer-tone) 3%, transparent) 70%, transparent);
+  /* The type follows the column, as the Recipe's does (recipe.css). */
+  container: slate-column / inline-size;
+  --slate-text-xs: clamp(10px, 6.55cqi, 11px);
+  --slate-text-sm: clamp(10.5px, 7.15cqi, 12px);
+  --slate-text-md: clamp(12px, 8.34cqi, 14px);
+  --slate-text-lg: clamp(13px, 9.53cqi, 16px);
+  --slate-text-xl: clamp(15px, 11.91cqi, 20px);
+  --slate-text-2xl: clamp(18px, 16.67cqi, 28px);
 }
 
+/* As tall as the Recipe's column head (recipe.css), so a switch of tab
+   moves no cell: its padding, its first row held at the share's height
+   (--slate-share-floor, a finger's tap under touch), and under the role
+   the room of the Recipe's share bar and its foot line of the menu and
+   the other share - which a weight has none of. */
 .slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__head {
   grid-row: 1;
   grid-column: 1;
-  padding: var(--slate-space-2) var(--slate-space-1);
+  gap: 2px;
+  padding: var(--slate-space-2) var(--slate-space-1) calc(var(--slate-space-2) + 28px + 2px + 4px + var(--slate-space-1));
   border-radius: var(--slate-radius) var(--slate-radius) 0 0;
+}
+
+/* The head as the Recipe's column head: the letter in the layer's tone
+   and, where the Recipe has the share, the word "Layer" - a weight has
+   no share - both large on one line, the role on its own line under
+   them, giving way at the column's edge. The name is written "Layer A";
+   it is drawn the other way round, the words kept for assistive tech. */
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__layer-name {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: var(--slate-space-1);
+  min-height: var(--slate-share-floor, 0px);
+  color: color-mix(in srgb, var(--slate-layer-tone) 70%, var(--slate-text));
+  font-size: var(--slate-text-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__layer-word {
+  color: var(--slate-text);
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__layer-role {
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--slate-layer-tone) 70%, var(--slate-text));
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .slate-root[data-weights-layers="grid"][data-grid-heads="top"] .slate-weights__row[data-key] {
