@@ -4,8 +4,9 @@
  * WHAT IT SHOWS
  *
  * The line's layers as the Recipe shows them, one row per hopper: its
- * badge, its resin (read-only here - the Recipe owns assignments), and a
- * field for the receiver weight in pounds. With Smart Hoppers on, each row
+ * badge and a field for the receiver weight in pounds - no resin, which a
+ * weight is not about (the Recipe owns assignments); a hopper with none
+ * is still marked empty. With Smart Hoppers on, each row
  * also carries the geometry the line measures (usable height in inches on
  * a cylindrical line, usable volume in gallons on a volume line) and the
  * weight the application computed from it and the resin's measured bulk
@@ -76,7 +77,6 @@
   "use strict";
 
   const TITLE = "Weights";
-  const EMPTY = "—";
   const SELECT_HINT = "Select a profile to load it, update it from the line's current weights, or manage it.";
   const NOTHING_CHANGES = "nothing would change";
   const ABANDONED = "The line changed; your unapplied entry was dropped.";
@@ -662,8 +662,6 @@
       // Its position in the layer: its column in the Grid layout.
       row.style.setProperty("--slate-hopper-slot", String(hopper.index));
       row.appendChild(text(doc, "span", "slate-weights__id", hopper.id));
-      const resin = text(doc, "span", "slate-weights__resin", EMPTY);
-      row.appendChild(resin);
       const weightWrap = element(doc, "span", "slate-weights__wrap slate-weights__weight");
       const weightInput = element(doc, "input", "slate-weights__field", {
         type: "text", inputmode: "decimal", autocomplete: "off", spellcheck: "false", placeholder: "0",
@@ -695,7 +693,7 @@
       }
       const rowNote = element(doc, "p", "slate-weights__row-note", { role: "status", hidden: "" });
       row.appendChild(rowNote);
-      state.rows.set(key, { row, resin, weightInput, geometryInput, computed, note: rowNote, id: hopper.id, layer: layer.id, index: hopper.index });
+      state.rows.set(key, { row, weightInput, geometryInput, computed, note: rowNote, id: hopper.id, layer: layer.id, index: hopper.index });
       return row;
     }
 
@@ -709,6 +707,8 @@
       // layout (components/weights.css), as the Recipe counts them.
       const positions = model.layers.reduce((most, layer) => layer.hoppers.reduce((deepest, hopper) => Math.max(deepest, hopper.index + 1), most), 1);
       layersEl.style.setProperty("--slate-hopper-rows", String(positions));
+      // How many layers stand side by side on a phone, as the Recipe says.
+      layersEl.style.setProperty("--slate-layers", String(model.layers.length));
       model.layers.forEach((layer, i) => {
         const card = element(doc, "div", "slate-weights__layer", { "data-layer": layer.id, "data-role": layer.role, "data-tone": layer.tone });
         card.style.setProperty("--slate-layer-i", String(i));
@@ -759,9 +759,6 @@
         if (unused) vacant += 1;
         // Never a row being typed in.
         entry.row.classList.toggle("is-vacant", unused && !state.showEmpty && !(state.editing && state.editing.key === key));
-        const resinText = assigned ? String(runtime.resinName) : EMPTY;
-        if (entry.resin.textContent !== resinText) entry.resin.textContent = resinText;
-        entry.resin.classList.toggle("is-placeholder", !assigned);
         entry.row.classList.toggle("is-empty", !assigned);
         patchField(entry.weightInput, key, KIND.weight, own);
         if (entry.geometryInput) patchField(entry.geometryInput, key, KIND.geometry, own);

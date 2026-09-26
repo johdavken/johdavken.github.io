@@ -549,9 +549,10 @@ test("the Weights Grid: a row per layer, the head a tile at its start and one ce
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row[data-key]'), /grid-column: calc\(var\(--slate-hopper-slot, 0\) \+ 2\);/);
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__row.is-empty'), /border-style: dashed;/);
   // Lined up with the Recipe's cell so a switch of tab moves nothing: the id's line as tall as the blend's,
-  // the resin at the Recipe's size, the field the room under the Recipe's resin.
+  // the Recipe's resin line kept empty under it (no resin here), the field the room under the Recipe's resin.
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /min-height: calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\)\);/);
-  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__resin'), /font-size: var\(--slate-text-lg\);/);
+  assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__id'), /padding-bottom: calc\(var\(--slate-text-lg\) \* var\(--slate-line-normal\) \+ 2px\);/);
+  assert.doesNotMatch(css, /\.slate-weights__resin/, "the Weights page shows no resin");
   assert.match(rule('.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind]'), /--slate-field-min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\) \+ 4px\);/);
   const container = css.indexOf("@container slate-weights");
   assert.ok(container > -1);

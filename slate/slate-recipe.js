@@ -1172,7 +1172,8 @@
       // The field and its Cancel stand together, before the field has focus
       // (moving a focused field would blur it, and the blur commits).
       if (touch()) {
-        const wrap = element(doc, "div", "slate-editor-field");
+        // A share's field names its layer (a phone floats it over every head).
+        const wrap = element(doc, "div", "slate-editor-field", target.entry ? {} : { "data-layer": target.layer });
         const cancel = text(doc, "button", "slate-editor-cancel", "×", { type: "button", "aria-label": "Cancel", title: "Cancel", "data-slate-cancel": "" });
         const hold = event => { target.cancelling = true; if (event && typeof event.preventDefault === "function") event.preventDefault(); };
         cancel.addEventListener("pointerdown", hold);

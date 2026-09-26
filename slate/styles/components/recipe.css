@@ -1385,6 +1385,41 @@
   display: none;
 }
 
+/* A share being typed: a column is too narrow for the field and its
+   Cancel, so the pair floats over the whole row of heads - named by its
+   layer's letter, in its tone - and the grid under it does not move. The
+   layers are its containing block, so its grid-column spans them all (the
+   touch rule's 2 / -1 would start it at the second); its top stays where
+   the head puts it. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-recipe__layers {
+  position: relative;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-editor-field[data-layer] {
+  grid-column: 1 / -1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding: 0 0 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-editor-field[data-layer]::before {
+  content: "Layer " attr(data-layer);
+  flex: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
+  font-size: var(--slate-text-md);
+  font-weight: 700;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__input {
+  flex: 1 1 auto;
+}
+
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer__note {
   flex: 1 0 100%;
   font-size: var(--slate-text-xs);

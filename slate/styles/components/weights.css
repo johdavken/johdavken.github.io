@@ -81,14 +81,14 @@
 
 .slate-weights__row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 128px;
+  grid-template-columns: 56px 128px;
   align-items: center;
   gap: var(--slate-space-3);
 }
 
 /* With Smart Hoppers on: the geometry field and the computed weight. */
 .slate-weights[data-shape^="smart"] .slate-weights__row {
-  grid-template-columns: 56px minmax(0, 1fr) 128px 128px 160px;
+  grid-template-columns: 56px 128px 128px 160px;
 }
 
 /* ---- Layers ---- */
@@ -171,17 +171,6 @@
 
 .slate-weights__id {
   font-weight: 600;
-}
-
-.slate-weights__resin {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.slate-weights__resin.is-placeholder {
-  color: var(--slate-text-faint);
 }
 
 /* A field and its unit. */
@@ -332,8 +321,8 @@
 /* ---- Layers with the head on top ----
    The Weights layout preference (data-weights-layers, chosen apart from
    the Recipe's): cards side by side, the head across the top, and each
-   row its id and resin with the field - and, with Smart Hoppers, the
-   geometry and the computed weight - stacked under the resin; the unit
+   row its id with the field - and, with Smart Hoppers, the geometry and
+   the computed weight - stacked beside it; the unit
    stands beside every field. Left, the sheet itself, needs no rule. */
 
 .slate-root[data-weights-layers="top"] .slate-weights__layers {
@@ -464,13 +453,19 @@
   }
 }
 
-/* ---- A phone: one line per hopper ----
-   The layers stack with a short bar for a head; each hopper is one line -
-   its id, its resin, the weight field, with Smart Hoppers the geometry
-   field and the computed weight - so a line's weights fit a screen or two.
-   A hopper empty in both recipes is left out (slate-weights.js marks it
-   is-vacant), and "Show empty hoppers" brings them back. The explanation
-   under the switch is left out too; the switch says its state. */
+/* ---- A phone: the Recipe's tiles ----
+   As the Recipe's phone grid (recipe.css): one column per layer, a short
+   head over each - the letter, in its tone - and a tile per hopper with
+   its id and its weight large at the tile's foot (no resin: a weight is
+   not about one; an empty hopper is still dashed), "lb" small
+   beside it; with Smart Hoppers the geometry field and the computed
+   weight under that. The layers' wrappers step aside (display: contents)
+   and each tile takes its position's row (--slate-hopper-slot), so the
+   hoppers of one position line up across the layers even where one is
+   left out. Tapping the weight types it in place. A hopper empty in both
+   recipes is left out (slate-weights.js marks it is-vacant), and "Show
+   empty hoppers" brings them back. The explanation under the switch is
+   left out too; the switch says its state. */
 .slate-weights__show-empty {
   display: none;
 }
@@ -480,43 +475,69 @@
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layers {
-  gap: var(--slate-space-2);
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: repeat(var(--slate-layers, 3), minmax(0, 1fr));
+  gap: 5px;
   margin-bottom: var(--slate-space-2);
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer {
-  display: block;
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__rows {
+  display: contents;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__head {
+  grid-row: 1;
+  grid-column: calc(var(--slate-layer-i, 0) + 1);
   flex-direction: row;
-  align-items: baseline;
-  gap: var(--slate-space-2);
-  padding: var(--slate-space-1) var(--slate-space-3);
-  border-left-width: 3px;
+  align-items: center;
+  min-height: var(--slate-tap);
+  padding: 0 2px;
+  border-width: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer-name {
-  font-size: var(--slate-text-md);
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
 }
 
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer-word,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__layer-role {
-  font-size: var(--slate-text-xs);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__rows {
-  gap: 1px;
-  padding: var(--slate-space-1);
+  display: none;
 }
 
 /* The attribute out-specifies the container's two-line rows. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row[data-key] {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: var(--slate-space-2);
-  row-gap: 2px;
-  padding: 2px var(--slate-space-1);
+  grid-row: calc(var(--slate-hopper-slot, 0) + 2);
+  grid-column: calc(var(--slate-layer-i, 0) + 1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas:
+    "id"
+    "weight"
+    "geometry"
+    "computed";
+  align-items: baseline;
+  gap: 0;
+  min-height: 84px;
+  padding: 6px 7px 5px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row.is-picked {
+  box-shadow: inset 0 0 0 2px var(--slate-accent);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row.is-vacant {
@@ -524,53 +545,80 @@
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__id {
-  flex: 0 0 26px;
+  grid-area: id;
+  min-width: 0;
+  color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
   font-weight: 700;
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__resin {
-  flex: 1 1 0;
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__weight {
+  grid-area: weight;
+  align-self: end;
+  justify-content: flex-start;
+  gap: 0;
+  margin-top: var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__geometry {
+  grid-area: geometry;
+  justify-content: flex-start;
+  gap: 0;
+  margin-top: var(--slate-space-1);
+}
+
+/* The weight reads as the Recipe's blend: no box, large, as wide as its
+   figure so "lb" follows the number; a changed one in the accent. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="weight"],
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="geometry"] {
+  --slate-field-border: var(--slate-stroke) solid transparent;
+  --slate-field-bg: transparent;
+  --slate-field-padding: 0;
+  --slate-field-min-height: 0;
+  --slate-field-width: auto;
+  field-sizing: content;
+  min-width: 2ch;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: left;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="weight"] {
+  font-size: var(--slate-text-xl);
+  font-weight: 700;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="geometry"] {
+  font-size: var(--slate-text-md);
+  font-weight: 600;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field.is-drafted {
+  color: var(--slate-accent-text);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__unit {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__computed {
+  grid-area: computed;
   min-width: 0;
   overflow: hidden;
-  font-size: var(--slate-text-sm);
+  font-size: var(--slate-text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__wrap {
-  flex: none;
-  gap: 2px;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="weight"] {
-  --slate-field-width: 4.4em;
-  --slate-field-padding: 2px var(--slate-space-2);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__field[data-kind="geometry"] {
-  --slate-field-width: 3.4em;
-  --slate-field-padding: 2px var(--slate-space-2);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__unit {
-  font-size: var(--slate-text-xs);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__computed {
-  flex: none;
-  min-width: 3.4em;
-  font-size: var(--slate-text-xs);
-  text-align: right;
-  white-space: nowrap;
-}
-
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row-note {
-  flex: 1 0 100%;
-  padding-left: calc(26px + var(--slate-space-2));
+  grid-column: 1 / -1;
+  padding-left: 0;
+  font-size: var(--slate-text-xs);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__revert:not([hidden]) {
+  grid-column: 1 / -1;
   min-width: 0;
   min-height: var(--slate-tap-cell);
   padding: 0 var(--slate-space-2);
@@ -595,8 +643,8 @@
 
 /* ---- The Grid layout: a row of cells per layer ----
    As the Recipe's (recipe.css): each layer a row, its head a tile at the
-   start, then one self-contained cell per hopper - its id and resin, the
-   weight field, and with Smart Hoppers the geometry field and the
+   start, then one self-contained cell per hopper - its id, the weight
+   field, and with Smart Hoppers the geometry field and the
    computed weight. Every row has the same columns (--slate-hopper-rows,
    the deepest layer's count, from the section), so a position lines up
    down the page. The layer's tone washes across its row behind the
@@ -667,8 +715,9 @@
 
 /* A cell, lined up with the Recipe's (recipe.css) so a switch of tab
    moves nothing: the id on the first line - as tall as the Recipe's
-   blend beside its id - the resin large on the second, the fields under
-   them where the Recipe has its weight and Track. */
+   blend beside its id - the second left empty where the Recipe has its
+   resin, the fields under them where the Recipe has its weight and
+   Track. */
 .slate-root[data-weights-layers="grid"] .slate-weights__row[data-key] {
   grid-column: calc(var(--slate-hopper-slot, 0) + 2);
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -697,8 +746,11 @@
 
 .slate-root[data-weights-layers="grid"] .slate-weights__id {
   grid-column: 1 / -1;
-  /* The Recipe's blend beside the id sets that line's height. */
+  /* The Recipe's blend beside the id sets that line's height; the room
+     under it is the Recipe's resin line (and the row gap before it),
+     kept empty so a switch of tab moves nothing. */
   min-height: calc(var(--slate-text-lg) * var(--slate-line-normal));
+  padding-bottom: calc(var(--slate-text-lg) * var(--slate-line-normal) + 2px);
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
   font-weight: 700;
@@ -709,13 +761,6 @@
    kept for that strip below is the readout's here. */
 .slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured] {
   padding-bottom: calc(var(--slate-space-2) - var(--slate-space-1));
-}
-
-.slate-root[data-weights-layers="grid"] .slate-weights__resin {
-  grid-column: 1 / -1;
-  font-size: var(--slate-text-lg);
-  font-weight: 600;
-  text-align: left;
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__wrap {
@@ -732,7 +777,7 @@
 }
 
 /* The field takes the cell's width, beside its unit, and the room the
-   Recipe's cell (recipe.css) gives below its resin: the weight's line
+   Recipe's cell (recipe.css) gives below its resin line: the weight's line
    plus the two row gaps of its empty mark and note rows. So a cell is as
    tall on either tab - with Track hidden (Automatic tracking, the
    default); where Track shows, a Recipe cell stands a few pixels taller. */
