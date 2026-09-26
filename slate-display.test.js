@@ -475,7 +475,7 @@ test("the layout is grid or grid-top, defaults to grid, persists beside the othe
   assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: "{broken" })).getLayout(), "grid");
 });
 
-test("Settings offers one Layout - Grid / Grid Top - for both pages after Tracking, marks the current one, and drives the controller", () => {
+test("Settings offers one Layout - Rows / Columns - for both pages after Tracking, marks the current one, and drives the controller", () => {
   const doc = makeDocument();
   const controller = display.create(node(), storage());
   const view = settings.create(doc, { theme: null, themes: [], display: controller });
@@ -494,7 +494,7 @@ test("Settings offers one Layout - Grid / Grid Top - for both pages after Tracki
   assert.deepEqual(modes.map(one => one.getAttribute("data-layout")), ["grid", "grid-top"]);
   assert.deepEqual(modes.map(one => one.getAttribute("role")), ["radio", "radio"]);
   assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false"], "Grid is the default");
-  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Grid", "Grid Top"]);
+  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Rows", "Columns"]);
   assert.match(section.querySelector(".slate-settings__lead").textContent, /Recipe and Weights pages/);
   assert.match(view.layout("grid-top").querySelector(".slate-settings__mode-note").textContent, /centred/);
   click(view.layout("grid-top"));
