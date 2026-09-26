@@ -20,7 +20,9 @@
 }
 
 .slate-home__brand .slate-logo {
-  width: min(72%, 300px);
+  /* Large: the header gives its row to the page on a phone, and RT Sync
+     stands in the menu's sheet, so the mark has the top of the screen. */
+  width: min(88%, 380px);
   /* No taller than the room the brand is given: on a short phone it is
      the mark that gives (below). */
   max-height: 100%;

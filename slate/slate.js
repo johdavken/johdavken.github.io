@@ -57,7 +57,9 @@
   const displayModule = root.PolynSlateDisplay || null;
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
-  const phoneBarModule = root.PolynSlatePhoneBar || null;
+  const phoneDrawerModule = root.PolynSlatePhoneDrawer || null;
+  /* The inputs that raise no keyboard: the grip stays up for these. */
+  const NO_KEYBOARD_INPUTS = new Set(["button", "checkbox", "radio", "range", "color", "file", "submit", "reset", "image", "hidden"]);
   const homeModule = root.PolynSlateHome || null;
   const lineModule = root.PolynSlateLine || null;
 
@@ -121,7 +123,7 @@
    * Each has a home - what it shows when no tool is in it. */
   const panes = {};
   let railView = null;
-  let phoneBar = null;
+  let phoneDrawer = null;
   /* Every section the boot defines (start() fills it), for the bar to
    * know which are tools. */
   const sectionDefinitions = [];
@@ -201,7 +203,7 @@
     // and no rail sheet to raise.
     if (asideOpen && !drawer() && !page()) setAside(false);
     if (railOpen && !page()) setRail(false);
-    if (toolsOpen && !page()) setTools(false);
+    placeSync();
     // Home is a phone's alone: listed there, and left for the Recipe
     // when the screen stops being one.
     if (railView) railView.setListed(HOME, page());
@@ -226,7 +228,7 @@
       if (shownId === WEIGHTS) openWeightsTab();
       else sections.show(DEFAULT_SECTION);
     }
-    paintBar();
+    paintTitle();
   }
 
   /* SCANNING
@@ -278,7 +280,7 @@
   function paintScrim() {
     const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
     if (!scrim) return;
-    if ((asideOpen && drawer()) || railOpen || toolsOpen) scrim.removeAttribute("hidden");
+    if ((asideOpen && drawer()) || railOpen) scrim.removeAttribute("hidden");
     else scrim.setAttribute("hidden", "");
   }
   function setAside(open) {
@@ -288,7 +290,7 @@
     if (!asideOpen && asideOffStack) { const off = asideOffStack; asideOffStack = null; off(); }
     if (mounts.aside) mounts.aside.classList.toggle("is-open", asideOpen);
     paintScrim();
-    paintBar();
+    paintTitle();
     paintAsideMark();
   }
 
@@ -305,42 +307,37 @@
 
   /* THE RAIL AS A SHEET (phone)
    *
-   * The bar's Menu raises the rail from the foot of the screen over a
-   * scrim; a choice, the scrim, the Menu again or Back lowers it. */
+   * The grip floating at the foot (slate-phone-drawer.js) slides the rail
+   * up over a scrim, following a swipe; a choice, the scrim, the grip, a
+   * swipe down or Back lowers it. */
   let railOpen = false;
   let railOffStack = null;
   let statsOffStack = null;
   function setRail(open) {
     railOpen = !!open && page();
+    if (!railOpen && sync && sync.isOpen() && syncInSheet) sync.close(false);
     if (railOpen && !railOffStack && dismissModule) railOffStack = dismissModule.register(() => setRail(false));
     if (!railOpen && railOffStack) { const off = railOffStack; railOffStack = null; off(); }
     if (mounts.rail) mounts.rail.classList.toggle("is-open", railOpen);
-    if (phoneBar) phoneBar.setExpanded(railOpen);
+    if (phoneDrawer) phoneDrawer.setExpanded(railOpen);
     paintScrim();
   }
 
-  /* The bar's lit key: the Timeline while its page is up, the centre's
-   * section when the bar has a key for it, and Menu - the way to it -
-   * for anything else. */
-  function paintBar() {
-    paintTitle();
-    if (!phoneBar || !panes.aside || !sections) return;
-    // The pages Home leads to that have no key of their own (the Timeline,
-    // Resin Balance) light Home; the Recipe has its own key; a tool lights
-    // Tools; what only Menu lists lights Menu.
-    const fromHome = new Set([HOME, TIMELINE, "resin-balance"]);
-    const tools = new Set(sectionDefinitions.filter(one => one.group === "tools").map(one => one.id));
-    let id;
-    if (asideOpen) {
-      const showing = panes.aside.swap.current();
-      id = showing ? showing.id : TIMELINE;
-    } else {
-      const centre = sections.current();
-      id = centre ? centre.id : DEFAULT_SECTION;
-    }
-    if (fromHome.has(id)) id = HOME;
-    else if (tools.has(id)) id = phoneBarModule.TOOLS;
-    phoneBar.setActive(phoneBarModule.KEYS.some(key => key.id === id) ? id : phoneBarModule.MENU);
+  /* RT SYNC'S PLACE
+   *
+   * In the header's corner - and on a phone, where the header gives its
+   * row to the page, at the foot of the menu's sheet beside Settings. A
+   * move closes the panel: a node moved while focused loses its focus. */
+  let syncInSheet = false;
+  function placeSync() {
+    if (!sync) return;
+    const foot = railView && railView.element && typeof railView.element.querySelector === "function" ? railView.element.querySelector(".slate-rail__foot") : null;
+    const inSheet = page() && !!foot;
+    if (inSheet === syncInSheet && sync.element.parentNode) return;
+    if (sync.isOpen()) sync.close(false);
+    syncInSheet = inSheet;
+    if (inSheet) foot.appendChild(sync.element);
+    else if (mounts.sync) mounts.sync.appendChild(sync.element);
   }
 
   /* The header names the centre's section - or, on a phone, the page laid
@@ -356,37 +353,6 @@
     title.textContent = showing.label;
     if (showing.id === DEFAULT_SECTION) title.setAttribute("hidden", "");
     else title.removeAttribute("hidden");
-  }
-
-  /* A key on the phone's bar. */
-  function onBarKey(id) {
-    if (!phoneBarModule) return;
-    if (id === phoneBarModule.MENU) { setTools(false); setRail(!railOpen); return; }
-    if (id === phoneBarModule.TOOLS) { setRail(false); setTools(!toolsOpen); return; }
-    setRail(false);
-    setTools(false);
-    goTo(id);
-  }
-
-  /* THE TOOLS SHEET (phone)
-   *
-   * The bar's Tools raises a short sheet of the calculators over the
-   * scrim; a choice opens it where it lives (the pressure conversion in
-   * the Scrap card's place, a sheet itself on a phone; Winding Tension as
-   * the page over the centre). */
-  let toolsOpen = false;
-  let toolsOffStack = null;
-  let toolSheet = null;
-  function setTools(open) {
-    toolsOpen = !!open && page() && !!toolSheet;
-    if (toolsOpen && !toolsOffStack && dismissModule) toolsOffStack = dismissModule.register(() => setTools(false));
-    if (!toolsOpen && toolsOffStack) { const off = toolsOffStack; toolsOffStack = null; off(); }
-    if (toolSheet) {
-      if (toolsOpen) toolSheet.removeAttribute("hidden");
-      else toolSheet.setAttribute("hidden", "");
-    }
-    if (phoneBar && phoneBarModule) phoneBar.setExpanded(toolsOpen, phoneBarModule.TOOLS);
-    paintScrim();
   }
 
   /* A page by id: a centre section, or the Timeline or a tool in the
@@ -409,12 +375,12 @@
   }
 
   /* The overdue dot: a hopper past its mark and still running. On a
-   * tablet it is the rail's Timeline's; on a phone Home's, the Timeline
-   * being one of its steps. */
+   * tablet it is the rail's Timeline's; on a phone the grip's, and Home's
+   * in the sheet it raises, the Timeline being one of Home's steps. */
   function paintOverdue() {
     const overdue = !!(summary && typeof summary.entries === "function") && summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
-    if (phoneBar) phoneBar.setDot(HOME, overdue);
-    if (railView) railView.setAlert(TIMELINE, overdue);
+    if (phoneDrawer) phoneDrawer.setDot(overdue);
+    if (railView) { railView.setAlert(TIMELINE, overdue); railView.setAlert(HOME, overdue); }
   }
 
   /* TIER
@@ -676,14 +642,14 @@
         // Home carries the job's figures itself: the strip steps aside
         // (shell.css), its editors still rising from it as sheets.
         if (mounts.stats) mounts.stats.classList.toggle("is-home", definition.id === HOME);
-        paintBar();
+        paintTitle();
       }
     });
     panes[rail.CENTRE] = { swap: sections, home: DEFAULT_SECTION };
     for (const [name, mount, homeId] of [["aside", mounts.aside, TIMELINE], ["stats", stats.slot(SCRAP), SCRAP]]) {
       const swap = sectionsModule.mountSections(doc, mount, inPane(name), ctx, {
         onChange(definition) {
-          if (name === "aside") { paintAsideMark(); paintBar(); }
+          if (name === "aside") { paintAsideMark(); paintTitle(); }
           else if (railView) railView.setActivePane(name, definition.id === homeId ? null : definition.id);
           // A tool in the Scrap card's place is a sheet on a phone
           // (components/phone.css): Back closes it, as its own close does.
@@ -729,29 +695,41 @@
       }
     });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
-    if (phoneBarModule && mounts.bar) {
-      phoneBar = phoneBarModule.create(doc, { onSelect: onBarKey });
-      mounts.bar.appendChild(phoneBar.element);
-      // The Tools key's sheet: one row per calculator the rail lists under Tools.
-      toolSheet = doc.createElement("div");
-      toolSheet.setAttribute("class", "slate-toolsheet");
-      toolSheet.setAttribute("role", "dialog");
-      toolSheet.setAttribute("aria-label", "Tools");
-      toolSheet.setAttribute("hidden", "");
-      const heading = doc.createElement("p");
-      heading.setAttribute("class", "slate-toolsheet__title");
-      heading.textContent = "Tools";
-      toolSheet.appendChild(heading);
-      for (const definition of definitions.filter(one => one.group === "tools")) {
-        const button = doc.createElement("button");
-        button.setAttribute("type", "button");
-        button.setAttribute("class", "slate-toolsheet__item");
-        button.setAttribute("data-tool", definition.id);
-        button.textContent = definition.label;
-        button.addEventListener("click", () => { setTools(false); goTo(definition.id); });
-        toolSheet.appendChild(button);
-      }
-      container.appendChild(toolSheet);
+    if (phoneDrawerModule && mounts.grip && mounts.rail) {
+      const sheet = mounts.rail;
+      phoneDrawer = phoneDrawerModule.create(doc, {
+        sheet,
+        enabled: () => page() && !(sync && sync.isOpen()),
+        isOpen: () => railOpen,
+        height: () => (typeof sheet.getBoundingClientRect === "function" ? sheet.getBoundingClientRect().height : 0),
+        // The sheet under the finger: shown, without its slide, at the
+        // drag's place; let go, it takes its slide back to where it settles.
+        follow: shift => {
+          sheet.classList.toggle("is-dragging", shift !== null);
+          if (shift === null) sheet.style.removeProperty("--slate-sheet-shift");
+          else sheet.style.setProperty("--slate-sheet-shift", `${shift}px`);
+        },
+        settle: open => setRail(open)
+      });
+      mounts.grip.appendChild(phoneDrawer.element);
+      // Typing, the keyboard shortens the page (slate-host.js) and the grip
+      // would ride on top of it: it steps aside while a field that raises
+      // the keyboard has focus, and is back when focus leaves for anything
+      // else.
+      const typingIn = node => {
+        if (!node || !node.tagName) return false;
+        const tag = String(node.tagName).toUpperCase();
+        if (tag === "TEXTAREA") return true;
+        if (node.isContentEditable || node.getAttribute("contenteditable") === "true") return true;
+        if (tag !== "INPUT") return false;
+        return !NO_KEYBOARD_INPUTS.has(String(node.getAttribute("type") || "text").toLowerCase());
+      };
+      const paintTyping = typing => {
+        if (typing) mounts.grip.setAttribute("hidden", "");
+        else mounts.grip.removeAttribute("hidden");
+      };
+      container.addEventListener("focusin", event => paintTyping(typingIn(event && event.target)));
+      container.addEventListener("focusout", event => paintTyping(typingIn(event && event.relatedTarget)));
     }
 
     // The administrator's sections appear and vanish with the one session,
@@ -772,17 +750,21 @@
     // tokens reach it; the sync module registers it with the bridge.
     const conflict = conflictModule ? conflictModule.create(doc) : null;
     if (conflict) container.appendChild(conflict.element);
-    sync = syncModule.create(doc, { connection, admin, conflict });
-    if (mounts.sync) mounts.sync.appendChild(sync.element);
+    sync = syncModule.create(doc, {
+      connection, admin, conflict,
+      // Opened from the menu's sheet, the panel takes the sheet's place:
+      // the sheet stays up behind it, unseen, and is back when it closes.
+      onToggle: open => { if (mounts.rail) mounts.rail.classList.toggle("is-covered", open && syncInSheet && railOpen); }
+    });
+    placeSync();
 
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
     const scrim = container.querySelector("[data-slate-scrim]");
-    if (scrim) scrim.addEventListener("click", () => { if (toolsOpen) setTools(false); else if (railOpen) setRail(false); else setAside(false); });
+    if (scrim) scrim.addEventListener("click", () => { if (railOpen) setRail(false); else setAside(false); });
     container.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
-      if (toolsOpen) setTools(false);
-      else if (railOpen) setRail(false);
+      if (railOpen) setRail(false);
       else if (asideOpen) setAside(false);
     });
 

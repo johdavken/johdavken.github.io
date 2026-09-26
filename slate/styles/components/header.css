@@ -44,9 +44,10 @@
 }
 
 /* ---- A phone ----
-   A short header: the RT Sync trigger on its line, a notice, when there
-   is one, on its own line beneath it. A phone's pages are named by the
-   bar and by what they show, so no title. */
+   No header row: RT Sync stands in the menu's sheet (slate.js), and a
+   phone's pages are named by what they show, so no title. A notice, when
+   there is one, is the header's whole content. */
+
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title {
   display: none;
 }

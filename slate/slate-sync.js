@@ -112,6 +112,9 @@
     // The conflict question (slate-conflict.js): registered with the
     // bridge here, since this is the one file that speaks to it.
     const conflict = settings.conflict && typeof settings.conflict.ask === "function" ? settings.conflict : null;
+    // Told when the panel opens and closes: on a phone the trigger stands
+    // in the menu's sheet, and the panel takes the sheet's place (slate.js).
+    const onToggle = typeof settings.onToggle === "function" ? settings.onToggle : () => {};
     if (conflict && connection && typeof connection.answer === "function") connection.answer("conflict", details => conflict.ask(details));
 
     const rootEl = element(doc, "div", "slate-sync", { hidden: "" });
@@ -382,6 +385,7 @@
       rootEl.classList.add("is-open");
       renderPanel();
       outsideCloser.start();
+      onToggle(true);
     }
 
     function close(refocus) {
@@ -394,6 +398,7 @@
       trigger.setAttribute("aria-expanded", "false");
       rootEl.classList.remove("is-open");
       outsideCloser.stop();
+      onToggle(false);
       if (refocus && typeof trigger.focus === "function") trigger.focus();
     }
 

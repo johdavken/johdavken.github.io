@@ -325,9 +325,13 @@
 }
 
 /* ---- A phone: the rail as a sheet ----
-   Raised from the foot of the screen by the bar's Menu (slate.js marks it
-   is-open), over the scrim, above everything else; the names are back
-   beside the icons, and Tools opens in place rather than as a flyout. */
+   Slid up from the foot of the screen by the grip (slate-phone-drawer.js;
+   slate.js marks it is-open), over the scrim, above everything else; the
+   names are back beside the icons, and Tools opens in place rather than
+   as a flyout. Under a finger (is-dragging) it stands where the drag has
+   it, --slate-sheet-shift from open, without its slide; let go, it slides
+   the rest of the way. A grab line across its top says it can be pushed
+   back down. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail {
   position: fixed;
   right: 0;
@@ -352,6 +356,28 @@
   transform: none;
   visibility: visible;
   transition: transform var(--slate-motion-move) var(--slate-motion-ease), visibility 0s linear 0s;
+}
+
+/* Scrolled to its top, the sheet leaves the browser the upward pans alone:
+   a downward swipe there is the push that lowers it. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-at-top:not(.is-covered) {
+  touch-action: pan-up;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-dragging {
+  transform: translateY(var(--slate-sheet-shift, 0px));
+  visibility: visible;
+  transition: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail::before {
+  content: "";
+  display: block;
+  width: 32px;
+  height: 4px;
+  margin: var(--slate-space-2) auto 0;
+  border-radius: 999px;
+  background: var(--slate-border);
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__inner {
@@ -389,8 +415,22 @@
   box-shadow: none;
 }
 
+/* The foot: Settings, and RT Sync's readout beside it at the right
+   (slate.js moves it here from the header). */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-rail__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: var(--slate-space-3);
   margin-top: var(--slate-space-3);
+}
+
+/* RT Sync's panel open from the foot takes the sheet's place: the sheet
+   stays up, unseen, and the panel - a sheet of its own (phone.css), seen
+   through its hidden parent - stands where it stood. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-rail.is-covered {
+  visibility: hidden;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

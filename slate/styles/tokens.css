@@ -81,10 +81,11 @@
   --slate-drawer-width: 360px;
   /* The drawer's width as it stands. */
   --slate-drawer-w: min(var(--slate-drawer-width), calc(100vw - var(--slate-rail-width-compact)));
-  /* A phone (data-viewport="phone"): the bar along the foot and the
-     header over the page, both kept short so the recipe has the screen. */
-  --slate-bar-height: 56px;
-  --slate-header-height-phone: 48px;
+  /* A phone (data-viewport="phone"): the grip floating at the foot,
+     kept short so the recipe has the screen; the page keeps the grip's
+     clearance under its last row. */
+  --slate-grip-height: 44px;
+  --slate-grip-clear: calc(var(--slate-grip-height) + 2 * var(--slate-space-2));
   /* The system bars over an edge-to-edge app (Android): the browser's own
      inset, or the one the Capacitor shell writes for a WebView without it.
      Zero on a desktop; spent only under the touch tier. */

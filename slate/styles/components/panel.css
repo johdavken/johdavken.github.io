@@ -119,7 +119,7 @@
 
 /* ---- A phone (touch, data-viewport="phone") ----
    The aside is a page: it shares the centre's cell in the shell's grid
-   and is laid over it while the bar's Timeline is chosen (slate.js marks
+   and is laid over it while Home's Timeline is chosen (slate.js marks
    it is-open). Shut, it is hidden from sight and focus but still laid
    out, so the Timeline keeps measuring its axis. No drawer, no handle. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-aside {
@@ -127,7 +127,7 @@
   z-index: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--slate-space-3);
+  padding: var(--slate-space-3) var(--slate-space-3) calc(var(--slate-space-3) + var(--slate-grip-clear) + var(--slate-inset-bottom));
   background: var(--slate-surface);
   visibility: hidden;
 }
