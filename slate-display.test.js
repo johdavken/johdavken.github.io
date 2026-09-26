@@ -1305,6 +1305,13 @@ test("on a phone RT Sync stands at the foot of the menu beside Settings, its pan
   assert.ok(syncEl.parentNode === foot);
 });
 
+test("on a phone an aside page - How to Use, the Weights guide, a tool - ends clear of the grip: the clearance is the panel's, which runs past its section, not the aside's", () => {
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "panel.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  assert.match(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-panel'), /padding-bottom: calc\(var\(--slate-space-3\) \+ var\(--slate-grip-clear\) \+ var\(--slate-inset-bottom\)\);/);
+  assert.doesNotMatch(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-aside'), /--slate-grip-clear/, "the aside's padding stands under the section, not under the text");
+});
+
 test("on a phone the grip steps aside while a field that raises the keyboard has focus, and comes back when focus leaves it", () => {
   const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
   const doc = hostEl.ownerDocument;
