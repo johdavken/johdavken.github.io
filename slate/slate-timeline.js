@@ -1080,7 +1080,7 @@
 
     function describe(correction, id) {
       if (!correction.ok) return runoutModule.reasonText(correction.reason);
-      const what = correction.target === "geometry" ? `${correction.dimension === "volume" ? "Usable volume" : "Usable height"} (Smart Hoppers)` : "Receiver weight";
+      const what = correction.target === "geometry" ? `${correction.dimension === "volume" ? "Capacity" : "Usable height"} (Smart Hoppers)` : "Receiver weight";
       return `${what}: ${correction.from} ${correction.unit} → ${correction.to} ${correction.unit}`;
     }
 
@@ -1187,7 +1187,7 @@
       if (result.changed) onCommitted(result);
       state.ratios.push(c.ratio);
       const profileId = profileSelect.value;
-      const said = `${entry.id}: ${c.target === "geometry" ? (c.dimension === "volume" ? "usable volume" : "usable height") : "receiver weight"} is now ${c.to} ${c.unit}.`;
+      const said = `${entry.id}: ${c.target === "geometry" ? (c.dimension === "volume" ? "capacity" : "usable height") : "receiver weight"} is now ${c.to} ${c.unit}.`;
       if (!profileId) { closeCorrection(); say(said); return; }
       open.busy = true;
       correctApply.setAttribute("disabled", "");

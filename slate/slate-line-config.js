@@ -80,9 +80,13 @@
     Object.freeze({ value: "inside", label: "Inside" }),
     Object.freeze({ value: "outside", label: "Outside" })
   ]);
+  /* Where a line's hopper volume comes from - both give a volume, which
+   * Smart Hoppers weighs by bulk density: measured from each round
+   * receiver's diameter and height, or taken as each hopper's capacity in
+   * gallons (any shape). The stored words stay cylindrical / volume. */
   const GEOMETRIES = Object.freeze([
-    Object.freeze({ value: "cylindrical", label: "Cylindrical" }),
-    Object.freeze({ value: "volume", label: "Volume" })
+    Object.freeze({ value: "cylindrical", label: "Diameter & height" }),
+    Object.freeze({ value: "volume", label: "Capacity" })
   ]);
   const NAMING_MODES = Object.freeze([
     Object.freeze({ value: "standard", label: "Standard" }),
@@ -644,7 +648,7 @@
       fields.appendChild(fieldRow("Hopper naming", chipGroup("hopperNamingMode", NAMING_MODES, draft.hopperNamingMode, { "aria-label": "Hopper naming mode" })));
       fields.appendChild(fieldRow("Hoppers", text(doc, "span", "slate-lines__hoppers",
         hopperSummary(draft.layerCount, draft.hopperNamingMode, draft.hopperCounts), { "data-role": "hoppers" })));
-      fields.appendChild(fieldRow("Hopper geometry", chipGroup("hopperGeometry", GEOMETRIES, draft.hopperGeometry, { "aria-label": "Hopper geometry" })));
+      fields.appendChild(fieldRow("Hopper volume from", chipGroup("hopperGeometry", GEOMETRIES, draft.hopperGeometry, { "aria-label": "Hopper volume from" })));
       fields.appendChild(fieldRow("Hopper manufacturer", chipGroup("hopperManufacturer", MANUFACTURERS, draft.hopperManufacturer, { "aria-label": "Hopper manufacturer" })));
       detail.appendChild(fields);
 

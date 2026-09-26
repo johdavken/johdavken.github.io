@@ -189,9 +189,17 @@ test("the definition is checked by the application's own rules before anything i
   assert.deepEqual(lines.validateDefinition({}, noName, []), { valid: true });
 });
 
+test("a line's hopper volume is named by what is measured - Diameter & height, or Capacity - both a volume; the stored words stay cylindrical and volume", () => {
+  assert.deepEqual(lines.GEOMETRIES.map(one => one.value), ["cylindrical", "volume"], "the stored words changed");
+  assert.deepEqual(lines.GEOMETRIES.map(one => one.label), ["Diameter & height", "Capacity"]);
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/slate-line-config.js"), "utf8");
+  assert.match(source, /fieldRow\("Hopper volume from", chipGroup\("hopperGeometry"/);
+  assert.doesNotMatch(source, /"Hopper geometry"|label: "Cylindrical"|label: "Volume"/);
+});
+
 test("the words a line's row and its summary carry, and the confirmations", () => {
-  assert.equal(lines.rowMeta(LINES[0]), "3 layers · A Outside · Cylindrical · Standard");
-  assert.equal(lines.rowMeta(LINES[1]), "5 layers · A Inside · Volume · Main + 1–5 · TSM · Inactive",
+  assert.equal(lines.rowMeta(LINES[0]), "3 layers · A Outside · Diameter & height · Standard");
+  assert.equal(lines.rowMeta(LINES[1]), "5 layers · A Inside · Capacity · Main + 1–5 · TSM · Inactive",
     "the manufacturer or the inactive mark went missing");
   assert.equal(lines.detailMeta(LINES[0]), "Line number 5 · Updated Sep 1, 2026 · Also Five");
   assert.equal(lines.detailMeta(LINES[1]), "Line number 8");
@@ -216,7 +224,7 @@ test("nothing is read without an administrator or before the section is shown; t
   await view.open();
   assert.deepEqual(admin.calls.map(call => call.action), ["listLineConfigurations"]);
   assert.deepEqual(view.rows().map(row => row.getAttribute("data-line")), ["l-5", "l-8"]);
-  assert.equal(view.rows()[0].querySelector(".slate-book__row-meta").textContent, "3 layers · A Outside · Cylindrical · Standard");
+  assert.equal(view.rows()[0].querySelector(".slate-book__row-meta").textContent, "3 layers · A Outside · Diameter & height · Standard");
   assert.ok(view.rows()[1].classList.contains("is-inactive"));
   assert.equal(view.note().textContent, "2 lines loaded.");
   // The line this device follows is marked, and named in the bar.
