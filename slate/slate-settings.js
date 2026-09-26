@@ -234,18 +234,20 @@
     if (!display) tracking.appendChild(text(doc, "p", "slate-settings__note", "Tracking cannot be changed on this page."));
     rootEl.appendChild(tracking);
 
-    // Layout: where a layer's head stands in the Recipe's and the Weights
-    // page's Grid. A phone keeps its own layout and a tablet held upright
-    // is always Grid Top (slate.js), so there the group is withheld
+    // Layout: Rows or Columns - each layer a row of cells with its head at
+    // the start, or a column with its head on top - in the Recipe's and the
+    // Weights page's grid. The stored values stay "grid" and "grid-top"
+    // (slate-display.js). A phone keeps its own layout and a tablet held
+    // upright is always Columns (slate.js), so there the group is withheld
     // (settings.css, --heads); a turned tablet chooses, as a mouse does.
     const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout slate-settings__group--heads", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
-    layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe or the weights changes."));
+    layout.appendChild(text(doc, "p", "slate-settings__lead", "How the layers are laid out on the Recipe and Weights pages: each layer a row, or each a column. Nothing about the recipe or the weights changes."));
     const layouts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layout" });
     const layoutButtons = new Map();
     for (const [mode, label, note] of [
-      ["grid", "Grid", "Every layer a row of cells, its name at the start, positions lined up down the page."],
-      ["grid-top", "Grid Top", "Every layer a column of cells, its name on top, positions lined up across. The cells keep their size and the columns sit centred."]
+      ["grid", "Rows", "Every layer a row of cells, its name at the start, positions lined up down the page."],
+      ["grid-top", "Columns", "Every layer a column of cells, its name on top, positions lined up across. The cells keep their size and the columns sit centred."]
     ]) {
       const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-layout": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
