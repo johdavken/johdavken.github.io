@@ -2146,15 +2146,34 @@ test("a desktop's layer menu waits only while the draft has changes; a Next cell
   assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-hopper__weight\[data-spacer\] \{\s*min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\)\);/);
 });
 
-test("the Grid head keeps Compare's other share beside the share, never under it, and the role on one line in a tile wide enough for a subskin", () => {
+test("the Grid head is share first: a small toned label over the share (a long role wrapping, never cut short), Compare's other share beside it, never under it, and a bar under both", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
   assert.match(tokens, /--slate-grid-head-width: 136px;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__head'), /display: grid;[^}]*grid-template-rows: auto auto 1fr;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 3;\s*grid-column: 1;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share-other'), /grid-row: 3;\s*grid-column: 2;[^}]*white-space: nowrap;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__role'), /white-space: nowrap;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__head'), /display: grid;[^}]*grid-template-rows: auto auto auto;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 2;\s*grid-column: 1 \/ 3;[^}]*font-size: var\(--slate-text-2xl\);/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share-other'), /grid-row: 2;\s*grid-column: 3;[^}]*white-space: nowrap;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /grid-row: 1;[^}]*var\(--slate-layer-tone\)[^}]*text-transform: uppercase;/);
+  assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-layer__role \{\s*grid-column: 2 \/ -1;[^}]*overflow-wrap: anywhere;/, "a subskin role is cut short, not wrapped");
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__word'), /display: none;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__bar'), /display: block;\s*grid-row: 3;[^}]*var\(--slate-layer-share, 0%\)/);
+  assert.match(css, /\n\.slate-layer__bar \{\s*display: none;/, "the bar shows outside the Grid layout");
+});
+
+test("the share's bar follows the share: set on build, moved by a patch, clamped to 0-100, and hidden from assistive tech", () => {
+  const { view } = boot();
+  view.update(resolvedFrom(), { kind: "structural" });
+  const share = layer => head(view, layer).style.getPropertyValue("--slate-layer-share");
+  const bar = head(view, "B").querySelector(".slate-layer__bar");
+  assert.ok(bar, "the head has no bar");
+  assert.equal(bar.getAttribute("aria-hidden"), "true");
+  assert.equal(share("B"), `${parseFloat(head(view, "B").querySelector(".slate-layer__share").textContent)}%`);
+  view.update(resolvedFrom(snap => { snap.layers[1].layerPct = 45; }), { kind: "values" });
+  assert.equal(share("B"), "45%");
+  view.update(resolvedFrom(snap => { snap.layers[1].layerPct = 140; snap.layers[0].layerPct = 0; }), { kind: "values" });
+  assert.equal(share("B"), "100%");
+  assert.equal(share("A"), "0%");
 });
 
 test("Empty blanks only the selected hoppers into the draft - nothing sent, the selection kept - and Apply sends them as ONE setHopperAssignments", () => {

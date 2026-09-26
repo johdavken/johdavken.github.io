@@ -274,6 +274,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The share's bar is the Grid layout's alone (below). */
+.slate-layer__bar {
+  display: none;
+}
+
 .slate-layer__rows {
   display: flex;
   flex-direction: column;
@@ -996,18 +1001,20 @@
 
 /* The head stands in the wash itself, with no stripe: the wash carries
    the tone (the stripe's width stays, transparent, so the text keeps its
-   place). The name and role lead, the share sits at the foot, and the
-   menu keeps the top corner out of their way. */
-/* The head's lines: the name, the role, and at the foot the share with
-   Compare's other share beside it - never under it, so a layer whose
-   share changes is no taller, on either tab. A refusal's note, when
-   there is one, takes a line of its own. */
+   place). Share first: the share is the head's figure, since it is the
+   value an operator changes; the layer's letter and role are a small
+   label over it in the layer's tone, and a bar under it fills to the
+   share. Compare's other share sits beside the share - never under it,
+   so a layer whose share changes is no taller, on either tab. A
+   refusal's note, when there is one, takes a line of its own. The menu
+   keeps the top corner, clear of the label. */
 .slate-root[data-layers="grid"] .slate-layer__head {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr;
-  column-gap: var(--slate-space-2);
-  row-gap: var(--slate-space-1);
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  column-gap: var(--slate-space-1);
+  row-gap: 2px;
   position: relative;
   padding: var(--slate-space-2) var(--slate-space-3);
   border-left-color: transparent;
@@ -1022,54 +1029,86 @@
   margin-top: 0;
 }
 
-.slate-root[data-layers="grid"] .slate-layer__name {
-  font-size: var(--slate-text-xl);
+/* The label: "A · Inside", in the layer's tone drawn toward the text so
+   it holds its contrast on a light theme and a dark one alike. */
+.slate-root[data-layers="grid"] .slate-layer__name,
+.slate-root[data-layers="grid"] .slate-layer__role {
+  grid-row: 1;
+  color: color-mix(in srgb, var(--slate-layer-tone) 70%, var(--slate-text));
+  font-size: var(--slate-text-xs);
   font-weight: 700;
+  line-height: var(--slate-line-tight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__name {
+  grid-column: 1;
 }
 
 .slate-root[data-layers="grid"] .slate-layer__word {
-  color: var(--slate-text-muted);
-  font-size: var(--slate-text-sm);
-  font-weight: 500;
+  display: none;
 }
 
 .slate-root[data-layers="grid"] .slate-layer__role {
-  font-size: var(--slate-text-xs);
-  line-height: var(--slate-line-tight);
-  white-space: nowrap;
+  grid-column: 2 / -1;
+  min-width: 0;
+  /* Clear of the menu in the corner. A subskin's role is too long for
+     the one line beside it, so it wraps under itself rather than being
+     cut short. */
+  padding-right: var(--slate-space-5);
+  overflow-wrap: anywhere;
+}
+
+.slate-root[data-layers="grid"] .slate-layer__role::before {
+  content: "\00B7\2009";
 }
 
 .slate-root[data-layers="grid"] .slate-layer__share {
-  grid-row: 3;
-  grid-column: 1;
-  align-self: end;
-  font-size: var(--slate-text-lg);
+  grid-row: 2;
+  grid-column: 1 / 3;
+  justify-self: start;
+  margin-top: 0;
+  font-size: var(--slate-text-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
-.slate-root[data-layers="grid"] .slate-layer__name,
-.slate-root[data-layers="grid"] .slate-layer__role,
 .slate-root[data-layers="grid"] .slate-layer__note {
+  grid-row: 4;
   grid-column: 1 / -1;
 }
 
 .slate-root[data-layers="grid"] .slate-layer__share-other {
-  grid-row: 3;
-  grid-column: 2;
+  grid-row: 2;
+  grid-column: 3;
   align-self: end;
   min-width: 0;
   overflow: hidden;
   /* On the share's line, sitting on its baseline. */
-  padding-bottom: 0.2em;
+  padding-bottom: 0.3em;
   font-size: var(--slate-text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .slate-root[data-layers="grid"] .slate-layer__input {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  font-size: var(--slate-text-xl);
+}
+
+/* The share as a bar: the head's --slate-layer-share (slate-recipe.js)
+   in the layer's tone over a faint track. */
+.slate-root[data-layers="grid"] .slate-layer__bar {
+  display: block;
   grid-row: 3;
-  grid-column: 1;
-  align-self: end;
-  font-size: var(--slate-text-lg);
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: var(--slate-space-1);
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--slate-layer-tone) var(--slate-layer-share, 0%), color-mix(in srgb, var(--slate-text) 14%, transparent) var(--slate-layer-share, 0%));
 }
 
 .slate-root[data-layers="grid"] .slate-layer__rows {

@@ -592,6 +592,10 @@
       head.appendChild(shareButton);
       const shareOther = element(doc, "span", "slate-layer__share-other", { hidden: "" });
       head.appendChild(shareOther);
+      // The share drawn as a bar under its figure: the Grid layout's head
+      // shows it (components/recipe.css), the others leave it out.
+      head.appendChild(element(doc, "span", "slate-layer__bar", { "aria-hidden": "true" }));
+      paintShareBar(head, share);
       const note = element(doc, "p", "slate-layer__note", { role: "status", hidden: "" });
       head.appendChild(note);
       const others = resolved.line.layers.map(one => one.id).filter(id => id !== layer.id);
@@ -608,6 +612,12 @@
       }) : null;
       if (menu) { head.appendChild(menu.element); body.menus.push(menu); }
       return { head, share: shareButton, shareOther, note, last: formatPct(share), shareValue: Number(share) || 0, layer: layer.id, menu };
+    }
+
+    function paintShareBar(head, share) {
+      const number = Number(share);
+      const pct = Number.isFinite(number) ? Math.min(100, Math.max(0, number)) : 0;
+      head.style.setProperty("--slate-layer-share", `${pct}%`);
     }
 
     function clearBody(body) {
@@ -688,6 +698,7 @@
           if (editingHere && !own && head.shareValue !== shareValue) markUnderneath(`Layer ${layer.id}'s share`);
           head.shareValue = shareValue;
           head.last = shareText;
+          paintShareBar(head.head, shareValue);
         }
         for (const hopper of layer.hoppers) {
           const key = `${layer.id}:${hopper.index}`;
