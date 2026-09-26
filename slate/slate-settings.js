@@ -235,9 +235,10 @@
     rootEl.appendChild(tracking);
 
     // Layout: where a layer's head stands in the Recipe's and the Weights
-    // page's Grid. A phone keeps its own layout (slate.js), so there the
-    // group is withheld (settings.css).
-    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout", { "aria-label": "Layout" });
+    // page's Grid. A phone keeps its own layout and a tablet held upright
+    // is always Grid Top (slate.js), so there the group is withheld
+    // (settings.css, --heads); a turned tablet chooses, as a mouse does.
+    const layout = element(doc, "section", "slate-settings__group slate-settings__group--layout slate-settings__group--heads", { "aria-label": "Layout" });
     layout.appendChild(text(doc, "h2", "slate-settings__heading", "Layout"));
     layout.appendChild(text(doc, "p", "slate-settings__lead", "Where each layer's name, role and share stand on the Recipe and Weights pages. Nothing about the recipe or the weights changes."));
     const layouts = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Layout" });

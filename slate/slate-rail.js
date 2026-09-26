@@ -124,8 +124,9 @@
         list.appendChild(divider);
       }
       const button = item(doc, definition);
-      // An administrator's section, and a phone's own (Home), wait to be listed.
-      if (definition.admin || definition.phone) button.setAttribute("hidden", "");
+      // An administrator's section, a phone's own (Home) and a drawer's
+      // own (the Timeline, a tablet's) wait to be listed.
+      if (definition.admin || definition.phone || definition.drawer) button.setAttribute("hidden", "");
       items.set(definition.id, button);
       list.appendChild(button);
     }
@@ -277,7 +278,16 @@
       return !!button && !button.hasAttribute("hidden");
     }
 
-    return Object.freeze({ element: rail, setActive, setActivePane, setListed, isListed, openTools, closeTools, isToolsOpen: () => toolsOpen });
+    /* A dot on an item that wants looking at (the Timeline's while a
+     * hopper is overdue and running). */
+    function setAlert(id, on) {
+      const button = items.get(id);
+      if (!button) return false;
+      button.classList.toggle("is-alert", !!on);
+      return true;
+    }
+
+    return Object.freeze({ element: rail, setActive, setActivePane, setListed, isListed, setAlert, openTools, closeTools, isToolsOpen: () => toolsOpen });
   }
 
   return Object.freeze({ GLYPHS, TOOLS_EMPTY, CENTRE, create });

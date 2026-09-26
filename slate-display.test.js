@@ -720,8 +720,8 @@ test("hosted under Automatic tracking, no Track is offered and the batch reaches
   }
 });
 
-test("hosted, both pages are the Grid on a desktop and a tablet alike; the Layout flips data-grid-heads alone - no command, no rebuild, an open editor survives - and a phone keeps its own layout", () => {
-  for (const env of [fakeMedia({ coarse: false, width: 1440 }), fakeMedia({ coarse: true, width: 1280 })]) {
+test("hosted, both pages are the Grid on a desktop and a turned tablet alike; the Layout flips data-grid-heads alone - no command, no rebuild, an open editor survives - an upright tablet is always Grid Top, and a phone keeps its own layout", () => {
+  for (const env of [fakeMedia({ coarse: false, width: 1440 }), fakeMedia({ coarse: true, width: 1280, landscape: true })]) {
     const { hostEl, executed, controller } = bootHosted({ linked: false, env, stored: { layers: "left", weightsLayers: "top" } });
     assert.equal(hostEl.getAttribute("data-layers"), "grid", "a retired Recipe layout came back");
     assert.equal(hostEl.getAttribute("data-weights-layers"), "grid", "a retired Weights layout came back");
@@ -752,6 +752,29 @@ test("hosted, both pages are the Grid on a desktop and a tablet alike; the Layou
   // The Weights Grid's positions: the deepest layer's, each row its slot.
   assert.ok(Number(stored.hostEl.querySelector(".slate-weights__layers").style.getPropertyValue("--slate-hopper-rows")) >= 1);
   assert.equal(stored.hostEl.querySelector(".slate-weights__row[data-hopper='A3']").style.getPropertyValue("--slate-hopper-slot"), "2");
+
+  // Upright under a finger (the Fold open, a tablet in portrait) the heads
+  // stand on top whatever is kept, and Settings withholds the choice; turned
+  // (the Spread) the kept choice - Grid Left by default - is back.
+  const uprightEnv = fakeMedia({ coarse: true, width: 704 });
+  const upright = bootHosted({ linked: false, env: uprightEnv });
+  assert.equal(upright.hostEl.getAttribute("data-input"), "touch");
+  assert.equal(upright.hostEl.getAttribute("data-orientation"), "portrait");
+  assert.equal(upright.controller.getLayout(), "grid");
+  assert.equal(upright.hostEl.getAttribute("data-grid-heads"), "top", "an upright tablet was offered six cells across");
+  upright.controller.setLayout("grid");
+  assert.equal(upright.hostEl.getAttribute("data-grid-heads"), "top");
+  uprightEnv.change({ landscape: true, width: 932 });
+  assert.equal(upright.hostEl.getAttribute("data-orientation"), "landscape");
+  assert.equal(upright.hostEl.getAttribute("data-grid-heads"), "start", "the Spread lost Grid Left, its default");
+  uprightEnv.change({ landscape: false, width: 704 });
+  assert.equal(upright.hostEl.getAttribute("data-grid-heads"), "top");
+  assert.equal(upright.controller.getLayout(), "grid", "turning the device overwrote the operator's choice");
+  const settingsCss = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "settings.css"), "utf8");
+  assert.match(settingsCss, /\.slate-root\[data-input="touch"\] \.slate-settings__group--heads \{\s*display: none;/);
+  assert.match(settingsCss, /\.slate-root\[data-input="touch"\]\[data-orientation="landscape"\] \.slate-settings__group--heads \{\s*display: block;/);
+  assert.ok(settingsCss.indexOf('[data-viewport="phone"] .slate-settings__group--layout') > settingsCss.indexOf('[data-orientation="landscape"] .slate-settings__group--heads'), "a turned phone brings Layout back");
+  assert.ok(upright.hostEl.querySelector("[aria-label='Layout']").classList.contains("slate-settings__group--heads"));
 
   const phone = bootHosted({ linked: false, stored: { layout: "grid-top" }, env: fakeMedia({ coarse: true, width: 412 }) });
   assert.equal(phone.hostEl.getAttribute("data-viewport"), "phone");
@@ -953,6 +976,7 @@ function fakeMedia(state) {
   const lists = [];
   function answer(query) {
     if (query === "(pointer: coarse)") return !!state.coarse;
+    if (query === "(orientation: landscape)") return !!state.landscape;
     const min = query.match(/\(min-width: (\d+)px\)/);
     return min ? state.width >= Number(min[1]) : false;
   }
@@ -1036,39 +1060,59 @@ test("hosted, the root carries the tier: a desktop is pointer and wide; a coarse
   assert.equal(bare.hostEl.getAttribute("data-viewport"), "wide");
 });
 
-test("on a narrow touch screen the aside is a drawer: its handle and a rail item open it, the scrim and Escape close it, widening shuts it - and a mouse never has one", () => {
+test("on a narrow touch screen the aside is a drawer with no handle: the rail's Timeline and Resin Balance open it on themselves and shut it again, the scrim and Escape close it, widening shuts it - and a mouse never has one", () => {
   const media = fakeMedia({ coarse: true, width: 800 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media });
   const aside = hostEl.querySelector("[data-slate-mount='aside']");
-  const toggle = hostEl.querySelector("[data-slate-aside-handle]");
   const scrim = hostEl.querySelector("[data-slate-scrim]");
-  assert.ok(toggle && scrim, "the shell has no drawer handle or scrim");
-  assert.equal(toggle.getAttribute("aria-label"), "Timeline");
+  const item = id => hostEl.querySelector(`.slate-rail__item[data-section='${id}']`);
+  const showing = () => aside.querySelectorAll(".slate-section").find(one => !one.hasAttribute("hidden")).getAttribute("data-section");
+  // A pull at the screen's edge is the system's Back: nothing to pull.
+  assert.equal(hostEl.querySelector("[data-slate-aside-handle], .slate-shell__handle"), null, "the drawer still has a handle");
+  assert.ok(scrim, "the shell has no scrim");
   assert.ok(!aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"));
-  click(toggle);
+
+  // The Timeline is listed on a tablet's rail, beside Resin Balance.
+  assert.ok(!item("timeline").hasAttribute("hidden"), "a tablet's rail does not list the Timeline");
+  const order = hostEl.querySelectorAll(".slate-rail__sections .slate-rail__item").map(one => one.getAttribute("data-section"));
+  assert.equal(order.indexOf("resin-balance"), order.indexOf("timeline") + 1);
+  click(item("timeline"));
   assert.ok(aside.classList.contains("is-open"));
+  assert.equal(showing(), "timeline");
   assert.ok(!scrim.hasAttribute("hidden"));
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.ok(item("timeline").classList.contains("is-active"), "the open drawer's item is not lit");
+  // Resin Balance turns the open drawer to it; chosen again, it shuts.
+  click(item("resin-balance"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.equal(showing(), "resin-balance");
+  assert.ok(item("resin-balance").classList.contains("is-active"));
+  assert.ok(!item("timeline").classList.contains("is-active"));
+  click(item("resin-balance"));
+  assert.ok(!aside.classList.contains("is-open"), "the open item did not shut its drawer");
+  assert.ok(!item("resin-balance").classList.contains("is-active"), "a shut drawer's item stayed lit");
+  // Shut on Resin Balance, the Timeline opens on the Timeline.
+  click(item("timeline"));
+  assert.ok(aside.classList.contains("is-open"));
+  assert.equal(showing(), "timeline");
   click(scrim);
   assert.ok(!aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"));
 
-  // A rail item for an aside section opens the drawer on that section, and names it on the button.
-  click(hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
+  click(item("resin-balance"));
   assert.ok(aside.classList.contains("is-open"));
-  assert.equal(toggle.getAttribute("aria-label"), "Resin Balance");
-  assert.ok(toggle.classList.contains("is-open"), "the handle does not ride the open drawer");
   hostEl.dispatchEvent({ type: "keydown", key: "Escape", target: hostEl, stopPropagation() {} });
   assert.ok(!aside.classList.contains("is-open"), "Escape left the drawer open");
 
-  click(toggle);
+  click(item("timeline"));
   media.change({ width: 1280 });
   assert.ok(!aside.classList.contains("is-open"), "a drawer stayed open once the aside had room again");
+  assert.ok(item("timeline").hasAttribute("hidden"), "the aside beside the page is listed on the rail too");
   assert.equal(executed.length, 0);
 
   const desk = bootHosted({ linked: false, env: fakeMedia({ coarse: false, width: 800 }) });
-  click(desk.hostEl.querySelector("[data-slate-aside-handle]"));
+  assert.ok(desk.hostEl.querySelector(".slate-rail__item[data-section='timeline']").hasAttribute("hidden"), "a mouse's rail lists the Timeline");
+  click(desk.hostEl.querySelector(".slate-rail__item[data-section='resin-balance']"));
   assert.ok(!desk.hostEl.querySelector("[data-slate-mount='aside']").classList.contains("is-open"), "a mouse window opened a drawer");
 });
 
@@ -1082,7 +1126,7 @@ test("the Android Back key, asked first, closes the drawer; with nothing open it
     for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  click(hostEl.querySelector("[data-slate-aside-handle]"));
+  click(hostEl.querySelector(".slate-rail__item[data-section='timeline']"));
   assert.ok(aside.classList.contains("is-open"));
   const first = back();
   assert.equal(first.defaultPrevented, true);
@@ -1093,15 +1137,14 @@ test("the Android Back key, asked first, closes the drawer; with nothing open it
   assert.equal(second.detail.minimize, true);
 });
 
-test("the drawer's handle carries a dot while a hopper is overdue and running", () => {
+test("a tablet's rail Timeline carries the dot while a hopper is overdue and running", () => {
   const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 800 }) });
-  const handle = hostEl.querySelector("[data-slate-aside-handle]");
-  const dot = handle.querySelector(".slate-shell__handle-dot");
-  assert.ok(dot, "the handle has no dot");
+  const item = hostEl.querySelector(".slate-rail__item[data-section='timeline']");
   const timeline = hostEl.querySelector(".slate-timeline");
   const overdue = timeline.classList.contains("is-overdue");
-  assert.equal(!dot.hasAttribute("hidden"), overdue, "the dot disagrees with the Timeline");
-  assert.equal(handle.classList.contains("is-overdue"), overdue);
+  assert.equal(item.classList.contains("is-alert"), overdue, "the dot disagrees with the Timeline");
+  const railCss = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "rail.css"), "utf8");
+  assert.match(railCss, /\.slate-root\[data-input="touch"\] \.slate-rail__item\.is-alert::after \{[^}]*background: var\(--slate-overdue\);/);
 });
 
 test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home and the bar move between pages, Tools and Menu raise sheets, and Back walks back Home before it lets the app go", () => {
@@ -1192,9 +1235,8 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.equal(event.defaultPrevented, true);
   assert.equal(event.detail.minimize, true);
 
-  // The drawer's handle does nothing on a phone.
-  click(hostEl.querySelector("[data-slate-aside-handle]"));
-  assert.ok(!aside.classList.contains("is-open"));
+  // A phone's rail sheet does not list the Timeline: Home and the bar reach it.
+  assert.ok(hostEl.querySelector(".slate-rail__item[data-section='timeline']").hasAttribute("hidden"));
 
   // Wider again: no page, no sheet, the operator's layout back, Home unlisted.
   click(step("timeline"));

@@ -471,8 +471,20 @@
   padding: 0 var(--slate-space-5);
 }
 
+/* A tablet held upright is always Grid Top (slate.js): the Layout choice
+   is withheld under a finger, and offered again once the device is turned
+   (the Fold's Spread), Grid Left by default. Handling stays either way. */
+.slate-root[data-input="touch"] .slate-settings__group--heads {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-orientation="landscape"] .slate-settings__group--heads {
+  display: block;
+}
+
 /* A phone keeps its own layout whatever is chosen (slate.js): the
-   Layout group has nothing to offer there. */
+   Layout group has nothing to offer there, nor Handling (no drag). Last,
+   so a turned phone does not bring Layout back. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__group--layout {
   display: none;
 }

@@ -92,7 +92,8 @@ test("every tablet rule is scoped to the root's touch tier, and the pointer tier
     for (const match of sheet.css.matchAll(/([^{}]*)\{/g)) {
       for (const selector of match[1].split(",").map(one => one.trim()).filter(Boolean)) {
         if (!/data-(input|viewport|orientation)/.test(selector)) continue;
-        assert.match(selector, /^\.slate-root\[data-input="touch"\](\[data-viewport="(narrow|phone)"\](\[data-orientation="landscape"\])?)? \.slate-[a-z_-]+/, `${sheet.name}: "${selector}" is not scoped to the root's touch tier`);
+        // Landscape may stand alone under a finger (a turned tablet of any width).
+        assert.match(selector, /^\.slate-root\[data-input="touch"\](\[data-viewport="(narrow|phone)"\])?(\[data-orientation="landscape"\])? \.slate-[a-z_-]+/, `${sheet.name}: "${selector}" is not scoped to the root's touch tier`);
       }
     }
     assert.doesNotMatch(sheet.css, /data-input="pointer"|data-viewport="wide"/, `${sheet.name} styles the pointer tier, which is the sheet itself`);

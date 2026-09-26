@@ -79,11 +79,8 @@
   /* The compact icon rail, and the aside's drawer on a narrow screen. */
   --slate-rail-width-compact: 64px;
   --slate-drawer-width: 360px;
-  /* The drawer's width as it stands, and how far in from the screen's edge
-     its handle floats: clear of Android's Back gesture, which takes an
-     inward swipe that starts on the edge itself. */
+  /* The drawer's width as it stands. */
   --slate-drawer-w: min(var(--slate-drawer-width), calc(100vw - var(--slate-rail-width-compact)));
-  --slate-handle-inset: 12px;
   /* A phone (data-viewport="phone"): the bar along the foot and the
      header over the page, both kept short so the recipe has the screen. */
   --slate-bar-height: 56px;
