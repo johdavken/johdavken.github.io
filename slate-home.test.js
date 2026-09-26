@@ -76,3 +76,19 @@ test("Home dispatches nothing, requests nothing and keeps no timer", () => {
   const source = fs.readFileSync(path.join(__dirname, "slate", "slate-home.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   assert.doesNotMatch(source, /dispatch|request\(|setTimeout|Bridge/);
 });
+
+test("on a phone Home is one screen that never scrolls: it takes the page cell's height, and the mark alone gives - shrinking on a short screen, never below a glance - the rest keeping their size", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/home.css"), "utf8");
+  const phone = '.slate-root[data-input="touch"][data-viewport="phone"]';
+  const rule = selector => { const at = css.indexOf(`${phone} ${selector} {`); assert.ok(at > -1, `no phone rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  assert.match(rule('.slate-section[data-section="home"]'), /height: 100%;/);
+  const home = rule(".slate-home");
+  assert.match(home, /height: 100%;/);
+  assert.match(home, /box-sizing: border-box;/);
+  assert.match(home, /justify-content: center;/);
+  const brand = rule(".slate-home__brand");
+  assert.match(brand, /flex: 0 1 auto;/, "the mark does not give");
+  assert.match(brand, /min-height: \d+px;/, "the mark can shrink to nothing");
+  assert.match(css, /\n\.slate-home__brand \.slate-logo \{[^}]*max-height: 100%;/);
+  assert.match(css, new RegExp(`\\.slate-home__steps \\{\\s*flex: none;`), "the steps give instead of the mark");
+});
