@@ -2187,6 +2187,25 @@ test("Grid Top's type follows its column: every size the token's own at the full
   assert.match(rule('.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-hopper__next:not([hidden])'), /gap: 2px;\s*letter-spacing: -0\.03em;/);
 });
 
+test("Grid Top's head: the letter beside the share and the role under them; the share typed in its place with a mouse, floated over the heads under a finger, and the head keeps its height either way", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  const top = '.slate-root[data-layers="grid"][data-grid-heads="top"]';
+  assert.match(rule(`${top} .slate-layer__name`), /grid-row: 1;\s*grid-column: 1;[^}]*font-size: var\(--slate-text-2xl\);/);
+  assert.match(rule(`${top} .slate-layer__share`), /grid-row: 1;\s*grid-column: 2;/);
+  assert.match(rule(`${top} .slate-layer__role`), /grid-row: 2;\s*grid-column: 1 \/ -1;[^}]*text-overflow: ellipsis;/);
+  assert.match(rule(`${top} .slate-layer__role::before`), /content: none;/, "the role still carries the label's dot");
+  // The row holds the share's height while the share is put away.
+  assert.match(rule(`${top} .slate-layer__head`), /grid-template-rows: minmax\(var\(--slate-share-floor, 0px\), auto\);/);
+  assert.match(rule('.slate-root[data-input="touch"] .slate-layer__head'), /--slate-share-floor: var\(--slate-tap\);/);
+  assert.match(rule(`${top} .slate-layer__input`), /grid-row: 1;\s*grid-column: 2;[^}]*height: calc\(var\(--slate-text-2xl\) \* 1\.1\);/);
+  assert.match(rule(`${top} .slate-layer__head:has(.slate-editor-field)`), /position: static;\s*visibility: hidden;/);
+  const floated = rule(`${top} .slate-editor-field[data-layer]`);
+  assert.match(floated, /position: absolute;[^}]*grid-area: auto;\s*left: 0;\s*right: 0;[^}]*visibility: visible;/);
+  assert.match(rule(`${top} .slate-editor-field[data-layer]::before`), /content: "Layer " attr\(data-layer\);/);
+  assert.match(rule(`${top} .slate-recipe__layers`), /position: relative;/);
+});
+
 test("the Grid head is share first and keeps its width: a toned label over the share, a bar, and a foot with the menu at its start and Compare's other share at its end", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");

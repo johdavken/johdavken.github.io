@@ -899,6 +899,12 @@
   padding: var(--slate-space-1) 0;
 }
 
+/* The share's height, for what must stand as tall as it (Grid Top's head
+   row, which it holds while the share is put away to be typed). */
+.slate-root[data-input="touch"] .slate-layer__head {
+  --slate-share-floor: var(--slate-tap);
+}
+
 .slate-root[data-input="touch"] .slate-toggle--tracking {
   min-height: 36px;
   padding: var(--slate-space-2) var(--slate-space-3);
@@ -1799,6 +1805,8 @@
    the columns round, auto-placement honouring it. */
 
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-recipe__layers {
+  /* The share editor's containing block under a finger (below). */
+  position: relative;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, var(--slate-grid-top-width));
@@ -1829,10 +1837,94 @@
 }
 
 .slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head {
+  /* The letter and share's row keeps the share's height while the share is
+     put away to be typed: a column's cells follow its head, and a shorter
+     head would lift them out of line with the other layers'. */
+  grid-template-rows: minmax(var(--slate-share-floor, 0px), auto);
   grid-row: 1;
   grid-column: 1;
   padding: var(--slate-space-2) var(--slate-space-1) calc(var(--slate-space-2) + var(--slate-grid-foot));
   border-radius: var(--slate-radius) var(--slate-radius) 0 0;
+}
+
+/* A column's head: the letter beside the share, both large, and the role
+   on its own line under them - a column has no room for "B · Outside
+   subskin" on one line beside anything. The role gives way at the edge
+   rather than running into the next column. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__name {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: baseline;
+  margin-right: var(--slate-space-1);
+  font-size: var(--slate-text-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__share {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: baseline;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__role {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__role::before {
+  content: none;
+}
+
+/* The share being typed. With a mouse the field takes the share's place
+   beside the letter. Under a finger the field comes with a Cancel, and a
+   column cannot hold both: the pair floats over the whole row of heads,
+   named "Layer B" in its tone, as a phone's does. Its head steps aside
+   while it is open - no longer the pair's containing block, so the
+   layers are, and unseen under it (the pair shows itself again) - which
+   only a head holding the pair does, so a mouse's head keeps its own. */
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__input {
+  --slate-field-padding: 0 var(--slate-space-1);
+  --slate-field-min-height: 0;
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  /* No taller than the share it stands in for, so the head keeps its
+     height while it is typed. */
+  height: calc(var(--slate-text-2xl) * 1.1);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head:has(.slate-editor-field) {
+  position: static;
+  visibility: hidden;
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-editor-field[data-layer] {
+  --slate-field-width: 100%;
+  position: absolute;
+  /* No placement: the columns are implicit, so a line past the first
+     means nothing, and unplaced the pair spans the layers' whole box. */
+  grid-area: auto;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  visibility: visible;
+  padding: 0 0 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-editor-field[data-layer]::before {
+  content: "Layer " attr(data-layer);
+  flex: none;
+  color: color-mix(in srgb, var(--slate-layer-tone) 85%, var(--slate-text));
+  font-size: var(--slate-text-md);
+  font-weight: 700;
 }
 
 /* The foot on Grid Top's narrower padding: the dots and the other share
