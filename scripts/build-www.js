@@ -88,6 +88,25 @@ function hostAssetReferences(hostRelativePath) {
   return refs;
 }
 
+// A followed host's stylesheets name files of their own - Slate's
+// background pictures, by url(...) - that neither index.html nor the host's
+// lists do. Follow those too, one level: each relative url() in a host
+// stylesheet, resolved against that stylesheet, so the Android shell has
+// every picture its sheets draw. data: and external urls are left alone.
+function stylesheetAssetReferences(stylesheetRelativePath) {
+  const source = fs.readFileSync(path.join(ROOT, stylesheetRelativePath), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const refs = [];
+  for (const match of source.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+    const raw = match[1].trim();
+    if (!raw || /^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//") || raw.startsWith("#")) continue;
+    const withoutQuery = raw.split("?")[0].split("#")[0];
+    const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(stylesheetRelativePath), withoutQuery));
+    if (resolved.startsWith("..")) throw new Error(`build-www: ${stylesheetRelativePath} names "${raw}", outside the app.`);
+    refs.push(resolved);
+  }
+  return refs;
+}
+
 function buildWww() {
   const html = fs.readFileSync(path.join(ROOT, INDEX_HTML_RELATIVE), "utf8");
   const htmlRefs = localRuntimeReferences(html);
@@ -97,7 +116,10 @@ function buildWww() {
   const hostRefs = FOLLOWED_HOSTS
     .filter(host => htmlRefs.includes(host))
     .flatMap(hostAssetReferences);
-  const files = [...new Set([INDEX_HTML_RELATIVE, ...htmlRefs, ...manifestRefs, ...hostRefs])];
+  const sheetRefs = hostRefs
+    .filter(ref => ref.endsWith(".css"))
+    .flatMap(stylesheetAssetReferences);
+  const files = [...new Set([INDEX_HTML_RELATIVE, ...htmlRefs, ...manifestRefs, ...hostRefs, ...sheetRefs])];
 
   fs.rmSync(OUT, { recursive: true, force: true });
 
@@ -121,4 +143,4 @@ if (require.main === module) {
   console.log(`build-www: copied ${count} files referenced by index.html into ${path.relative(ROOT, OUT)}/`);
 }
 
-module.exports = { buildWww, localRuntimeReferences, hostAssetReferences, FOLLOWED_HOSTS, ROOT, OUT };
+module.exports = { buildWww, localRuntimeReferences, hostAssetReferences, stylesheetAssetReferences, FOLLOWED_HOSTS, ROOT, OUT };

@@ -346,7 +346,7 @@ test("Slate queries only inside its own container, never the document", () => {
  * decision, pinned in slate-host.test.js.
  * -------------------------------------------------------------------- */
 
-test("the Android shell carries exactly the Slate assets the host loads, and nothing else from slate/", () => {
+test("the Android shell carries exactly the Slate assets the host loads - and the pictures its stylesheets draw - and nothing else from slate/", () => {
   const www = path.join(ROOT, "www");
   if (!fs.existsSync(www)) return;
   const files = [];
@@ -359,6 +359,9 @@ test("the Android shell carries exactly the Slate assets the host loads, and not
   })(www);
   const host = codeOnly(fs.readFileSync(path.join(ROOT, "slate-host.js"), "utf8"));
   const loaded = new Set([...host.matchAll(/"(slate\/[^"]+)"/g)].map(match => match[1]));
+  // What the loaded stylesheets draw by url() (build-www.js follows it).
+  const { stylesheetAssetReferences } = require("./scripts/build-www.js");
+  for (const file of [...loaded].filter(ref => ref.endsWith(".css"))) for (const ref of stylesheetAssetReferences(file)) loaded.add(ref);
   const extra = files.filter(file => file.startsWith("slate/") && !loaded.has(file));
   assert.deepEqual(extra, [], "www/ carries Slate files the host never loads");
 });

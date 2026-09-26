@@ -1016,3 +1016,53 @@ test("a card's head says only when - no 'pump off by' - so it fits its narrow ca
     assert.ok(when.textContent.length <= 26, `"${when.textContent}" is longer than a card's head holds`);
   }
 });
+
+test("on a phone the Timeline leads with what to do next: the next group due - its time large, each hopper with a Pump off that goes the one way every pill goes; what is late comes first", () => {
+  const phone = boot({ height: 700, tier: () => ({ input: "touch", width: "phone" }) });
+  // A changeover far enough out that nothing is late yet.
+  phone.view.update(withChangeover(NOW, 11));
+  assert.equal(phone.view.grouped().overdue, null, "the job has something late");
+  const next = phone.view.element.querySelector(".slate-timeline__next");
+  assert.ok(!next.hasAttribute("hidden"), "a phone's Timeline does not say what is next");
+  assert.equal(next.getAttribute("data-kind"), "next");
+  assert.equal(next.querySelector(".slate-timeline__next-head").textContent, "Next - turn the pump off");
+  assert.match(next.querySelector(".slate-timeline__next-when").textContent, / · in \d/);
+  const first = phone.view.grouped().groups[0];
+  const rows = next.querySelectorAll(".slate-timeline__next-row");
+  assert.deepEqual(rows.map(row => row.getAttribute("data-key")), first.members.slice(0, 4).map(member => member.key));
+  const button = rows[0].querySelector(".slate-timeline__next-pump");
+  assert.equal(button.getAttribute("data-slate-control"), "pump", "the Next button is not a tracking control");
+  assert.equal(button.getAttribute("data-able"), "true");
+  click(button);
+  assert.equal(phone.commands.calls.length, 1);
+  assert.equal(phone.commands.calls[0].command, "setPumpOff");
+  assert.equal(phone.commands.calls[0].args.pumpOff, true);
+  assert.equal(`${phone.commands.calls[0].args.layer}:${phone.commands.calls[0].args.index}`, first.members[0].key);
+
+  // Late first, in the danger's words.
+  const late = boot({ height: 700, tier: () => ({ input: "touch", width: "phone" }) });
+  late.view.update(withChangeover(NOW, 1, snap => { for (const layer of snap.layers) for (const hopper of layer.hoppers) hopper.track = !!hopper.resinName; }));
+  const lateBlock = late.view.element.querySelector(".slate-timeline__next");
+  assert.equal(lateBlock.getAttribute("data-kind"), "late");
+  assert.equal(lateBlock.querySelector(".slate-timeline__next-head").textContent, "Late - turn the pump off");
+  assert.match(lateBlock.querySelector(".slate-timeline__next-when").textContent, / late$/);
+  assert.ok(lateBlock.querySelector(".slate-timeline__next-pump").classList.contains("is-late"));
+
+  // A desktop or a tablet: nothing is drawn, and no control is added.
+  for (const tier of [undefined, () => ({ input: "touch", width: "narrow" })]) {
+    const other = boot({ height: 700, tier });
+    other.view.update(withChangeover(NOW, 5));
+    assert.ok(other.view.element.querySelector(".slate-timeline__next").hasAttribute("hidden"));
+    assert.equal(other.view.element.querySelectorAll(".slate-timeline__next-pump").length, 0);
+  }
+});
+
+test("the phone's sheet: Next shows on a phone alone with a thumb's button, and the Timeline card is as tall as what it holds", () => {
+  const css = fs.readFileSync(path.join(__dirname, "slate", "styles", "components", "timeline.css"), "utf8");
+  assert.match(css, /\n\.slate-timeline__next \{\s*display: none;/);
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-timeline__next:not\(\[hidden\]\) \{\s*display: flex;/);
+  const button = css.slice(css.indexOf(".slate-root .slate-timeline__next-pump {"));
+  const height = Number(button.match(/min-height: (\d+)px;/)[1]);
+  assert.ok(height >= 48, `the Next button is ${height}px: not a thumb's`);
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-panel\.slate-timeline \{\s*min-height: 0;/);
+});

@@ -277,3 +277,17 @@ test("a session opened or ended anywhere else is followed here; with no bridge t
   await tick();
   assert.match(none.said[none.said.length - 1], /Sign in is unavailable: no application is connected/);
 });
+
+test("on a phone Settings is the desktop's at a phone's size: the galleries two across, smaller pictures, the one-line descriptions left to the pictures and names", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/settings.css"), "utf8");
+  const phone = '.slate-root[data-input="touch"][data-viewport="phone"]';
+  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
+  assert.match(css, new RegExp(`${phone.replace(/[[\]]/g, "\\$&")} \\.slate-settings__themes,\\n${phone.replace(/[[\]]/g, "\\$&")} \\.slate-settings__backgrounds \\{\\s*grid-template-columns: repeat\\(2, minmax\\(0, 1fr\\)\\);`));
+  assert.match(css, new RegExp(`${phone.replace(/[[\]]/g, "\\$&")} \\.slate-theme-tile__description,\\n${phone.replace(/[[\]]/g, "\\$&")} \\.slate-settings__background-note \\{\\s*display: none;`));
+  assert.ok(Number(rule(`${phone} .slate-theme-tile__swatch`).match(/height: (\d+)px/)[1]) < 64, "the phone's swatch is no smaller");
+  // The background's notes carry their own class, so the phone can leave them out alone.
+  const doc = makeDocument();
+  const view = settings.create(doc, { theme: null, themes: theme.THEMES });
+  assert.ok(view.element.querySelectorAll(".slate-settings__background-note").length >= 2);
+  assert.equal(view.element.querySelectorAll(".slate-settings__mode-note.slate-settings__background-note").length, view.element.querySelectorAll("[data-background-choice]").length);
+});
