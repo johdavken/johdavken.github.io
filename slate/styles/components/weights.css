@@ -468,9 +468,10 @@
    weight under that. The layers' wrappers step aside (display: contents)
    and each tile takes its position's row (--slate-hopper-slot), so the
    hoppers of one position line up across the layers even where one is
-   left out. Tapping the weight types it in place. A hopper empty in both
-   recipes is left out (slate-weights.js marks it is-vacant), and "Show
-   empty hoppers" brings them back. The explanation under the switch is
+   left out. Tapping the weight types it in place. A position empty in
+   every layer and both recipes is left out (slate-weights.js marks it
+   is-vacant), as the Recipe's grid leaves it out, and "Show empty
+   hoppers" brings them back. The explanation under the switch is
    left out too; the switch says its state. */
 .slate-weights__show-empty {
   display: none;

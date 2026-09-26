@@ -675,9 +675,11 @@ test("a locked weight says why on a tap, since its title never shows under a fin
   assert.match(said[said.length - 1], /^Cannot be changed here: /);
 });
 
-test("a hopper empty in both recipes is marked vacant (a phone leaves it out), unless one is being typed in; Show empty hoppers brings them back and says how many", () => {
+test("a position empty in every layer and both recipes is marked vacant (a phone leaves it out), as the Recipe's grid does - a hopper empty beside neighbours in use keeps its tile; unless one is being typed in; Show empty hoppers brings them back and says how many", () => {
   const { view } = boot();
   const plan = resolvedFrom(snap => {
+    // Position 5 empty everywhere but the plan's A; position 4 empty everywhere, in both.
+    for (const layer of snap.layers) for (const h of layer.hoppers) h.resinName = h.index === 4 || h.index === 5 ? "" : (h.resinName || "FILL0");
     snap.nextRecipe = { layers: snap.layers.map(layer => ({ name: layer.name, layerPct: layer.layerPct, hoppers: layer.hoppers.map(h => ({ index: h.index, pct: h.pct, resinName: h.resinName })) })) };
     snap.nextRecipe.layers[0].hoppers[5].resinName = "FILL1";
   });
@@ -685,8 +687,14 @@ test("a hopper empty in both recipes is marked vacant (a phone leaves it out), u
   const button = view.element.querySelector(".slate-weights__show-empty");
   const vacant = () => view.element.querySelectorAll(".slate-weights__row.is-vacant").map(row => row.getAttribute("data-key")).sort();
   const before = vacant();
-  assert.ok(before.length > 0, "the demo line has no empty hopper");
-  assert.ok(!before.includes("A:5"), "a hopper the plan fills was left out");
+  const at4 = view.element.querySelectorAll(".slate-weights__row[data-index='4']").map(row => row.getAttribute("data-key")).sort();
+  assert.ok(at4.length > 1);
+  assert.deepEqual(before, at4, "only the position empty in every layer is left out");
+  // Position 5: empty in both recipes on every layer but the plan's A - so every hopper there keeps its tile.
+  for (const row of view.element.querySelectorAll(".slate-weights__row[data-index='5']")) {
+    assert.ok(!row.classList.contains("is-vacant"), `${row.getAttribute("data-key")} was left out beside a position in use`);
+  }
+  assert.ok(rowOf(view, "B:5") === null || rowOf(view, "B:5").classList.contains("is-empty"), "an empty hopper kept as a tile is still marked empty");
   for (const key of before) assert.ok(rowOf(view, key).classList.contains("is-empty"), `${key} is marked empty`);
   assert.ok(!button.hasAttribute("hidden"));
   assert.equal(button.textContent, `Show empty hoppers (${before.length})`);
