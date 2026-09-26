@@ -127,7 +127,7 @@
   z-index: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--slate-space-3) var(--slate-space-3) calc(var(--slate-space-3) + var(--slate-grip-clear) + var(--slate-inset-bottom));
+  padding: var(--slate-space-3);
   background: var(--slate-surface);
   visibility: hidden;
 }
@@ -136,8 +136,13 @@
   visibility: visible;
 }
 
+/* The panel keeps the grip's clearance under its last line: it runs past
+   its section (a pane's height) as it grows, so padding on the aside
+   would stand under the section, not under the text, and How to Use,
+   the Weights guide and the tools would end behind the grip. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-panel {
   position: static;
   height: auto;
   min-height: 100%;
+  padding-bottom: calc(var(--slate-space-3) + var(--slate-grip-clear) + var(--slate-inset-bottom));
 }
