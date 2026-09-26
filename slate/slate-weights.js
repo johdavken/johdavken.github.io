@@ -751,11 +751,20 @@
     function paintRows(own) {
       const planned = !!(state.resolved && state.resolved.plan && state.resolved.plan.planned);
       const nextOf = key => (planned && state.resolved.nextHopperState && state.resolved.nextHopperState[key]) || {};
+      // A position is left out only where it is empty in every layer and
+      // both recipes, as the Recipe's grid leaves it out (slate-recipe.js):
+      // a hopper empty beside neighbours in use keeps its tile, so its
+      // position still lines up across the layers.
+      const assignedAt = key => !!String(runtimeOf(key).resinName || "").trim();
+      const usedAt = new Map();
+      for (const [key, entry] of state.rows) {
+        const used = assignedAt(key) || !!String(nextOf(key).resinName || "").trim();
+        usedAt.set(entry.index, usedAt.get(entry.index) === true || used);
+      }
       let vacant = 0;
       for (const [key, entry] of state.rows) {
-        const runtime = runtimeOf(key);
-        const assigned = !!(runtime.resinName && String(runtime.resinName).trim());
-        const unused = !assigned && !String(nextOf(key).resinName || "").trim();
+        const assigned = assignedAt(key);
+        const unused = usedAt.get(entry.index) !== true;
         if (unused) vacant += 1;
         // Never a row being typed in.
         entry.row.classList.toggle("is-vacant", unused && !state.showEmpty && !(state.editing && state.editing.key === key));
