@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slate Layer Headers</title>
+<!--
+  Preview only: five directions for the desktop Slate Recipe's layer head
+  (the Grid layout's .slate-layer__head). The hopper cells are drawn as
+  they are today (components/recipe.css) so only the head differs.
+  Tokens are Slate's Yaru Dark / Yaru Light values (themes/yaru-*.css).
+  Nothing here is loaded by the app.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #1e1e1e; --surface-raised: #2f2f2f; --surface-sunken: #202020;
+    --text: #f7f7f7; --muted: #c8c8c8; --faint: #b0b0b0;
+    --border: #787878; --border-subtle: #454545;
+    --tracking: #70cf7d; --pump-off: #e792e7; --pump-off-soft: rgba(231,146,231,.15); --overdue: #ff92a2;
+    --outside: #3d8ff5; --core: #f99b11; --inside: #c56fc0;
+    --shadow: 0 1px 2px rgba(0,0,0,.32);
+    --dashed: dashed;
+    --tile-border: var(--border);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f2f2f2; --surface-raised: #fff; --surface-sunken: #e9e9e9;
+    --text: #303030; --muted: #5e5c64; --faint: #606065;
+    --border: #c8c8c8; --border-subtle: #e0e0e0;
+    --tracking: #0b6d1b; --pump-off: #8e3a8e; --pump-off-soft: rgba(142,58,142,.12); --overdue: #b91428;
+    --outside: #0073e5; --core: #c97d00; --inside: #772953;
+    --shadow: 0 1px 2px rgba(48,48,48,.08);
+    --tile-border: transparent;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+  .intro { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+  .intro h1 { margin: 0 0 4px; font-size: 24px; }
+  .intro p { margin: 0; color: var(--muted); max-width: 64ch; }
+  .theme-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .theme-toggle button { font: inherit; font-size: 12px; padding: 6px 14px; border: 0; background: none; color: var(--muted); cursor: pointer; }
+  .theme-toggle button[aria-pressed="true"] { background: var(--surface-raised); color: var(--text); font-weight: 600; }
+
+  section.option { margin-top: 36px; }
+  .option h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 2px; font-size: 16px; }
+  .option h2 .num { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .06em; }
+  .option > p { margin: 0 0 12px; color: var(--muted); font-size: 13px; max-width: 80ch; }
+  .option > p b { color: var(--text); font-weight: 600; }
+  .option.current h2 .num { color: var(--faint); }
+
+  /* ---- The sheet: identical to today's Grid cells ---- */
+  .layers { display: flex; flex-direction: column; gap: 12px; }
+  .layer {
+    --head-w: 136px;
+    display: grid;
+    grid-template-columns: var(--head-w) repeat(6, minmax(0, 1fr));
+    gap: 8px; padding: 8px 8px 8px 0; border-radius: 8px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 22%, transparent), color-mix(in srgb, var(--tone) 3%, transparent) 70%, transparent);
+  }
+  .layer[data-tone="inside"] { --tone: var(--inside); }
+  .layer[data-tone="core"] { --tone: var(--core); }
+  .layer[data-tone="outside"] { --tone: var(--outside); }
+
+  .cell {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; align-content: start; gap: 2px 4px;
+    padding: 8px; min-height: 104px;
+    border: 1px solid var(--tile-border); border-radius: 8px;
+    background: var(--surface-raised); box-shadow: var(--shadow);
+    font-variant-numeric: tabular-nums;
+  }
+  .cell .id { color: var(--muted); font-size: 12px; font-weight: 700; }
+  .cell .pct { font-size: 16px; font-weight: 700; letter-spacing: -.02em; text-align: right; }
+  .cell .pct.auto { color: var(--muted); }
+  .cell .resin { grid-column: 1 / -1; font-size: 16px; font-weight: 600; }
+  .cell .mark { grid-column: 1 / -1; color: var(--overdue); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .cell .grip { grid-column: 1 / -1; justify-self: center; align-self: end; width: 22px; height: 3px; margin-top: auto; border-radius: 2px; background: var(--border); }
+  .cell.tracked { border-color: color-mix(in srgb, var(--tracking) 55%, var(--tile-border)); background: color-mix(in srgb, var(--tracking) 14%, var(--surface-raised)); }
+  .cell.pump { border-color: var(--pump-off); background: var(--pump-off-soft); }
+  :root[data-theme="light"] .cell.tracked, :root[data-theme="light"] .cell.pump { border-color: transparent; }
+  .cell.empty { border-style: dashed; border-color: var(--border); background: color-mix(in srgb, var(--text) 4%, transparent); box-shadow: none; }
+  .cell.empty .plus { grid-column: 1 / -1; text-align: center; font-size: 28px; font-weight: 300; line-height: 1.1; color: var(--muted); }
+
+  .dots { display: inline-flex; gap: 3px; padding: 6px 4px; border-radius: 6px; color: var(--muted); cursor: pointer; }
+  .dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .dots:hover { background: color-mix(in srgb, var(--text) 10%, transparent); }
+  .share { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ---- 0 · Current ---- */
+  .h-current { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 8px 16px; }
+  .h-current .name { font-size: 20px; font-weight: 700; line-height: 1.25; }
+  .h-current .name small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .h-current .role { font-size: 11px; color: var(--muted); }
+  .h-current .share { margin-top: auto; font-size: 16px; }
+  .h-current .dots { position: absolute; top: 4px; right: 4px; }
+
+  /* ---- 1 · Letter badge ---- */
+  .h-badge { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr; column-gap: 10px; padding: 8px 8px 8px 12px; align-items: start; }
+  .h-badge .badge {
+    grid-row: 1 / 3; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px;
+    background: var(--tone); color: #fff; font-size: 22px; font-weight: 800;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--tone) 40%, transparent);
+  }
+  .h-badge .role { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; line-height: 1.2; padding-top: 2px; }
+  .h-badge .share { font-size: 22px; line-height: 1.1; align-self: start; }
+  .h-badge .dots { position: absolute; bottom: 6px; right: 6px; }
+
+  /* ---- 2 · Share ring ---- */
+  .h-ring { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 6px 8px; }
+  .h-ring .ring {
+    --p: 25;
+    position: relative; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%;
+    background: conic-gradient(var(--tone) calc(var(--p) * 1%), color-mix(in srgb, var(--text) 12%, transparent) 0);
+  }
+  .h-ring .ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--bg); }
+  .h-ring .ring span { position: relative; text-align: center; line-height: 1; }
+  .h-ring .ring b { display: block; font-size: 20px; font-weight: 800; }
+  .h-ring .ring em { display: block; font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+  .h-ring .role { font-size: 11px; color: var(--muted); }
+  .h-ring .dots { position: absolute; top: 4px; right: 4px; }
+
+  /* ---- 3 · Share-first ---- */
+  .h-share { position: relative; display: flex; flex-direction: column; justify-content: center; padding: 8px 12px 8px 16px; }
+  .h-share .label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--tone); filter: brightness(1.25); }
+  :root[data-theme="light"] .h-share .label { filter: none; }
+  .h-share .share { font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+  .h-share .bar { height: 4px; margin-top: 8px; border-radius: 2px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
+  .h-share .bar i { display: block; height: 100%; background: var(--tone); }
+  .h-share .dots { position: absolute; top: 4px; right: 4px; }
+
+  /* ---- 4 · Spine ---- */
+  .layer.spine { --head-w: 96px; }
+  .h-spine { display: grid; grid-template-columns: 22px 1fr; border-radius: 8px 0 0 8px; overflow: hidden; }
+  .h-spine .rail {
+    display: grid; place-items: center; background: var(--tone); color: #fff;
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  }
+  .h-spine .body { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8px 4px; }
+  .h-spine .letter { font-size: 26px; font-weight: 800; line-height: 1; }
+  .h-spine .share { font-size: 16px; }
+
+  /* ---- 5 · Label chip strip ---- */
+  .h-chip { position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 8px 8px 8px 12px; }
+  .h-chip .chip {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    padding: 3px 10px 3px 4px; border-radius: 999px;
+    background: color-mix(in srgb, var(--tone) 28%, var(--surface-raised));
+    border: 1px solid color-mix(in srgb, var(--tone) 60%, transparent);
+    font-size: 12px; font-weight: 600;
+  }
+  .h-chip .chip b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--tone); color: #fff; font-size: 11px; font-weight: 800; }
+  .h-chip .foot { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+  .h-chip .share { font-size: 24px; letter-spacing: -.02em; }
+  .h-chip .share small { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 3px; letter-spacing: .04em; text-transform: uppercase; }
+
+  @media (max-width: 760px) {
+    .layers { overflow-x: auto; }
+    .layer { min-width: 720px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="intro">
+    <div>
+      <h1>Slate layer headers: 5 alternatives</h1>
+      <p>The desktop Recipe, Grid layout. The hopper cells are drawn exactly as they are now; only the layer header on the left changes. The demo line has three layers.</p>
+    </div>
+    <div class="theme-toggle" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="dark" aria-pressed="true">Yaru Dark</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Yaru Light</button>
+    </div>
+  </div>
+  <div id="options"></div>
+</main>
+<script>
+  const LAYERS = [
+    { id: "A", role: "Inside", tone: "inside", share: 25, cells: [
+      ["HX204", 60, "tracked", true], ["LD105", 30, "pump", false, "Overdue"], ["AB120", 10], null, null, null ] },
+    { id: "B", role: "Core", tone: "core", share: 50, cells: [
+      ["LL318", 70, "tracked", true], ["HD622", 20, "pump"], ["SL710", 10], null ] },
+    { id: "C", role: "Outside", tone: "outside", share: 25, cells: [
+      ["EVA340", 80, "", true], ["AB120", 20, "tracked"], null, null, null, null ] }
+  ];
+  const DOTS = '<span class="dots" title="Layer actions"><i></i><i></i><i></i></span>';
+
+  const OPTIONS = [
+    { key: "current", cls: "current", num: "NOW", title: "Current",
+      text: "For reference: the word “Layer” plus the letter, the role underneath, the share at the bottom, and the ⋯ menu in the corner.",
+      head: l => `<div class="h-current">${DOTS}<span class="name"><small>Layer </small>${l.id}</span><span class="role">${l.role}</span><span class="share">${l.share}%</span></div>` },
+    { key: "badge", num: "01", title: "Letter badge",
+      text: "<b>A solid tile in the layer's colour holds the letter</b>, so the layer is easy to spot from a distance. The role goes in small caps next to it, with a larger share % below. The colour sits in one strong block, not just the faint wash.",
+      head: l => `<div class="h-badge"><span class="badge">${l.id}</span><span class="role">${l.role}</span><span class="share">${l.share}%</span>${DOTS}</div>` },
+    { key: "ring", num: "02", title: "Share ring",
+      text: "<b>A ring fills to the layer's share</b>, with the letter and % inside it. You can compare 25 / 50 / 25 at a glance without reading the numbers. The role sits under the ring.",
+      head: l => `<div class="h-ring">${DOTS}<span class="ring" style="--p:${l.share}"><span><b>${l.id}</b><em>${l.share}%</em></span></span><span class="role">${l.role}</span></div>` },
+    { key: "share", num: "03", title: "Share first",
+      text: "<b>The share is the headline</b>, since it's the value you edit. “A · Inside” becomes a small label in the layer's colour, with a thin bar underneath that fills to the share.",
+      head: l => `<div class="h-share">${DOTS}<span class="label">${l.id} · ${l.role}</span><span class="share">${l.share}%</span><span class="bar"><i style="width:${l.share}%"></i></span></div>` },
+    { key: "spine", num: "04", title: "Spine (narrow)",
+      text: "<b>A narrow coloured strip with the role written vertically</b>, and the letter and share stacked beside it. The header shrinks from 136px to 96px, which gives the six hopper cells about 40px more room. The ⋯ menu would move to a right-click or a hover button.",
+      layerCls: "spine",
+      head: l => `<div class="h-spine"><span class="rail">${l.role}</span><span class="body"><span class="letter">${l.id}</span><span class="share">${l.share}%</span></span></div>` },
+    { key: "chip", num: "05", title: "Label chip",
+      text: "<b>A pill-shaped tag</b> (letter dot + role) at the top, with the share and a small “share” caption at the bottom next to the ⋯ menu. It matches the pill style Slate uses for Track, and the controls sit together at the bottom.",
+      head: l => `<div class="h-chip"><span class="chip"><b>${l.id}</b>${l.role}</span><span class="foot"><span class="share">${l.share}%<small>share</small></span>${DOTS}</span></div>` }
+  ];
+
+  function cell(l, i, c) {
+    const id = `${l.id}${i + 1}`;
+    if (!c) return `<div class="cell empty"><span class="id">${id}</span><span></span><span class="plus">+</span><span class="grip"></span></div>`;
+    const [resin, pct, state, auto, mark] = c;
+    return `<div class="cell ${state || ""}"><span class="id">${id}</span><span class="pct${auto ? " auto" : ""}">${pct}%</span><span class="resin">${resin}</span>${mark ? `<span class="mark">${mark}</span>` : ""}<span class="grip"></span></div>`;
+  }
+
+  document.getElementById("options").innerHTML = OPTIONS.map(o => `
+    <section class="option ${o.cls || ""}">
+      <h2><span class="num">${o.num}</span>${o.title}</h2>
+      <p>${o.text}</p>
+      <div class="layers">${LAYERS.map(l => `
+        <div class="layer ${o.layerCls || ""}" data-tone="${l.tone}">${o.head(l)}${l.cells.map((c, i) => cell(l, i, c)).join("")}</div>`).join("")}
+      </div>
+    </section>`).join("");
+
+  document.querySelectorAll("[data-theme-set]").forEach(btn => btn.addEventListener("click", () => {
+    document.documentElement.setAttribute("data-theme", btn.dataset.themeSet);
+    document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  }));
+</script>
+</body>
+</html>
