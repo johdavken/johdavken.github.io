@@ -531,6 +531,8 @@
   align-items: baseline;
   gap: 0;
   min-height: 84px;
+  /* A tab's slide crosses the tile's width (cqi, recipe.css). */
+  container-type: inline-size;
   padding: 6px 7px 5px;
   border: var(--slate-stroke) solid var(--slate-border-subtle);
   border-radius: var(--slate-radius);
@@ -719,20 +721,34 @@
   display: contents;
 }
 
-/* A cell, lined up with the Recipe's (recipe.css) so a switch of tab
-   moves nothing: the id on the first line - as tall as the Recipe's
-   blend beside its id - the second left empty where the Recipe has its
-   resin, the fields under them where the Recipe has its weight and
-   Track. */
+/* A cell, laid out as the Recipe's tile (recipe.css) so the two tabs read
+   as one grid and a switch of tab moves nothing: the id at the top left
+   and the weight large beside it, where the Recipe has its blend; with
+   Smart Hoppers the measure on the second line, where the Recipe has its
+   resin, and what it computed on the third as a band, where the Recipe's
+   Compare band stands. The lines keep their height when empty - no Smart
+   Hoppers, no readout - and the foot keeps the room the Recipe's cell
+   gives its grab strip. */
 .slate-root[data-weights-layers="grid"] .slate-weights__row[data-key] {
   grid-column: calc(var(--slate-hopper-slot, 0) + 2);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* The Recipe's lines: its id and blend, its resin, its band. */
+  grid-template-rows:
+    calc(var(--slate-text-lg) * var(--slate-line-normal))
+    calc(var(--slate-text-lg) * var(--slate-line-normal))
+    calc(var(--slate-text-sm) * var(--slate-line-normal))
+    auto;
+  grid-template-areas:
+    "id weight"
+    "geometry geometry"
+    "computed computed"
+    "note note";
   align-content: start;
   align-items: center;
   gap: 2px var(--slate-space-1);
   padding: var(--slate-space-2);
   /* The room the Recipe's cell gives its grab strip (recipe.css). */
-  padding-bottom: calc(var(--slate-space-2) + var(--slate-grid-grip) + 2px - var(--slate-space-1));
+  padding-bottom: calc(var(--slate-space-2) + var(--slate-grid-grip) + 2px);
   border: var(--slate-stroke) solid light-dark(transparent, var(--slate-border));
   border-radius: var(--slate-radius);
   background: var(--slate-surface-raised);
@@ -751,62 +767,76 @@
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__id {
-  grid-column: 1 / -1;
-  /* The Recipe's blend beside the id sets that line's height; the room
-     under it is the Recipe's resin line (and the row gap before it),
-     kept empty so a switch of tab moves nothing. */
-  min-height: calc(var(--slate-text-lg) * var(--slate-line-normal));
-  padding-bottom: calc(var(--slate-text-lg) * var(--slate-line-normal) + 2px);
+  grid-area: id;
+  min-width: 0;
   color: var(--slate-text-muted);
   font-size: var(--slate-text-sm);
   font-weight: 700;
 }
 
-/* With Smart Hoppers the weight and the measure share the third line, and
-   the readout takes the line the Recipe's grab strip does - so the room
-   kept for that strip below is the readout's here. */
-.slate-root[data-weights-layers="grid"] .slate-weights__row[data-measured] {
-  padding-bottom: calc(var(--slate-space-2) - var(--slate-space-1));
-}
-
 .slate-root[data-weights-layers="grid"] .slate-weights__wrap {
   min-width: 0;
+  gap: 2px;
+}
+
+/* The weight as the Recipe's blend: large, at the tile's right. */
+.slate-root[data-weights-layers="grid"] .slate-weights__weight {
+  grid-area: weight;
+  justify-content: flex-end;
+}
+
+/* The measure as the Recipe's resin: the second line, from the left. */
+.slate-root[data-weights-layers="grid"] .slate-weights__geometry {
+  grid-area: geometry;
   justify-content: flex-start;
 }
 
-.slate-root[data-weights-layers="grid"] .slate-weights__weight {
-  grid-column: 1;
-}
-
-.slate-root[data-weights-layers="grid"] .slate-weights__geometry {
-  grid-column: 2;
-}
-
-/* The field takes the cell's width, beside its unit, and the room the
-   Recipe's cell (recipe.css) gives below its resin line: the weight's line
-   plus the two row gaps of its empty mark and note rows. So a cell is as
-   tall on either tab - with Track hidden (Automatic tracking, the
-   default); where Track shows, a Recipe cell stands a few pixels taller. */
+/* A field no taller than the line it stands on: the number is the line. */
 .slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind] {
-  --slate-field-width: auto;
-  --slate-field-min-height: calc(var(--slate-text-sm) * var(--slate-line-normal) + 4px);
-  --slate-field-padding: 0 var(--slate-space-2);
-  flex: 1 1 0;
-  font-size: var(--slate-text-sm);
+  --slate-field-min-height: 0;
+  line-height: 1;
 }
 
-/* One line at the strip's height; the full words are its title. */
-.slate-root[data-weights-layers="grid"] .slate-weights__computed {
-  grid-column: 1 / -1;
-  overflow: hidden;
+.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind="weight"] {
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Its figure flush with the id above it; the field's padding, which a
+   hover shows, stands out into the tile's. */
+.slate-root[data-weights-layers="grid"] .slate-weights__field[data-kind="geometry"] {
+  margin-left: calc(-1 * var(--slate-space-1));
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-root[data-weights-layers="grid"] .slate-weights__unit {
+  min-width: 0;
   font-size: var(--slate-text-xs);
-  line-height: var(--slate-grid-grip);
+  font-weight: 600;
+}
+
+/* What Smart Hoppers computed, as the Recipe's Compare band: one line in
+   a soft band of its own colour - the smart tint when it computed, faint
+   when it could not; the full words are its title. */
+.slate-root[data-weights-layers="grid"] .slate-weights__computed {
+  grid-area: computed;
+  justify-self: stretch;
+  margin-left: calc(-1 * var(--slate-space-1));
+  padding: 0 var(--slate-space-1);
+  overflow: hidden;
+  border-radius: var(--slate-radius-sm);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  line-height: calc(var(--slate-text-sm) * var(--slate-line-normal));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .slate-root[data-weights-layers="grid"] .slate-weights__row-note {
-  grid-column: 1 / -1;
+  grid-area: note;
   padding-left: 0;
 }
 

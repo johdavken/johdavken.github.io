@@ -1552,31 +1552,43 @@
   }
 }
 
-/* Current and Next are two faces of the same tiles: turning from one to
-   the other slides each tile's contents in over the ones they replace
-   (slate-recipe.js marks it is-sliding, on a phone alone), the frame
-   standing still and clipping them, one position after another, the
-   wave running down and across the grid as the band's does. Next comes
-   in from the right, Current back from the left - the way the tabs
-   stand. The distance is the tile's width (it is a container: cqi). The
-   band keeps its own drop beside the slide. */
-.slate-hopper.is-sliding {
-  overflow: hidden;
+/* Current, Next and Weights are three faces of the same tiles: turning
+   from one tab to another slides each tile's contents in over the ones
+   they replace (slate-recipe.js marks it is-sliding), the frame standing
+   still and clipping them, one position after another, the wave running
+   down and across the grid as the band's does. They come in from the
+   side of the tab turned to (data-slide-from): the right going on along
+   Current, Next, Weights, the left coming back. The distance is each
+   part's own width; on a phone, whose tiles are containers, the tile's
+   (cqi). A Recipe band keeps its own drop beside the slide. Clipped, not
+   hidden: a scroll container's grid item may shrink to nothing, and a
+   desktop's tiles would collapse for the slide. */
+.slate-hopper.is-sliding,
+.slate-weights__row.is-sliding {
+  --slate-slide-distance: 100%;
+  overflow: clip;
 }
 
-.slate-hopper.is-sliding > * {
-  animation: slate-slide-next var(--slate-motion-band) var(--slate-motion-ease) both;
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-hopper.is-sliding,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-weights__row.is-sliding {
+  --slate-slide-distance: 100cqi;
+}
+
+.slate-hopper.is-sliding > *,
+.slate-weights__row.is-sliding > * {
+  animation: slate-slide-from-right var(--slate-motion-band) var(--slate-motion-ease) both;
   animation-delay: calc((var(--slate-hopper-slot, 0) + var(--slate-layer-i, 0)) * var(--slate-motion-lead));
 }
 
-.slate-hopper.is-sliding[data-recipe="current"] > * {
-  animation-name: slate-slide-current;
+.slate-hopper.is-sliding[data-slide-from="left"] > *,
+.slate-weights__row.is-sliding[data-slide-from="left"] > * {
+  animation-name: slate-slide-from-left;
 }
 
-@keyframes slate-slide-next {
+@keyframes slate-slide-from-right {
   from {
     opacity: 0;
-    transform: translateX(100cqi);
+    transform: translateX(var(--slate-slide-distance, 100%));
   }
 
   to {
@@ -1585,10 +1597,10 @@
   }
 }
 
-@keyframes slate-slide-current {
+@keyframes slate-slide-from-left {
   from {
     opacity: 0;
-    transform: translateX(-100cqi);
+    transform: translateX(calc(-1 * var(--slate-slide-distance, 100%)));
   }
 
   to {
@@ -1598,7 +1610,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slate-hopper.is-sliding > * {
+  .slate-hopper.is-sliding > *,
+  .slate-weights__row.is-sliding > * {
     animation: none;
   }
 }
