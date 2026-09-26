@@ -1129,7 +1129,8 @@
     }
 
     function openEditor(target) {
-      if (form) { say(`Cannot change the ${SLOT_LABEL[target.slot]} here: ${BULK_BUSY}`); return null; }
+      // A desktop's always-open form holds the share only while it has changes.
+      if (formHolds()) { say(`Cannot change the ${SLOT_LABEL[target.slot]} here: ${form.auto ? DRAFT_BUSY : BULK_BUSY}`); return null; }
       if (editing) closeEditor();
       const bridge = commands();
       const able = actionsModule.abilities(bridge, guard());
@@ -1877,8 +1878,9 @@
 
     rootEl.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
-      if (form) { discardOrArm(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
+      // A share's editor open over a desktop's form closes before the form hears it.
       if (editing) { closeEditor(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
+      if (form) { discardOrArm(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (saving) { closeSave(); if (typeof event.stopPropagation === "function") event.stopPropagation(); return; }
       if (bookOpen && event.target && typeof bookPanel.contains === "function" && bookPanel.contains(event.target)) {
         setBook(false);
