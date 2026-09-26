@@ -48,8 +48,11 @@
      left of its hopper rows. */
   --slate-layer-head-width: 168px;
   /* The Grid layout's head tile, at the start of each layer's row of
-     cells: room for "Outside subskin" on one line, and for the share
-     with the other recipe's beside it. */
+     cells: room for its label - "B · Outside subskin" - and its share
+     on one line each, never wrapped or cut. The layer menu and the other
+     recipe's share take a foot line under them (components/recipe.css)
+     rather than width. The Weights grid keeps the same width so the two
+     line up. */
   --slate-grid-head-width: 136px;
   /* Grid Top's column: every cell's width there, fixed rather than
      sharing the page, so a line of few layers stands centred. */
