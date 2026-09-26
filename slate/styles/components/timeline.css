@@ -770,3 +770,118 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__alarm:not([hidden]) {
   margin-top: var(--slate-space-3);
 }
+
+/* ---- A phone at the line panel ----
+   The Timeline is where a phone is used most: held at the line's panel,
+   often gloved. So on a phone it leads with what to do next (the Next
+   block, slate-timeline.js) in large type with full-size buttons - the
+   cards' pills keep their size, which the axis's layout counts on, and
+   their touch tier's wider hit area - and the card is as tall as what it
+   holds: no stretch of empty panel under the last row. */
+
+.slate-timeline__next {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__next:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin: var(--slate-space-2) 0 var(--slate-space-3);
+  padding: var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-left: 5px solid var(--slate-accent);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__next[data-kind="late"] {
+  border-color: var(--slate-danger);
+  border-left-color: var(--slate-danger);
+  background: linear-gradient(var(--slate-danger-soft) 0 0), var(--slate-surface-raised);
+}
+
+.slate-timeline__next-head {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.slate-timeline__next[data-kind="late"] > .slate-timeline__next-head {
+  color: var(--slate-danger);
+}
+
+.slate-timeline__next-when {
+  font-size: var(--slate-text-2xl);
+  font-weight: 700;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline__next-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-1);
+}
+
+.slate-timeline__next-row {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+}
+
+.slate-timeline__next-name {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  min-width: 0;
+  font-size: var(--slate-text-xl);
+}
+
+.slate-timeline__next-id {
+  font-weight: 700;
+}
+
+.slate-timeline__next-resin {
+  overflow: hidden;
+  color: var(--slate-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A thumb's button, filled: the one thing the block asks for. */
+.slate-root .slate-timeline__next-pump {
+  flex: none;
+  min-width: 132px;
+  min-height: 52px;
+  padding: 0 var(--slate-space-4);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+  font-size: var(--slate-text-lg);
+  font-weight: 700;
+}
+
+.slate-root .slate-timeline__next-pump.is-late {
+  background: var(--slate-danger);
+  color: var(--slate-surface);
+}
+
+.slate-root .slate-timeline__next-pump[data-able="false"] {
+  opacity: 0.5;
+}
+
+.slate-timeline__next-more {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+/* As tall as what it holds: no empty panel under the foot. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-panel.slate-timeline {
+  min-height: 0;
+}

@@ -539,3 +539,55 @@
     transition: none;
   }
 }
+
+/* ---- A phone: Settings made compact ----
+   The galleries go two across, their pictures smaller and their one-line
+   descriptions left to the pictures and names; the choice cards tighten.
+   What each does is unchanged: this is the desktop's Settings at a
+   phone's size, not a second page. */
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__themes,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__backgrounds {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-theme-tile__choose {
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-theme-tile__swatch {
+  height: 52px;
+}
+
+/* The name beside the day / night switch, clear of it. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-theme-tile__name {
+  min-height: 26px;
+  padding-right: calc(var(--slate-theme-switch-width) + var(--slate-space-1));
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-tight);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-theme-tile__description,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__background-note {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-theme-tile__toggle {
+  right: var(--slate-space-2);
+  bottom: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__background-preview {
+  height: 44px;
+  margin-bottom: var(--slate-space-1);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__mode {
+  padding: var(--slate-space-2) var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__modes {
+  gap: var(--slate-space-2);
+}

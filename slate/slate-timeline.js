@@ -233,6 +233,19 @@
       const on = alarmButton.getAttribute("aria-checked") === "true";
       settle(trackingModule.setAlarm(commands(), !on));
     });
+    // What to do next, for the line panel (a phone's; timeline.css shows it
+    // there only): what is late, else the next group due - its time large,
+    // each hopper with a Pump off a thumb can find. The buttons are the
+    // tracking controls the cards carry (data-slate-control), so a press
+    // goes the one way every pill goes.
+    const nextEl = element(doc, "section", "slate-timeline__next", { "aria-label": "Next", hidden: "" });
+    const nextHead = text(doc, "p", "slate-timeline__next-head", "");
+    const nextWhen = text(doc, "p", "slate-timeline__next-when", "");
+    const nextRowsEl = element(doc, "div", "slate-timeline__next-rows");
+    const nextMore = text(doc, "p", "slate-timeline__next-more", "", { hidden: "" });
+    for (const node of [nextHead, nextWhen, nextRowsEl, nextMore]) nextEl.appendChild(node);
+    rootEl.appendChild(nextEl);
+    const nextRows = new Map();
     const notice = element(doc, "p", "slate-timeline__notice", { hidden: "" });
     rootEl.appendChild(notice);
 
@@ -594,11 +607,81 @@
       paintNotice(state.inputs && state.inputs.model, state.entries.length);
     }
 
+    /* ---- Next (a phone's) ---- */
+
+    const NEXT_MAX = 4;
+
+    function nextRow(entry) {
+      let built = nextRows.get(entry.key);
+      if (!built) {
+        const el = element(doc, "div", "slate-timeline__next-row", { "data-key": entry.key });
+        const name = element(doc, "span", "slate-timeline__next-name");
+        const id = text(doc, "span", "slate-timeline__next-id", entry.id);
+        const resin = text(doc, "span", "slate-timeline__next-resin", "");
+        name.appendChild(id);
+        name.appendChild(resin);
+        const button = text(doc, "button", "slate-timeline__next-pump", "Pump off", {
+          type: "button", "data-slate-control": "pump", "data-layer": entry.layer, "data-index": String(entry.index),
+          "aria-pressed": "false", "data-able": "false", "aria-label": `Turn ${entry.id}'s pump off`
+        });
+        el.appendChild(name);
+        el.appendChild(button);
+        built = { el, resin, button };
+        nextRows.set(entry.key, built);
+      }
+      setText(built.resin, entry.resin || "no resin");
+      return built;
+    }
+
+    /* The late, else the next group due, else the next beyond the horizon. */
+    function paintNext(at) {
+      const grouped = state.grouped;
+      let kind = null;
+      let members = [];
+      if (grouped && grouped.overdue) { kind = "late"; members = grouped.overdue.members; }
+      else if (grouped && grouped.groups.length) { kind = "next"; members = grouped.groups[0].members; }
+      else if (grouped && grouped.later.length) { kind = "next"; members = [grouped.later[0]]; }
+      // A phone's alone: elsewhere the cards are in reach and nothing is drawn.
+      if (!phoneTier()) kind = null;
+      show(nextEl, !!kind);
+      if (!kind) { clear(nextRowsEl); nextRows.clear(); return; }
+      const first = members[0];
+      const empty = first.markKind === "empty";
+      nextEl.setAttribute("data-kind", kind);
+      setText(nextHead, kind === "late"
+        ? (empty ? "Late - ran empty" : "Late - turn the pump off")
+        : (empty ? "Next to run empty" : "Next - turn the pump off"));
+      const clockText = rundownModule.formatClock(first.markAt);
+      setText(nextWhen, kind === "late"
+        ? `${clockText} · ${rundownModule.formatRemaining(at - first.markAt)} late`
+        : `${clockText} · in ${rundownModule.formatRemaining(first.markAt - at)}`);
+      const shown = members.slice(0, NEXT_MAX);
+      const keep = new Set(shown.map(member => member.key));
+      for (const [key, built] of nextRows) {
+        if (keep.has(key)) continue;
+        if (built.el.parentNode) built.el.parentNode.removeChild(built.el);
+        nextRows.delete(key);
+      }
+      shown.forEach((member, index) => {
+        const built = nextRow(member);
+        built.button.classList.toggle("is-late", kind === "late");
+        if (nextRowsEl.children[index] !== built.el) nextRowsEl.insertBefore(built.el, nextRowsEl.children[index] || null);
+      });
+      const more = members.length - shown.length;
+      setText(nextMore, more > 0 ? `and ${more} more below` : "");
+      show(nextMore, more > 0);
+    }
+
     function applyAbilities() {
       const bridge = commands();
       const options = guard();
       const able = trackingModule.abilities(bridge, options);
       rootEl.classList.toggle("is-readonly", !!options.readOnly);
+      for (const built of nextRows.values()) {
+        built.button.setAttribute("data-able", able.pump ? "true" : "false");
+        if (!able.pump) built.button.setAttribute("title", `Pump off: ${trackingModule.reason(bridge, "pump", options)}`);
+        else built.button.removeAttribute("title");
+      }
       for (const built of state.rows.values()) {
         const on = built.button.getAttribute("aria-pressed") === "true";
         built.button.setAttribute("data-able", able.pump ? "true" : "false");
@@ -666,6 +749,7 @@
         place(doneList, built);
       }
       pruneRows(keep);
+      paintNext(at);
       // A correction whose hopper is no longer pumped off has nothing to say.
       if (state.correcting && !off.some(entry => entry.key === state.correcting.key)) closeCorrection();
       applyAbilities();

@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { buildWww, localRuntimeReferences, hostAssetReferences, FOLLOWED_HOSTS, ROOT, OUT } = require("./scripts/build-www.js");
+const { buildWww, localRuntimeReferences, hostAssetReferences, stylesheetAssetReferences, FOLLOWED_HOSTS, ROOT, OUT } = require("./scripts/build-www.js");
 
 // This runs the real build (writes www/, same as `npm run build:android`)
 // and inspects its actual output - not just the script's source - so a
@@ -25,7 +25,10 @@ function allFiles(dir) {
 test("build-www produces www/ from an explicit allowlist, not a blocklist over the repo", () => {
   buildWww();
   assert.ok(fs.existsSync(OUT));
-  const hostFiles = new Set(FOLLOWED_HOSTS.flatMap(hostAssetReferences));
+  // A followed host's own list, and the pictures its stylesheets name, are
+  // counted apart: both are exact, and pinned below.
+  const hostList = FOLLOWED_HOSTS.flatMap(hostAssetReferences);
+  const hostFiles = new Set([...hostList, ...hostList.filter(ref => ref.endsWith(".css")).flatMap(stylesheetAssetReferences)]);
   const files = allFiles(OUT).map(f => path.relative(OUT, f)).filter(f => !hostFiles.has(f));
   assert.ok(files.length > 0);
   // A sanity ceiling, not an exact contract: the repo tracks ~370 files, so
@@ -118,10 +121,24 @@ test("every asset the Slate host loads reaches www/, and nothing else under slat
   assert.ok(wanted.includes("slate/slate.js") && wanted.includes("slate/styles/tokens.css"));
   const missing = wanted.filter(file => !fs.existsSync(path.join(OUT, file)));
   assert.deepEqual(missing, [], "these Slate assets were not copied into www/");
+  const pictures = wanted.filter(file => file.endsWith(".css")).flatMap(stylesheetAssetReferences);
   const shipped = allFiles(OUT).map(f => path.relative(OUT, f).split(path.sep).join("/"))
     .filter(file => file.startsWith("slate/") || file.startsWith("station/"));
-  assert.deepEqual(shipped.filter(file => !wanted.includes(file)), [],
-    "only the host's own lists are followed - no directory is copied wholesale (the harness, TABLET-PLAN.md and Station's UI stay out)");
+  assert.deepEqual(shipped.filter(file => !wanted.includes(file) && !pictures.includes(file)), [],
+    "only the host's own lists, and what its stylesheets name, are followed - no directory is copied wholesale (the harness, TABLET-PLAN.md and Station's UI stay out)");
+});
+
+test("what the host's stylesheets draw reaches www/: every Slate background picture, resolved against its sheet; data: and external urls are left alone", () => {
+  buildWww();
+  const refs = stylesheetAssetReferences("slate/styles/components/background.css");
+  const backgrounds = ["smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"].map(name => `slate/images/backgrounds/${name}.jpg`);
+  for (const file of backgrounds) {
+    assert.ok(refs.includes(file), `${file} is not followed from background.css`);
+    assert.ok(fs.existsSync(path.join(OUT, file)), `${file} did not reach www/ - the Android app's background would be blank`);
+  }
+  for (const file of hostAssetReferences("slate-host.js").filter(ref => ref.endsWith(".css"))) {
+    for (const ref of stylesheetAssetReferences(file)) assert.ok(!/^[a-z]+:|^\/\//i.test(ref), `${file}: ${ref}`);
+  }
 });
 
 test("a host is followed only when index.html loads it, and a host without its lists fails loudly", () => {

@@ -202,7 +202,7 @@
       const button = element(doc, "button", "slate-settings__mode slate-settings__background", { type: "button", role: "radio", "aria-checked": "false", "data-background-choice": choice });
       button.appendChild(element(doc, "span", "slate-settings__background-preview", { "aria-hidden": "true", "data-background": choice }));
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));
-      button.appendChild(text(doc, "span", "slate-settings__mode-note", note));
+      button.appendChild(text(doc, "span", "slate-settings__mode-note slate-settings__background-note", note));
       button.addEventListener("click", () => { if (display && typeof display.setBackground === "function") display.setBackground(choice); });
       backgroundButtons.set(choice, button);
       backdrops.appendChild(button);
