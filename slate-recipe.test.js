@@ -2146,19 +2146,26 @@ test("a desktop's layer menu waits only while the draft has changes; a Next cell
   assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-hopper__weight\[data-spacer\] \{\s*min-height: calc\(var\(--slate-text-sm\) \* var\(--slate-line-normal\)\);/);
 });
 
-test("the Grid head is share first: a small toned label over the share (on one line, never wrapped or cut: the menu moves to the share's line), Compare's other share beside it, never under it, and a bar under both", () => {
+test("the Grid head is share first and keeps its width: a toned label over the share, a bar, and a foot with the menu at its start and Compare's other share at its end", () => {
   const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe.css"), "utf8");
   const tokens = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/tokens.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
-  assert.match(tokens, /--slate-grid-head-width: 164px;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__head'), /display: grid;[^}]*grid-template-rows: auto auto auto;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 2;\s*grid-column: 1 \/ 3;[^}]*font-size: var\(--slate-text-2xl\);/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share-other'), /grid-row: 2;\s*grid-column: 3;[^}]*white-space: nowrap;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /grid-row: 1;[^}]*var\(--slate-layer-tone\)[^}]*text-transform: uppercase;/);
-  assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-layer__role \{\s*grid-column: 2 \/ -1;\s*\}/, "the role is wrapped, clipped or padded for a menu");
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /white-space: nowrap;/);
-  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer-menu'), /grid-row: 2;\s*grid-column: 4;/, "the menu is back over the label");
+  // The cells keep their size: the head is no wider than it was.
+  assert.match(tokens, /--slate-grid-head-width: 136px;/);
+  const head = rule('.slate-root[data-layers="grid"] .slate-layer__head');
+  assert.match(head, /--slate-grid-foot: 28px;[^}]*display: grid;/);
+  assert.match(head, /padding: [^;]*calc\(var\(--slate-space-2\) \+ var\(--slate-grid-foot\)\);/, "the foot line is not reserved");
+  assert.match(rule('.slate-root[data-layers="grid"][data-grid-heads="top"] .slate-layer__head'), /padding: [^;]*calc\(var\(--slate-space-2\) \+ var\(--slate-grid-foot\)\);/, "Grid Top's head drops the foot line");
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__name,\n.slate-root[data-layers="grid"] .slate-layer__role'), /grid-row: 1;[^}]*var\(--slate-layer-tone\)[^}]*white-space: nowrap;/);
+  assert.match(css, /\.slate-root\[data-layers="grid"\] \.slate-layer__role \{\s*grid-column: 2;\s*\}/, "the role is wrapped or clipped");
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__word'), /display: none;/);
+  assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__share'), /grid-row: 2;\s*grid-column: 1 \/ -1;[^}]*font-size: var\(--slate-text-2xl\);[^}]*white-space: nowrap;/);
+  const menu = rule('.slate-root[data-layers="grid"] .slate-layer-menu');
+  assert.match(menu, /position: absolute;\s*left: var\(--slate-space-1\);\s*bottom: var\(--slate-space-2\);/, "the menu is not at the foot's start");
+  const other = rule('.slate-root[data-layers="grid"] .slate-layer__share-other');
+  assert.match(other, /position: absolute;\s*right: var\(--slate-space-2\);\s*bottom: var\(--slate-space-2\);/, "the other share is not at the foot's end");
+  assert.match(other, /white-space: nowrap;/);
+  assert.doesNotMatch(other, /text-overflow|overflow: hidden/, "the other share can be cut short");
   assert.match(rule('.slate-root[data-layers="grid"] .slate-layer__bar'), /display: block;\s*grid-row: 3;[^}]*var\(--slate-layer-share, 0%\)/);
   assert.match(css, /\n\.slate-layer__bar \{\s*display: none;/, "the bar shows outside the Grid layout");
 });
