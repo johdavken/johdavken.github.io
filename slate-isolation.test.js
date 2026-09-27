@@ -27,7 +27,7 @@ const SLATE_FILES = [
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-handling-preview.js", "slate-settings.js", "slate-timeline-layout.js", "slate-runout.js", "slate-timeline.js", "slate-resin-balance.js", "slate-guide.js", "slate-weights-guide.js",
-  "slate-pressure.js", "slate-winding-tension.js",
+  "slate-pressure.js", "slate-winding-tension.js", "slate-work-alarm.js",
   "slate-workspaces.js", "slate-line-config.js", "slate-resin-db.js"
 ];
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];
@@ -271,7 +271,8 @@ test("Slate never writes through a bridge - it only reads and subscribes", () =>
     assert.doesNotMatch(source, /\.connect\s*\(/, `${file} connects a producer to a bridge`);
     assert.doesNotMatch(source, /\.publish\s*\(/, `${file} publishes to a bridge`);
     for (const match of source.matchAll(/(\w+)\.subscribe\s*\(/g)) {
-      assert.ok(["bridge", "connection", "admin", "recipes", "profiles", "controller", "theme", "display", "displayController"].includes(match[1]), `${file} subscribes to ${match[1]}`);
+      // `device`: the Work Alarm's own device module (work-alarm.js), not a bridge.
+      assert.ok(["bridge", "connection", "admin", "recipes", "profiles", "controller", "theme", "display", "displayController", "device"].includes(match[1]), `${file} subscribes to ${match[1]}`);
     }
   }
 });

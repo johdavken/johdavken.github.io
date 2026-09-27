@@ -44,6 +44,8 @@
     gauge: "M3 15a7 7 0 0 1 14 0M10 15l4-5M10 15h.01",
     weights: "M10 3v3M6 6h8l2 11H4ZM7.5 11.5h5",
     winding: "M8 10a5 5 0 1 0 10 0a5 5 0 1 0-10 0M13 10h.01M2 10h5M4.5 7.5 7 10l-2.5 2.5",
+    admin: "M10 2.5 16 5v4.5c0 3.8-2.6 6.9-6 8-3.4-1.1-6-4.2-6-8V5ZM7.5 10l1.8 1.8 3.4-3.6",
+    alarm: "M10 17a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM10 8v3.5l2 1.5M3.5 5.5l2.5-2M16.5 5.5l-2.5-2M6 16l-1.5 1.5M14 16l1.5 1.5",
     home: "M3 9.5 10 3.5l7 6V17h-4.5v-4.5h-5V17H3Z",
     workspaces: "M10 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM5 12.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM15 12.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4M8.8 7.4 6.2 11M11.2 7.4l2.6 3.6",
     lines: "M3 6h4M11 6h6M3 12h8M15 12h2M9 4v4M13 10v4",
@@ -112,59 +114,75 @@
     if (logoModule && typeof logoModule.create === "function") brand.appendChild(logoModule.create(doc, { label: settings.brand || "Resin.Tools" }));
     rail.appendChild(brand);
 
-    // The sections. An administrator's sections come last, behind a rule,
-    // and are not listed at all until one is signed in (setListed).
+    // The sections, then the two drop-downs: Tools, and - behind a rule,
+    // listed only while an administrator is signed in (setListed) - Admin,
+    // which holds the administrator's sections. One drop-down open at a
+    // time: opening either closes the other, so a phone's sheet never
+    // has to hold both lists at once.
     const list = element(doc, "div", "slate-rail__sections");
     const items = new Map();
     const sectionDefinitions = definitions.filter(one => one.group === "sections");
-    let divider = null;
-    for (const definition of sectionDefinitions) {
-      if (definition.admin && !divider) {
-        divider = element(doc, "div", "slate-rail__divider", { role: "separator", hidden: "" });
-        list.appendChild(divider);
-      }
+    for (const definition of sectionDefinitions.filter(one => !one.admin)) {
       const button = item(doc, definition);
-      // An administrator's section, a phone's own (Home) and a drawer's
-      // own (the Timeline, a tablet's) wait to be listed.
-      if (definition.admin || definition.phone || definition.drawer) button.setAttribute("hidden", "");
+      // A phone's own (Home) and a drawer's own (the Timeline, a
+      // tablet's) wait to be listed.
+      if (definition.phone || definition.drawer) button.setAttribute("hidden", "");
       items.set(definition.id, button);
       list.appendChild(button);
     }
 
-    // Tools: one item that opens a menu of the tool sections.
-    const tools = element(doc, "div", "slate-rail__tools");
-    const toolsButton = element(doc, "button", "slate-rail__item slate-rail__item--tools", {
-      type: "button", "aria-haspopup": "menu", "aria-expanded": "false"
-    });
-    toolsButton.appendChild(glyph(doc, "tools"));
-    const toolsLabel = element(doc, "span", "slate-rail__label");
-    toolsLabel.textContent = "Tools";
-    toolsButton.appendChild(toolsLabel);
-    const chevron = glyph(doc, "chevron");
-    chevron.setAttribute("class", "slate-rail__glyph slate-rail__chevron");
-    toolsButton.appendChild(chevron);
-    tools.appendChild(toolsButton);
-    const menu = element(doc, "ul", "slate-rail__menu", { role: "menu", hidden: "" });
-    const toolDefinitions = definitions.filter(one => one.group === "tools");
-    if (toolDefinitions.length === 0) {
-      const empty = element(doc, "li", "slate-rail__menu-empty", { role: "presentation" });
-      empty.textContent = TOOLS_EMPTY;
-      menu.appendChild(empty);
+    /* A drop-down: one item that opens a menu of sections. */
+    function dropdown(key, label, glyphName, members, emptyText) {
+      const wrap = element(doc, "div", `slate-rail__tools slate-rail__tools--${key}`, { "data-menu": key });
+      const button = element(doc, "button", `slate-rail__item slate-rail__item--${key}`, {
+        type: "button", "aria-haspopup": "menu", "aria-expanded": "false"
+      });
+      button.appendChild(glyph(doc, glyphName));
+      const words = element(doc, "span", "slate-rail__label");
+      words.textContent = label;
+      button.appendChild(words);
+      const chevron = glyph(doc, "chevron");
+      chevron.setAttribute("class", "slate-rail__glyph slate-rail__chevron");
+      button.appendChild(chevron);
+      wrap.appendChild(button);
+      const menu = element(doc, "ul", "slate-rail__menu", { role: "menu", hidden: "", "data-menu": key });
+      if (members.length === 0 && emptyText) {
+        const empty = element(doc, "li", "slate-rail__menu-empty", { role: "presentation" });
+        empty.textContent = emptyText;
+        menu.appendChild(empty);
+      }
+      for (const definition of members) {
+        const li = element(doc, "li", "slate-rail__menu-item", { role: "presentation" });
+        const entry = item(doc, definition);
+        entry.setAttribute("role", "menuitem");
+        // Named in the flyout, where the rail's own labels are hidden.
+        entry.classList.add("slate-rail__item--menu");
+        const entryLabel = entry.querySelector(".slate-rail__label");
+        if (entryLabel) entryLabel.classList.add("slate-rail__label--menu");
+        items.set(definition.id, entry);
+        li.appendChild(entry);
+        menu.appendChild(li);
+      }
+      wrap.appendChild(menu);
+      return { key, wrap, button, menu, open: false };
     }
-    for (const definition of toolDefinitions) {
-      const li = element(doc, "li", "slate-rail__menu-item", { role: "presentation" });
-      const button = item(doc, definition);
-      button.setAttribute("role", "menuitem");
-      // Named in the flyout, where the rail's own labels are hidden.
-      button.classList.add("slate-rail__item--menu");
-      const label = button.querySelector(".slate-rail__label");
-      if (label) label.classList.add("slate-rail__label--menu");
-      items.set(definition.id, button);
-      li.appendChild(button);
-      menu.appendChild(li);
+
+    const toolsMenu = dropdown("tools", "Tools", "tools", definitions.filter(one => one.group === "tools"), TOOLS_EMPTY);
+    list.appendChild(toolsMenu.wrap);
+    const adminDefinitions = sectionDefinitions.filter(one => one.admin);
+    let divider = null;
+    let adminMenu = null;
+    if (adminDefinitions.length) {
+      divider = element(doc, "div", "slate-rail__divider", { role: "separator", hidden: "" });
+      list.appendChild(divider);
+      adminMenu = dropdown("admin", "Admin", "admin", adminDefinitions, "");
+      // Each administrator's section waits to be listed; the drop-down
+      // stands with the first of them.
+      for (const definition of adminDefinitions) items.get(definition.id).setAttribute("hidden", "");
+      adminMenu.wrap.setAttribute("hidden", "");
+      list.appendChild(adminMenu.wrap);
     }
-    tools.appendChild(menu);
-    list.appendChild(tools);
+    const menus = [toolsMenu, adminMenu].filter(Boolean);
     rail.appendChild(list);
 
     // The foot: Settings.
@@ -176,51 +194,67 @@
     }
     rail.appendChild(foot);
 
-    /* The menu stays open once opened - through a selection, through a
-       press elsewhere on the page - until the Tools item is pressed
-       again, or Escape while the rail has focus. The tools are used
-       side by side, and the list is the way to them. */
-    let toolsOpen = false;
-    const outsideCloser = dismissal(doc, node => typeof tools.contains === "function" && tools.contains(node), () => closeTools());
-    /* The flyout stands beside the Tools item, fixed to the screen: the
-     * rail scrolls, and a scrolling box clips whatever leaves it sideways,
+    /* A menu stays open once opened - through a selection, through a
+       press elsewhere on the page - until its item is pressed again, the
+       other drop-down is opened, or Escape while the rail has focus. The
+       tools are used side by side, and the list is the way to them. */
+    const outsideCloser = dismissal(doc, node => menus.some(one => typeof one.wrap.contains === "function" && one.wrap.contains(node)), () => closeAll());
+    /* The flyout stands beside its item, fixed to the screen: the rail
+     * scrolls, and a scrolling box clips whatever leaves it sideways,
      * so a menu anchored inside the rail could open and never be seen or
      * tapped. It is placed from the item each time it opens (rail.css
      * reads the two properties). */
-    function placeFlyout() {
-      if (typeof toolsButton.getBoundingClientRect !== "function" || !menu.style || typeof menu.style.setProperty !== "function") return;
-      const rect = toolsButton.getBoundingClientRect();
-      menu.style.setProperty("--slate-flyout-top", `${Math.round(rect.top)}px`);
-      menu.style.setProperty("--slate-flyout-left", `${Math.round(rect.right)}px`);
+    function placeFlyout(one) {
+      if (typeof one.button.getBoundingClientRect !== "function" || !one.menu.style || typeof one.menu.style.setProperty !== "function") return;
+      const rect = one.button.getBoundingClientRect();
+      one.menu.style.setProperty("--slate-flyout-top", `${Math.round(rect.top)}px`);
+      one.menu.style.setProperty("--slate-flyout-left", `${Math.round(rect.right)}px`);
     }
 
-    function openTools() {
-      if (toolsOpen) return;
-      toolsOpen = true;
-      menu.removeAttribute("hidden");
-      toolsButton.setAttribute("aria-expanded", "true");
-      tools.classList.add("is-open");
+    function openMenu(one) {
+      if (!one || one.open) return;
+      for (const other of menus) if (other !== one) shut(other);
+      one.open = true;
+      one.menu.removeAttribute("hidden");
+      one.button.setAttribute("aria-expanded", "true");
+      one.wrap.classList.add("is-open");
       // Only the flyout closes on a press outside; the sidebar's menu stays.
       if (flyout()) {
-        placeFlyout();
+        placeFlyout(one);
         outsideCloser.start();
+      } else if (typeof one.menu.scrollIntoView === "function") {
+        // In a phone's sheet (or a short sidebar) the menu opens below its
+        // item and can end past the sheet's foot: bring it in.
+        one.menu.scrollIntoView({ block: "nearest" });
       }
     }
-    function closeTools() {
-      if (!toolsOpen) return;
-      toolsOpen = false;
-      menu.setAttribute("hidden", "");
-      toolsButton.setAttribute("aria-expanded", "false");
-      tools.classList.remove("is-open");
+    function shut(one) {
+      if (!one || !one.open) return;
+      one.open = false;
+      one.menu.setAttribute("hidden", "");
+      one.button.setAttribute("aria-expanded", "false");
+      one.wrap.classList.remove("is-open");
+    }
+    function closeMenu(one) {
+      shut(one);
+      if (!menus.some(other => other.open)) outsideCloser.stop();
+    }
+    function closeAll() {
+      for (const one of menus) shut(one);
       outsideCloser.stop();
     }
+    const openTools = () => openMenu(toolsMenu);
+    const closeTools = () => closeMenu(toolsMenu);
+    const openAdmin = () => openMenu(adminMenu);
+    const closeAdmin = () => closeMenu(adminMenu);
 
-    toolsButton.addEventListener("click", () => { if (toolsOpen) closeTools(); else openTools(); });
+    for (const one of menus) one.button.addEventListener("click", () => { if (one.open) closeMenu(one); else openMenu(one); });
     rail.addEventListener("keydown", event => {
-      if (event && event.key === "Escape" && toolsOpen) {
-        closeTools();
+      const open = menus.find(one => one.open);
+      if (event && event.key === "Escape" && open) {
+        closeMenu(open);
         if (typeof event.stopPropagation === "function") event.stopPropagation();
-        if (typeof toolsButton.focus === "function") toolsButton.focus();
+        if (typeof open.button.focus === "function") open.button.focus();
       }
     });
     rail.addEventListener("click", event => {
@@ -228,15 +262,16 @@
       const button = target && typeof target.closest === "function" ? target.closest("[data-section]") : null;
       if (!button || !rail.contains(button)) return;
       onSelect(button.getAttribute("data-section"));
-      if (toolsOpen && flyout() && menu.contains(button)) closeTools();
+      const holder = menus.find(one => one.open && one.menu.contains(button));
+      if (holder && flyout()) closeMenu(holder);
     });
 
     /* Several things are current at once: the centre's section, and what
        each other pane shows in its home's place (a definition with a
        `pane`: the aside in the Timeline's, the stats row in the Scrap
        card's). Each pane is marked apart, so none unmarks another. The
-       mark is on the item alone: the Tools item is a list, not a place,
-       and never lights. */
+       mark is on the item alone: a drop-down's item is a list, not a
+       place, and never lights. */
     const paneOf = id => {
       const definition = definitions.find(one => one.id === id);
       return definition && definition.pane ? definition.pane : CENTRE;
@@ -259,16 +294,20 @@
 
     /* Whether an item is offered at all. The administrator's sections are
      * built with the rest and stand hidden until there is an administrator
-     * to use them; the rule above them goes with the first of them. */
+     * to use them; the Admin drop-down, and the rule above it, go with the
+     * first of them. */
     function setListed(id, on) {
       const button = items.get(id);
       if (!button) return false;
       if (on) button.removeAttribute("hidden");
       else button.setAttribute("hidden", "");
-      if (divider) {
-        const anyAdmin = sectionDefinitions.some(one => one.admin && items.get(one.id) && !items.get(one.id).hasAttribute("hidden"));
-        if (anyAdmin) divider.removeAttribute("hidden");
-        else divider.setAttribute("hidden", "");
+      if (adminMenu) {
+        const anyAdmin = adminDefinitions.some(one => items.get(one.id) && !items.get(one.id).hasAttribute("hidden"));
+        for (const node of [divider, adminMenu.wrap]) {
+          if (anyAdmin) node.removeAttribute("hidden");
+          else node.setAttribute("hidden", "");
+        }
+        if (!anyAdmin) closeMenu(adminMenu);
       }
       return true;
     }
@@ -287,7 +326,11 @@
       return true;
     }
 
-    return Object.freeze({ element: rail, setActive, setActivePane, setListed, isListed, setAlert, openTools, closeTools, isToolsOpen: () => toolsOpen });
+    return Object.freeze({
+      element: rail, setActive, setActivePane, setListed, isListed, setAlert,
+      openTools, closeTools, isToolsOpen: () => toolsMenu.open,
+      openAdmin, closeAdmin, isAdminOpen: () => !!(adminMenu && adminMenu.open)
+    });
   }
 
   return Object.freeze({ GLYPHS, TOOLS_EMPTY, CENTRE, create });

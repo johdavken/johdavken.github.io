@@ -1,0 +1,254 @@
+/* Work Alarm: the switch, the crew and the lead, a status line, then the
+   next shifts with the time each alarm rings. The panel's chrome is the
+   aside's (panel.css). */
+
+.slate-alarm__caption {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+/* ---- The settings ---- */
+
+.slate-alarm__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  margin-top: var(--slate-space-3);
+}
+
+.slate-alarm__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slate-space-3);
+}
+
+.slate-alarm__label {
+  flex: none;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* The switch: a track and a knob, the accent when on. */
+.slate-root .slate-alarm__switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--slate-border);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-alarm__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  transition: transform var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+.slate-root .slate-alarm__switch[aria-checked="true"] {
+  background: var(--slate-accent);
+}
+
+.slate-alarm__switch[aria-checked="true"] .slate-alarm__knob {
+  transform: translateX(18px);
+}
+
+.slate-root .slate-alarm__switch:disabled {
+  opacity: 0.45;
+}
+
+/* The crews: four letters in one segmented row. */
+.slate-alarm__crews {
+  display: inline-flex;
+  padding: 2px;
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-root .slate-alarm__crew {
+  min-width: 36px;
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+.slate-root .slate-alarm__crew[aria-checked="true"] {
+  background: var(--slate-accent);
+  color: var(--slate-text-on-accent);
+}
+
+.slate-root .slate-alarm__lead {
+  min-width: 0;
+  min-height: 32px;
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--slate-text-sm);
+}
+
+/* ---- What it's doing ---- */
+
+.slate-alarm__status {
+  margin-top: var(--slate-space-3);
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-alarm__status[data-kind="ok"] {
+  background: var(--slate-success-soft);
+  color: var(--slate-text);
+}
+
+.slate-alarm__status[data-kind="warn"] {
+  background: var(--slate-warning-soft);
+  color: var(--slate-text);
+}
+
+.slate-alarm__fixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-2);
+}
+
+.slate-root .slate-alarm__fix {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-accent);
+  border-radius: var(--slate-radius);
+  color: var(--slate-accent-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+/* ---- The shifts ---- */
+
+.slate-alarm__heading {
+  margin-top: var(--slate-space-4);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The list takes what the panel has left and scrolls inside it, so the
+   foot stays in the panel on a short screen. */
+.slate-alarm__list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: var(--slate-space-1);
+  list-style: none;
+}
+
+.slate-alarm__shift {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-2) 0;
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-alarm__when {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.slate-alarm__day {
+  font-weight: 600;
+}
+
+.slate-alarm__kind {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-alarm__shift[data-kind="night"] .slate-alarm__kind::before {
+  content: "☾ ";
+}
+
+.slate-alarm__ring {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-alarm__shift[data-skipped] .slate-alarm__ring {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+}
+
+.slate-alarm__shift[data-skipped] .slate-alarm__day {
+  color: var(--slate-text-muted);
+}
+
+.slate-root .slate-alarm__skip {
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+}
+
+.slate-root .slate-alarm__skip:disabled {
+  opacity: 0.4;
+}
+
+.slate-alarm__foot {
+  margin-top: var(--slate-space-3);
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-alarm__knob,
+  .slate-root .slate-alarm__switch {
+    transition: none;
+  }
+}
+
+/* ---- Touch (data-input="touch" on the root) ---- */
+
+.slate-root[data-input="touch"] .slate-alarm__crew {
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap-cell);
+}
+
+.slate-root[data-input="touch"] .slate-alarm__lead {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-alarm__skip {
+  min-height: var(--slate-tap-cell);
+  padding: 0 var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"] .slate-alarm__fix {
+  min-height: var(--slate-tap);
+}

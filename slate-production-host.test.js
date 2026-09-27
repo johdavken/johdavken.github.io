@@ -220,7 +220,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   const railItems = hostEl.querySelectorAll(".slate-rail__sections [data-section]");
   const listed = railItems.filter(item => !item.hasAttribute("hidden")).map(item => item.getAttribute("data-section"));
   // With a mouse the Recipe Book opens under the Recipe's tabs and Weights is its third tab, not the rail's.
-  assert.deepEqual(listed, ["recipe", "resin-balance", "guide", "pressure", "winding-tension"], "the sections are Recipe, Resin Balance, How to Use, with the two calculators in the Tools menu after");
+  assert.deepEqual(listed, ["recipe", "resin-balance", "guide", "pressure", "winding-tension", "work-alarm"], "the sections are Recipe, Resin Balance, How to Use, with the two calculators and the Work Alarm in the Tools menu after");
   // The administrator's three are built with the rest and stand unlisted:
   // no administrator is signed in on this boot (no producer connects the
   // admin bridge), so they are not on the rail and the rule above them is
@@ -232,7 +232,7 @@ test("with the bridges connected, the hosted boot draws the recipe, the cards, t
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(hostEl.querySelector(`.slate-centre .slate-section[data-section='${id}']`), `${id} was not mounted in the centre`);
   }
-  assert.deepEqual(hostEl.querySelectorAll(".slate-rail__menu [data-section]").map(item => item.getAttribute("data-section")), ["pressure", "winding-tension"]);
+  assert.deepEqual(hostEl.querySelectorAll(".slate-rail__menu[data-menu='tools'] [data-section]").map(item => item.getAttribute("data-section")), ["pressure", "winding-tension", "work-alarm"]);
   const toolItem = hostEl.querySelector(".slate-rail__sections [data-section='resin-balance']");
   toolItem.dispatchEvent({ type: "click", target: toolItem, stopPropagation() {} });
   assert.ok(timelineWrap.hasAttribute("hidden") && !balanceWrap.hasAttribute("hidden"), "selecting the tool did not swap the aside");
