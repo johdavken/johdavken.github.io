@@ -12,5 +12,17 @@
         "30:64:8C:5E:B5:7B:4E:2F:AA:66:3B:06:50:E3:67:4D:76:B9:F8:AA:19:9D:D6:9D:4C:50:2C:E5:4D:36:CC:35"
       ]
     }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "tools.resin.app.slatepreview",
+      "sha256_cert_fingerprints": [
+        "55:9F:2D:13:D4:C7:8A:92:DB:7E:CC:F2:83:BF:49:03:14:94:DB:46:20:08:BE:34:FF:93:6C:19:C3:53:C8:E0"
+      ]
+    }
   }
 ]

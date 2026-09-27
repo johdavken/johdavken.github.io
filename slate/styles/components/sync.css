@@ -350,6 +350,31 @@
   letter-spacing: 0.2em;
 }
 
+/* The code's time and New code, on one line under it. */
+.slate-sync__code-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slate-space-2);
+  margin-top: var(--slate-space-1);
+}
+
+/* A code past its time: struck through and faded, its QR too, so no one
+   scans what will be refused. */
+.slate-sync__join-code[data-expired] .slate-sync__code {
+  color: var(--slate-text-disabled);
+  text-decoration: line-through;
+}
+
+.slate-sync__join-code[data-expired] .slate-sync__expires {
+  color: var(--slate-warning);
+}
+
+.slate-sync__join-code[data-expired] .slate-sync__qr-image {
+  opacity: 0.25;
+}
+
 .slate-sync__qr-image {
   width: 160px;
   margin-top: var(--slate-space-2);
