@@ -83,6 +83,23 @@
   min-width: 0;
 }
 
+/* An open search stands above everything around it. A cell or a layer
+   can become a stacking context of its own - a cell while it flashes an
+   update or enters (an animation holding transform or opacity), a Grid
+   Top column by its container query - and then the next one along
+   paints over a list its z-index cannot lift out. So while a list is
+   open, its cell and its layer are raised over their neighbours. A
+   drafting recipe keeps a closed, hidden list in every cell: only the
+   open one counts. */
+.slate-root .slate-hopper:has(.slate-combobox__list:not([hidden])) {
+  z-index: 20;
+}
+
+.slate-root .slate-layer:has(.slate-combobox__list:not([hidden])) {
+  position: relative;
+  z-index: 20;
+}
+
 .slate-combobox__list {
   position: absolute;
   top: 100%;
