@@ -49,7 +49,7 @@ function boot(status, options) {
   const settings = options || {};
   const doc = makeDocument();
   const connection = status === null ? null : makeConnection(status, settings.answers);
-  const view = sync.create(doc, { connection, admin: settings.admin || null, lineIdentity: settings.lineIdentity || null });
+  const view = sync.create(doc, { connection, admin: settings.admin || null, lineIdentity: settings.lineIdentity || null, now: settings.now, timers: settings.timers });
   doc.body.appendChild(view.element);
   return { doc, connection, view };
 }
@@ -290,4 +290,62 @@ test("the status stands beside the logo's streams, which carry its key", () => {
   click(none.view.trigger);
   assert.equal(none.view.panel.querySelector(".slate-sync__numeral"), null);
   assert.ok(!none.view.panel.children[0].classList.contains("is-numbered"));
+});
+
+test("a shown join code offers New code, which mints another and draws its QR; a code past its time says so, faded, and New code leads", async () => {
+  const at = Date.UTC(2026, 8, 26, 23, 0, 0);
+  let clock = at;
+  const pending = [];
+  const timers = { setTimeout(fn, ms) { pending.push({ fn, ms }); return pending.length; }, clearTimeout(id) { if (pending[id - 1]) pending[id - 1].fn = null; } };
+  const codeFor = (code, minutes) => ({ code, expiresAt: new Date(at + minutes * 60e3).toISOString(), url: "" });
+
+  assert.equal(sync.isExpired("", at), false);
+  assert.equal(sync.isExpired(new Date(at + 1).toISOString(), at), false);
+  assert.equal(sync.isExpired(new Date(at).toISOString(), at), true);
+  assert.equal(sync.isExpired("not a date", at), false);
+
+  const { view, connection } = boot(statusOf({ joinCode: codeFor("K7Q2", 15) }), {
+    now: () => clock, timers,
+    answers: { generateJoinCode: () => { connection.set(statusOf({ joinCode: codeFor("ZX90", 30) })); return { ok: true }; }, renderJoinQr: { ok: true, code: "ZX90", svg: "<svg id='new'></svg>" } }
+  });
+  click(view.trigger);
+  const section = () => view.panel.querySelector(".slate-sync__join-code");
+  assert.equal(view.panel.querySelector(".slate-sync__code").textContent, "K7Q2");
+  assert.match(view.panel.querySelector(".slate-sync__expires").textContent, /^Expires /);
+  assert.ok(!section().hasAttribute("data-expired"));
+  const renew = view.panel.querySelector("[data-action='newJoinCode']");
+  assert.equal(renew.textContent, "New code");
+  assert.equal(renew.hasAttribute("disabled"), false);
+  assert.ok(!renew.classList.contains("slate-sync__button--primary"));
+
+  // The panel redraws itself when the code runs out.
+  const armed = pending.filter(one => one.fn);
+  assert.equal(armed.length, 1, "no redraw was set for the code's expiry");
+  assert.equal(armed[0].ms, 15 * 60e3 + 250);
+  clock = at + 15 * 60e3 + 250;
+  const fire = armed[0].fn;
+  armed[0].fn = null;
+  fire();
+  assert.ok(section().hasAttribute("data-expired"));
+  assert.match(view.panel.querySelector(".slate-sync__expires").textContent, /^Expired .* make a new code to try again$/);
+  assert.ok(view.panel.querySelector("[data-action='newJoinCode']").classList.contains("slate-sync__button--primary"));
+  assert.equal(pending.filter(one => one.fn).length, 0, "an expired code set another redraw");
+
+  // New code: mint, then draw.
+  click(view.panel.querySelector("[data-action='newJoinCode']"));
+  await settle();
+  await settle();
+  assert.deepEqual(connection.requests.map(one => one.name), ["generateJoinCode", "renderJoinQr"]);
+  assert.equal(view.panel.querySelector(".slate-sync__code").textContent, "ZX90");
+  assert.equal(view.panel.querySelector(".slate-sync__qr-image").innerHTML, "<svg id='new'></svg>");
+  assert.ok(!section().hasAttribute("data-expired"));
+
+  // Closing clears the redraw.
+  view.close(false);
+  assert.equal(pending.filter(one => one.fn).length, 0, "the redraw outlived the panel");
+
+  // Withheld while the bridge says no device can be added.
+  const off = boot(statusOf({ joinCode: codeFor("K7Q2", 15), can: { addDevice: false } }), { now: () => at, timers });
+  click(off.view.trigger);
+  assert.ok(off.view.panel.querySelector("[data-action='newJoinCode']").hasAttribute("disabled"));
 });

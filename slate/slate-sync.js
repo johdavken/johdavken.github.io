@@ -70,6 +70,13 @@
     }
   }
 
+  /* Whether a join code's time is up. Pure, and exported. */
+  function isExpired(expiresAt, at) {
+    if (!expiresAt) return false;
+    const when = new Date(expiresAt).getTime();
+    return Number.isFinite(when) && when <= at;
+  }
+
   /* The trigger's words. Pure, and exported. */
   function summarize(status) {
     if (!status) return null;
@@ -136,6 +143,19 @@
     const connection = settings.connection || null;
     const admin = settings.admin || null;
     const identityModule = settings.lineIdentity || null;
+    const now = typeof settings.now === "function" ? settings.now : () => Date.now();
+    // A timer that redraws the open panel when the shown code runs out, so
+    // "Expires" turns to "Expired" without a status to prompt it.
+    const timers = settings.timers || (typeof globalThis !== "undefined" ? globalThis : null);
+    let expiryTimer = null;
+    function scheduleExpiry(expiresAt) {
+      if (expiryTimer !== null && timers && typeof timers.clearTimeout === "function") timers.clearTimeout(expiryTimer);
+      expiryTimer = null;
+      if (!expiresAt || !state.open || !timers || typeof timers.setTimeout !== "function") return;
+      const wait = new Date(expiresAt).getTime() - now();
+      if (!Number.isFinite(wait) || wait <= 0 || wait > 24 * 3600e3) return;
+      expiryTimer = timers.setTimeout(() => { expiryTimer = null; if (state.open) renderPanel(); }, wait + 250);
+    }
     // The conflict question (slate-conflict.js): registered with the
     // bridge here, since this is the one file that speaks to it.
     const conflict = settings.conflict && typeof settings.conflict.ask === "function" ? settings.conflict : null;
@@ -231,6 +251,7 @@
 
     function renderPanel() {
       clear(panel);
+      scheduleExpiry("");
       const status = state.status;
       if (!status) return;
       const busy = !!state.pending || !!(status.busy && status.busy.active);
@@ -329,7 +350,16 @@
         code.appendChild(text(doc, "h3", "slate-sync__heading", "Add a device"));
         const value = state.qr ? state.qr.code : status.joinCode.code;
         code.appendChild(text(doc, "p", "slate-sync__code", value));
-        if (status.joinCode && status.joinCode.expiresAt) code.appendChild(text(doc, "p", "slate-sync__expires", `Expires ${formatWhen(status.joinCode.expiresAt)}`));
+        // A code is good for a while, then refused: said here, rather than
+        // left looking live, and a new one is one press away.
+        const expiresAt = status.joinCode && status.joinCode.expiresAt ? status.joinCode.expiresAt : "";
+        const expired = isExpired(expiresAt, now());
+        if (expired) code.setAttribute("data-expired", "");
+        const foot = element(doc, "div", "slate-sync__code-foot");
+        if (expiresAt) foot.appendChild(text(doc, "p", "slate-sync__expires", expired ? `Expired ${formatWhen(expiresAt)} · make a new code to try again` : `Expires ${formatWhen(expiresAt)}`));
+        foot.appendChild(button("New code", expired ? "slate-sync__button--primary" : "", addDevice, { enabled: !!can.addDevice && !busy, action: "newJoinCode" }));
+        code.appendChild(foot);
+        scheduleExpiry(expired ? "" : expiresAt);
         if (state.qr) {
           const image = element(doc, "div", "slate-sync__qr-image", { "aria-label": `QR code for ${state.qr.code}`, role: "img" });
           // The bridge's SVG is the application's own drawing of a code it minted.
@@ -442,6 +472,7 @@
     function close(refocus) {
       if (!state.open) return;
       state.open = false;
+      scheduleExpiry("");
       state.leaving = false;
       state.joining = false;
       state.relabelling = false;
@@ -479,5 +510,5 @@
     return Object.freeze({ element: rootEl, panel, trigger, open, close, update, isOpen: () => state.open, status: () => state.status });
   }
 
-  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, lineFacts, offersLines, guidance, formatWhen, create });
+  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, lineFacts, isExpired, offersLines, guidance, formatWhen, create });
 });
