@@ -195,10 +195,10 @@
       ["smoke", "Smoke", "Grey smoke drifting across."],
       ["ember", "Ember", "Warm amber smoke."],
       ["tide", "Tide", "Cool blue-green smoke."],
-      ["aurora", "Aurora", "Ribbons of green and violet."],
       ["dunes", "Dunes", "Soft sand ridges."],
       ["hearth", "Hearth", "Made for Gruvbox: warm lights out of focus."],
-      ["horizon", "Horizon", "Made for Retro 82: a striped sun behind a grid."]
+      ["horizon", "Horizon", "Made for Retro 82: a striped sun behind a grid."],
+      ["solitude", "Solitude", "Made for Solitude: ridges in fog, a low red sun."]
     ]) {
       const button = element(doc, "button", "slate-settings__mode slate-settings__background", { type: "button", role: "radio", "aria-checked": "false", "data-background-choice": choice });
       button.appendChild(element(doc, "span", "slate-settings__background-preview", { "aria-hidden": "true", "data-background": choice }));

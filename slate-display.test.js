@@ -85,10 +85,12 @@ test("the tracking mode is one of three words, defaults to automatic, persists b
 });
 
 test("the background is none or one of seven pictures, defaults to none, persists beside the others, and an old record without it reads none", () => {
-  assert.deepEqual(display.BACKGROUNDS, ["none", "smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"]);
+  assert.deepEqual(display.BACKGROUNDS, ["none", "smoke", "ember", "tide", "dunes", "hearth", "horizon", "solitude"]);
   assert.equal(display.DEFAULTS.background, "none");
   assert.equal(display.normalize({ background: "ember" }).background, "ember");
   assert.equal(display.normalize({ background: "sunset" }).background, "none");
+  // Aurora was retired for Solitude: a device that saved it reads none.
+  assert.equal(display.normalize({ background: "aurora" }).background, "none");
   assert.equal(display.backgroundOf("TIDE"), "none");
   const saved = storage();
   const controller = display.create(node(), saved);
@@ -115,7 +117,7 @@ test("Settings offers None and the seven pictures as radios after Appearance, ea
   assert.ok(choices.every(one => one.getAttribute("role") === "radio"));
   assert.equal(choices.length % 2, 0, "an odd number of backgrounds leaves the grid ragged");
   assert.deepEqual(choices.map(one => one.getAttribute("aria-checked")), display.BACKGROUNDS.map(id => (id === "none" ? "true" : "false")), "None is the default");
-  assert.deepEqual(choices.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["None", "Smoke", "Ember", "Tide", "Aurora", "Dunes", "Hearth", "Horizon"]);
+  assert.deepEqual(choices.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["None", "Smoke", "Ember", "Tide", "Dunes", "Hearth", "Horizon", "Solitude"]);
   assert.deepEqual(choices.map(one => one.querySelector(".slate-settings__background-preview").getAttribute("data-background")), [...display.BACKGROUNDS]);
   assert.match(view.background("hearth").textContent, /Made for Gruvbox/);
   assert.match(view.background("horizon").textContent, /Made for Retro 82/);

@@ -25,11 +25,6 @@
   --slate-background-image: url("../../images/backgrounds/tide.jpg");
 }
 
-.slate-root[data-background="aurora"],
-.slate-settings__background-preview[data-background="aurora"] {
-  --slate-background-image: url("../../images/backgrounds/aurora.jpg");
-}
-
 .slate-root[data-background="dunes"],
 .slate-settings__background-preview[data-background="dunes"] {
   --slate-background-image: url("../../images/backgrounds/dunes.jpg");
@@ -45,6 +40,12 @@
 .slate-root[data-background="horizon"],
 .slate-settings__background-preview[data-background="horizon"] {
   --slate-background-image: url("../../images/backgrounds/horizon.jpg");
+}
+
+/* Made for Solitude. */
+.slate-root[data-background="solitude"],
+.slate-settings__background-preview[data-background="solitude"] {
+  --slate-background-image: url("../../images/backgrounds/solitude.jpg");
 }
 
 .slate-root[data-background]:not([data-background="none"])::after {

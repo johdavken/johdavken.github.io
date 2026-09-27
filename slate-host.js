@@ -89,6 +89,8 @@
     "slate/styles/themes/retro-82-dark.css",
     "slate/styles/themes/ristretto-light.css",
     "slate/styles/themes/ristretto-dark.css",
+    "slate/styles/themes/solitude-light.css",
+    "slate/styles/themes/solitude-dark.css",
     "slate/styles/base.css",
     "slate/styles/shell.css",
     "slate/styles/components/rail.css",
@@ -180,7 +182,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.55.2";
+  const VERSION = "0.55.3";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a
