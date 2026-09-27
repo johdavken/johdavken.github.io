@@ -9339,6 +9339,9 @@
     url.search = "";
     url.hash = "";
     url.searchParams.set("rtSyncCode", code);
+    // A browser that scans the QR opens Slate, a phone's included; the
+    // Android app reads only the code from the link (openRtSyncJoinFromUrl).
+    url.searchParams.set("view", "slate");
     return url.toString();
   }
 
