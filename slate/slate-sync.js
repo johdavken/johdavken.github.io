@@ -89,6 +89,59 @@
     return { line, state, devices, text: [line, state, devices].filter(Boolean).join(" · ") };
   }
 
+  /* The trigger's ring: the live mark's ring in miniature (slate-logo.js),
+   * the line's number in the middle, twenty ticks round it, one lit per
+   * device from the top - this device first, in the accent - and an arc
+   * that runs round while changes move. */
+  const GAUGE_TICKS = 20;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  /* Which ticks are lit, from the top: "this" for this device, "other"
+   * for the rest. Pure, and exported. */
+  function gaugeTicks(status) {
+    if (!status || !status.assigned) return [];
+    const devices = Array.isArray(status.devices) ? status.devices : [];
+    const count = Math.min(GAUGE_TICKS, Math.max(Number.isInteger(status.deviceCount) ? status.deviceCount : 0, devices.length));
+    const here = devices.some(one => one && one.thisDevice);
+    return Array.from({ length: count }, (_, index) => (here && index === 0 ? "this" : "other"));
+  }
+
+  function svgNode(doc, name, attributes) {
+    const node = doc.createElementNS(SVG_NS, name);
+    for (const key of Object.keys(attributes)) node.setAttribute(key, attributes[key]);
+    return node;
+  }
+
+  function createGauge(doc) {
+    const box = element(doc, "span", "slate-sync__gauge", { "aria-hidden": "true" });
+    const svg = svgNode(doc, "svg", { class: "slate-sync__ring", viewBox: "0 0 28 28", focusable: "false" });
+    const ticks = [];
+    for (let index = 0; index < GAUGE_TICKS; index += 1) {
+      const angle = (index / GAUGE_TICKS) * 2 * Math.PI - Math.PI / 2;
+      const at = radius => [(14 + Math.cos(angle) * radius).toFixed(2), (14 + Math.sin(angle) * radius).toFixed(2)];
+      const [x1, y1] = at(10.5);
+      const [x2, y2] = at(13.5);
+      const tick = svgNode(doc, "line", { class: "slate-sync__tick", x1, y1, x2, y2 });
+      svg.appendChild(tick);
+      ticks.push(tick);
+    }
+    svg.appendChild(svgNode(doc, "circle", { class: "slate-sync__arc", cx: "14", cy: "14", r: "12", fill: "none" }));
+    box.appendChild(svg);
+    const number = text(doc, "span", "slate-sync__gauge-number", "");
+    box.appendChild(number);
+
+    function update(mark) {
+      const value = mark.lineNumber === null ? "–" : String(mark.lineNumber);
+      if (number.textContent !== value) number.textContent = value;
+      box.classList.toggle("is-wide", value.length > 1);
+      ticks.forEach((tick, index) => {
+        const lit = mark.lit[index];
+        tick.setAttribute("class", lit ? `slate-sync__tick is-lit${lit === "this" ? " is-this-device" : ""}` : "slate-sync__tick");
+      });
+    }
+    return Object.freeze({ element: box, update });
+  }
+
   function administrator(admin) {
     if (!admin || typeof admin.getAccess !== "function") return false;
     const access = admin.getAccess();
@@ -166,9 +219,9 @@
 
     const rootEl = element(doc, "div", "slate-sync", { hidden: "" });
     const trigger = element(doc, "button", "slate-sync__trigger", { type: "button", "aria-haspopup": "dialog", "aria-expanded": "false" });
-    const dot = element(doc, "span", "slate-sync__dot", { "aria-hidden": "true" });
+    const gauge = createGauge(doc);
     const triggerText = text(doc, "span", "slate-sync__summary", "");
-    trigger.appendChild(dot);
+    trigger.appendChild(gauge.element);
     trigger.appendChild(triggerText);
     rootEl.appendChild(trigger);
 
@@ -443,9 +496,14 @@
       const summary = summarize(state.status);
       show(rootEl, !!summary);
       if (!summary) return;
-      triggerText.textContent = summary.text;
-      dot.setAttribute("data-state", state.status.status ? state.status.status.key : "");
+      const status = state.status;
+      const number = status.assigned && status.line && Number.isInteger(status.line.lineNumber) ? status.line.lineNumber : null;
+      trigger.setAttribute("data-state", status.status ? status.status.key : "");
+      gauge.update({ lineNumber: number, lit: status.assigned ? gaugeTicks(status) : [] });
+      // The number stands in the ring; a line without one is named.
+      triggerText.textContent = number === null && status.assigned ? `${summary.line} · ${summary.state}` : summary.state;
       trigger.setAttribute("title", `RT Sync — ${summary.text}`);
+      trigger.setAttribute("aria-label", `RT Sync — ${summary.text}`);
     }
 
     function render() {
@@ -510,5 +568,5 @@
     return Object.freeze({ element: rootEl, panel, trigger, open, close, update, isOpen: () => state.open, status: () => state.status });
   }
 
-  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, lineFacts, isExpired, offersLines, guidance, formatWhen, create });
+  return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, gaugeTicks, lineFacts, isExpired, offersLines, guidance, formatWhen, create });
 });

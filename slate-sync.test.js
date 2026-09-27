@@ -68,8 +68,10 @@ test("the trigger summarises the line, the status and the devices; with no statu
 
   const { view } = boot(statusOf());
   assert.ok(!view.element.hasAttribute("hidden"));
-  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Line 5 · Synced · 2 devices");
-  assert.equal(view.trigger.querySelector(".slate-sync__dot").getAttribute("data-state"), "synced");
+  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Synced");
+  assert.equal(view.trigger.querySelector(".slate-sync__gauge-number").textContent, "5");
+  assert.equal(view.trigger.getAttribute("data-state"), "synced");
+  assert.equal(view.trigger.getAttribute("aria-label"), "RT Sync — Line 5 · Synced · 2 devices");
   assert.equal(view.trigger.getAttribute("aria-haspopup"), "dialog");
 
   const none = boot(null);
@@ -77,6 +79,36 @@ test("the trigger summarises the line, the status and the devices; with no statu
   const harness = boot(undefined);
   harness.connection.set(null);
   assert.ok(harness.view.element.hasAttribute("hidden"));
+});
+
+test("the trigger's ring: the number in the middle, a lit tick per device from the top with this device first, the line named when it has no number", () => {
+  assert.deepEqual(sync.gaugeTicks(statusOf()), ["this", "other"]);
+  assert.deepEqual(sync.gaugeTicks(statusOf({ devices: [{ thisDevice: false }], deviceCount: 3 })), ["other", "other", "other"]);
+  assert.deepEqual(sync.gaugeTicks(statusOf({ deviceCount: 40 })).length, 20);
+  assert.deepEqual(sync.gaugeTicks(statusOf({ assigned: false })), []);
+  assert.deepEqual(sync.gaugeTicks(null), []);
+
+  const { view, connection } = boot(statusOf());
+  const ticks = view.trigger.querySelectorAll(".slate-sync__tick");
+  assert.equal(ticks.length, 20);
+  assert.ok(ticks[0].classList.contains("is-lit") && ticks[0].classList.contains("is-this-device"));
+  assert.ok(ticks[1].classList.contains("is-lit") && !ticks[1].classList.contains("is-this-device"));
+  assert.ok(!ticks[2].classList.contains("is-lit"));
+  assert.ok(view.trigger.querySelector(".slate-sync__gauge").getAttribute("aria-hidden") === "true");
+
+  connection.set(statusOf({ line: { workspaceId: "ws-1", name: "line-12", lineNumber: 12, displayName: "Line 12", role: "member" } }));
+  assert.equal(view.trigger.querySelector(".slate-sync__gauge-number").textContent, "12");
+  assert.ok(view.trigger.querySelector(".slate-sync__gauge").classList.contains("is-wide"));
+
+  connection.set(statusOf({ line: { workspaceId: "ws-1", name: "pilot", lineNumber: null, displayName: "Pilot", role: "member" } }));
+  assert.equal(view.trigger.querySelector(".slate-sync__gauge-number").textContent, "–");
+  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Pilot · Synced");
+
+  connection.set(statusOf({ assigned: false, line: null, deviceCount: 0, devices: [], status: { key: "local", label: "Local only", pendingCount: 0 } }));
+  assert.equal(view.trigger.querySelector(".slate-sync__gauge-number").textContent, "–");
+  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Local only");
+  assert.equal(view.trigger.getAttribute("data-state"), "local");
+  assert.equal(view.trigger.querySelectorAll(".slate-sync__tick.is-lit").length, 0);
 });
 
 test("the panel opens on the trigger, leads with the Line Identity, and closes on Escape, Close or an outside press", () => {
@@ -243,7 +275,8 @@ test("a failed request shows the application's message; a status change redraws 
   const input = view.panel.querySelector(".slate-sync__inline .slate-sync__input");
   input.value = "typing";
   connection.set(statusOf({ status: { key: "syncing", label: "Syncing", pendingCount: 1 } }));
-  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Line 5 · Syncing (1) · 2 devices");
+  assert.equal(view.trigger.querySelector(".slate-sync__summary").textContent, "Syncing (1)");
+  assert.equal(view.trigger.getAttribute("aria-label"), "RT Sync — Line 5 · Syncing (1) · 2 devices");
   assert.ok(view.panel.querySelector(".slate-sync__inline .slate-sync__input") === input, "the form was rebuilt under the operator");
   assert.equal(input.value, "typing");
 });
