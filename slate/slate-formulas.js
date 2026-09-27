@@ -78,8 +78,9 @@
     Object.freeze({ key: "width", label: "From the film", formula: FILM_FORMULA })
   ]);
   const CHECK_TITLE = "Weighed set check";
-  const CHECK_PROMPT = "Weigh a set and fill in From the rolls. With the film's width and mil, it works back to the density and gauge the set really has.";
-  const CHECK_NEEDS_WIDTH = "Add the film's width on the roll - and its mil - to work back from the rolls.";
+  /* What the check waits for, naming the boxes as they are labelled. */
+  const CHECK_PROMPT = "Enter a weighed set in From the rolls.";
+  const CHECK_NEEDS_WIDTH = "Now fill in Width and Thickness under From the film.";
   /* What the "?" says: a heading and its lines, in order. */
   const INFO = Object.freeze([
     Object.freeze({ heading: "From the rolls", lines: Object.freeze([
