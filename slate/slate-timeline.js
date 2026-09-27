@@ -182,15 +182,26 @@
     return parts.join(" · ");
   }
 
-  /** The counts line: "5 tracked · 1 overdue · 1 off". */
+  /** The counts line: "5 tracked · 1 late · 1 off" ("late", as the
+   * late-for-pump-off banner says it and the head's numeral is labelled). */
   function countsFor(entries) {
     const list = Array.isArray(entries) ? entries : [];
     const parts = [`${list.length} tracked`];
     const overdue = list.filter(entry => entry.overdue).length;
     const off = list.filter(entry => entry.pumpOff).length;
-    if (overdue > 0) parts.push(`${overdue} overdue`);
+    if (overdue > 0) parts.push(`${overdue} late`);
     if (off > 0) parts.push(`${off} off`);
     return parts.join(" · ");
+  }
+
+  /** The head's three numerals: tracked, late, off. Pure. */
+  function tallyFor(entries) {
+    const list = Array.isArray(entries) ? entries : [];
+    return {
+      tracked: list.length,
+      late: list.filter(entry => entry.overdue).length,
+      off: list.filter(entry => entry.pumpOff).length
+    };
   }
 
   /** The changeover line: what the head says about the deadline. */
@@ -199,6 +210,24 @@
     if (changeover.stale) return `Confirm changeover · ${rundownModule.formatClock(changeover.at)}`;
     const remaining = changeover.at - now;
     return `Changeover ${rundownModule.formatClock(changeover.at)} · ${remaining < 0 ? "passed" : `in ${rundownModule.formatRemaining(remaining)}`}`;
+  }
+
+  /**
+   * The changeover as the head's figure: the clock's digits and its
+   * AM/PM apart (none on a 24-hour clock); what leads - the time left
+   * ("11h 35m"), "Passed", "Confirm" or "Not set" - and the word and clock
+   * beside it ("to changeover" / "6:17 PM"). Pure.
+   */
+  function changeoverFigure(changeover, now) {
+    if (!changeover || !Number.isFinite(changeover.at)) return { digits: "–:––", suffix: "", left: "Not set", word: "Changeover", clock: "" };
+    const clockText = rundownModule.formatClock(changeover.at);
+    const split = /^(.*?\d)\s*([^\d\s][^\d]*)$/.exec(clockText);
+    const digits = split ? split[1] : clockText;
+    const suffix = split ? split[2].trim() : "";
+    if (changeover.stale) return { digits, suffix, left: "Confirm", word: "Changeover", clock: clockText };
+    const remaining = changeover.at - now;
+    if (remaining < 0) return { digits, suffix, left: "Passed", word: "Changeover", clock: clockText };
+    return { digits, suffix, left: rundownModule.formatRemaining(remaining), word: "to changeover", clock: clockText };
   }
 
   /**
@@ -242,16 +271,28 @@
     const clock = text(doc, "span", "slate-timeline__clock", "");
     head.appendChild(clock);
     rootEl.appendChild(head);
+    /* The countdown leads (option 2 of the head study): the title and the
+     * clock as one small label, then the time left to the changeover large
+     * in the display face with the changeover's own time beside it, then a
+     * foot of the counts at the left and the scale at the right - 3H, 6H,
+     * 12H and Scaled's mark alone. The changeover's sentence is said to
+     * assistive tech and not shown twice. */
+    const changeoverBlock = element(doc, "div", "slate-timeline__changeover-block", { "aria-hidden": "true" });
+    const changeoverLeft = text(doc, "p", "slate-timeline__changeover-left", "");
+    changeoverBlock.appendChild(changeoverLeft);
+    const figureSide = element(doc, "p", "slate-timeline__figure-side");
+    const figureWord = text(doc, "span", "slate-timeline__figure-word", "");
+    figureSide.appendChild(figureWord);
+    const figureClock = text(doc, "span", "slate-timeline__figure-clock", "");
+    figureSide.appendChild(figureClock);
+    changeoverBlock.appendChild(figureSide);
+    rootEl.appendChild(changeoverBlock);
     const changeoverLine = text(doc, "p", "slate-timeline__changeover-line", "");
     rootEl.appendChild(changeoverLine);
-    const counts = text(doc, "p", "slate-timeline__counts", "");
-    rootEl.appendChild(counts);
-    /* The scale, on a line of its own under the counts. It stood in the
-     * head and was withheld whenever the axis fitted the changeover -
-     * which is most of a shift, so the operator had no say in it. Scaled
-     * is now one of the four choices and the control stays; four choices
-     * and a title do not share 300px of aside, and a line of its own is
-     * a height that never moves as the counts grow. */
+
+    const foot = element(doc, "div", "slate-timeline__foot");
+    const counts = element(doc, "p", "slate-timeline__counts");
+    foot.appendChild(counts);
     const scaleRow = element(doc, "div", "slate-timeline__scale-row");
     const scale = element(doc, "div", "slate-timeline__scale", { role: "group", "aria-label": "How far ahead the timeline looks" });
     const rangeButtons = new Map();
@@ -266,14 +307,15 @@
       type: "button",
       "data-window": layoutModule.SCALED,
       "aria-pressed": "false",
+      "aria-label": "Scaled",
       title: SCALED_HINT
     });
     scaledButton.appendChild(fitGlyph(doc));
-    scaledButton.appendChild(text(doc, "span", "slate-timeline__range-word", "Scaled"));
     rangeButtons.set(layoutModule.SCALED, scaledButton);
     scale.appendChild(scaledButton);
     scaleRow.appendChild(scale);
-    rootEl.appendChild(scaleRow);
+    foot.appendChild(scaleRow);
+    rootEl.appendChild(foot);
     // The pump-off alarm: this device's own sound, vibration and
     // notifications (the application's), switched through the tracking
     // seam. Offered under a finger (timeline.css), where the floor UI
@@ -644,6 +686,19 @@
 
     /* ---- Abilities ---- */
 
+    // The counts, each tinted by what it counts (late the overdue colour,
+    // off the pump-off one); their text is the counts sentence, whole.
+    function paintCounts(sentence, tallied) {
+      if (counts.textContent === sentence) return;
+      clear(counts);
+      if (!sentence) return;
+      const parts = [["tracked", `${tallied.tracked} tracked`], ["late", tallied.late ? `${tallied.late} late` : ""], ["off", tallied.off ? `${tallied.off} off` : ""]].filter(([, words]) => words);
+      parts.forEach(([key, words], index) => {
+        if (index > 0) counts.appendChild(text(doc, "span", "slate-timeline__counts-sep", " · "));
+        counts.appendChild(text(doc, "span", "slate-timeline__count", words, { "data-count": key }));
+      });
+    }
+
     // The idle line: no line, nothing tracked (in the tracking mode's
     // words), or a stale changeover.
     function paintNotice(model, tracked) {
@@ -771,13 +826,17 @@
       rootEl.setAttribute("data-scale", String(state.window.scale));
       paintScale();
       setText(changeoverLine, changeoverText(state.changeover, at));
+      const shown = changeoverFigure(state.changeover, at);
+      setText(changeoverLeft, shown.left);
+      setText(figureWord, shown.word);
+      setText(figureClock, shown.clock);
       rootEl.classList.toggle("is-stale", !!state.changeover.stale);
       rootEl.classList.toggle("is-unset", state.changeover.at === null);
 
       const tracked = entries.length;
       const idle = !model || tracked === 0;
       rootEl.classList.toggle("is-idle", idle);
-      setText(counts, idle ? "" : countsFor(entries));
+      paintCounts(idle ? "" : countsFor(entries), tallyFor(entries));
       paintNotice(model, tracked);
 
       state.view = viewNow();
@@ -1367,6 +1426,6 @@
   return Object.freeze({
     TICK_MS, RANOUT_ARM_MS, RANOUT_APPLY_LABEL, RANOUT_CONFIRM_LABEL, FALLBACK_HEIGHT, NONE_TRACKED, NONE_TRACKED_AUTOMATIC, STALE_CHANGEOVER, NO_LINE,
     TOP_INSET, BOTTOM_INSET, CHANGEOVER_INSET, GAP, CARD_PAD, CARD_HEAD, MEMBER_ROW, CARD_FACTS, DOT_X, CARD_LEFT, LEADER_INTO, leaderFor,
-    cardHeight, facts, countsFor, changeoverText, create
+    cardHeight, facts, countsFor, tallyFor, changeoverText, changeoverFigure, create
   });
 });

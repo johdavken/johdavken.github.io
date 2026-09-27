@@ -93,12 +93,27 @@ test("cardHeight sums the stylesheet's pieces; the words for facts, counts and t
   assert.equal(timelineModule.cardHeight({ members: [{}], pinned: true }), timelineModule.CARD_PAD + timelineModule.CARD_HEAD + timelineModule.MEMBER_ROW);
   assert.equal(timelineModule.facts({ weight: 400.4, durationMs: 3 * HOUR + 10 * MINUTE }), "400 lb · 3h 10m run-down");
   assert.equal(timelineModule.facts({ weight: 0, durationMs: null }), "");
-  assert.equal(timelineModule.countsFor([{ overdue: true }, { pumpOff: true }, {}]), "3 tracked · 1 overdue · 1 off");
+  assert.equal(timelineModule.countsFor([{ overdue: true }, { pumpOff: true }, {}]), "3 tracked · 1 late · 1 off");
   assert.equal(timelineModule.countsFor([]), "0 tracked");
+  assert.deepEqual(timelineModule.tallyFor([{ overdue: true }, { pumpOff: true }, {}]), { tracked: 3, late: 1, off: 1 });
+  assert.deepEqual(timelineModule.tallyFor(null), { tracked: 0, late: 0, off: 0 });
   assert.equal(timelineModule.changeoverText({ at: null, stale: false }, NOW), "Changeover not set");
   assert.match(timelineModule.changeoverText({ at: NOW + 2 * HOUR, stale: false }, NOW), /^Changeover .+ · in 2h 00m$/);
   assert.match(timelineModule.changeoverText({ at: NOW + 2 * HOUR, stale: true }, NOW), /^Confirm changeover · /);
   assert.match(timelineModule.changeoverText({ at: NOW - MINUTE, stale: false }, NOW), /passed$/);
+
+  // The figure: the clock's digits and its AM/PM apart, and what stands beside it.
+  const figure = timelineModule.changeoverFigure({ at: NOW + 2 * HOUR, stale: false }, NOW);
+  assert.equal(figure.left, "2h 00m");
+  assert.equal(`${figure.digits}${figure.suffix ? ` ${figure.suffix}` : ""}`.replace(/\s+/g, " "), rundown.formatClock(NOW + 2 * HOUR).replace(/\s+/g, " "));
+  assert.match(figure.digits, /\d$/);
+  assert.equal(timelineModule.changeoverFigure({ at: NOW + 2 * HOUR, stale: true }, NOW).left, "Confirm");
+  assert.equal(figure.word, "to changeover");
+  assert.equal(figure.clock, rundown.formatClock(NOW + 2 * HOUR));
+  const passed = timelineModule.changeoverFigure({ at: NOW - MINUTE, stale: false }, NOW);
+  assert.equal(passed.left, "Passed");
+  assert.equal(passed.word, "Changeover");
+  assert.deepEqual(timelineModule.changeoverFigure({ at: null, stale: false }, NOW), { digits: "–:––", suffix: "", left: "Not set", word: "Changeover", clock: "" });
 });
 
 /* ----------------------------------------------------------------------
@@ -173,12 +188,19 @@ test("with nothing tracked or no line the pane says so; with a job the head carr
   assert.doesNotMatch(timelineModule.NONE_TRACKED_AUTOMATIC, /Turn on Track/);
   assert.equal(qa(view, ".slate-timeline__member").length, 0);
   assert.equal(q(view, ".slate-timeline__counts").textContent, "");
+  assert.equal(qa(view, ".slate-timeline__count").length, 0, "no counts with nothing tracked");
 
   view.update(withChangeover(NOW, 4));
   assert.ok(!view.element.classList.contains("is-idle"));
   assert.ok(q(view, ".slate-timeline__notice").hasAttribute("hidden"));
   assert.equal(q(view, ".slate-timeline__clock").textContent, rundown.formatClock(NOW));
   assert.match(q(view, ".slate-timeline__changeover-line").textContent, /^Changeover .+ · in 4h 00m$/);
+  assert.equal(q(view, ".slate-timeline__changeover-left").textContent, "4h 00m");
+  assert.equal(q(view, ".slate-timeline__figure-word").textContent, "to changeover");
+  assert.equal(q(view, ".slate-timeline__figure-clock").textContent, rundown.formatClock(NOW + 4 * HOUR));
+  assert.equal(q(view, ".slate-timeline__changeover-block").getAttribute("aria-hidden"), "true");
+  assert.equal(q(view, "[data-count='tracked']").textContent, "5 tracked");
+  assert.equal(q(view, "[data-count='off']").textContent, "1 off");
   assert.match(q(view, ".slate-timeline__counts").textContent, /^5 tracked/);
   assert.match(q(view, ".slate-timeline__counts").textContent, /1 off$/);
 });
@@ -299,7 +321,9 @@ test("the scale offers three spans and Scaled; a chosen span is obeyed while the
   view.update(withChangeover(NOW, 4));
   const options = qa(view, "[data-window]");
   assert.deepEqual(options.map(option => option.getAttribute("data-window")), ["3", "6", "12", "scaled"]);
-  assert.deepEqual(options.map(option => option.textContent), ["3H", "6H", "12H", "Scaled"]);
+  assert.deepEqual(options.map(option => option.getAttribute("aria-label") || option.textContent), ["3H", "6H", "12H", "Scaled"]);
+  assert.equal(q(view, "[data-window='scaled']").textContent, "", "Scaled is its mark alone");
+  assert.ok(q(view, ".slate-timeline__foot .slate-timeline__scale"), "the scale shares the counts' row");
   assert.ok(q(view, "[data-window='scaled'] .slate-timeline__range-glyph"), "Scaled has its mark");
   assert.equal(view.element.getAttribute("data-scale"), "scaled");
 
@@ -382,7 +406,7 @@ test("what is late pins under Now in one block, most late first; what has no est
   assert.equal(qa(view, ".slate-timeline__event").length, 0);
   const chip = q(view, ".slate-timeline__chip.is-unavailable");
   assert.equal(chip.textContent, "C2 · No weight");
-  assert.match(q(view, ".slate-timeline__counts").textContent, /overdue/);
+  assert.match(q(view, ".slate-timeline__counts").textContent, /late/);
   // The first card starts under the pinned block.
   const placed = view.placed();
   assert.equal(placed.floor, placed.pinned.y + placed.pinned.height + timelineModule.GAP);

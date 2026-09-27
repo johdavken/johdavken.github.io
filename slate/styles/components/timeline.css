@@ -5,26 +5,37 @@
 
 /* ---- Head ---- */
 
+/* The title and the clock as one small label over the countdown. */
 .slate-timeline__head {
   display: flex;
   align-items: baseline;
-  gap: var(--slate-space-2);
+  gap: 6px;
+  min-width: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .slate-timeline__title {
-  font-size: var(--slate-text-lg);
-  font-weight: 600;
+  font: inherit;
 }
 
 .slate-timeline__clock {
   color: var(--slate-text-faint);
-  font-size: var(--slate-text-sm);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.slate-timeline__clock::before {
+  content: "·";
+  margin-right: 6px;
 }
 
 /* ---- The scale: 3H, 6H, 12H, Scaled ----
-   A line of its own under the counts, so its height never moves as the
-   counts grow, and right-aligned with the clock above it. The track is the
+   At the right of the counts' row, Scaled as its mark alone. The track is the
    house segmented control (the recipe's tabs, recipe.css): a sunken bed
    with one pill lit. Scaled stands apart from the three spans - a hairline,
    then its mark and its word - because it is a different kind of choice:
@@ -32,7 +43,8 @@
 
 .slate-timeline__scale-row {
   display: flex;
-  justify-content: flex-end;
+  flex: none;
+  margin-left: auto;
 }
 
 .slate-timeline__scale {
@@ -49,8 +61,11 @@
 .slate-root .slate-timeline__range {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 1px;
-  padding: 3px var(--slate-space-2);
+  /* Snug: the four choices share the counts' row in the narrowest
+     aside (276px). */
+  padding: 3px 5px;
   border-radius: var(--slate-radius-sm);
   color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
@@ -73,14 +88,14 @@
 
 .slate-timeline__range-glyph {
   flex: none;
-  margin-right: 1px;
   opacity: 0.85;
 }
 
 /* Scaled's hairline. */
 .slate-root .slate-timeline__range.is-scaled {
   position: relative;
-  margin-left: 7px;
+  margin-left: 5px;
+  padding-inline: 5px;
 }
 
 .slate-timeline__range.is-scaled::before {
@@ -88,7 +103,7 @@
   position: absolute;
   top: 2px;
   bottom: 2px;
-  left: -4px;
+  left: -3px;
   width: var(--slate-stroke);
   background: var(--slate-border-subtle);
 }
@@ -136,25 +151,93 @@
   color: var(--slate-accent-text);
 }
 
-.slate-timeline__changeover-line {
+/* ---- The countdown and the foot ----
+   Option 2 of the head study: the time left to the changeover leads,
+   large in the display face, with the changeover's word and time beside
+   it; under it the counts at the left and the scale at the right. */
+
+.slate-timeline__changeover-block {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  min-width: 0;
+}
+
+.slate-timeline__changeover-left {
+  flex: none;
   color: var(--slate-text);
-  font-size: var(--slate-text-sm);
-  font-weight: 500;
+  font-family: var(--slate-font-display);
+  font-stretch: semi-condensed;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
-.slate-timeline.is-unset .slate-timeline__changeover-line {
-  color: var(--slate-text-faint);
-  font-weight: 400;
+.slate-timeline__figure-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-tight);
 }
 
-.slate-timeline.is-stale .slate-timeline__changeover-line {
+.slate-timeline__figure-clock {
+  color: var(--slate-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline__figure-clock:empty {
+  display: none;
+}
+
+.slate-timeline.is-unset .slate-timeline__changeover-left {
+  color: var(--slate-text-faint);
+}
+
+.slate-timeline.is-stale .slate-timeline__changeover-left,
+.slate-timeline.is-stale .slate-timeline__figure-clock {
   color: var(--slate-warning);
 }
 
+.slate-timeline__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  min-width: 0;
+}
+
 .slate-timeline__counts {
+  min-width: 0;
   color: var(--slate-text-muted);
   font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-timeline__counts-sep {
+  color: var(--slate-text-faint);
+}
+
+.slate-timeline__count[data-count="late"] {
+  color: var(--slate-overdue);
+}
+
+.slate-timeline__count[data-count="off"] {
+  color: var(--slate-pump-off);
+}
+
+/* The whole sentence, for assistive tech: the countdown says it on
+   screen. */
+.slate-timeline__changeover-line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .slate-timeline__notice {
@@ -854,7 +937,8 @@
 /* A phone: the header names the page and the job's strip carries the
    changeover, so the panel's own title and changeover line step aside. */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__title,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__changeover-line {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__clock::before,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-timeline__changeover-block {
   display: none;
 }
 
