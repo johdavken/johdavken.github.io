@@ -1,0 +1,66 @@
+/* Slate theme: Solitude Dark.
+ *
+ * Omarchy's Solitude on Slate's semantic contract: blue-black graphite
+ * surfaces, ash-white text, the palette's silver for the accent (a filled
+ * control is silver with graphite ink), and its one colour - vermilion -
+ * kept for what is overdue or wrong (the Core layer takes a clay grey
+ * rather than borrow it). Solitude has no other hues, so the
+ * statuses are its greys given the faintest tint each: sage for tracking,
+ * steel for a pumped-off hopper, sand for a warning, frost for smart
+ * weights. The only family whose accent is not a colour. Same token set
+ * as yaru-light.css.
+ */
+.slate-root[data-theme="solitude-dark"],
+.slate-theme-scope[data-theme="solitude-dark"] {
+  color-scheme: dark;
+  --slate-color-scheme: dark;
+
+  --slate-bg: #0c0e10;
+  --slate-surface: #101315;
+  --slate-surface-raised: #161a1d;
+  --slate-surface-sunken: #080a0b;
+  --slate-surface-hover: #1c2124;
+  --slate-surface-selected: #252c30;
+
+  --slate-text: #cacccc;
+  --slate-text-muted: #a5aeb4;
+  --slate-text-faint: #8d9498;
+  --slate-text-disabled: #4b4e55;
+  --slate-text-on-accent: #101315;
+
+  --slate-border-subtle: #1f2528;
+  --slate-border: #656b6f;
+  --slate-border-strong: #798186;
+  --slate-focus-ring: #d9dbdc;
+
+  --slate-accent: #a5aeb4;
+  --slate-accent-text: #bcc3c7;
+  --slate-accent-hover: #bcc3c7;
+  --slate-accent-active: #9199a0;
+  --slate-accent-soft: rgba(165, 174, 180, 0.14);
+  --slate-pump-off-soft: rgba(148, 170, 196, 0.14);
+
+  --slate-success: #a8bca0;
+  --slate-warning: #c9b896;
+  --slate-danger: #ea7659;
+  --slate-info: #9fbcc0;
+  --slate-success-soft: rgba(168, 188, 160, 0.12);
+  --slate-warning-soft: rgba(201, 184, 150, 0.12);
+  --slate-danger-soft: rgba(222, 97, 69, 0.13);
+
+  --slate-tracking: #a8bca0;
+  --slate-pump-off: #9db1c8;
+  --slate-overdue: #ea7659;
+  --slate-smart: #9fbcc0;
+
+  --slate-layer-outside: #9fbcc0;
+  --slate-layer-subskin: #a8bca0;
+  --slate-layer-core: #bf9a8c;
+  --slate-layer-inside: #9db1c8;
+  --slate-layer-single: #798186;
+
+  --slate-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --slate-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.65);
+  --slate-scrim: rgba(0, 0, 0, 0.62);
+  --slate-qr-surface: #d9dbdc;
+}

@@ -131,7 +131,7 @@ test("every asset the Slate host loads reaches www/, and nothing else under slat
 test("what the host's stylesheets draw reaches www/: every Slate background picture, resolved against its sheet; data: and external urls are left alone", () => {
   buildWww();
   const refs = stylesheetAssetReferences("slate/styles/components/background.css");
-  const backgrounds = ["smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"].map(name => `slate/images/backgrounds/${name}.jpg`);
+  const backgrounds = ["smoke", "ember", "tide", "dunes", "hearth", "horizon", "solitude"].map(name => `slate/images/backgrounds/${name}.jpg`);
   for (const file of backgrounds) {
     assert.ok(refs.includes(file), `${file} is not followed from background.css`);
     assert.ok(fs.existsSync(path.join(OUT, file)), `${file} did not reach www/ - the Android app's background would be blank`);

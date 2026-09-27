@@ -13,7 +13,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const NAMES = ["smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"];
+const NAMES = ["smoke", "ember", "tide", "dunes", "hearth", "horizon", "solitude"];
 const OUT = path.join(__dirname, "..", "..", "slate", "images", "backgrounds");
 
 (async () => {

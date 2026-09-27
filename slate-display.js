@@ -18,10 +18,12 @@
  * A soft picture behind Slate, as a translucent window shows the
  * wallpaper behind it: `none`, the default, or one of seven pictures
  * (slate/images/backgrounds, drawn by tools/slate-backgrounds) - smoke,
- * ember, tide, aurora and dunes belong to no theme; hearth is made for
- * Gruvbox and horizon for Retro 82, though any theme may wear them. The boot writes the word onto the root as
- * data-background and components/background.css lays the picture over the
- * page, faintly, with every press passing through it.
+ * ember, tide and dunes belong to no theme; hearth is made for Gruvbox,
+ * horizon for Retro 82 and solitude for Solitude, though any theme may
+ * wear them. A device that saved the retired aurora falls back to none.
+ * The boot writes the word onto the root as data-background and
+ * components/background.css lays the picture over the page, faintly,
+ * with every press passing through it.
  *
  * HANDLING
  *
@@ -115,7 +117,7 @@
   const STORAGE_KEY = "polyn.slate.display.v1";
   const DEFAULTS = Object.freeze({ background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
-  const BACKGROUNDS = Object.freeze(["none", "smoke", "ember", "tide", "aurora", "dunes", "hearth", "horizon"]);
+  const BACKGROUNDS = Object.freeze(["none", "smoke", "ember", "tide", "dunes", "hearth", "horizon", "solitude"]);
   const HANDLINGS = Object.freeze(["lift", "tilt", "float", "glow", "glass", "stamp", "neon", "still"]);
   const MEASURES = Object.freeze(["diameter", "circumference"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
