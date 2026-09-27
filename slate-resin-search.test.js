@@ -252,3 +252,18 @@ test("the click after a finger's choice is spent at the document, so it cannot o
   assert.equal((again.doc.listeners.click || []).length, 0, "a later tap's click would be eaten");
   assert.equal(opened, 0);
 });
+
+test("an open resin search is raised over its neighbours: its cell and its layer, and only the open one - a drafting recipe keeps a closed, hidden list in every cell", () => {
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "slate/styles/components/recipe-edit.css"), "utf8");
+  const rule = selector => {
+    const at = css.indexOf(`${selector} {`);
+    assert.ok(at > -1, `no rule for ${selector}`);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  assert.match(rule(".slate-root .slate-hopper:has(.slate-combobox__list:not([hidden]))"), /z-index:\s*20/);
+  const layer = rule(".slate-root .slate-layer:has(.slate-combobox__list:not([hidden]))");
+  assert.match(layer, /position:\s*relative/);
+  assert.match(layer, /z-index:\s*20/);
+  // A bare :has(.slate-combobox__list) matches every drafting cell and lifts nothing.
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ""), /:has\(\.slate-combobox__list\)/);
+});
