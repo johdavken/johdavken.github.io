@@ -43,12 +43,18 @@ test("the QR stays the existing HTTPS URL with only rtSyncCode", () => {
   assert.doesNotMatch(app, /resintools:\/\//i);
 });
 
-test("the Slate Preview debug build (tools.resin.app.slatepreview) is delegated too, for its debug key alone", () => {
+test("the Slate Preview debug build (tools.resin.app.slatepreview) is delegated too, for the debug keys alone", () => {
   const preview = assetLinks[1];
   assert.deepEqual(preview.relation, ["delegate_permission/common.handle_all_urls"]);
   assert.equal(preview.target.namespace, "android_app");
   assert.equal(preview.target.package_name, "tools.resin.app.slatepreview");
-  // The debug keystore's key, which the Resin Tools statement already lists; no release key.
-  assert.deepEqual(preview.target.sha256_cert_fingerprints, ["55:9F:2D:13:D4:C7:8A:92:DB:7E:CC:F2:83:BF:49:03:14:94:DB:46:20:08:BE:34:FF:93:6C:19:C3:53:C8:E0"]);
-  assert.ok(assetLinks[0].target.sha256_cert_fingerprints.includes(preview.target.sha256_cert_fingerprints[0]));
+  // The debug keys, no release key: ~/.config/.android/debug.keystore, which
+  // the builds sign with since 2026-09-22, then the older ~/.android one the
+  // Resin Tools statement also lists.
+  assert.deepEqual(preview.target.sha256_cert_fingerprints, [
+    "1B:0C:01:40:0D:24:9A:E4:BE:42:31:A6:9E:59:A9:4E:87:DF:06:11:85:D5:BE:4D:A1:0B:BD:17:4B:C5:D0:26",
+    "55:9F:2D:13:D4:C7:8A:92:DB:7E:CC:F2:83:BF:49:03:14:94:DB:46:20:08:BE:34:FF:93:6C:19:C3:53:C8:E0"
+  ]);
+  assert.ok(assetLinks[0].target.sha256_cert_fingerprints.includes(preview.target.sha256_cert_fingerprints[1]));
+  for (const release of assetLinks[0].target.sha256_cert_fingerprints.slice(1)) assert.ok(!preview.target.sha256_cert_fingerprints.includes(release), "a release key vouches for the preview");
 });
