@@ -230,11 +230,13 @@ test("each way shows its formula - the film's as 12 ÷ 15 - and the \"?\" beside
   click(button);
   assert.ok(!pop.hasAttribute("hidden") && view.isInfoOpen());
   assert.equal(button.getAttribute("aria-expanded"), "true");
-  assert.deepEqual(pop.querySelectorAll(".slate-formulas__info-heading").map(one => one.textContent), ["From the rolls", "From the film", "Width", "Density", "Weighed set check", "What it assumes"]);
+  assert.deepEqual(pop.querySelectorAll(".slate-formulas__info-heading").map(one => one.textContent), ["From the rolls", "From the film", "Width", "Density", "Weighed set check"]);
   const words = pop.querySelectorAll(".slate-formulas__info-line").map(one => one.textContent).join(" ");
-  for (const fact of ["after trim", "trim back into the screw", "80 in against 75 in is 6.7% heavy", "12,000 inches", "0.001 inch", "30 cubic inches to the pound", "two walls", "30 ÷ 2 = 15", "0.8", "÷ 30", "0.92", "0.95", "divided by 1,000"]) {
+  for (const fact of ["footage in feet", "after trim", "ground back into the screw", "6.7% heavy", "12,000 inches", "0.001 in", "30 cubic inches to the pound", "two walls", "30 ÷ 2", "0.8", "÷ 30", "0.92", "13.84 ÷ density"]) {
     assert.ok(words.includes(fact), `the ? does not say ${fact}`);
   }
+  // Short: a line or three a section.
+  assert.ok(words.length < 900, `the ? runs to ${words.length} characters`);
   click(button);
   assert.ok(pop.hasAttribute("hidden"), "a second press left it open");
   click(button);

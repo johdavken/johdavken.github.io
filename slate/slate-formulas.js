@@ -83,34 +83,22 @@
   /* What the "?" says: a heading and its lines, in order. */
   const INFO = Object.freeze([
     Object.freeze({ heading: "From the rolls", lines: Object.freeze([
-      "What the line actually made: the set's weight (the heaviest roll × the rolls wound together) over its length in thousands of feet.",
-      "Type the footage in feet; it is divided by 1,000 for you."
+      "What the line made: roll weight × rolls ÷ thousands of feet. Type the footage in feet."
     ]) }),
     Object.freeze({ heading: "From the film", lines: Object.freeze([
-      "What the film should weigh: width × mil × 12 ÷ 15.",
-      "12: a thousand feet is 12,000 inches, and a mil is 0.001 inch, so every inch of width and every mil is 12 cubic inches of film per 1,000 ft.",
-      "15: polyethylene near 0.92 density is about 30 cubic inches to the pound. A tube has two walls, so each inch of width is two inches of film: 30 ÷ 2 = 15.",
-      "12 ÷ 15 is the 0.8 often used as a shortcut."
+      "What the film should weigh. 12 ÷ 15 is the 0.8 shortcut.",
+      "12: 1,000 ft is 12,000 inches; at 1 mil (0.001 in) that is 12 cubic inches per inch of width.",
+      "15: PE near 0.92 is about 30 cubic inches to the pound, and a tube has two walls: 30 ÷ 2. A single web is ÷ 30."
     ]) }),
     Object.freeze({ heading: "Width", lines: Object.freeze([
-      "Use the width on the roll, after trim - the film the weighed set is.",
-      "On a line that grinds its trim back into the screw, the layflat is wider than the roll, but the trim comes back as regrind, not extra weight: the roll's film is its own width. Using the layflat overstates it by layflat ÷ roll width - 80 in against 75 in is 6.7% heavy."
+      "The roll width, after trim. With trim ground back into the screw the regrind adds no weight: an 80 in layflat on a 75 in roll reads 6.7% heavy."
     ]) }),
     Object.freeze({ heading: "Density", lines: Object.freeze([
-      "Leave Density empty for the floor's 12 ÷ 15, which is film at about 0.92.",
-      "With a density, the 15 is worked out for it: 13.84 ÷ density - 15.04 at 0.92, 14.57 at 0.95.",
-      "Traveler is the last product density given the Line rate calculator. Current and Next are the recipe's own: each resin's density from the resin database, weighted by its share of the film.",
-      "A recipe's density is offered only when every resin in it has a density in the database."
+      "Empty is 12 ÷ 15 (0.92). Given one, the 15 becomes 13.84 ÷ density. Heavy film - HDPE, white, calcium - needs one.",
+      "Traveler is the line rate calculator's last entry; Current and Next come from the resin database, when every resin has a density."
     ]) }),
     Object.freeze({ heading: "Weighed set check", lines: Object.freeze([
-      "Works backwards from a weighed set: the rolls' pounds per 1,000 ft against the film's width and mil.",
-      "Density the rolls imply: rolls ÷ (width × mil × 0.867). Worth entering as the film's density next time the product runs.",
-      "Gauge the rolls imply: rolls × 15 ÷ (width × 12), or with the film's density in the 15's place. A figure off the order means the line is running heavy or light.",
-      "Rolls vs film: how far the weighed set reads from the film's figure."
-    ]) }),
-    Object.freeze({ heading: "What it assumes", lines: Object.freeze([
-      "Layflat tubing at about 0.92 density - LDPE and LLDPE. A single web (slit sheet) is ÷ 30 instead.",
-      "Denser film - HDPE near 0.95, or filled or pigmented film - weighs a few percent more than the formula says."
+      "Works back from the rolls to the film's real density and gauge, and how far the rolls read from the film's figure."
     ]) })
   ]);
 
@@ -366,10 +354,14 @@
       const outside = dismissal(doc, node => wrap.contains(node) || pop.contains(node), () => hide());
       // Measured against what the note is laid out from: the sticky panel,
       // or on a tablet's drawer, where the panel is static, the aside.
+      // It never runs past the anchor's foot: taller, it scrolls in itself.
       function place() {
         const anchor = pop.offsetParent;
         if (!anchor || typeof button.getBoundingClientRect !== "function" || typeof anchor.getBoundingClientRect !== "function") return;
-        pop.style.top = `${Math.round(button.getBoundingClientRect().bottom - anchor.getBoundingClientRect().top + 4)}px`;
+        const box = anchor.getBoundingClientRect();
+        const top = Math.round(button.getBoundingClientRect().bottom - box.top + 4);
+        pop.style.top = `${top}px`;
+        pop.style.maxHeight = `${Math.max(120, Math.round(box.height - top - 12))}px`;
       }
       function reveal() {
         if (open) return;
