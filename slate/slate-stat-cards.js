@@ -26,8 +26,9 @@
  *
  * Each card stands in a slot of the row. A slot is a mount: the boot runs
  * a swap in the Scrap card's (slate-sections.js), so a tool small enough
- * for a card - the pressure converter - takes its place and hands it
- * back. This file knows nothing of the tool; it only leaves the slot.
+ * for a card could take its place and hand it back (none does since
+ * PSI ⇄ bar moved into Conversions, in the aside). This file knows
+ * nothing of any tool; it only leaves the slot.
  */
 (function (root, factory) {
   const rundown = typeof require === "function"
@@ -328,6 +329,7 @@
         estimate: settings.lineRate,
         storage: settings.lineRateStorage || null,
         blendDensity: () => settings.lineRate.blendDensity(lineRateModule.blendItems(current, resins())),
+        blendMissing: () => (typeof settings.lineRate.missingDensities === "function" ? settings.lineRate.missingDensities(lineRateModule.blendItems(current, resins())) : []),
         able: () => ({ ok: able(commandsFor(), "rate", guard()), reason: reason(commandsFor(), "rate", guard()) }),
         apply: lbPerHour => apply("rate", { command: COMMAND.rate, args: { lineRate: lbPerHour } }),
         say: sayOut,

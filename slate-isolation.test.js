@@ -27,7 +27,7 @@ const SLATE_FILES = [
   "slate-recipe-actions.js", "slate-plan-actions.js", "slate-book-actions.js", "slate-weight-actions.js", "slate-profile-actions.js", "slate-admin-actions.js",
   "slate-resin-search.js", "slate-recipe-draft.js", "slate-recipe-form.js", "slate-recipe-drag.js", "slate-layer-menu.js", "slate-print.js",
   "slate-recipe-book.js", "slate-weights.js", "slate-wizard.js", "slate-changeover.js", "slate-line-rate.js", "slate-time-picker.js", "slate-conflict.js", "slate-sync.js", "slate-handling-preview.js", "slate-settings.js", "slate-timeline-layout.js", "slate-runout.js", "slate-timeline.js", "slate-resin-balance.js", "slate-guide.js", "slate-weights-guide.js",
-  "slate-pressure.js", "slate-winding-tension.js", "slate-work-alarm.js",
+  "slate-formulas.js", "slate-winding-tension.js", "slate-work-alarm.js",
   "slate-workspaces.js", "slate-line-config.js", "slate-resin-db.js"
 ];
 const DISPATCHES = ["slate-tracking.js", "slate-stat-cards.js", "slate-recipe-actions.js", "slate-plan-actions.js", "slate-weight-actions.js"];

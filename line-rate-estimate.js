@@ -24,6 +24,9 @@
  * The blend average is a courtesy: the recipe's resins weighted by blend
  * and layer share, from the catalog's polymer densities, offered beside
  * the density prompt so the traveler's figure can be checked against it.
+ * Blends add by volume, so it is the weighted harmonic mean, and it is
+ * all or nothing: one resin without a density leaves no average (the same
+ * rule as product-density.js, which Formulas uses).
  */
 (function (root, factory) {
   const api = factory();
@@ -100,26 +103,50 @@
     return { lbPerHour, widthIn, lbPerHourRounded: Math.round(lbPerHour) };
   }
 
+  /* The items that weigh anything: a blend in a layer with a share. */
+  function weighted(items) {
+    return (Array.isArray(items) ? items : []).filter(item => {
+      const share = Number(item && item.share);
+      const pct = Number(item && item.pct);
+      return Number.isFinite(share) && Number.isFinite(pct) && share > 0 && pct > 0;
+    });
+  }
+
+  function hasDensity(item) {
+    const density = Number(item && item.density);
+    return item && item.density !== null && Number.isFinite(density) && density > 0;
+  }
+
   /**
-   * The recipe's density, weighted: each hopper by its blend within its
-   * layer and the layer's share of the film; a hopper whose resin has no
-   * density in the catalog is left out of the average.
-   * @param {Array<{share: number, pct: number, density: number|null}>} items
+   * The recipe's density: each hopper weighted by its blend within its
+   * layer and the layer's share of the film, the weighted harmonic mean -
+   * volumes add, densities do not. None when a weighted hopper's resin has
+   * no density in the catalog: an average that leaves a resin out is not
+   * the recipe's.
+   * @param {Array<{share: number, pct: number, density: number|null, code?: string}>} items
    * @returns {number|null}
    */
   function blendDensity(items) {
+    const list = weighted(items);
+    if (!list.length || !list.every(hasDensity)) return null;
     let weight = 0;
-    let sum = 0;
-    for (const item of Array.isArray(items) ? items : []) {
-      const share = Number(item && item.share);
-      const pct = Number(item && item.pct);
-      const density = Number(item && item.density);
-      if (!Number.isFinite(share) || !Number.isFinite(pct) || !Number.isFinite(density) || share <= 0 || pct <= 0 || density <= 0) continue;
-      const w = (share / 100) * (pct / 100);
+    let volume = 0;
+    for (const item of list) {
+      const w = (Number(item.share) / 100) * (Number(item.pct) / 100);
       weight += w;
-      sum += w * density;
+      volume += w / Number(item.density);
     }
-    return weight > 0 ? sum / weight : null;
+    return weight / volume;
+  }
+
+  /** The resins, once each in recipe order, that leave no average. */
+  function missingDensities(items) {
+    const missing = [];
+    for (const item of weighted(items)) {
+      const code = String((item && item.code) || "");
+      if (!hasDensity(item) && code && !missing.includes(code)) missing.push(code);
+    }
+    return missing;
   }
 
   /** "0.923" - three places, as densities are written. */
@@ -131,5 +158,5 @@
     return saveAnswers(storage, answers);
   }
 
-  return Object.freeze({ STORAGE_KEY, DEFAULT_ANSWERS, FIELDS, LB_PER_IN3_PER_G_CM3, PLIES, storageFrom, readAnswers, saveAnswers, validateAnswer, estimate, blendDensity, formatDensity, accept });
+  return Object.freeze({ STORAGE_KEY, DEFAULT_ANSWERS, FIELDS, LB_PER_IN3_PER_G_CM3, PLIES, storageFrom, readAnswers, saveAnswers, validateAnswer, estimate, blendDensity, missingDensities, formatDensity, accept });
 });

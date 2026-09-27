@@ -1,0 +1,405 @@
+/* Formulas: pounds per thousand feet, two ways, with a "?" that opens
+   what they mean; under them Conversions, folded - a row per quantity,
+   its name, the entry with the unit it is typed in, and the same figure
+   in the quantity's other units. The panel's chrome is the aside's
+   (panel.css). */
+
+.slate-formulas__caption {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+/* Between the head and the foot: what scrolls when it outgrows the
+   panel, as the other tools' bodies do. */
+.slate-formulas__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ---- Pounds per thousand feet: two ways, each with its answer ---- */
+
+.slate-formulas__per-thousand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  padding-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-formulas__method {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  padding: var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-sunken);
+}
+
+.slate-formulas__method-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slate-space-2);
+}
+
+.slate-formulas__formula {
+  margin-top: calc(-1 * var(--slate-space-1));
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The "?": a small round button. What it opens hangs from the
+   panel (the scrolling body would cut it; the sticky panel anchors it),
+   across the panel's inner width from just under the button - left and
+   down from it. */
+.slate-formulas__info {
+  flex: none;
+}
+
+.slate-root .slate-formulas__info-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 50%;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+@media (hover: hover) {
+  .slate-root .slate-formulas__info-button:hover {
+    border-color: var(--slate-accent);
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
+}
+
+.slate-root .slate-formulas__info-button[aria-expanded="true"] {
+  border-color: var(--slate-accent);
+  color: var(--slate-accent-text);
+}
+
+.slate-formulas__info-pop {
+  position: absolute;
+  top: 0;
+  right: var(--slate-space-3);
+  left: var(--slate-space-3);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-pop);
+}
+
+.slate-formulas__info-pop[hidden] {
+  display: none;
+}
+
+.slate-formulas__info-heading {
+  margin-top: var(--slate-space-2);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+.slate-formulas__info-heading:first-child {
+  margin-top: 0;
+}
+
+.slate-formulas__info-line {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-formulas__method-title {
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+.slate-formulas__field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5em 4.5em;
+  align-items: center;
+  column-gap: var(--slate-space-2);
+}
+
+/* The aside is narrow: a long label wraps rather than being cut. */
+.slate-formulas__field-label {
+  min-width: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-tight);
+  overflow-wrap: anywhere;
+}
+
+.slate-formulas__field-input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-formulas__field-unit {
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xs);
+  white-space: nowrap;
+}
+
+/* The density's sources: one press fills the entry. A source with
+   nothing to offer stays, dimmed, so the row never shifts. */
+.slate-formulas__sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--slate-space-1);
+}
+
+.slate-root .slate-formulas__source {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: var(--slate-space-1);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-root .slate-formulas__source:disabled {
+  border-color: var(--slate-border-subtle);
+  color: var(--slate-text-disabled);
+}
+
+@media (hover: hover) {
+  .slate-root .slate-formulas__source:not(:disabled):hover {
+    border-color: var(--slate-accent);
+    background: var(--slate-surface-hover);
+  }
+}
+
+.slate-formulas__source-label {
+  color: inherit;
+  font-size: var(--slate-text-xs);
+  opacity: 0.8;
+}
+
+.slate-formulas__source-value {
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-formulas__sources-note {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-formulas__method.is-answered .slate-formulas__answer {
+  color: var(--slate-text);
+}
+
+/* ---- Conversions, folded: a full-width heading that opens the rows ---- */
+.slate-formulas__fold {
+  margin-top: var(--slate-space-3);
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-root .slate-formulas__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: var(--slate-space-2) 0;
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  text-align: left;
+}
+
+.slate-formulas__toggle-chevron {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--slate-text-muted);
+  transform: rotate(-90deg);
+  transition: transform var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+.slate-formulas__fold.is-open .slate-formulas__toggle-chevron {
+  transform: none;
+}
+
+@media (hover: hover) {
+  .slate-formulas__toggle:not(:disabled):hover .slate-formulas__toggle-chevron {
+    color: var(--slate-text);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slate-formulas__toggle-chevron {
+    transition: none;
+  }
+}
+
+.slate-formulas__list {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--slate-space-2);
+}
+
+.slate-formulas__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-1);
+  padding: var(--slate-space-3) 0;
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+}
+
+.slate-formulas__label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The entry and, at its end, the unit it is typed in. */
+.slate-formulas__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+}
+
+.slate-formulas__input {
+  --slate-field-width: 100%;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-border);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface);
+  --slate-field-min-height: 32px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The unit: a chip that turns the entry to the quantity's next unit. */
+.slate-root .slate-formulas__unit {
+  flex: none;
+  min-width: 4em;
+  padding: var(--slate-space-1) var(--slate-space-2);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: 999px;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  text-align: center;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease), border-color var(--slate-motion-ack) var(--slate-motion-ease), color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+@media (hover: hover) {
+  .slate-root .slate-formulas__unit:hover {
+    border-color: var(--slate-accent);
+    background: var(--slate-surface-hover);
+    color: var(--slate-text);
+  }
+}
+
+/* The answer: the same figure in the other units. */
+.slate-formulas__answer {
+  color: var(--slate-text-faint);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.slate-formulas__row.is-answered .slate-formulas__answer {
+  color: var(--slate-text);
+}
+
+/* The application's refusal, under the entry it is about. */
+.slate-formulas__note {
+  color: var(--slate-danger);
+  font-size: var(--slate-text-sm);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-formulas__foot {
+  display: flex;
+  margin-top: auto;
+  padding-top: var(--slate-space-2);
+}
+
+.slate-root .slate-formulas__clear {
+  padding: var(--slate-space-1) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius-sm);
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 500;
+  transition: background-color var(--slate-motion-ack) var(--slate-motion-ease);
+}
+
+@media (hover: hover) {
+  .slate-root .slate-formulas__clear:not(:disabled):hover {
+    background: var(--slate-surface-hover);
+  }
+}
+
+/* ---- Touch (data-input="touch" on the root): the unit chip is the only
+   way to type in another unit, so it is a real target. */
+
+.slate-root[data-input="touch"] .slate-formulas__input,
+.slate-root[data-input="touch"] .slate-formulas__field-input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-formulas__unit {
+  min-width: var(--slate-tap);
+  min-height: var(--slate-tap);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"] .slate-formulas__info-button {
+  width: var(--slate-tap);
+  height: var(--slate-tap);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-root[data-input="touch"] .slate-formulas__toggle {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-formulas__source {
+  min-height: var(--slate-tap);
+}
+
+.slate-root[data-input="touch"] .slate-formulas__clear {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-4);
+}

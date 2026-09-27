@@ -250,9 +250,7 @@
    On a tablet and a phone, production and scrap leave the strip for Resin
    Balance, where they are entered in place (slate-resin-balance.js, through
    these cards' own entry). The strip keeps the changeover and the output.
-   The Scrap slot stays built but unseen, laid under the strip: a tool in
-   its place (the pressure conversion) still shows from it - a sheet on a
-   phone, a card over the page's top on a tablet. */
+   The Scrap slot stays built but unseen, laid under the strip. */
 .slate-root[data-input="touch"] .slate-cards {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -269,22 +267,6 @@
   width: min(400px, calc(100% - 2 * var(--slate-space-3)));
   margin-top: var(--slate-space-2);
   visibility: hidden;
-}
-
-.slate-root[data-input="touch"] .slate-pressure {
-  visibility: visible;
-}
-
-/* On a tablet it stands where the calculators do (wizard.css): centred
-   under the header, over the page. A phone makes it a sheet (phone.css). */
-.slate-root[data-input="touch"] .slate-pressure {
-  position: fixed;
-  top: calc(var(--slate-inset-top) + var(--slate-header-height) + var(--slate-space-3));
-  right: 0;
-  left: 0;
-  width: min(400px, calc(100vw - 2 * var(--slate-space-4)));
-  margin: 0 auto;
-  box-shadow: var(--slate-shadow-pop);
 }
 
 /* A phone keeps the changeover's countdown ("in 4h 53m") under its time:

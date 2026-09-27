@@ -33,11 +33,14 @@
   const weightProfiles = root.PolynStationWeightProfilesBridge || null;
   const rundown = root.PolynStationRundown || null;
   // The application's own arithmetic for the tools - Resin Totals
-  // (resin-totals.js), the pressure factor (pressure-conversion.js), the
-  // tension bands (winding-tension.js). The application loads them; the
-  // harness loads the same files. Optional: without one, its tool says so.
+  // (resin-totals.js), the unit conversions (unit-conversions.js, which
+  // takes pressure from pressure-conversion.js), the tension bands
+  // (winding-tension.js). The application loads them; the harness loads
+  // the same files. Optional: without one, its tool says so.
   const resinTotals = root.PolynResinTotals || null;
-  const pressureConversion = root.PolynPressureConversion || null;
+  const unitConversions = root.PolynUnitConversions || null;
+  // A recipe's product density from the catalog (product-density.js).
+  const productDensity = root.PolynProductDensity || null;
   const windingTension = root.PolynWindingTension || null;
   // The device's work alarm (work-alarm.js): its own settings and native
   // alarms, never the line's; handed to the tool with the module's helpers.
@@ -86,7 +89,7 @@
   const workspacesModule = root.PolynSlateWorkspaces;
   const lineConfigModule = root.PolynSlateLineConfig;
   const resinDbModule = root.PolynSlateResinDb;
-  const pressureModule = root.PolynSlatePressure;
+  const formulasModule = root.PolynSlateFormulas;
   const windingModule = root.PolynSlateWindingTension;
   const workAlarmTool = root.PolynSlateWorkAlarm || null;
 
@@ -373,6 +376,29 @@
     sections.show(id);
   }
 
+  /* The densities Formulas' film entry can be filled from: the traveler's,
+   * as last given the line rate calculator on this device, and the Current
+   * and Next recipes' own from the catalog (product-density.js - none
+   * unless every resin in the recipe has one). Read, never stored. */
+  function formulaDensities() {
+    let traveler = null;
+    try {
+      const saved = lineRateEstimate ? Number(lineRateEstimate.readAnswers(lineRateStorage).density) : Number.NaN;
+      if (Number.isFinite(saved) && saved > 0) traveler = saved;
+    } catch (error) { traveler = null; }
+    const recipe = kind => {
+      if (!productDensity || !current) return { density: null, missing: [], empty: true };
+      let resins = [];
+      try { resins = catalog && typeof catalog.getResins === "function" ? (catalog.getResins() || []) : []; } catch (error) { resins = []; }
+      const hoppers = kind === "next" ? current.nextHopperState : current.hopperState;
+      const layers = kind === "next" ? current.nextLayerState : current.layerState;
+      const result = productDensity.productDensity(productDensity.itemsFrom(hoppers, layers, resins));
+      // No catalog at all is not every resin lacking a density.
+      return !resins.length && !result.empty ? { density: null, missing: [], empty: false, noCatalog: true } : result;
+    };
+    return { traveler: { density: traveler, missing: [] }, current: recipe("current"), next: recipe("next") };
+  }
+
   function refreshHome() {
     const homeView = sections ? sections.section(HOME) : null;
     if (homeView && typeof homeView.refresh === "function") homeView.refresh();
@@ -631,7 +657,7 @@
       { id: "workspaces", label: workspacesModule.TITLE, group: "sections", admin: true, icon: "workspaces", create: (d, c) => workspacesModule.create(d, c) },
       { id: "line-config", label: lineConfigModule.TITLE, group: "sections", admin: true, icon: "lines", create: (d, c) => lineConfigModule.create(d, Object.assign({}, c, { lineIdentity })) },
       { id: "resins", label: resinDbModule.TITLE, group: "sections", admin: true, icon: "resins", create: (d, c) => resinDbModule.create(d, c) },
-      { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
+      { id: "formulas", label: formulasModule.TITLE, group: "tools", pane: "aside", icon: "gauge", create: (d, c) => formulasModule.create(d, Object.assign({}, c, { conversions: unitConversions, densities: formulaDensities, back: () => home("aside") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
       ...(workAlarmTool ? [{ id: "work-alarm", label: workAlarmTool.TITLE, group: "tools", pane: "aside", icon: "alarm", create: (d, c) => workAlarmTool.create(d, Object.assign({}, c, {
         workAlarm: workAlarmModule && typeof workAlarmModule.shared === "function" ? { device: workAlarmModule.shared(), format: workAlarmModule } : null,
