@@ -2,7 +2,8 @@
  *
  * At the top, pounds per thousand feet, worked out the floor's two ways -
  * from the rolls (max roll weight x rolls per set / thousands of feet,
- * the footage typed in feet) and from the film (layflat width x mil x
+ * the footage typed in feet) and from the film (the width on the roll,
+ * after trim, x mil x
  * 12 / 15) - each with its own answer, so one checks the other. A "?"
  * beside the first opens what the two formulas are and what the 12 and
  * the 15 mean.
@@ -14,6 +15,11 @@
  * when every resin in it has a density; the resins it lacks are named.
  * The figures come from ctx.densities(), read as the panel is shown and
  * as the state changes.
+ *
+ * Under both, the weighed set's check: once the rolls' way has an answer
+ * (a set weighed and measured), it is worked backwards against the film's
+ * entries - the density the rolls imply, the gauge they imply, and how far
+ * they read from the film's figure.
  *
  * Under them, Conversions, folded until it is opened: one row per
  * quantity - pressure, temperature, film thickness, width, length,
@@ -71,6 +77,9 @@
     Object.freeze({ key: "rolls", label: "From the rolls", formula: "Roll weight × rolls ÷ (footage ÷ 1,000)" }),
     Object.freeze({ key: "width", label: "From the film", formula: FILM_FORMULA })
   ]);
+  const CHECK_TITLE = "Weighed set check";
+  const CHECK_PROMPT = "Weigh a set and fill in From the rolls. With the film's width and mil, it works back to the density and gauge the set really has.";
+  const CHECK_NEEDS_WIDTH = "Add the film's width on the roll - and its mil - to work back from the rolls.";
   /* What the "?" says: a heading and its lines, in order. */
   const INFO = Object.freeze([
     Object.freeze({ heading: "From the rolls", lines: Object.freeze([
@@ -80,14 +89,24 @@
     Object.freeze({ heading: "From the film", lines: Object.freeze([
       "What the film should weigh: width × mil × 12 ÷ 15.",
       "12: a thousand feet is 12,000 inches, and a mil is 0.001 inch, so every inch of width and every mil is 12 cubic inches of film per 1,000 ft.",
-      "15: polyethylene near 0.92 density is about 30 cubic inches to the pound. A tube has two walls, so each inch of layflat is two inches of film: 30 ÷ 2 = 15.",
+      "15: polyethylene near 0.92 density is about 30 cubic inches to the pound. A tube has two walls, so each inch of width is two inches of film: 30 ÷ 2 = 15.",
       "12 ÷ 15 is the 0.8 often used as a shortcut."
+    ]) }),
+    Object.freeze({ heading: "Width", lines: Object.freeze([
+      "Use the width on the roll, after trim - the film the weighed set is.",
+      "On a line that grinds its trim back into the screw, the layflat is wider than the roll, but the trim comes back as regrind, not extra weight: the roll's film is its own width. Using the layflat overstates it by layflat ÷ roll width - 80 in against 75 in is 6.7% heavy."
     ]) }),
     Object.freeze({ heading: "Density", lines: Object.freeze([
       "Leave Density empty for the floor's 12 ÷ 15, which is film at about 0.92.",
       "With a density, the 15 is worked out for it: 13.84 ÷ density - 15.04 at 0.92, 14.57 at 0.95.",
       "Traveler is the last product density given the Line rate calculator. Current and Next are the recipe's own: each resin's density from the resin database, weighted by its share of the film.",
       "A recipe's density is offered only when every resin in it has a density in the database."
+    ]) }),
+    Object.freeze({ heading: "Weighed set check", lines: Object.freeze([
+      "Works backwards from a weighed set: the rolls' pounds per 1,000 ft against the film's width and mil.",
+      "Density the rolls imply: rolls ÷ (width × mil × 0.867). Worth entering as the film's density next time the product runs.",
+      "Gauge the rolls imply: rolls × 15 ÷ (width × 12), or with the film's density in the 15's place. A figure off the order means the line is running heavy or light.",
+      "Rolls vs film: how far the weighed set reads from the film's figure."
     ]) }),
     Object.freeze({ heading: "What it assumes", lines: Object.freeze([
       "Layflat tubing at about 0.92 density - LDPE and LLDPE. A single web (slit sheet) is ÷ 30 instead.",
@@ -159,6 +178,37 @@
     return { answer, error: "", result };
   }
 
+  /**
+   * What the weighed set's check reads: the rolls' answer worked back
+   * against what of the film's way is entered. Pure.
+   *
+   * @param {object} conversions
+   * @param {object|null} rolls     the rolls' way's result ({ lbPerThousand }), or null
+   * @param {object} film           the film's entries as typed ({ width, mil, density })
+   * @param {object|null} filmResult  the film's way's result, or null
+   * @returns {{prompt: string, lines: Array<{key: string, label: string, value: string}>, warning: string}}
+   */
+  function checkFor(conversions, rolls, film, filmResult) {
+    if (!conversions || !rolls) return { prompt: CHECK_PROMPT, lines: [], warning: "" };
+    const entries = film || {};
+    const density = filmResult && typeof filmResult.density === "number" ? filmResult.density : null;
+    const check = conversions.weighedSetCheck(rolls.lbPerThousand, {
+      width: entries.width, mil: entries.mil, density, lbPerThousand: filmResult ? filmResult.lbPerThousand : null
+    });
+    if (check.impliedMil === null) return { prompt: CHECK_NEEDS_WIDTH, lines: [], warning: "" };
+    const lines = [];
+    if (check.difference !== null) {
+      const pct = check.difference * 100;
+      const value = Math.abs(pct) < 0.05 ? "the same" : `${pct > 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}% ${pct > 0 ? "heavier" : "lighter"}`;
+      lines.push({ key: "difference", label: "Rolls vs film", value });
+    }
+    if (check.impliedDensity !== null) lines.push({ key: "density", label: "Density the rolls imply", value: `${format(check.impliedDensity)} g/cc` });
+    lines.push({ key: "gauge", label: "Gauge the rolls imply", value: `${check.impliedMil.toFixed(3)} mil ${density === null ? "(at 12 ÷ 15)" : `(at ${format(density)} g/cc)`}` });
+    const { min, max } = conversions.PLAUSIBLE_DENSITY;
+    const warning = check.plausible ? "" : `No film weighs ${format(check.impliedDensity)} g/cc (${min}–${max}): check the roll weight, rolls, footage, width and mil.`;
+    return { prompt: "", lines, warning };
+  }
+
   /* "0.923": a density as it is written, three places. */
   function format(value) {
     const number = Number(value);
@@ -209,6 +259,7 @@
 
     /* ---- Pounds per thousand feet ---- */
     const methods = [];
+    let checkView = null;
     let info = null;
     if (conversions) {
       const block = element(doc, "div", "slate-formulas__per-thousand", { "data-calc": "per-thousand" });
@@ -279,6 +330,17 @@
           }
         }
       }
+      /* ---- The weighed set's check ---- */
+      const group = element(doc, "div", "slate-formulas__method slate-formulas__check", { "data-method": "check" });
+      group.appendChild(text(doc, "span", "slate-formulas__method-title", CHECK_TITLE));
+      const prompt = text(doc, "p", "slate-formulas__check-prompt", CHECK_PROMPT, { "data-check-prompt": "" });
+      group.appendChild(prompt);
+      const list = element(doc, "dl", "slate-formulas__check-list", { hidden: "", "aria-live": "polite" });
+      group.appendChild(list);
+      const warning = element(doc, "p", "slate-formulas__note", { role: "status", hidden: "" });
+      group.appendChild(warning);
+      block.appendChild(group);
+      checkView = { group, prompt, list, warning };
       scroller.appendChild(block);
     }
 
@@ -449,7 +511,29 @@
       state.group.classList.toggle("is-answered", !!reading.result);
       state.note.textContent = reading.error;
       show(state.note, !!reading.error);
+      paintCheck();
       return reading;
+    }
+
+    function paintCheck() {
+      if (!checkView) return;
+      const rolls = methods.find(one => one.method.key === "rolls");
+      const film = methods.find(one => one.method.key === "width");
+      if (!rolls || !film) return;
+      const entries = {};
+      for (const key of Object.keys(film.inputs)) entries[key] = film.inputs[key].value;
+      const reading = checkFor(conversions, rolls.result, entries, film.result);
+      checkView.prompt.textContent = reading.prompt;
+      show(checkView.prompt, !!reading.prompt);
+      while (checkView.list.firstChild) checkView.list.removeChild(checkView.list.firstChild);
+      for (const line of reading.lines) {
+        checkView.list.appendChild(text(doc, "dt", "slate-formulas__check-label", line.label));
+        checkView.list.appendChild(text(doc, "dd", "slate-formulas__check-value", line.value, { "data-check": line.key }));
+      }
+      show(checkView.list, reading.lines.length > 0);
+      checkView.group.classList.toggle("is-answered", reading.lines.length > 0);
+      checkView.warning.textContent = reading.warning;
+      show(checkView.warning, !!reading.warning);
     }
 
     /* ---- The density's sources ---- */
@@ -533,6 +617,6 @@
 
   return Object.freeze({
     TITLE, CLOSE_LABEL, UNAVAILABLE, EMPTY, PER_THOUSAND_TITLE, PER_THOUSAND_UNIT, CONVERSIONS_TITLE, CONVERSIONS_CAPTION,
-    INFO_LABEL, INFO, METHODS, FILM_FORMULA, DENSITY_SOURCES, NO_CATALOG, nextOf, readingFor, perThousandFor, reasonFor, create
+    INFO_LABEL, INFO, METHODS, FILM_FORMULA, DENSITY_SOURCES, NO_CATALOG, CHECK_TITLE, CHECK_PROMPT, CHECK_NEEDS_WIDTH, checkFor, nextOf, readingFor, perThousandFor, reasonFor, create
   });
 });

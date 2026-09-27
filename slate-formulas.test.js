@@ -177,8 +177,8 @@ test("pounds per thousand feet leads the panel, above the unit rows, with its tw
   const children = view.element.querySelector(".slate-formulas__body").children;
   assert.ok(children.indexOf(block) < children.indexOf(view.element.querySelector(".slate-formulas__fold")), "the block is not above Conversions");
   assert.equal(block.querySelector(".slate-formulas__label").textContent, tool.PER_THOUSAND_TITLE);
-  assert.deepEqual(block.querySelectorAll(".slate-formulas__method").map(one => one.getAttribute("data-method")), ["rolls", "width"]);
-  assert.deepEqual(block.querySelectorAll(".slate-formulas__field-label").map(one => one.textContent), ["Max roll weight", "Rolls per set", "Footage", "Layflat width", "Thickness", "Density"]);
+  assert.deepEqual(block.querySelectorAll(".slate-formulas__method").map(one => one.getAttribute("data-method")), ["rolls", "width", "check"]);
+  assert.deepEqual(block.querySelectorAll(".slate-formulas__field-label").map(one => one.textContent), ["Max roll weight", "Rolls per set", "Footage", "Width (on the roll)", "Thickness", "Density"]);
 
   const calc = perThousand(view);
   calc.type("rolls", "rollWeight", "500");
@@ -212,7 +212,7 @@ test("perThousandFor is the application's arithmetic with its refusals, and noth
   assert.equal(tool.perThousandFor(conversions, "rolls", { rollWeight: "620", rolls: "2", footage: "8000" }).answer, "155.00 lb / 1,000 ft");
   assert.equal(tool.perThousandFor(conversions, "rolls", { rollWeight: "500", rolls: "2.5", footage: "10000" }).error, "Rolls per set must be a whole number.");
   assert.equal(tool.perThousandFor(conversions, "width", { width: "36", mil: "2" }).answer, "57.60 lb / 1,000 ft");
-  assert.equal(tool.perThousandFor(conversions, "width", { width: "-36", mil: "2" }).error, "Layflat width must be more than zero.");
+  assert.equal(tool.perThousandFor(conversions, "width", { width: "-36", mil: "2" }).error, "Width (on the roll) must be more than zero.");
   assert.equal(tool.perThousandFor(null, "width", { width: "36", mil: "2" }).error, tool.UNAVAILABLE);
 });
 
@@ -230,9 +230,9 @@ test("each way shows its formula - the film's as 12 ÷ 15 - and the \"?\" beside
   click(button);
   assert.ok(!pop.hasAttribute("hidden") && view.isInfoOpen());
   assert.equal(button.getAttribute("aria-expanded"), "true");
-  assert.deepEqual(pop.querySelectorAll(".slate-formulas__info-heading").map(one => one.textContent), ["From the rolls", "From the film", "Density", "What it assumes"]);
+  assert.deepEqual(pop.querySelectorAll(".slate-formulas__info-heading").map(one => one.textContent), ["From the rolls", "From the film", "Width", "Density", "Weighed set check", "What it assumes"]);
   const words = pop.querySelectorAll(".slate-formulas__info-line").map(one => one.textContent).join(" ");
-  for (const fact of ["12,000 inches", "0.001 inch", "30 cubic inches to the pound", "two walls", "30 ÷ 2 = 15", "0.8", "÷ 30", "0.92", "0.95", "divided by 1,000"]) {
+  for (const fact of ["after trim", "trim back into the screw", "80 in against 75 in is 6.7% heavy", "12,000 inches", "0.001 inch", "30 cubic inches to the pound", "two walls", "30 ÷ 2 = 15", "0.8", "÷ 30", "0.92", "0.95", "divided by 1,000"]) {
     assert.ok(words.includes(fact), `the ? does not say ${fact}`);
   }
   click(button);
@@ -332,4 +332,58 @@ test("with no resin database at all, the note says so once rather than naming ev
   assert.equal(note.textContent, tool.NO_CATALOG);
   assert.equal(tool.reasonFor("current", { density: null, missing: ["LL318"] }), "Current: no density for LL318.");
   assert.equal(tool.reasonFor("next", { density: 0.92, missing: [] }), "");
+});
+
+/* ----------------------------------------------------------------------
+ *   The weighed set's check
+ * -------------------------------------------------------------------- */
+
+test("the weighed set's check waits for the rolls, then for the film's width, then works back to the density and gauge the set implies and how far it reads from the film", () => {
+  const { view } = boot();
+  const calc = perThousand(view);
+  const group = view.element.querySelector(".slate-formulas__check");
+  const prompt = () => group.querySelector("[data-check-prompt]");
+  const value = key => { const node = group.querySelector(`[data-check='${key}']`); return node ? node.textContent : null; };
+  assert.equal(group.querySelector(".slate-formulas__method-title").textContent, tool.CHECK_TITLE);
+  assert.equal(prompt().textContent, tool.CHECK_PROMPT);
+  assert.ok(group.querySelector(".slate-formulas__check-list").hasAttribute("hidden"));
+
+  // Line 8: 72.5 in layflat, 0.395 mil; a set weighing 24.93 lb/1,000 ft.
+  calc.type("rolls", "rollWeight", "249.3");
+  calc.type("rolls", "rolls", "1");
+  calc.type("rolls", "footage", "10000");
+  assert.equal(calc.answer("rolls"), "24.93 lb / 1,000 ft");
+  assert.equal(prompt().textContent, tool.CHECK_NEEDS_WIDTH);
+  calc.type("width", "width", "72.5");
+  assert.ok(prompt().hasAttribute("hidden"));
+  assert.equal(value("gauge"), "0.430 mil (at 12 ÷ 15)");
+  assert.equal(value("density"), null, "a density was implied without the mil");
+  calc.type("width", "mil", "0.395");
+  assert.equal(value("density"), "1.004 g/cc");
+  assert.equal(value("difference"), "+8.8% heavier");
+  assert.ok(group.classList.contains("is-answered"));
+  // With the traveler's density the film's figure and the set agree.
+  calc.type("width", "density", "1.0021");
+  assert.equal(value("difference"), "+0.2% heavier");
+  assert.equal(value("gauge"), "0.396 mil (at 1.002 g/cc)");
+  // An impossible set is flagged, not trusted.
+  calc.type("rolls", "rollWeight", "2493");
+  const warning = group.querySelector(".slate-formulas__note");
+  assert.ok(!warning.hasAttribute("hidden"));
+  assert.match(warning.textContent, /^No film weighs 10\.040 g\/cc/);
+  // Clear empties it back to the prompt.
+  click(view.element.querySelector("[data-slate-clear]"));
+  assert.equal(prompt().textContent, tool.CHECK_PROMPT);
+  assert.ok(warning.hasAttribute("hidden"));
+});
+
+test("checkFor is the application's arithmetic, worded; a lighter set says so", () => {
+  const rolls = { lbPerThousand: 22 };
+  const film = conversions.poundsPerThousand("width", { width: "72.5", mil: "0.395" });
+  const reading = tool.checkFor(conversions, rolls, { width: "72.5", mil: "0.395", density: "" }, film);
+  assert.deepEqual(reading.lines.map(line => line.key), ["difference", "density", "gauge"]);
+  assert.equal(reading.lines[0].value, "−4.0% lighter");
+  assert.equal(tool.checkFor(conversions, rolls, { width: "72.5", mil: "0.395" }, { lbPerThousand: 22, density: null }).lines[0].value, "the same");
+  assert.equal(tool.checkFor(conversions, null, {}, null).prompt, tool.CHECK_PROMPT);
+  assert.equal(tool.checkFor(null, rolls, {}, null).prompt, tool.CHECK_PROMPT);
 });

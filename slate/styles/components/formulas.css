@@ -218,6 +218,39 @@
   line-height: var(--slate-line-normal);
 }
 
+/* The weighed set's check: what it waits for, then label and figure, a
+   row each. */
+.slate-formulas__check-prompt {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-xs);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-formulas__check-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--slate-space-1) var(--slate-space-2);
+  margin: 0;
+}
+
+.slate-formulas__check-list[hidden] {
+  display: none;
+}
+
+.slate-formulas__check-label {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-formulas__check-value {
+  margin: 0;
+  color: var(--slate-text);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .slate-formulas__method.is-answered .slate-formulas__answer {
   color: var(--slate-text);
 }

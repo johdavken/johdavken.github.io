@@ -12,8 +12,8 @@
     "hash": "b9995db646744e8b"
   },
   "line-rate-estimate.js": {
-    "v": "0.1.1",
-    "hash": "75fd2b4abf41a45a"
+    "v": "0.1.2",
+    "hash": "373b518714a218d5"
   },
   "resin-totals.js": {
     "v": "0.1.0",
@@ -44,8 +44,8 @@
     "hash": "a13ae62c00bb8eb6"
   },
   "unit-conversions.js": {
-    "v": "0.1.3",
-    "hash": "c05ace159d2fdffb"
+    "v": "0.1.5",
+    "hash": "bfc1ffc31322a158"
   },
   "product-density.js": {
     "v": "0.1.0",
@@ -96,8 +96,8 @@
     "hash": "a5ba6670e5acf766"
   },
   "slate-host.js": {
-    "v": "0.55.6",
-    "hash": "6afb228b2a16b4c3"
+    "v": "0.55.8",
+    "hash": "f280adf458470127"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",

@@ -96,7 +96,7 @@ test("pounds per thousand feet refuses each entry in its own words and never div
     ["Rolls per set must be a whole number.", "Footage must be more than zero."]);
   assert.deepEqual(conv.poundsPerThousand("rolls", { rollWeight: "abc", rolls: "1", footage: "5000" }).errors, ["Max roll weight must be a number."]);
   assert.deepEqual(conv.poundsPerThousand("width", { width: "48", mil: "-1" }).errors, ["Thickness must be more than zero."]);
-  assert.deepEqual(conv.poundsPerThousand("width", { width: "2000000", mil: "1" }).errors, ["Layflat width must be 1,000,000 or less."]);
+  assert.deepEqual(conv.poundsPerThousand("width", { width: "2000000", mil: "1" }).errors, ["Width (on the roll) must be 1,000,000 or less."]);
   assert.deepEqual(conv.poundsPerThousand("gauge", {}).errors, ["That is not a way to work out pounds per thousand feet."]);
   assert.equal(conv.poundsPerThousand("rolls").valid, false);
 });
@@ -113,4 +113,26 @@ test("the film's way takes an optional density: empty is 12 ÷ 15; given, the 15
   assert.deepEqual(conv.poundsPerThousand("width", { width: "48", mil: "1.5", density: "0" }).errors, ["Density must be more than zero."]);
   assert.deepEqual(conv.poundsPerThousand("width", { width: "48", mil: "1.5", density: "11" }).errors, ["Density must be 10 or less."]);
   assert.deepEqual(conv.poundsPerThousand("width", { width: "48", mil: "1.5", density: "x" }).errors, ["Density must be a number."]);
+});
+
+test("the weighed set's check: the density and gauge a weighed set implies, and how far it reads from the film", () => {
+  // Line 8: 72.5 in, 0.395 mil, a set at 24.93 lb/1,000 ft.
+  const plain = conv.weighedSetCheck(24.93, { width: "72.5", mil: "0.395", density: null, lbPerThousand: 22.91 });
+  assert.ok(Math.abs(plain.impliedDensity - 24.93 / (72.5 * 0.395 * 24 * 0.0361273)) < 1e-12);
+  assert.equal(plain.impliedDensity.toFixed(3), "1.004");
+  assert.ok(Math.abs(plain.impliedMil - 24.93 * 15 / (72.5 * 12)) < 1e-12, "without a density the gauge uses the floor's 15");
+  assert.ok(Math.abs(plain.difference - (24.93 / 22.91 - 1)) < 1e-12);
+  assert.equal(plain.plausible, true);
+  const dense = conv.weighedSetCheck(24.93, { width: "72.5", mil: "0.395", density: "1.0021" });
+  assert.ok(Math.abs(dense.impliedMil - 24.93 * conv.divisorFor(1.0021) / (72.5 * 12)) < 1e-12);
+  assert.equal(dense.difference, null, "a difference without the film's figure");
+  // Working the film's own figure back gives its own inputs.
+  const film = conv.poundsPerThousand("width", { width: "48", mil: "1.5", density: "0.95" });
+  const round = conv.weighedSetCheck(film.lbPerThousand, { width: "48", mil: "1.5", density: "0.95", lbPerThousand: film.lbPerThousand });
+  assert.ok(Math.abs(round.impliedDensity - 0.95) < 1e-12 && Math.abs(round.impliedMil - 1.5) < 1e-12 && Math.abs(round.difference) < 1e-12);
+  // What is missing is null, never guessed; an impossible density is flagged.
+  assert.deepEqual(conv.weighedSetCheck(24.93, { width: "72.5" }), { impliedDensity: null, impliedMil: 24.93 * 15 / (72.5 * 12), difference: null, plausible: true });
+  assert.deepEqual(conv.weighedSetCheck(null, { width: "72.5", mil: "1" }), { impliedDensity: null, impliedMil: null, difference: null, plausible: true });
+  assert.equal(conv.weighedSetCheck(249.3, { width: "72.5", mil: "0.395" }).plausible, false);
+  assert.deepEqual(conv.PLAUSIBLE_DENSITY, { min: 0.85, max: 2.5 });
 });

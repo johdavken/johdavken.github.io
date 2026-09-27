@@ -119,13 +119,17 @@
   /* Pounds per thousand feet, the floor's two ways.
    *
    *   rolls: max roll weight (lb) x rolls per set / (footage / 1,000)
-   *   film:  layflat width (in) x thickness (mil) x 12 / 15
+   *   film:  width on the roll (in) x thickness (mil) x 12 / 15
    *
    * The 12: a thousand feet is 12,000 inches, and a mil is 0.001 inch, so
    * each inch of width and each mil is 12 cubic inches of film per
    * thousand feet. The 15: polyethylene near 0.92 density is about 30
-   * cubic inches to the pound, and a tube has two walls, so a layflat
-   * inch weighs twice that - 30 / 2. Together, 0.8.
+   * cubic inches to the pound, and a tube has two walls, so an inch of
+   * flattened tube weighs twice that - 30 / 2. Together, 0.8.
+   *
+   * The width is the width on the roll, after trim: the weighed set is the
+   * roll's film, and on a line that grinds its trim back into the screw
+   * the bubble's layflat is wider than anything that leaves the line.
    *
    * The film's way takes an optional product density (g/cc). Given one,
    * the 15 is worked out for it instead: a g/cc is 0.0361273 lb per cubic
@@ -148,7 +152,7 @@
       Object.freeze({ key: "footage", label: "Footage", unit: "ft" })
     ]),
     width: Object.freeze([
-      Object.freeze({ key: "width", label: "Layflat width", unit: "in" }),
+      Object.freeze({ key: "width", label: "Width (on the roll)", unit: "in" }),
       Object.freeze({ key: "mil", label: "Thickness", unit: "mil" }),
       Object.freeze({ key: "density", label: "Density", unit: "g/cc", optional: true, max: MAX_DENSITY })
     ])
@@ -182,13 +186,51 @@
     return { valid: true, errors: [], lbPerThousand: values.width * values.mil * CUBIC_INCHES / divisor, divisor, density };
   }
 
+  /* The weighed set's check: a set weighed and measured (the rolls' way)
+   * against the film it was made from, worked backwards.
+   *
+   *   implied density = rolls lb/1,000 ft / (width x mil x 12 x 2 x 0.0361273)
+   *   implied gauge   = rolls lb/1,000 ft x divisor / (width x 12)
+   *   difference      = rolls / film - 1
+   *
+   * The gauge's divisor is the film's own - its density's, or the floor's
+   * 15. Outside PLAUSIBLE_DENSITY the implied density is still given but
+   * flagged: no blown film weighs that, so an entry is wrong. */
+  const PLAUSIBLE_DENSITY = Object.freeze({ min: 0.85, max: 2.5 });
+
+  /**
+   * @param {number} rollsLb    the rolls' lb per 1,000 ft
+   * @param {object} film       { width, mil, density|null, lbPerThousand|null } - what of the film's way is in
+   * @returns {{impliedDensity:number|null, impliedMil:number|null, difference:number|null, plausible:boolean}}
+   */
+  function weighedSetCheck(rollsLb, film){
+    const lb = positiveOrNull(rollsLb);
+    const f = film || {};
+    const width = positiveOrNull(f.width);
+    const mil = positiveOrNull(f.mil);
+    const density = positiveOrNull(f.density);
+    const filmLb = positiveOrNull(f.lbPerThousand);
+    const impliedDensity = lb !== null && width !== null && mil !== null
+      ? lb / (width * mil * CUBIC_INCHES * WALLS * LB_PER_IN3_PER_G_CM3) : null;
+    const divisor = density !== null ? divisorFor(density) : TUBE_DIVISOR;
+    const impliedMil = lb !== null && width !== null ? lb * divisor / (width * CUBIC_INCHES) : null;
+    const difference = lb !== null && filmLb !== null ? lb / filmLb - 1 : null;
+    const plausible = impliedDensity === null || (impliedDensity >= PLAUSIBLE_DENSITY.min && impliedDensity <= PLAUSIBLE_DENSITY.max);
+    return { impliedDensity, impliedMil, difference, plausible };
+  }
+
+  function positiveOrNull(value){
+    const number = typeof value === "number" ? value : numeric(value);
+    return Number.isFinite(number) && number > 0 ? number : null;
+  }
+
   function formatPerThousand(value){
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(2) : "—";
   }
 
   return Object.freeze({
-    MAX_ENTRY, ABSOLUTE_ZERO_F, QUANTITIES, CUBIC_INCHES, TUBE_DIVISOR, LB_PER_IN3_PER_G_CM3, PER_THOUSAND, divisorFor,
+    MAX_ENTRY, ABSOLUTE_ZERO_F, QUANTITIES, CUBIC_INCHES, TUBE_DIVISOR, LB_PER_IN3_PER_G_CM3, PER_THOUSAND, PLAUSIBLE_DENSITY, divisorFor, weighedSetCheck,
     quantityOf, unitOf, convert, format, poundsPerThousand, formatPerThousand,
     available: quantity => quantity !== "pressure" || !!pressure
   });

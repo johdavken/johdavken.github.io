@@ -1,7 +1,8 @@
 /* The line rate calculator: the output the line makes from the film it
  * is running, as a popover under the Line rate card.
  *
- * Four prompts, one at a time - the layflat width, the gauge, the line
+ * Four prompts, one at a time - the layflat width (the roll's, after
+ * trim, on a line that grinds its trim back in), the gauge, the line
  * speed, the product's density from the job traveler - then the estimate,
  * with "Use 574 lb/hr" or "Adjust answers". The arithmetic, the checks
  * and the remembered answers are line-rate-estimate.js's, the
@@ -30,11 +31,14 @@
   const UNAVAILABLE = "The line rate calculator is not available on this page.";
   const NO_ESTIMATE = "Those answers do not add up to a line rate. Start again.";
   const USED = rate => `Line rate set to ${rate} lb/hr.`;
+  /* A line that grinds its trim back into the screw feeds its hoppers only
+   * for what leaves on the rolls: the regrind makes up the trim. */
+  const TRIM_HINT = "If the trim is ground back into the screw, enter the roll width after trim - the hoppers only feed what leaves on the rolls.";
   const NO_BLEND = "No blend average: the recipe's resins have no densities in the catalog.";
   const NO_BLEND_FOR = missing => `No blend average: no density in the catalog for ${missing.join(", ")}.`;
 
   const STEPS = Object.freeze([
-    Object.freeze({ field: "layflat", kind: "number", question: "What’s the layflat width?", unit: "in" }),
+    Object.freeze({ field: "layflat", kind: "number", question: "What’s the layflat width?", unit: "in", hint: () => TRIM_HINT }),
     Object.freeze({ field: "mil", kind: "number", question: "What’s the gauge?", unit: "mil" }),
     Object.freeze({ field: "lineSpeed", kind: "number", question: "What’s the line speed?", unit: "ft/min" }),
     Object.freeze({ field: "density", kind: "number", question: "What’s the product density on the traveler?", unit: "g/cc" })
@@ -131,5 +135,5 @@
     });
   }
 
-  return Object.freeze({ TITLE, OPEN_LABEL, UNAVAILABLE, NO_ESTIMATE, NO_BLEND, NO_BLEND_FOR, STEPS, ESTIMATE_STEP, glyph: wizardModule.glyph, blendItems, summaryText, create });
+  return Object.freeze({ TITLE, OPEN_LABEL, UNAVAILABLE, NO_ESTIMATE, NO_BLEND, NO_BLEND_FOR, TRIM_HINT, STEPS, ESTIMATE_STEP, glyph: wizardModule.glyph, blendItems, summaryText, create });
 });
