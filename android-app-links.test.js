@@ -36,10 +36,10 @@ test("cold and warm native URLs feed the existing RT Sync join-confirmation path
   assert.match(app, /sourceUrl\.protocol !== "https:" \|\| sourceUrl\.hostname !== "resin\.tools" \|\| sourceUrl\.pathname !== "\/"/);
 });
 
-test("the QR stays the existing HTTPS URL with only rtSyncCode", () => {
+test("the QR stays the existing HTTPS URL with the code and view=slate alone", () => {
   assert.match(app, /url\.search = "";/);
   assert.match(app, /url\.hash = "";/);
-  assert.match(app, /url\.searchParams\.set\("rtSyncCode", code\)/);
+  assert.match(app, /url\.searchParams\.set\("rtSyncCode", code\);\s*(\/\/[^\n]*\n\s*)*url\.searchParams\.set\("view", "slate"\);\s*return url\.toString\(\);/);
   assert.doesNotMatch(app, /resintools:\/\//i);
 });
 
@@ -57,4 +57,18 @@ test("the Slate Preview debug build (tools.resin.app.slatepreview) is delegated 
   ]);
   assert.ok(assetLinks[0].target.sha256_cert_fingerprints.includes(preview.target.sha256_cert_fingerprints[1]));
   for (const release of assetLinks[0].target.sha256_cert_fingerprints.slice(1)) assert.ok(!preview.target.sha256_cert_fingerprints.includes(release), "a release key vouches for the preview");
+});
+
+test("the QR link: resin.tools root, the code then view=slate, whatever page drew it", () => {
+  const start = app.indexOf("function rtSyncLinkUrl(code){");
+  const body = app.slice(start, app.indexOf("\n  }\n", start) + 4);
+  const window = { location: { href: "https://resin.tools/?view=legacy&demo=x#timeline" } };
+  const rtSyncLinkUrl = new Function("window", "normalizedRtSyncLinkCode", "URL", `${body}; return rtSyncLinkUrl;`)(window, code => String(code || "").trim().toUpperCase(), URL);
+  const link = new URL(rtSyncLinkUrl("ab12"));
+  assert.equal(link.origin + link.pathname, "https://resin.tools/");
+  assert.deepEqual([...link.searchParams.entries()], [["rtSyncCode", "AB12"], ["view", "slate"]]);
+  assert.equal(link.hash, "");
+  assert.equal(rtSyncLinkUrl(""), "");
+  // Still inside the manifest's App Link: https, resin.tools, path "/" (a query does not change the path).
+  assert.equal(link.protocol, "https:");
 });
