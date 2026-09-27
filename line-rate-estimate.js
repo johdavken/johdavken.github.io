@@ -1,5 +1,7 @@
 /* The line rate estimate - the output a blown-film line makes from the
- * film it is running: layflat width, gauge, line speed and the product's
+ * film it is running: layflat width (on a line that grinds its trim back
+ * into the screw, the roll width after trim - the hoppers feed only what
+ * leaves on the rolls), gauge, line speed and the product's
  * density, as the job traveler states them.
  *
  * WHAT THIS IS

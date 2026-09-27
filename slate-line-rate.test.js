@@ -67,6 +67,9 @@ test("four prompts in order with their units; the density prompt offers the blen
   assert.equal(q(view, ".slate-wizard__progress").textContent, "1 of 4");
   assert.equal(q(view, ".slate-wizard__question").textContent, "What’s the layflat width?");
   assert.equal(q(view, ".slate-wizard__unit").textContent, "in");
+  // A line that grinds its trim back in: the roll width, not the bubble's.
+  assert.equal(q(view, ".slate-wizard__hint").textContent, lineRate.TRIM_HINT);
+  assert.match(lineRate.TRIM_HINT, /roll width after trim/);
   next(view);
   assert.equal(q(view, ".slate-wizard__error").textContent, "Enter a value greater than zero.");
   field(view, "layflat").value = "40"; next(view);
