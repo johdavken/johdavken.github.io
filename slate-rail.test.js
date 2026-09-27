@@ -39,7 +39,7 @@ const listedIds = view => view.element
 test("the sections are listed in order, the tools go in the menu, the foot takes the rest, and every item carries its glyph", () => {
   const { view, item } = boot();
   assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance"]);
-  assert.deepEqual(view.element.querySelectorAll(".slate-rail__menu [data-section]").map(node => node.getAttribute("data-section")), ["pressure"]);
+  assert.deepEqual(view.element.querySelectorAll(".slate-rail__menu[data-menu='tools'] [data-section]").map(node => node.getAttribute("data-section")), ["pressure"]);
   assert.ok(view.element.querySelector(".slate-rail__foot [data-section='settings']"));
   assert.ok(item("recipe").querySelector(".slate-rail__glyph"));
   assert.equal(item("recipe").querySelector(".slate-rail__label").textContent, "Recipe");
@@ -47,38 +47,70 @@ test("the sections are listed in order, the tools go in the menu, the foot takes
   assert.equal(item("resin-balance").getAttribute("title"), "Resin Balance");
 });
 
-test("an administrator's sections are built with the rest but unlisted, and the rule above them is drawn only with them", () => {
+test("an administrator's sections wait in an Admin drop-down after Tools, behind a rule, and the drop-down and rule are drawn only with them", () => {
   const { view, item } = boot();
   const divider = view.element.querySelector(".slate-rail__divider");
+  const admin = view.element.querySelector("[data-menu='admin'].slate-rail__tools");
   assert.ok(divider, "no rule was drawn for the administrator's sections");
-  assert.ok(divider.hasAttribute("hidden"));
+  assert.ok(admin, "no Admin drop-down");
+  assert.ok(divider.hasAttribute("hidden") && admin.hasAttribute("hidden"));
   for (const id of ["workspaces", "line-config", "resins"]) {
     assert.ok(item(id), `${id} was not built`);
+    assert.ok(item(id).closest(".slate-rail__menu[data-menu='admin']"), `${id} is not in the Admin menu`);
     assert.ok(item(id).hasAttribute("hidden"), `${id} was listed with nobody signed in`);
     assert.equal(view.isListed(id), false);
   }
-  // The rule stands before the first of them, after the ordinary sections.
-  const nodes = view.element.querySelector(".slate-rail__sections").children.map(node => node.getAttribute("data-section") || node.getAttribute("class"));
-  assert.equal(nodes[3], "slate-rail__divider");
-  assert.equal(nodes[4], "workspaces");
+  // Order: the ordinary sections, Tools, the rule, Admin.
+  const nodes = view.element.querySelector(".slate-rail__sections").children.map(node => node.getAttribute("data-section") || node.getAttribute("data-menu") || node.getAttribute("class"));
+  assert.deepEqual(nodes, ["recipe", "recipe-book", "resin-balance", "tools", "slate-rail__divider", "admin"]);
+  assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance"]);
 
-  // Signed in: all three, and the rule.
+  // Signed in: the drop-down and the rule, the three inside it, the column unchanged.
   for (const id of ["workspaces", "line-config", "resins"]) assert.equal(view.setListed(id, true), true);
-  assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance", "workspaces", "line-config", "resins"]);
-  assert.ok(!divider.hasAttribute("hidden"));
+  assert.ok(!divider.hasAttribute("hidden") && !admin.hasAttribute("hidden"));
+  assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance"]);
+  assert.deepEqual(view.element.querySelectorAll(".slate-rail__menu[data-menu='admin'] [data-section]").filter(node => !node.hasAttribute("hidden")).map(node => node.getAttribute("data-section")),
+    ["workspaces", "line-config", "resins"]);
   assert.equal(view.isListed("workspaces"), true);
+  assert.equal(admin.querySelector(".slate-rail__item--admin .slate-rail__label").textContent, "Admin");
 
-  // One at a time back off: the rule stays while any of them is listed.
+  // One at a time back off: the drop-down stays while any of them is listed,
+  // and closes with the last.
   view.setListed("workspaces", false);
-  assert.ok(!divider.hasAttribute("hidden"));
+  assert.ok(!admin.hasAttribute("hidden"));
+  view.openAdmin();
+  assert.equal(view.isAdminOpen(), true);
   view.setListed("line-config", false);
   view.setListed("resins", false);
-  assert.ok(divider.hasAttribute("hidden"));
-  assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance"]);
+  assert.ok(divider.hasAttribute("hidden") && admin.hasAttribute("hidden"));
+  assert.equal(view.isAdminOpen(), false);
   assert.equal(view.setListed("nope", true), false);
   assert.equal(view.isListed("nope"), false);
 });
 
+test("one drop-down collapses the other: opening Admin closes Tools, opening Tools closes Admin", () => {
+  const { view } = boot();
+  for (const id of ["workspaces", "line-config", "resins"]) view.setListed(id, true);
+  const toolsButton = view.element.querySelector(".slate-rail__item--tools");
+  const adminButton = view.element.querySelector(".slate-rail__item--admin");
+  click(toolsButton);
+  assert.equal(view.isToolsOpen(), true);
+  click(adminButton);
+  assert.equal(view.isAdminOpen(), true);
+  assert.equal(view.isToolsOpen(), false, "Tools stayed open under Admin");
+  assert.equal(toolsButton.getAttribute("aria-expanded"), "false");
+  assert.ok(view.element.querySelector(".slate-rail__menu[data-menu='tools']").hasAttribute("hidden"));
+  click(toolsButton);
+  assert.equal(view.isToolsOpen(), true);
+  assert.equal(view.isAdminOpen(), false);
+  // Escape closes the open one.
+  view.element.dispatchEvent({ type: "keydown", key: "Escape", target: view.element, stopPropagation() {} });
+  assert.equal(view.isToolsOpen(), false);
+  // A press on an admin section still selects it.
+  click(adminButton);
+  click(view.element.querySelector("[data-section='line-config']"));
+  assert.equal(view.isAdminOpen(), true, "the sidebar's menu closed on a selection");
+});
 test("a press on an item names it; the marks are kept per pane, and the Tools item never lights", () => {
   const { view, chosen, item } = boot();
   click(item("recipe-book"));
@@ -163,4 +195,21 @@ test("the flyout is placed beside the Tools item each time it opens, so it can s
     assert.equal(menu.style.getPropertyValue("--slate-flyout-top"), compact ? "412px" : "");
     assert.equal(menu.style.getPropertyValue("--slate-flyout-left"), compact ? "56px" : "");
   }
+});
+
+test("opened in a phone's sheet or the sidebar, the Tools menu scrolls itself into view, so its last tool is never left below the sheet's foot; a flyout is placed instead", () => {
+  const { view } = boot();
+  const menu = view.element.querySelector(".slate-rail__menu");
+  const scrolls = [];
+  menu.scrollIntoView = options => scrolls.push(options);
+  view.openTools();
+  assert.deepEqual(scrolls, [{ block: "nearest" }]);
+  view.closeTools();
+
+  const flyout = boot({ flyout: () => true });
+  const flyMenu = flyout.view.element.querySelector(".slate-rail__menu");
+  const flyScrolls = [];
+  flyMenu.scrollIntoView = options => flyScrolls.push(options);
+  flyout.view.openTools();
+  assert.deepEqual(flyScrolls, [], "a flyout scrolled the page");
 });

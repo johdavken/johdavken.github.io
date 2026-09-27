@@ -39,6 +39,9 @@
   const resinTotals = root.PolynResinTotals || null;
   const pressureConversion = root.PolynPressureConversion || null;
   const windingTension = root.PolynWindingTension || null;
+  // The device's work alarm (work-alarm.js): its own settings and native
+  // alarms, never the line's; handed to the tool with the module's helpers.
+  const workAlarmModule = root.PolynWorkAlarm || null;
   // The changeover calculator's arithmetic and records (changeover-estimate.js):
   // the application's own wizard, restated. Its storage is the module's to
   // find; Slate is handed the result and never looks itself.
@@ -85,6 +88,7 @@
   const resinDbModule = root.PolynSlateResinDb;
   const pressureModule = root.PolynSlatePressure;
   const windingModule = root.PolynSlateWindingTension;
+  const workAlarmTool = root.PolynSlateWorkAlarm || null;
 
   /* Inside the application host (?view=slate, marked on the body by
    * slate-host.js) the application connects the bridges before any of
@@ -629,6 +633,10 @@
       { id: "resins", label: resinDbModule.TITLE, group: "sections", admin: true, icon: "resins", create: (d, c) => resinDbModule.create(d, c) },
       { id: "pressure", label: pressureModule.TITLE, group: "tools", pane: "stats", icon: "gauge", create: (d, c) => pressureModule.create(d, Object.assign({}, c, { pressure: pressureConversion, back: () => home("stats") })) },
       { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
+      ...(workAlarmTool ? [{ id: "work-alarm", label: workAlarmTool.TITLE, group: "tools", pane: "aside", icon: "alarm", create: (d, c) => workAlarmTool.create(d, Object.assign({}, c, {
+        workAlarm: workAlarmModule && typeof workAlarmModule.shared === "function" ? { device: workAlarmModule.shared(), format: workAlarmModule } : null,
+        back: () => home("aside")
+      })) }] : []),
       { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
       // The Scrap card, already built and painted by the job's cards: the
       // stats row's home, the way the Timeline is the aside's.

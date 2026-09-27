@@ -31,6 +31,14 @@
     "v": "0.1.1",
     "hash": "48895ed8cc1e00c8"
   },
+  "work-rotation.js": {
+    "v": "0.1.0",
+    "hash": "dd5f4504a71bf466"
+  },
+  "work-alarm.js": {
+    "v": "0.1.0",
+    "hash": "b7d6472835ec0353"
+  },
   "pressure-conversion.js": {
     "v": "0.1.0",
     "hash": "a13ae62c00bb8eb6"
@@ -80,8 +88,8 @@
     "hash": "c23b9108d431b1e9"
   },
   "slate-host.js": {
-    "v": "0.54.2",
-    "hash": "0f460105bab32edc"
+    "v": "0.55.2",
+    "hash": "2c3893ab8e92fa91"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
