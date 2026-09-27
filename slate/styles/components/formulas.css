@@ -92,6 +92,8 @@
 
 .slate-formulas__info-pop {
   position: absolute;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   top: 0;
   right: var(--slate-space-3);
   left: var(--slate-space-3);
