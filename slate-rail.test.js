@@ -17,7 +17,7 @@ const SECTIONS = [
   { id: "workspaces", label: "Workspaces", group: "sections", admin: true, icon: "workspaces" },
   { id: "line-config", label: "Line Configuration", group: "sections", admin: true, icon: "lines" },
   { id: "resins", label: "Resin Database", group: "sections", admin: true, icon: "resins" },
-  { id: "pressure", label: "PSI ⇄ bar", group: "tools", pane: "stats", icon: "gauge" },
+  { id: "formulas", label: "Formulas", group: "tools", pane: "aside", icon: "gauge" },
   { id: "settings", label: "Settings", group: "foot", icon: "settings" }
 ];
 
@@ -39,7 +39,7 @@ const listedIds = view => view.element
 test("the sections are listed in order, the tools go in the menu, the foot takes the rest, and every item carries its glyph", () => {
   const { view, item } = boot();
   assert.deepEqual(listedIds(view), ["recipe", "recipe-book", "resin-balance"]);
-  assert.deepEqual(view.element.querySelectorAll(".slate-rail__menu[data-menu='tools'] [data-section]").map(node => node.getAttribute("data-section")), ["pressure"]);
+  assert.deepEqual(view.element.querySelectorAll(".slate-rail__menu[data-menu='tools'] [data-section]").map(node => node.getAttribute("data-section")), ["formulas"]);
   assert.ok(view.element.querySelector(".slate-rail__foot [data-section='settings']"));
   assert.ok(item("recipe").querySelector(".slate-rail__glyph"));
   assert.equal(item("recipe").querySelector(".slate-rail__label").textContent, "Recipe");

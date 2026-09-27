@@ -1193,7 +1193,7 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.ok(!scrim.hasAttribute("hidden"));
   assert.equal(grip.getAttribute("aria-expanded"), "true");
   for (const id of ["recipe-book", "weights"]) assert.ok(item(id).hasAttribute("hidden"), `the phone's rail lists ${id}`);
-  for (const id of ["home", "recipe", "settings", "pressure", "winding-tension"]) assert.ok(!item(id).hasAttribute("hidden"), `the phone's rail leaves out ${id}`);
+  for (const id of ["home", "recipe", "settings", "formulas", "winding-tension"]) assert.ok(!item(id).hasAttribute("hidden"), `the phone's rail leaves out ${id}`);
   click(item("recipe"));
   assert.ok(!rail.classList.contains("is-open"));
   assert.equal(grip.getAttribute("aria-expanded"), "false");
@@ -1363,23 +1363,25 @@ test("the application's pump-off alert is Slate's to show: the event is taken, t
   assert.equal(stopped, 2);
 });
 
-test("Back closes a tool in the Scrap card's place on a phone, where it is a sheet; on a tablet Back leaves it and lets the app go, as before", () => {
+test("Formulas stands in the aside: on a phone it is the aside's page and Back lowers it; on a tablet it takes the drawer and the Scrap slot stays Scrap", () => {
   const back = doc => {
     const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
     for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  const shown = hostEl => hostEl.querySelector("[data-slate-mount='stats']").querySelectorAll(".slate-section").filter(one => !one.hasAttribute("hidden")).map(one => one.getAttribute("data-section"));
+  const shown = (hostEl, mount) => hostEl.querySelector(`[data-slate-mount='${mount}']`).querySelectorAll(".slate-section").filter(one => !one.hasAttribute("hidden")).map(one => one.getAttribute("data-section"));
   const phone = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
-  click(phone.hostEl.querySelector(".slate-rail__item[data-section='pressure']"));
-  assert.deepEqual(shown(phone.hostEl), ["pressure"]);
+  const phoneAside = phone.hostEl.querySelector("[data-slate-mount='aside']");
+  click(phone.hostEl.querySelector(".slate-rail__item[data-section='formulas']"));
+  assert.deepEqual(shown(phone.hostEl, "aside"), ["formulas"]);
+  assert.ok(phoneAside.classList.contains("is-open"), "Formulas did not open the aside's page");
+  assert.deepEqual(shown(phone.hostEl, "stats"), ["scrap"], "Formulas took the Scrap slot");
   assert.equal(back(phone.hostEl.ownerDocument).detail.minimize, false);
-  assert.deepEqual(shown(phone.hostEl), ["scrap"]);
+  assert.ok(!phoneAside.classList.contains("is-open"), "Back left the aside's page up");
   const tablet = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 800 }) });
-  click(tablet.hostEl.querySelector(".slate-rail__item[data-section='pressure']"));
-  assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
-  assert.equal(back(tablet.hostEl.ownerDocument).detail.minimize, true, "a tablet's Back changed");
-  assert.deepEqual(shown(tablet.hostEl), ["pressure"]);
+  click(tablet.hostEl.querySelector(".slate-rail__item[data-section='formulas']"));
+  assert.deepEqual(shown(tablet.hostEl, "aside"), ["formulas"]);
+  assert.deepEqual(shown(tablet.hostEl, "stats"), ["scrap"]);
 });
 
 test("a visit - the address asked for Slate where the device would have opened the floor UI - offers to open Slate every time; Always makes it this device's choice, Not now only closes; a device that chose, or no visit, is not asked", () => {

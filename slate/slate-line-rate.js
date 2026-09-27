@@ -9,7 +9,8 @@
  *
  * The density prompt offers the recipe's blend average beside the
  * traveler's figure: each hopper's polymer density from the catalog,
- * weighted by its blend and its layer's share. The average is a check,
+ * weighted by its blend and its layer's share - none, and the resins it
+ * lacks named, unless every resin has one. The average is a check,
  * never the answer - the field starts on the last figure entered, or on
  * the average when there is none.
  *
@@ -30,6 +31,7 @@
   const NO_ESTIMATE = "Those answers do not add up to a line rate. Start again.";
   const USED = rate => `Line rate set to ${rate} lb/hr.`;
   const NO_BLEND = "No blend average: the recipe's resins have no densities in the catalog.";
+  const NO_BLEND_FOR = missing => `No blend average: no density in the catalog for ${missing.join(", ")}.`;
 
   const STEPS = Object.freeze([
     Object.freeze({ field: "layflat", kind: "number", question: "What’s the layflat width?", unit: "in" }),
@@ -66,7 +68,7 @@
       const layer = layers[layerId] || {};
       const code = normalizeCode(hopper.resinName);
       if (!code) continue;
-      items.push({ share: Number(layer.layerPct) || 0, pct: Number(hopper.pct) || 0, density: densities.has(code) ? densities.get(code) : null });
+      items.push({ code, share: Number(layer.layerPct) || 0, pct: Number(hopper.pct) || 0, density: densities.has(code) ? densities.get(code) : null });
     }
     return items;
   }
@@ -83,6 +85,7 @@
    * @param {object|null} [options.storage]
    * @param {function} options.apply          (lbPerHour) -> the card's result for setLineRate
    * @param {function} [options.blendDensity] () -> the recipe's blend average, or null
+   * @param {function} [options.blendMissing] () -> the resins with no density that leave none
    * @param {function} [options.able]
    * @param {function} [options.say]
    * @param {function} [options.onChange]
@@ -95,10 +98,12 @@
     const storage = settings.storage || null;
     const apply = typeof settings.apply === "function" ? settings.apply : () => ({ ok: false, code: "unavailable", message: UNAVAILABLE });
     const blendDensity = typeof settings.blendDensity === "function" ? settings.blendDensity : () => null;
+    const blendMissing = () => { try { return typeof settings.blendMissing === "function" ? (settings.blendMissing() || []) : []; } catch (error) { return []; } };
+    const noBlend = () => { const missing = blendMissing(); return missing.length ? NO_BLEND_FOR(missing) : NO_BLEND; };
     const format = value => (calc ? calc.formatDensity(value) : String(value));
 
     const steps = STEPS.map(step => (step.field !== "density" ? step : Object.assign({}, step, {
-      hint: () => { const blend = blendDensity(); return Number.isFinite(blend) ? `Blend average from the recipe: ${format(blend)} g/cc` : NO_BLEND; },
+      hint: () => { const blend = blendDensity(); return Number.isFinite(blend) ? `Blend average from the recipe: ${format(blend)} g/cc` : noBlend(); },
       suggest: () => { const blend = blendDensity(); return Number.isFinite(blend) ? format(blend) : ""; }
     })));
 
@@ -126,5 +131,5 @@
     });
   }
 
-  return Object.freeze({ TITLE, OPEN_LABEL, UNAVAILABLE, NO_ESTIMATE, NO_BLEND, STEPS, ESTIMATE_STEP, glyph: wizardModule.glyph, blendItems, summaryText, create });
+  return Object.freeze({ TITLE, OPEN_LABEL, UNAVAILABLE, NO_ESTIMATE, NO_BLEND, NO_BLEND_FOR, STEPS, ESTIMATE_STEP, glyph: wizardModule.glyph, blendItems, summaryText, create });
 });

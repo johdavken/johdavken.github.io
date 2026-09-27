@@ -35,15 +35,26 @@ test("every answer must be a number greater than zero, in the wizard's words", (
   assert.equal(estimate.validateAnswer("rolls", "3").ok, false);
 });
 
-test("the blend average weights each hopper by blend and layer share and leaves out a hopper without a density", () => {
+test("the blend average is the weighted harmonic mean - volumes add - and there is none when a weighted resin has no density", () => {
   // Layer A half the film: 70% at 0.92, 30% at 0.95. Layer B half: 100% at 0.96.
   const items = [
-    { share: 50, pct: 70, density: 0.92 }, { share: 50, pct: 30, density: 0.95 },
-    { share: 50, pct: 100, density: 0.96 }
+    { code: "A", share: 50, pct: 70, density: 0.92 }, { code: "B", share: 50, pct: 30, density: 0.95 },
+    { code: "C", share: 50, pct: 100, density: 0.96 }
   ];
-  const expected = (0.5 * 0.7 * 0.92 + 0.5 * 0.3 * 0.95 + 0.5 * 1 * 0.96) / (0.5 * 0.7 + 0.5 * 0.3 + 0.5);
-  assert.ok(Math.abs(estimate.blendDensity(items) - expected) < 1e-9);
-  assert.ok(Math.abs(estimate.blendDensity(items.concat([{ share: 50, pct: 20, density: null }])) - expected) < 1e-9, "a hopper without a density moved the average");
+  const expected = (0.35 + 0.15 + 0.5) / (0.35 / 0.92 + 0.15 / 0.95 + 0.5 / 0.96);
+  assert.ok(Math.abs(estimate.blendDensity(items) - expected) < 1e-12);
+  const plain = (0.35 * 0.92 + 0.15 * 0.95 + 0.5 * 0.96) / 1;
+  assert.ok(estimate.blendDensity(items) < plain, "the plain average is not the harmonic one");
+  // It agrees with Formulas' product density.
+  const pd = require("./product-density.js");
+  const same = pd.productDensity(items.map(item => ({ code: item.code, weight: item.share / 100 * item.pct / 100, density: item.density })));
+  assert.ok(Math.abs(estimate.blendDensity(items) - same.density) < 1e-12);
+  // A weighted resin without a density leaves no average, and is named; a weightless one does not count.
+  const gap = items.concat([{ code: "AB120", share: 50, pct: 20, density: null }, { code: "AB120", share: 50, pct: 5, density: null }]);
+  assert.equal(estimate.blendDensity(gap), null);
+  assert.deepEqual(estimate.missingDensities(gap), ["AB120"]);
+  assert.ok(Math.abs(estimate.blendDensity(items.concat([{ code: "Z", share: 0, pct: 100, density: null }])) - expected) < 1e-12);
+  assert.deepEqual(estimate.missingDensities(items), []);
   assert.equal(estimate.blendDensity([{ share: 50, pct: 20, density: null }]), null);
   assert.equal(estimate.blendDensity([]), null);
   assert.equal(estimate.blendDensity(null), null);

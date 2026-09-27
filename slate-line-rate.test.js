@@ -37,6 +37,7 @@ function boot(options) {
     storage: saved,
     apply: value => { applied.push(value); return settings.apply ? settings.apply(value) : { ok: true, changed: true }; },
     blendDensity: () => (settings.blend === undefined ? 0.9234 : settings.blend),
+    blendMissing: () => settings.missing || [],
     able: () => settings.able || { ok: true, reason: "" },
     say: message => said.push(message),
     anchor,
@@ -53,7 +54,7 @@ const next = view => click(q(view, "[data-wizard='next']"));
 test("blendItems reads each hopper's blend, its layer's share and its resin's catalog density, by code whatever the case; an unassigned hopper is left out", () => {
   const items = lineRate.blendItems(RESOLVED, CATALOG);
   assert.deepEqual(items, [
-    { share: 50, pct: 70, density: 0.92 }, { share: 50, pct: 30, density: 0.95 }, { share: 50, pct: 100, density: 0.96 }, { share: 0, pct: 100, density: null }
+    { code: "HX204", share: 50, pct: 70, density: 0.92 }, { code: "LD105", share: 50, pct: 30, density: 0.95 }, { code: "LL318", share: 50, pct: 100, density: 0.96 }, { code: "NODENSITY", share: 0, pct: 100, density: null }
   ]);
   assert.deepEqual(lineRate.blendItems(null, CATALOG), []);
   assert.deepEqual(lineRate.blendItems(RESOLVED, null).map(item => item.density), [null, null, null, null]);
@@ -99,6 +100,12 @@ test("four prompts in order with their units; the density prompt offers the blen
   for (let i = 0; i < 3; i += 1) { field(none.view, ["layflat", "mil", "lineSpeed"][i]).value = "1"; next(none.view); }
   assert.equal(q(none.view, ".slate-wizard__hint").textContent, lineRate.NO_BLEND);
   assert.equal(field(none.view, "density").value, "");
+  // A recipe with a resin missing its density names it rather than averaging round it.
+  const gap = boot({ blend: null, missing: ["AB120", "WHITE-MB"] });
+  gap.view.open();
+  for (let i = 0; i < 3; i += 1) { field(gap.view, ["layflat", "mil", "lineSpeed"][i]).value = "1"; next(gap.view); }
+  assert.equal(q(gap.view, ".slate-wizard__hint").textContent, "No blend average: no density in the catalog for AB120, WHITE-MB.");
+  assert.equal(field(gap.view, "density").value, "");
 });
 
 test("a refusal keeps the estimate open with the application's words; an unable Use is withheld; without the module it says so", () => {
@@ -201,12 +208,13 @@ test("the Line rate card carries its own calculator; the blend average comes fro
   assert.equal(view.editing(), null);
   const popover = calculator.element;
   for (const [name, value] of [["layflat", "40"], ["mil", "2"], ["lineSpeed", "150"]]) { popover.querySelector(`[data-wizard-field='${name}']`).value = value; click(popover.querySelector("[data-wizard='next']")); }
-  // The recipe above: (0.5x0.7x0.92 + 0.5x0.3x0.95 + 0.5x0.96) / 1 = 0.9445.
-  assert.equal(popover.querySelector(".slate-wizard__hint").textContent, "Blend average from the recipe: 0.945 g/cc");
-  assert.equal(popover.querySelector("[data-wizard-field='density']").value, "0.945");
+  // The recipe above, by volume: 1 / (0.35/0.92 + 0.15/0.95 + 0.5/0.96) = 0.9441
+  // (the plain average, 0.9445, would read 0.945).
+  assert.equal(popover.querySelector(".slate-wizard__hint").textContent, "Blend average from the recipe: 0.944 g/cc");
+  assert.equal(popover.querySelector("[data-wizard-field='density']").value, "0.944");
   click(popover.querySelector("[data-wizard='next']"));
   click(popover.querySelector("[data-wizard='use']"));
-  const expected = estimate.estimate({ layflat: 40, mil: 2, lineSpeed: 150, density: "0.945" }).lbPerHourRounded;
+  const expected = estimate.estimate({ layflat: 40, mil: 2, lineSpeed: 150, density: "0.944" }).lbPerHourRounded;
   assert.deepEqual(commands.calls, [{ command: "setLineRate", args: { lineRate: expected } }]);
   assert.equal(committed.length, 1);
   assert.ok(!calculator.isOpen());

@@ -74,8 +74,7 @@
 }
 
 /* ---- Sheets ----
-   The job's editors and pickers, the pressure
-   conversion (in the Scrap card's place elsewhere), the layer's menu, the
+   The job's editors and pickers, the layer's menu, the
    Scan menu and the RT Sync panel: anchored to what opened them they
    would run off a phone's screen, so there each rises from the foot, the
    screen's width, over the grip, clear of the gesture bar - and above the
@@ -83,7 +82,6 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
@@ -130,19 +128,9 @@
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
-  .slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
     animation: none;
   }
-}
-
-/* The pressure conversion is a tool, not a passing popover: it stays up
-   until its close or Back (slate.js), so it stands above the grip, which
-   stays in reach. */
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-pressure {
-  bottom: calc(var(--slate-grip-clear) + var(--slate-inset-bottom));
-  padding-bottom: var(--slate-space-4);
-  border-bottom: var(--slate-stroke) solid var(--slate-border-subtle);
 }
