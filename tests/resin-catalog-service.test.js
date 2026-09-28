@@ -1,0 +1,162 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const service = require("../resin-catalog-service.js");
+
+function createStorage(initial = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+}
+
+const fallback = Object.freeze([
+  { code: "FALLBACK-A", density: 0.918 },
+  { code: "FALLBACK-B", density: null }
+]);
+
+function cachedEnvelope(resins, version = service.CACHE_SCHEMA_VERSION) {
+  return JSON.stringify({ version, cachedAt: Date.now(), resins });
+}
+
+const cachedResin = {
+  id: "cached-id",
+  resin_code: "CACHED-A",
+  density_g_cm3: 0.925,
+  bulk_density_lb_ft3: null,
+  is_active: true,
+  updated_at: null
+};
+
+function remoteClient({ data = [], error = null, onQuery } = {}) {
+  return {
+    from(table) {
+      assert.equal(table, "resins");
+      return {
+        select(fields) {
+          onQuery?.("select", fields);
+          return this;
+        },
+        eq(field, value) {
+          onQuery?.("eq", [field, value]);
+          return this;
+        },
+        async order(field, options) {
+          onQuery?.("order", [field, options]);
+          return { data, error };
+        }
+      };
+    }
+  };
+}
+
+test("loads a valid versioned cache before using the fallback", () => {
+  const storage = createStorage({ [service.CACHE_KEY]: cachedEnvelope([cachedResin]) });
+  const catalog = service.create({ storage, fallbackCatalog: fallback, config: { enabled: false } });
+  assert.deepEqual(catalog.getCachedResins(), [cachedResin]);
+  assert.equal(catalog.getResins()[0].resin_code, "CACHED-A");
+});
+
+test("malformed cache and incompatible versions fall back safely", () => {
+  for (const value of ["{not json", cachedEnvelope([cachedResin], 999)]) {
+    const storage = createStorage({ [service.CACHE_KEY]: value });
+    const catalog = service.create({ storage, fallbackCatalog: fallback, config: { enabled: false } });
+    assert.equal(catalog.getCachedResins(), null);
+    assert.deepEqual(catalog.getResins().map(resin => resin.resin_code), ["FALLBACK-A", "FALLBACK-B"]);
+  }
+});
+
+test("refreshes active Supabase rows, normalizes them, and updates the cache", async () => {
+  const storage = createStorage();
+  const events = [];
+  const remote = [
+    { id: "2", resin_code: "z-code", density_g_cm3: null, is_active: true, updated_at: null },
+    { id: "1", resin_code: "A-code", density_g_cm3: 0.912, is_active: true, updated_at: "2026-08-02T00:00:00Z" }
+  ];
+  const catalog = service.create({ storage, fallbackCatalog: fallback, config: { enabled: true }, client: remoteClient({ data: remote, onQuery: (...event) => events.push(event) }) });
+  let notification;
+  catalog.subscribe((resins, result) => { notification = { resins, result }; });
+
+  const result = await catalog.refreshResins();
+  assert.equal(result.loaded, true);
+  assert.deepEqual(result.resins.map(resin => resin.resin_code), ["A-code", "z-code"]);
+  assert.equal(catalog.getCachedResins()[0].resin_code, "A-code");
+  assert.equal(notification.result.loaded, true);
+  assert.deepEqual(events, [
+    ["select", service.REMOTE_FIELDS],
+    ["eq", ["is_active", true]],
+    ["order", ["resin_code", { ascending: true }]]
+  ]);
+});
+
+test("a failed refresh preserves the last valid cache", async () => {
+  const storage = createStorage({ [service.CACHE_KEY]: cachedEnvelope([cachedResin]) });
+  const catalog = service.create({
+    storage,
+    fallbackCatalog: fallback,
+    config: { enabled: true },
+    client: remoteClient({ error: new Error("offline") })
+  });
+  const result = await catalog.refreshResins();
+  assert.equal(result.loaded, false);
+  assert.equal(result.reason, "request-failed");
+  assert.deepEqual(catalog.getCachedResins(), [cachedResin]);
+});
+
+test("a malformed refresh response preserves the last valid cache", async () => {
+  const storage = createStorage({ [service.CACHE_KEY]: cachedEnvelope([cachedResin]) });
+  const catalog = service.create({
+    storage,
+    fallbackCatalog: fallback,
+    config: { enabled: true },
+    client: remoteClient({ data: [{ resin_code: "missing-active-status" }] })
+  });
+  const result = await catalog.refreshResins();
+  assert.equal(result.loaded, false);
+  assert.equal(result.reason, "invalid-response");
+  assert.deepEqual(catalog.getCachedResins(), [cachedResin]);
+});
+
+test("looks up resin codes without regard to case or surrounding whitespace", () => {
+  const catalog = service.create({ storage: createStorage(), fallbackCatalog: fallback, config: { enabled: false } });
+  assert.equal(catalog.getResinByCode("  fallback-a ").resin_code, "FALLBACK-A");
+  assert.equal(catalog.getResinByCode("missing"), null);
+});
+
+test("a server-confirmed admin update refreshes cache subscribers immediately", () => {
+  const storage = createStorage({ [service.CACHE_KEY]: cachedEnvelope([cachedResin]) });
+  const catalog = service.create({ storage, fallbackCatalog:fallback, config:{ enabled:false } });
+  let notification;
+  catalog.subscribe((resins, result) => { notification = { resins, result }; });
+  assert.equal(catalog.acceptConfirmedResin({ ...cachedResin, bulk_density_lb_ft3:48.8, updated_at:"2026-08-11T12:00:00Z" }), true);
+  assert.equal(catalog.getCachedResins()[0].bulk_density_lb_ft3, 48.8);
+  assert.equal(notification.result.reason, "confirmed-admin-update");
+  assert.equal(notification.resins[0].bulk_density_lb_ft3, 48.8);
+});
+
+test("normalization retains unknown values as null - display_description/information_description are no longer part of the shape", () => {
+  assert.deepEqual(service.normalizeResin({ resin_code: "UNKNOWN", density_g_cm3: 0, bulk_density_lb_ft3: 0, is_active: "yes" }), {
+    id: null,
+    resin_code: "UNKNOWN",
+    density_g_cm3: null,
+    bulk_density_lb_ft3: null,
+    is_active: null,
+    updated_at: null
+  });
+});
+
+test("bulk density normalizes like density - positive numbers pass through, zero/negative/non-numeric become null, and the fallback shape reads bulk_density instead of bulk_density_lb_ft3", () => {
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: 37.2 }).bulk_density_lb_ft3, 37.2);
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: 0 }).bulk_density_lb_ft3, null);
+  assert.equal(service.normalizeResin({ resin_code: "X", bulk_density_lb_ft3: -5 }).bulk_density_lb_ft3, null);
+  assert.equal(service.normalizeResin({ code: "X", bulk_density: 40 }, { fallback: true }).bulk_density_lb_ft3, 40);
+});
+
+test("works with unavailable Supabase and localStorage", async () => {
+  const catalog = service.create({ storage: null, fallbackCatalog: fallback, config: { enabled: true }, supabaseLibrary: null });
+  assert.deepEqual(catalog.getResins().map(resin => resin.resin_code), ["FALLBACK-A", "FALLBACK-B"]);
+  const result = await catalog.refreshResins();
+  assert.equal(result.loaded, false);
+  assert.equal(result.reason, "unavailable");
+});

@@ -1,0 +1,159 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const { readStyles } = require("../css-source");
+
+const styles = readStyles();
+
+function desktopBlock(){
+  const start = styles.indexOf("@media (min-width: 901px) and (pointer: fine){");
+  assert.notEqual(start, -1, "expected the desktop Recipe matrix block");
+  const end = styles.indexOf("\n}\n\n@media (hover:hover){", start);
+  assert.notEqual(end, -1);
+  return styles.slice(start, end);
+}
+
+test("the Recipe matrix left-aligns instead of centering, desktop only", () => {
+  const body = desktopBlock();
+  assert.match(body, /\.splitsMatrixFrame\{[\s\S]*?width: min\(100%, var\(--recipe-five-layer-rail\)\);[\s\S]*?margin-inline: 0;/);
+  // The base (mobile-inclusive) rule must remain centered - only desktop
+  // overrides it, so mobile's own width:100% override elsewhere is untouched.
+  assert.match(styles, /\.splitsMatrixFrame\{\s*\n\s*width:max-content;\s*\n\s*margin-inline:auto;/);
+});
+
+test("the matrix frame is capped at min(100%, rail) rather than a bare rail width, and #splitsArea's grid column is pinned to the container - a fixed 1062px frame sized #splitsArea's auto/max-content column to 1062px even when the panel only had ~726px, so every sibling in that column resolved percentages against 1062px. That is what made opening Edit appear to widen the panel: #splitsBulkBar's own width:min(100%, rail) saw 100% = 1062px and painted past the rail, detaching the header from the grid's right edge", () => {
+  const body = desktopBlock();
+  assert.match(body, /#splitsArea\{\s*\n\s*grid-template-columns: minmax\(0, 1fr\);\s*\n\s*\}/);
+  // The header row and the Edit toolbar already used this same capped rail -
+  // the frame disagreeing with them is what split the layout into two rails.
+  assert.match(styles, /#splitsBlock \.recipeHeaderRow,\s*\n\s*#splitsArea > \.splitsBulkBar\{\s*\n\s*width: min\(100%, var\(--recipe-five-layer-rail\)\);/);
+});
+
+// The "unused rail" isometric lattice above was designed for the old
+// non-transposed (stacked) matrix, where fewer than 5 layers left real
+// unused column space to texture. Recipe Setup's grid is transposed
+// (layers as rows, all 6 hopper columns always rendered - see
+// area.dataset.recipeLayout in app.js) whenever reworkedGrid is true, which
+// is unconditionally the case at desktop widths now. So data-layer-count
+// "1"/"3" still got set (frame.dataset.layerCount = String(layerNames.length)
+// in app.js), the lattice rule still matched, and --recipe-active-rail's
+// stacked-layout pixel widths (268px/664px) landed mid-table - painting the
+// lattice over the Hopper 5/6 columns of a live 3-layer recipe. Removed
+// entirely: there is no "missing layer column" concept left to texture.
+test("the stale unused-rail lattice is gone; data-layer-count is still set for any other consumer, but no CSS keys off it", () => {
+  const app = fs.readFileSync("app.js", "utf8");
+  const body = desktopBlock();
+  assert.match(app, /frame\.dataset\.layerCount = String\(layerNames\.length\);/);
+  assert.doesNotMatch(body, /data-layer-count/);
+  assert.doesNotMatch(styles, /recipe-active-rail/);
+});
+
+test("Summary no longer collapses the row gutter - it's a permanent column now, so toggling Edit never shifts Columns A-E. Same fix as the header-row/Edit-toolbar rail alignment work: the gutter is reserved everywhere, only its content (Select row label, interactive styling) changes with view", () => {
+  const body = desktopBlock();
+  assert.doesNotMatch(body, /#splitsArea\[data-recipe-view="summary"\] \.splitsMatrix tr > :first-child\{\s*\n\s*display: none;/);
+  assert.match(styles, /#splitsBlock #splitsArea \.splitsMatrix tr > :first-child\{\s*\n\s*display: table-cell;\s*\n\s*min-width: 70px;\s*\n\s*width: 70px;\s*\n\s*max-width: 70px;\s*\n\s*\}/);
+});
+
+test("the 10% size increase is scoped to .splitsMatrixFrame, not #splitsArea - the surrounding toolbars must stay their normal size", () => {
+  const body = desktopBlock();
+  // A custom property that reads its own name back out is a cycle (even
+  // through calc()) and Chromium resolves it to nothing, so the actual
+  // scaling can't live in a --font-base: calc(var(--font-base) * 1.1)
+  // declared on .splitsMatrixFrame itself. #splitsArea precomputes the
+  // scaled value under a different name (--font-base-x11) and
+  // .splitsMatrixFrame just reassigns the real token from that - #splitsArea
+  // itself must never assign --font-base directly (only the "-x11" alias),
+  // or every descendant, including the toolbars, would inherit the scaled
+  // value instead of just the matrix.
+  assert.match(body, /#splitsArea\{\s*\n\s*--font-base-x11: calc\(var\(--font-base\) \* 1\.1\);/);
+  assert.match(body, /#splitsArea \.splitsMatrixFrame\{\s*\n\s*--font-base: var\(--font-base-x11\);/);
+  assert.doesNotMatch(body, /#splitsArea\{\s*\n\s*--font-base:/, "the font scaling must not be declared directly on #splitsArea - that would also grow .recipeUtilityTabs/.splitsBulkModeBar");
+});
+
+test("column width, the hopper-designation badge, and the Track toggle clock icon are each ~10% larger on desktop", () => {
+  const body = desktopBlock();
+  assert.match(body, /#splitsArea \.splitsMatrix thead th,\s*\n\s*#splitsArea \.splitMatrixCell\{ min-width: 198px; width: 198px; max-width: 198px; \}/);
+  assert.match(body, /#splitsArea \.splitCellHopperName\{ min-width: 29px; height: 24px;/);
+  assert.match(body, /#splitsArea \.splitTrackButton\{ width: 25px; height: 25px; min-height: 25px; \}/);
+  assert.match(body, /#splitsArea \.splitTrackButton svg\{ width: 21px; height: 21px; \}/);
+});
+
+test("desktop tracked cells retain their normal surface while the hopper badge itself highlights", () => {
+  const body = desktopBlock();
+  // Tracked (Summary or Edit) = a --ok wash over the cell's own fill, no shadow.
+  assert.match(body, /\.splitMatrixCell\.tracked,\s*\n\s*#splitsArea\[data-recipe-view="edit"\][^{]*\.splitMatrixCell\.tracked\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: none;/);
+  assert.match(body, /\.splitMatrixCell\.selected\{[\s\S]*?background: var\(--desktop-recipe-cell-bg\);[\s\S]*?box-shadow: inset 0 0 0 2px var\(--focus-border\);/);
+  // A tracked cell selected in Edit keeps the ordinary cell surface under the selection outline.
+  assert.match(body, /\.splitMatrixCell\.tracked\.selected\{[\s\S]*?background:var\(--desktop-recipe-cell-bg\);/);
+  assert.match(body, /\.splitMatrixCell\.selected::after\{[\s\S]*?content: "EDIT";[\s\S]*?font-size: 8px;/);
+  // Tracking sits inside the hopper badge itself (no clock icon, no
+  // cell-corner marker, no spelled-out "TRACKING" label) - Summary view
+  // only, so it never competes with Edit's own status label.
+  assert.doesNotMatch(styles, /splitHopperTrackingClock/);
+  // The shared badge-highlight rule now excludes the compact phone grid
+  // (:not([data-recipe-cells="static"])); desktop is "typeable", so it
+  // still matches here.
+  assert.match(styles, /#splitsArea\[data-recipe-view="summary"\]:not\(\[data-recipe-cells="static"\]\) \.splitsMatrix tbody \.splitMatrixCell\.tracked \.splitCellHopperName\{[\s\S]*?background:color-mix\(in srgb,var\(--ok\)[\s\S]*?color:var\(--ok\);/);
+  assert.doesNotMatch(styles, /\.splitMatrixCell\.tracked::before/);
+  assert.doesNotMatch(body, /content: "TRACKING"/);
+});
+
+test("hovering a cell no longer highlights its whole row", () => {
+  assert.doesNotMatch(styles, /tbody tr:hover \.splitMatrixCell/);
+});
+
+test("the static row/column shading alternates by column (layer), not by row", () => {
+  assert.doesNotMatch(styles, /\.splitsMatrix tbody tr:nth-child\(even\) \.splitMatrixCell/);
+  assert.match(styles, /\.splitsMatrix tbody td\.splitMatrixCell:nth-child\(even\)\{background:color-mix\(in srgb,var\(--row-bg-2\) 55%,transparent\)\}/);
+});
+
+test("Saved recipes/Bulk edit/Rearrange panel content is 15% smaller on desktop, but the tab strip that opens them is untouched", () => {
+  const body = desktopBlock();
+  // Same self-reference cycle as the matrix's 1.1x block above, at 25
+  // properties instead of 3 - #splitsBlock (not #splitsArea, so the same
+  // "-x85" tokens also reach .recipeHeaderControls) precomputes the scaled
+  // values under "-x85" names and the real tokens are reassigned from those.
+  assert.match(body, /#splitsBlock\{\s*\n\s*--font-base-x85: calc\(var\(--font-base\) \* \.85\);/);
+  assert.match(body, /--control-height-x85: calc\(var\(--control-height\) \* \.85\);/);
+  assert.match(body, /\.splitsBulkBar,\s*\n\s*\.splitsSavedRecipesPanel,\s*\n\s*\.rearrangeModeBar,\s*\n\s*\.recipeHeaderControls\{/);
+  assert.match(body, /--font-base: var\(--font-base-x85\);/);
+  assert.match(body, /--control-height: var\(--control-height-x85\);/);
+  // .recipeUtilityTabs/.recipeUtilityTab must never appear as a selector
+  // inside this 0.85x block - the tab strip itself stays full size.
+  const shrinkBlockStart = body.indexOf(".splitsBulkBar,\n  .splitsSavedRecipesPanel,\n  .rearrangeModeBar,\n  .recipeHeaderControls{");
+  assert.notEqual(shrinkBlockStart, -1);
+  const shrinkBlock = body.slice(shrinkBlockStart);
+  assert.doesNotMatch(shrinkBlock, /recipeUtilityTab/);
+});
+
+test("Load Current/Next and Print physically relocate into the desktop header without gaining tab semantics", () => {
+  const appJsPath = require.resolve("../app.js");
+  const app = fs.readFileSync(appJsPath, "utf8");
+  assert.match(app, /loadNextButton\?\.classList\.add\("recipeHeaderAction"\);/);
+  assert.match(app, /printButton\.classList\.remove\("recipeActionTertiary"\);\s*\n\s*printButton\.classList\.add\("secondary", "recipeHeaderAction"\);/);
+  // This must live inside the desktop-only (!compactMobileRecipe) branch,
+  // not be applied unconditionally,
+  // since loadNextButton is reused as-is (still in modeBar) on mobile.
+  const elseBranchStart = app.indexOf('// Current/Next and Print are ordinary app buttons in the header.');
+  const elseBranchEnd = app.indexOf("// Percentage problems", elseBranchStart);
+  assert.notEqual(elseBranchStart, -1);
+  assert.notEqual(elseBranchEnd, -1);
+  const elseBranch = app.slice(elseBranchStart, elseBranchEnd);
+  // .append() moves each node here from modeBar (its original parent) -
+  // no separate removal call needed.
+  assert.match(elseBranch, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
+  assert.match(elseBranch, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  assert.match(elseBranch, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(elseBranch, /savedRecipesButton/);
+  assert.doesNotMatch(elseBranch, /setAttribute\("role", "tab"\)/, "the lower strip contains actions, not page tabs");
+});
+
+test(".recipeActionTab is a lean modifier (icon+label flex layout only) combined with .recipeUtilityTab, which supplies the actual tab shape - not a standalone duplicate of it", () => {
+  const start = styles.indexOf(".recipeActionTab{");
+  assert.notEqual(start, -1);
+  const rule = styles.slice(start, styles.indexOf("}", start) + 1);
+  assert.match(rule, /display: inline-flex;/);
+  assert.doesNotMatch(rule, /border-radius:/, ".recipeActionTab must not redeclare the tab shape - that comes from .recipeUtilityTab once both classes are combined");
+});

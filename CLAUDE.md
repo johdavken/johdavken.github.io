@@ -489,9 +489,11 @@ Every substantial feature or correction should include focused tests.
 Run:
 
 ```
-node --test *.test.js
+node --test tests/*.test.js
 git diff --check
 ```
+
+Tests live in `tests/` and are run from the repo root: they `require("../<module>.js")` and resolve repo files from `path.join(__dirname, "..")`.
 
 Also run targeted tests for the feature being changed.
 
