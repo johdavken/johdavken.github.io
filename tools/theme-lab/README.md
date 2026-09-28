@@ -53,7 +53,7 @@ A token whose consumers are all `:hover` / `:focus-visible` / `:active` selector
 
 - `server.js` — static server + `/__theme-lab/api/{themes,save}`
 - `index.html`, `theme-lab.css`, `theme-lab.js` — the editor UI
-- `theme-parser.js` — `theme.css` block parser + conservative rewriter (unit-tested by `../../theme-lab.test.js`)
+- `theme-parser.js` — `theme.css` block parser + conservative rewriter (unit-tested by `../../tests/theme-lab.test.js`)
 - `preview-agent.js` — injected into the preview iframe: element picker + trace dispatch
-- `css-trace.js` — injected into the preview iframe: stylesheet line-parser, specificity, cascade resolution, `var()` chain resolution (`trace`), the reverse token → consumer map (`buildRefMap` / `walkConsumers` / `impact`), and the lightweight per-row `impactCount` with a `bumpLiveGen()`-keyed live cache. Pure helpers unit-tested by `../../theme-lab-trace.test.js`
+- `css-trace.js` — injected into the preview iframe: stylesheet line-parser, specificity, cascade resolution, `var()` chain resolution (`trace`), the reverse token → consumer map (`buildRefMap` / `walkConsumers` / `impact`), and the lightweight per-row `impactCount` with a `bumpLiveGen()`-keyed live cache. Pure helpers unit-tested by `../../tests/theme-lab-trace.test.js`
 - `backups/` — auto-created, git-ignored `theme.css` backups from Save

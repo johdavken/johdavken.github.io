@@ -1,0 +1,140 @@
+"use strict";
+
+// Phone Recipe panel: the four page tabs (Current / Next / Weights / Recipe
+// Book) show an icon instead of their text label, and Scan + the page's own
+// Load action fold up into the same tab row as icon-only buttons beside the
+// Edit/Done pencil - replacing the action bar that used to sit below the
+// matrix. Print is desktop-only. Behaviour is unchanged: same ids, same
+// role="tab", same handlers; only the visual label swaps to an icon and
+// the text label stays in the a11y tree.
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const { readStyles } = require("../css-source");
+const { rulesUnder } = require("../css-media");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = readStyles();
+
+function tabsMarkup(){
+  const start = html.indexOf('<div class="recipePageTabs"');
+  const end = html.indexOf("</div>", start);
+  assert.ok(start > -1 && end > start);
+  return html.slice(start, end);
+}
+
+function mobileBlock(){
+  // Every phone-width rule, from all max-width:700px blocks.
+  //
+  // This used to be the slice from the first such block to the next 720px one,
+  // which assumed there was only one. There are three, and the rules this file
+  // checks live in a later one - so the slice was reading a different part of
+  // the stylesheet entirely and reporting the tab icons missing while they
+  // were working. Collecting all the blocks keeps both directions honest: a
+  // rule that must be phone-scoped is found, and one that must not be is
+  // still absent.
+  const rules = rulesUnder(styles);
+  assert.ok(rules.length > 0, "no max-width:700px rules found at all");
+  return rules;
+}
+
+/* -------------------------------------------------------------------
+ *   Tab markup: every tab carries both a label and an icon
+ * ------------------------------------------------------------------- */
+
+test("each page tab has a .recipeTabLabel and an aria-hidden .recipeTabIcon, ids/roles unchanged", () => {
+  const tabs = tabsMarkup();
+  for (const [id, page, label] of [
+    ["recipePageTabCurrent", "current", "Current"],
+    ["recipePageTabNext", "next", "Next"],
+    ["recipePageTabWeights", "weights", "Hopper Weights"],
+    ["recipePageTabSaved", "saved", "Recipe Book"],
+  ]){
+    const re = new RegExp(`id="${id}"[^>]*data-recipe-page="${page}"[^>]*>`);
+    assert.match(tabs, re, `${id} keeps its id/role/data-recipe-page`);
+  }
+  assert.match(tabs, /<span class="recipeTabLabel">Current<\/span><span class="recipeTabIcon" aria-hidden="true"><svg/);
+  assert.match(tabs, /<span class="recipeTabLabel">Next<\/span><span class="recipeTabIcon" aria-hidden="true"><svg/);
+  assert.match(tabs, /<span class="recipeTabLabel"><span class="recipeWeightsTabFull">Hopper Weights<\/span>/);
+  assert.match(tabs, /<span class="recipeTabLabel">Recipe Book<\/span><span class="recipeTabIcon" aria-hidden="true"><svg/);
+});
+
+test("the Next tab keeps its planned-recipe dot after the icon", () => {
+  const tabs = tabsMarkup();
+  assert.match(tabs, /data-recipe-page="next">[\s\S]*?<span class="recipeTabIcon"[\s\S]*?<\/span><span class="recipePageTabDot" id="recipePageTabNextDot" hidden/);
+});
+
+/* -------------------------------------------------------------------
+ *   CSS: label <-> icon swap only kicks in on phones
+ * ------------------------------------------------------------------- */
+
+test("desktop shows the label and hides the icon; phones clip the label and show the icon", () => {
+  assert.match(styles, /\.recipeTabIcon\{ display:none; \}/);
+  const block = mobileBlock();
+  assert.match(block, /#splitsBlock \.recipePageTab \.recipeTabLabel\{[\s\S]*?clip-path:inset\(50%\);/);
+  assert.match(block, /#splitsBlock \.recipePageTab \.recipeTabIcon\{\s*\n\s*display:inline-flex;/);
+  assert.match(block, /#splitsBlock \.recipePageTab \.recipeTabIcon svg\{[\s\S]*?stroke:currentColor;/);
+});
+
+test("the label is clipped, never display:none - it stays the tab's accessible name", () => {
+  const block = mobileBlock();
+  const rule = block.slice(block.indexOf("#splitsBlock .recipePageTab .recipeTabLabel{"), block.indexOf("}", block.indexOf("#splitsBlock .recipePageTab .recipeTabLabel{")));
+  assert.doesNotMatch(rule, /display:\s*none/);
+});
+
+/* -------------------------------------------------------------------
+ *   The icon action cluster (Scan / Load / Edit) in the tab row
+ * ------------------------------------------------------------------- */
+
+test("#recipeHeaderActions is a flex icon row pulled left of the pencil (order:-1) on phones - not force-hidden", () => {
+  const block = mobileBlock();
+  assert.match(block, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions\{\s*\n\s*display:flex;\s*\n\s*order:-1;/);
+  assert.doesNotMatch(styles, /@media \(max-width: 700px\)\{\s*\.recipeHeaderActions\{ display: none; \}/);
+});
+
+test("Recipe Book is the only page that hides #recipeHeaderActions outright", () => {
+  const sync = app.slice(app.indexOf("function syncRecipePageUI("), app.indexOf("function setRecipePage("));
+  /* This used to read `isSavedRecipesPage() || (isWeightsPage() &&
+   * isDesktopLayout())` - desktop Weights kept an inline panel and left the
+   * slot empty. 48b9af1 retired that on purpose: Smart Hoppers and
+   * Circumference moved into the slot as tinted pill segments, and its message
+   * says so directly - "syncRecipePageUI no longer hides the slot on desktop
+   * Weights". renderWeightsArea populates it on both shells now.
+   *
+   * Desktop has no Summary/Edit mode and therefore no pencil, so on desktop
+   * Weights those two controls are the entire contents of that space. That is
+   * the intended design, not a leftover - do not narrow this back to phones.
+   *
+   * 48b9af1 updated recipe-book-weight-profiles.test.js and missed this file,
+   * which is why the assertion outlived the behaviour it described. */
+  assert.match(sync, /headerActions\.hidden = isSavedRecipesPage\(\);/);
+  assert.doesNotMatch(sync, /headerActions\.hidden = [^;]*isWeightsPage\(\)/,
+    "a desktop-Weights exception is back - that slot is where Smart Hoppers and Circumference live");
+  const block = mobileBlock();
+  // No rule of its own any more: the global [hidden]{display:none!important}
+  // at the top of styles.css hides it. That can only be outranked by an
+  // !important display on a more specific selector, so check for exactly that.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  assert.doesNotMatch(styles, /\.recipeHeaderActions[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+\s*!important/);
+  assert.match(block, /#splitsBlock \.recipeHeaderRow \.recipeHeaderActions:empty\{ display:none; \}/);
+});
+
+test("Scan and Load are square icon-only buttons; Edit/Done collapses to its pencil ::before", () => {
+  const block = mobileBlock();
+  assert.match(block, /#splitsBlock \.recipeHeaderActions > \.mobileScanIconAction > summary,\s*\n\s*#splitsBlock \.recipeHeaderActions > \.recipeHeaderMobileAction\{[\s\S]*?font-size:0;/);
+  assert.match(block, /#splitsBlock \.recipeHeaderActions \.recipeActionIcon\{\s*\n\s*display:block;/);
+  assert.match(block, /#recipeHeaderActionPill \.recipeViewToggle button\[data-recipe-view="edit"\],[\s\S]*?\{[\s\S]*?font-size:0;/);
+  // The Hopper Weights page's own Summary/Edit toggle collapses the same way.
+  assert.match(block, /#recipeHeaderControls \.weightsHeaderViewToggle button\[data-weight-view="edit"\]/);
+});
+
+test("no Print on mobile - it is only appended in the desktop header branch", () => {
+  assert.doesNotMatch(styles, /mobilePrintIconAction/);
+  const editor = app.slice(app.indexOf("function renderSplitsArea(){"), app.indexOf("function renderResinCalculator(){"));
+  const compact = editor.slice(editor.indexOf("if (compactMobileRecipe){"), editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
+  assert.doesNotMatch(compact, /printButton/);
+  const desktop = editor.slice(editor.indexOf("}else{", editor.indexOf("if (compactMobileRecipe){")));
+  assert.match(desktop, /headerActions\?\.append\(printButton\);/);
+});

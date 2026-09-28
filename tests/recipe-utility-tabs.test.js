@@ -1,0 +1,88 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const { readStyles } = require("../css-source");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = readStyles();
+
+function rule(selector, from = styles){
+  const start = from.indexOf(selector);
+  assert.notEqual(start, -1, `expected to find ${selector}`);
+  return from.slice(start, from.indexOf("}", start) + 1);
+}
+
+function desktopAssembly(){
+  const start = app.indexOf('// Current/Next and Print are ordinary app buttons in the header.');
+  const end = app.indexOf("// Percentage problems", start);
+  assert.ok(start > -1 && end > start, "expected desktop recipe action assembly");
+  return app.slice(start, end);
+}
+
+test("Recipe Book is a primary Recipe page beside Current and Next", () => {
+  const tabs = html.slice(html.indexOf('class="recipePageTabs"'), html.indexOf('</div>', html.indexOf('class="recipePageTabs"')));
+  assert.match(tabs, /data-recipe-page="current">[\s\S]*data-recipe-page="next">[\s\S]*data-recipe-page="saved" hidden><span class="recipeTabLabel">Recipe Book<\/span>/);
+  assert.match(tabs, /id="recipePageTabSaved" role="tab" aria-selected="false" aria-controls="splitsArea"/);
+});
+
+test("desktop recipe actions live in the labelled header group and not a lower strip", () => {
+  const desktop = desktopAssembly();
+  assert.match(html, /class="recipeHeaderActions" id="recipeHeaderActions" role="group" aria-label="Recipe actions"/);
+  assert.match(desktop, /if \(loadNextButton\) headerActions\?\.append\(loadNextButton\);/);
+  assert.match(desktop, /if \(loadCurrentButton\) headerActions\?\.append\(loadCurrentButton\);/);
+  assert.match(desktop, /headerActions\?\.append\(printButton\);/);
+  assert.doesNotMatch(desktop, /recipeUtilityTabs/);
+});
+
+test("desktop action-strip controls stay quiet and keyboard-visible", () => {
+  const tabsRule = rule(".recipeUtilityTabs{");
+  assert.match(tabsRule, /border-bottom: 1px solid var\(--row-border\);/);
+  assert.match(tabsRule, /display: flex;/);
+  const actionRule = rule(".recipeUtilityTab{");
+  assert.match(actionRule, /border: 1px solid transparent;/);
+  assert.match(actionRule, /background: transparent;/);
+  assert.match(actionRule, /font-size: var\(--font-tiny\);/);
+  const focusRule = rule(".recipeUtilityTab:focus-visible{");
+  assert.match(focusRule, /outline: var\(--focus-outline\);/);
+});
+
+test("immediate actions never gain tab semantics", () => {
+  assert.doesNotMatch(app, /scanRecipeButton\.classList\.add\("recipeUtilityTab"\)/);
+  assert.doesNotMatch(app, /printButton\.setAttribute\("role", "tab"\)/);
+  assert.doesNotMatch(app, /loadNextButton\.setAttribute\("role", "tab"\)/);
+  assert.doesNotMatch(app, /loadCurrentButton\.setAttribute\("role", "tab"\)/);
+});
+
+test("header view and recipe actions use the app's primary/secondary button families with a divider", () => {
+  assert.match(html, /class="primary actionRail active"[^>]*data-recipe-view="summary"/);
+  assert.match(html, /class="secondary"[^>]*data-recipe-view="edit"/);
+  assert.match(app, /button\.classList\.toggle\("primary", active\);/);
+  assert.match(app, /printButton\.classList\.add\("secondary", "recipeHeaderAction"\);/);
+  assert.match(styles, /\.recipeHeaderActions\{[\s\S]*?border-left: 1px solid var\(--row-border-2\);/);
+});
+
+test("mobile's action cluster never receives desktop tab styling, and Recipe Book is reached through the shared tab row instead of a row button", () => {
+  const start = app.indexOf("if (compactMobileRecipe){");
+  const end = app.indexOf("}else{", start);
+  assert.ok(start > -1 && end > start);
+  const mobile = app.slice(start, end);
+  assert.doesNotMatch(mobile, /savedRecipesButton/);
+  assert.doesNotMatch(mobile, /recipeUtilityTab/);
+  assert.doesNotMatch(mobile, /role", "tab/);
+  assert.doesNotMatch(mobile, /mobilePrimaryRow/);
+});
+
+test("the Recipe Book panel occupies the matrix slot at every width, sized for desktop/tablet from 701px up", () => {
+  assert.match(styles, /body\[data-recipe-page="saved"\] #splitsArea > :not\(\.splitsSavedRecipesPanel\):not\(\.splitsConfigurationPreview\)\{\s*display: none!important;/);
+  const panel = styles.slice(styles.indexOf('body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{'));
+  const panelRule = panel.slice(0, panel.indexOf("}") + 1);
+  assert.match(panelRule, /display: block;/);
+  assert.match(panelRule, /order: 0;/);
+  const widePanel = styles.slice(styles.indexOf('@media (min-width: 701px){\n  body[data-recipe-page="saved"] #splitsArea > .splitsSavedRecipesPanel{'));
+  const widePanelRule = widePanel.slice(0, widePanel.indexOf("}") + 1);
+  assert.match(widePanelRule, /width: min\(100%, var\(--recipe-five-layer-rail, 1062px\)\);/);
+  assert.match(widePanelRule, /min-height: 540px;/);
+});

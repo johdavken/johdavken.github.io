@@ -1,0 +1,133 @@
+"use strict";
+
+// Mobile-only icon guide in the Recipe panel: an "i" in the summary bar,
+// opposite the RECIPE title. Tapping it drops a legend (down + to the left)
+// naming every tab / action icon that replaces a text label on phones. The
+// rows are grouped by where the control appears, including the Edit toolbar's
+// Undo, Redo, Clear selection, Empty cells, Rearrange, and Reset Recipe. It
+// is a <details> nested inside #splitsBlock's own <summary>, so its summary
+// click must not bubble out and toggle the panel.
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { occurrences, PHONE } = require("../css-media");
+const fs = require("node:fs");
+const { readStyles } = require("../css-source");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = readStyles();
+
+function recipeSummary(){
+  const block = html.indexOf('id="splitsBlock"');
+  const start = html.indexOf("<summary>", block);
+  const end = html.indexOf("</summary>", start);
+  assert.ok(start > -1 && end > start);
+  return html.slice(start, end);
+}
+
+function legendMarkup(){
+  const s = html.indexOf('<details class="recipeInfoLegend"');
+  const e = html.indexOf("</details>", s);
+  assert.ok(s > -1 && e > s, "expected #recipeInfoLegend markup");
+  return html.slice(s, e);
+}
+
+/* -------------------------------------------------------------------
+ *   Placement: in the Recipe summary bar, after the status pill
+ * ------------------------------------------------------------------- */
+
+test("the guide is a <details id=\"recipeInfoLegend\"> in the Recipe panel's summary, after #splitsSummaryStatus", () => {
+  const summary = recipeSummary();
+  const pillAt = summary.indexOf('id="splitsSummaryStatus"');
+  const legendAt = summary.indexOf('id="recipeInfoLegend"');
+  assert.ok(pillAt > -1 && legendAt > pillAt, "legend sits opposite the title, after the status pill");
+  assert.match(summary, /<details class="recipeInfoLegend" id="recipeInfoLegend">/);
+  assert.match(summary, /<summary aria-label="What the icons mean"[^>]*><svg/);
+});
+
+/* -------------------------------------------------------------------
+ *   Legend contents: one row per icon, icon + description
+ * ------------------------------------------------------------------- */
+
+test("the legend groups all mobile Recipe icons by screen section, each with an SVG and a description", () => {
+  const legend = legendMarkup();
+  const headings = legend.match(/<li class="recipeInfoLegendSectionHeading">[^<]+<\/li>/g) || [];
+  assert.deepEqual(headings, [
+    '<li class="recipeInfoLegendSectionHeading">Recipe pages</li>',
+    '<li class="recipeInfoLegendSectionHeading">Recipe actions</li>',
+    '<li class="recipeInfoLegendSectionHeading">Edit toolbar</li>',
+    '<li class="recipeInfoLegendSectionHeading">Weights tab</li>'
+  ]);
+  const items = (legend.match(/<li>[\s\S]*?<\/li>/g) || []).filter(li=>!li.includes("recipeInfoLegendSectionHeading"));
+  assert.equal(items.length, 17, "one row per icon");
+  for (const name of ["Current", "Next", "Weights", "Recipe Book", "Scan", "Load Next", "Load Current", "Edit", "Undo", "Redo", "Clear selection", "Empty cells", "Copy hoppers", "Paste hoppers", "Rearrange", "Reset Recipe", "Weights profile"]){
+    assert.ok(
+      items.some(li => li.includes(`<strong>${name}</strong>`) && /<span class="recipeInfoLegendIcon[^"]*"><svg/.test(li) && li.replace(/<[^>]+>/g, "").trim().length > name.length + 6),
+      `row for "${name}" with an icon and a description`
+    );
+  }
+});
+
+test("legend icons reuse the real tab / action icon paths", () => {
+  const legend = legendMarkup();
+  // Current tab's document glyph
+  assert.ok(legend.includes('d="M7 3.5h7L18.5 8v12.5h-11z"'));
+  // Weights profile clipboard glyph (also on #mobileWeightProfilesButton)
+  assert.ok(legend.includes('d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13'));
+  // Edit pencil glyph (also the ::before mask)
+  assert.ok(legend.includes('d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"'));
+  // Reset retains the Recipe toolbar's circular-arrow glyph and danger tone.
+  assert.ok(legend.includes('d="M20 11a8 8 0 1 0 1.2 4.2"'));
+  assert.match(styles,/\.recipeInfoLegendIcon\.recipeInfoLegendDanger\{ color:var\(--bad\); \}/);
+});
+
+/* -------------------------------------------------------------------
+ *   CSS: desktop-hidden, phone-shown, drops down + right-aligned
+ * ------------------------------------------------------------------- */
+
+test("hidden at desktop widths, shown only <=700px", () => {
+  assert.match(styles, /\.recipeInfoLegend\{ display: none; position: relative;/);
+  // Asked as "is the reveal inside a phone media query", not "is it in the
+  // slice between the first max-width:700px block and the next 720px one".
+  // There are three max-width:700px blocks now and this rule is in the third,
+  // so the old positional slice looked straight past it and reported the
+  // legend missing while it was working fine.
+  const anchor = "#splitsBlock .recipeInfoLegend{ display: block; }";
+  const hits = occurrences(styles, anchor);
+  assert.ok(hits.length, "the phone reveal rule for .recipeInfoLegend is gone");
+  assert.ok(hits.some(h => h.condition && PHONE.test(h.condition)),
+    `the reveal exists but not under a phone media query - found under: ${hits.map(h => h.condition || "top level").join(", ")}`);
+});
+
+test("the panel drops downward and hugs the right edge (opens to the left)", () => {
+  const rule = styles.slice(styles.indexOf(".recipeInfoLegendPanel{"), styles.indexOf("}", styles.indexOf(".recipeInfoLegendPanel{")));
+  assert.match(rule, /position: absolute;/);
+  assert.match(rule, /top: calc\(100% \+ 6px\);/);
+  assert.match(rule, /right: 0;/);
+  assert.match(rule, /max-height:/);
+  assert.match(rule, /overflow-y: auto;/);
+});
+
+test("section headings use the guide's existing compact list treatment", () => {
+  assert.match(styles,/\.recipeInfoLegendList li\.recipeInfoLegendSectionHeading\{[\s\S]*?text-transform:uppercase;/);
+});
+
+/* -------------------------------------------------------------------
+ *   Behaviour: never toggles the panel; closes on outside click / Escape
+ * ------------------------------------------------------------------- */
+
+test("hookRecipeInfoLegend stops the summary click from bubbling to the panel <summary>", () => {
+  assert.match(app, /function hookRecipeInfoLegend\(\)\{[\s\S]*?querySelector\(":scope > summary"\)\?\.addEventListener\("click", event=>\{\s*\n\s*event\.stopPropagation\(\);/);
+  assert.match(app, /hookRecipeInfoLegend\(\);/);
+});
+
+test("an outside click and Escape close the guide, mirroring the Scan popup", () => {
+  assert.match(app, /const infoLegend = document\.getElementById\("recipeInfoLegend"\);\s*\n\s*if \(infoLegend\?\.open && !infoLegend\.contains\(event\.target\)\) infoLegend\.open = false;/);
+  assert.match(app, /if \(event\.key === "Escape" && infoLegend\?\.open\)\{\s*\n\s*infoLegend\.open = false;/);
+});
+
+test("the guide's open state is not persisted (not in DETAILS_IDS)", () => {
+  const idsBlock = app.slice(app.indexOf("DETAILS_IDS"), app.indexOf("]", app.indexOf("DETAILS_IDS")) + 1);
+  assert.doesNotMatch(idsBlock, /recipeInfoLegend/);
+});

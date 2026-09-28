@@ -1,0 +1,355 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const { readStyles } = require("../css-source");
+
+const app = fs.readFileSync("app.js", "utf8");
+const html = fs.readFileSync("index.html", "utf8");
+const styles = readStyles();
+const manifest = fs.readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
+const capacitorConfig = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+const pluginJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmPlugin.java", "utf8");
+const schedulerJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmScheduler.java", "utf8");
+const receiverJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmReceiver.java", "utf8");
+const activityJava = fs.readFileSync("android/app/src/main/java/tools/resin/app/PumpOffAlarmActivity.java", "utf8");
+
+// Root cause (see the feature's own diagnosis notes): Timeline cards only ever
+// recomputed startByText/isLate inside validateAndCompute, which only runs on
+// a data mutation - so a card sat stale until something else (an edit, an RT
+// Sync apply, a restart) happened to trigger a recompute. These tests cover
+// the fix: a single centralized clock ticker that re-derives only the
+// time-dependent presentation, plus the native (Android) alarm replacement
+// for the page-JS-lifetime-bound setTimeout alarm, which Android silently
+// suspends when backgrounded/screen-off.
+
+function functionBody(name){
+  const start = app.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `Expected function ${name}`);
+  const next = app.indexOf("\n    function ", start + 1);
+  assert.notEqual(next, -1, `Expected a following function after ${name} to bound its body`);
+  return app.slice(start, next);
+}
+
+// --- Part A: the clock ticker ------------------------------------------
+
+test("refreshTimelinePresentation re-derives status from a fresh wall-clock read, not a cached one", () => {
+  const body = functionBody("refreshTimelinePresentation");
+  assert.match(body, /if \(!lastTimelineFlat\) return;/, "must no-op before the first real computation has ever populated the cache");
+  assert.match(body, /const now = new Date\(\);/);
+  assert.match(body, /formatTimelineStart\(item\.startByDate, lastTimelineChangeoverDate, now, state\.timeFormat\)/);
+});
+
+test("refreshTimelinePresentation reuses the existing render path and touches nothing else - no persistence, no RT Sync, no re-scheduling", () => {
+  const body = functionBody("refreshTimelinePresentation");
+  assert.match(body, /renderResultsFlat\(refreshed, lastTimelineChangeoverDate\);/);
+  assert.match(body, /updateFooterNext\(refreshed, lastTimelineChangeoverDate\);/);
+  assert.doesNotMatch(body, /saveSession\(/);
+  assert.doesNotMatch(body, /notifyActiveJobMutation/);
+  assert.doesNotMatch(body, /schedulePumpOffAlerts/);
+  assert.doesNotMatch(body, /syncNativeTimelineAlarms/);
+});
+
+test("the ticker fires every 15-30s (the task's requested cadence) and is guarded against ever starting twice", () => {
+  const body = functionBody("startTimelineTicker");
+  assert.match(body, /if \(timelineTickerStarted\) return;/);
+  assert.match(body, /timelineTickerStarted = true;/);
+  const interval = /setInterval\(refreshTimelinePresentation, (\d+)\)/.exec(body);
+  assert.ok(interval, "expected a single setInterval driving refreshTimelinePresentation");
+  const ms = Number(interval[1]);
+  assert.ok(ms >= 15000 && ms <= 30000, `expected 15-30s cadence, got ${ms}ms`);
+});
+
+test("startTimelineTicker is called exactly once, from init - not from Timeline being opened/visited", () => {
+  const calls = app.match(/startTimelineTicker\(\);/g) || [];
+  assert.equal(calls.length, 1);
+});
+
+test("validateAndCompute caches flat/changeoverDate for the ticker on every real computation", () => {
+  assert.match(app, /lastTimelineFlat = flat;\n\s*lastTimelineChangeoverDate = changeoverDate;/);
+});
+
+test("foreground/resume forces one immediate refresh on both native (appStateChange) and web (visibilitychange)", () => {
+  assert.match(app, /window\.Capacitor\?\.Plugins\?\.App\?\.addListener\?\.\("appStateChange", \(\{ isActive \}\)=>\{/);
+  const nativeStart = app.indexOf('addListener?.("appStateChange"');
+  const nativeBlock = app.slice(nativeStart, app.indexOf("});", nativeStart));
+  assert.match(nativeBlock, /if \(!isActive\) return;/);
+  assert.match(nativeBlock, /refreshTimelinePresentation\(\);/);
+
+  assert.match(app, /document\.addEventListener\("visibilitychange", \(\)=>\{/);
+  // app.js registers more than one visibilitychange listener, and the first is
+  // not this one - so search from the native handler this is paired with
+  // rather than from the top of the file.
+  const webStart = app.indexOf('addEventListener("visibilitychange"', nativeStart);
+  assert.notEqual(webStart, -1, "no visibilitychange listener after the appStateChange one");
+  const webBlock = app.slice(webStart, app.indexOf("});", webStart));
+  assert.match(webBlock, /if \(!document\.hidden\) refreshTimelinePresentation\(\);/);
+});
+
+// --- Part B/C: native alarms ---------------------------------------------
+
+test("native notifications are gated behind the real plugin object, using window.Capacitor - app.js has no root/UMD wrapper, so a root.Capacitor reference is an undefined-variable crash, not a native/web branch", () => {
+  assert.match(app, /function nativeLocalNotifications\(\)\{ return window\.Capacitor\?\.Plugins\?\.LocalNotifications \|\| null; \}/);
+  // Regression guard: this file's IIFE is `(() => { ... })()` with no root
+  // parameter (unlike scheduling.js/recipe-scan-ui.js's UMD wrapper) - a
+  // bare `root.` reference here throws ReferenceError, which is exactly
+  // what silently broke every native alarm call (channel creation,
+  // permission request, and scheduling all failed as uncaught promise
+  // rejections) until this was caught via live device testing.
+  assert.doesNotMatch(app, /\broot\.Capacitor\b/);
+});
+
+test("stableNotificationId is a deterministic 32-bit-safe hash of identity only, not of anything that changes on every edit", () => {
+  const body = functionBody("stableNotificationId");
+  // Executed directly (pure function, no external deps) rather than only
+  // pattern-matched, to actually prove determinism and range - not just that
+  // the code looks right.
+  const fn = new Function(`${body}\n; return stableNotificationId;`)();
+
+  const a1 = fn("workspace-1:A:H1");
+  const a2 = fn("workspace-1:A:H1");
+  assert.equal(a1, a2, "same seed must always produce the same id");
+  assert.ok(Number.isInteger(a1) && a1 >= 1 && a1 <= 2147483647, "id must be a positive 32-bit int (Android notification id constraint)");
+
+  const b = fn("workspace-1:A:H2");
+  assert.notEqual(a1, b, "different hoppers should not collide for this seed set");
+
+  // Volatile fields (changeover time, weight, resin) must never be part of
+  // the seed at the call site - checked at the source level since the pure
+  // function itself can't prove what its caller passes in.
+  const callSite = functionBody("syncNativeTimelineAlarms");
+  assert.match(callSite, /stableNotificationId\(`\$\{workspaceId\}:\$\{item\.layer\}:\$\{item\.hopperLabel\}`\)/);
+});
+
+test("syncNativeTimelineAlarms builds the desired set only from trackable, not-yet-due entries while the alarm is enabled", () => {
+  const body = functionBody("syncNativeTimelineAlarms");
+  assert.match(body, /if \(!PumpOffAlarm\) return;/, "no-op on web/desktop where the plugin doesn't exist");
+  assert.match(body, /if \(state\.mobileTimelineAlarm && changeoverDate\)/, "nothing scheduled while the operator has the alarm off");
+  assert.match(body, /if \(!item\.startByDate \|\| item\.pumpOff\) return;/, "never notify for a pumped-off or timeless entry");
+  assert.match(body, /if \(due <= Date\.now\(\)\) return;/, "never (re)notify for something already due/late");
+});
+
+test("syncNativeTimelineAlarms diffs against what's currently scheduled - cancels exactly what's no longer desired, schedules the rest, then updates the tracked set", () => {
+  const body = functionBody("syncNativeTimelineAlarms");
+  // The cancel candidates are the union of this run's record and the one the
+  // previous run persisted - see recipe/alarm notes in
+  // timeline-alarm-recovery.test.js for why the in-memory half is not enough.
+  assert.match(body, /const known = new Set\(\[\.\.\.scheduledTimelineNotificationIds, \.\.\.readScheduledAlarmIds\(\)\]\);/);
+  assert.match(body, /const toCancel = \[\.\.\.known\]\.filter\(id=>!desired\.has\(id\)\);/);
+  assert.match(body, /if \(toCancel\.length\) await PumpOffAlarm\.cancel\(\{ notifications: toCancel\.map\(id=>\(\{ id \}\)\) \}\);/);
+  assert.match(body, /if \(desired\.size\) await PumpOffAlarm\.schedule\(\{ notifications: \[\.\.\.desired\.values\(\)\] \}\);/);
+  assert.match(body, /scheduledTimelineNotificationIds = new Set\(desired\.keys\(\)\);/);
+});
+
+test("syncNativeTimelineAlarms is reused as the single resync point for every trigger the task lists - data recompute, foreground resume, RT Sync workspace change/disconnect, and changing the alarm sound/vibrate choice", () => {
+  const calls = app.match(/syncNativeTimelineAlarms\(/g) || [];
+  // Definition + validateAndCompute + appStateChange resume + renderLineSync
+  // + sound-change handler + vibrate-toggle handler = 6.
+  assert.equal(calls.length, 6, `expected exactly 6 references (definition + 5 call sites), found ${calls.length}`);
+  assert.match(app, /syncNativeTimelineAlarms\(flat, changeoverDate\);/, "wired into validateAndCompute alongside schedulePumpOffAlerts");
+  assert.match(app, /if \(lastTimelineFlat\) syncNativeTimelineAlarms\(lastTimelineFlat, lastTimelineChangeoverDate\);/, "resume and RT Sync paths reuse the cached flat rather than recomputing");
+});
+
+test("a bare RT Sync disconnect (selectedWorkspaceId unchanged, only `connected` flips) still triggers a native alarm resync, not just an explicit workspace switch", () => {
+  const start = app.indexOf("function renderLineSync(syncState){");
+  const end = app.indexOf("\n  function resolveLineSyncConflict", start);
+  const body = app.slice(start, end);
+  assert.match(body, /const connectedChanged = lastLineSyncConnectedState !== null && lastLineSyncConnectedState !== connected;/);
+  assert.match(body, /lastLineSyncConnectedState = connected;/);
+  assert.match(body, /if \(\(workspaceChanged \|\| connectedChanged\) && lastTimelineFlat\)\{/);
+});
+
+test("notification ids are seeded by workspace, so leaving/switching workspaces never lets one workspace's alarms fire under another's identity", () => {
+  const body = functionBody("syncNativeTimelineAlarms");
+  assert.match(body, /const workspaceId = lineSync\?\.getState\?\.\(\)\.selectedWorkspaceId \|\| "local";/);
+});
+
+test("checkNativePumpOffAlarmLaunch picks up the alarm screen's Open Resin.Tools tap and navigates to Timeline via the existing panel navigation, not a new API", () => {
+  const body = functionBody("checkNativePumpOffAlarmLaunch");
+  assert.match(body, /if \(!PumpOffAlarm\) return;/);
+  assert.match(body, /const \{ openTimeline \} = await PumpOffAlarm\.consumeLaunchIntent\(\);/);
+  assert.match(body, /if \(openTimeline\) setWorkspacePanel\("resultsBlock", \{ reveal: true \}\);/);
+  const calls = app.match(/checkNativePumpOffAlarmLaunch\(\);/g) || [];
+  assert.equal(calls.length, 2, "must be checked at init and again on every foreground resume");
+});
+
+// --- permission timing (extends mobile-timeline-alarm.test.js's web-side coverage) ---
+
+test("native notification permission is requested only from the alarm toggle's own enable branch - never at launch, never from session/payload restore", () => {
+  // Matches an actual call statement (preceded by "await "), not the
+  // `async function requestNativeTimelineAlarmPermission(){` declaration.
+  const callSites = app.match(/await requestNativeTimelineAlarmPermission\(\);/g) || [];
+  assert.equal(callSites.length, 1, `expected exactly one call site, found ${callSites.length}`);
+
+  const listenerStart = app.indexOf('$("mobileTimelineAlarmToggle")?.addEventListener');
+  const listenerEnd = app.indexOf('$("prodResinLb")', listenerStart);
+  const listener = app.slice(listenerStart, listenerEnd);
+  assert.match(listener, /if \(enabled\) await requestNativeTimelineAlarmPermission\(\);/);
+});
+
+test("permission denial leaves the app usable and explains the in-app alarm still works, with a path to retry", () => {
+  const body = functionBody("requestNativeTimelineAlarmPermission");
+  assert.match(body, /status\.textContent = "Notifications are turned off for Resin Tools, so alarms won't fire while the app is closed or the screen is off - sound and vibration still work while it's open\. Turn this off and on to ask again, or enable notifications for Resin Tools in Android Settings\."/);
+});
+
+// --- Part D: full-screen alarm-clock behavior (native PumpOffAlarm plugin) -
+
+test("the alarm is genuinely alarm-clock-like: SCHEDULE_EXACT_ALARM (the low-friction, user-toggleable permission) is requested, but USE_EXACT_ALARM (the Play-Console-review-gated one) never is", () => {
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.SCHEDULE_EXACT_ALARM" \/>/);
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.USE_FULL_SCREEN_INTENT" \/>/);
+  assert.doesNotMatch(manifest, /USE_EXACT_ALARM/);
+  const body = functionBody("requestNativeTimelineAlarmPermission");
+  assert.match(body, /const exactAlarm = await PumpOffAlarm\.checkExactAlarmPermission\(\);/);
+  assert.match(body, /if \(!exactAlarm\.granted\) await PumpOffAlarm\.requestExactAlarmPermission\(\);/);
+});
+
+test("full-screen-intent access (revocable independently on Android 14+) is checked and, if blocked, the settings screen to fix it is actually opened - not just described in a status message", () => {
+  const body = functionBody("requestNativeTimelineAlarmPermission");
+  assert.match(body, /const fullScreenIntent = await PumpOffAlarm\.checkFullScreenIntentPermission\(\);/);
+  assert.match(body, /if \(!fullScreenIntent\.granted\)\{/);
+  const gateStart = body.indexOf("if (!fullScreenIntent.granted){");
+  const gate = body.slice(gateStart, body.indexOf("return;", gateStart));
+  assert.match(gate, /await PumpOffAlarm\.requestFullScreenIntentPermission\(\);/, "must actually route the operator to the settings screen, mirroring the exact-alarm gate above it - not just tell them to go find it themselves");
+  assert.match(gate, /Android is blocking the full-screen alarm screen/);
+});
+
+// --- Part E: in-app alarm sound/vibrate customization ---------------------
+
+test("the sound/vibrate controls exist in the Timeline alarm section and start hidden - they're native-only, shown only once nativePumpOffAlarm() is confirmed present", () => {
+  assert.match(html, /<div class="pumpOffAlarmSoundRow" id="pumpOffAlarmSoundRow" hidden>/);
+  assert.match(html, /<button id="pumpOffAlarmSoundChangeBtn" type="button" class="copyBtn">Change<\/button>/);
+  assert.match(html, /<button id="pumpOffAlarmPreviewBtn" type="button" class="copyBtn">Preview<\/button>/);
+  assert.match(html, /<label class="pumpOffAlarmVibrateChoice" id="pumpOffAlarmVibrateRow" for="pumpOffAlarmVibrateToggle" hidden>/);
+});
+
+test("the sound/vibrate rows' own hidden attribute isn't silently defeated by their own display:flex rule - this is exactly what requires the APK: no window.Capacitor in any browser means nativePumpOffAlarm() is always null there, so these rows must actually stay invisible", () => {
+  // Found live in an earlier feature on this same page (.splitsMobilePrimaryRow):
+  // an author rule's display:flex always beats the UA stylesheet's own
+  // [hidden]{display:none}, regardless of selector specificity - so without
+  // an explicit override here, Change/Preview/Vibrate would render in every
+  // browser, not just inside the Capacitor app.
+  // These rows carry display:flex, which is exactly why the attribute alone
+  // was not enough. The global [hidden]{display:none!important} now wins for
+  // them, and nothing may grant either row an !important display to beat it.
+  assert.match(styles, /\[hidden\]\{display:none!important\}/);
+  for (const sel of ["pumpOffAlarmSoundRow", "pumpOffAlarmVibrateChoice"]) {
+    assert.doesNotMatch(styles,
+      new RegExp(`\\.${sel}[^{}]*\\{[^}]*display:\\s*(?!none)[a-z-]+\\s*!important`),
+      `${sel} has an !important display that outranks the global [hidden] rule`);
+  }
+});
+
+test("applyPumpOffAlarmSound stores the choice, refreshes the displayed name/toggle, and gates visibility on native availability alone", () => {
+  const body = functionBody("applyPumpOffAlarmSound");
+  assert.match(body, /state\.pumpOffAlarmSoundUri = uri \|\| null;/);
+  assert.match(body, /state\.pumpOffAlarmSoundName = name \|\| "Default alarm sound";/);
+  assert.match(body, /state\.pumpOffAlarmVibrate = vibrate !== false;/);
+  assert.match(body, /const nativeAvailable = !!nativePumpOffAlarm\(\);/);
+  assert.match(body, /soundRow\.hidden = !nativeAvailable;/);
+  assert.match(body, /vibrateRow\.hidden = !nativeAvailable;/);
+});
+
+test("the Capacitor-only compact alarm panel is activated from native alarm availability, leaving browser mobile rows unchanged", () => {
+  assert.match(app, /document\.body\.classList\.toggle\("native-pump-off-alarm", nativeAvailable\);/);
+  assert.match(styles, /body\.native-pump-off-alarm \.timelineAlarmSetting\{/);
+  assert.match(styles, /grid-template-columns:auto auto minmax\(0,1fr\) auto;/);
+  assert.match(styles, /body\.native-pump-off-alarm \.pumpOffAlarmSoundRow\{display:contents\}/);
+  assert.ok(html.indexOf('id="pumpOffAlarmVibrateRow"') < html.indexOf('id="pumpOffAlarmSoundRow"'), "Vibrate must precede the sound controls so the compact native strip follows the intended reading order");
+  assert.match(styles, /\.pumpOffAlarmVibrateChoice\{grid-column:2;grid-row:1\}/);
+});
+
+test("Change opens the native ringtone picker and, unless cancelled, applies the result and immediately resyncs any already-scheduled alarms", () => {
+  const start = app.indexOf('$("pumpOffAlarmSoundChangeBtn")?.addEventListener("click"');
+  assert.notEqual(start, -1);
+  const body = app.slice(start, app.indexOf("\n    });", start));
+  assert.match(body, /await PumpOffAlarm\.pickAlarmSound\(\{ uri: state\.pumpOffAlarmSoundUri \|\| null \}\);/);
+  assert.match(body, /if \(result\?\.cancelled\) return;/);
+  assert.match(body, /applyPumpOffAlarmSound\(result\.uri, result\.name, state\.pumpOffAlarmVibrate\);/);
+  assert.match(body, /saveSession\(\);/);
+  assert.match(body, /if \(lastTimelineFlat\) syncNativeTimelineAlarms\(lastTimelineFlat, lastTimelineChangeoverDate\);/);
+});
+
+test("Preview plays the currently selected sound/vibrate choice without touching any scheduled alarm or persisted state", () => {
+  const start = app.indexOf('$("pumpOffAlarmPreviewBtn")?.addEventListener("click"');
+  assert.notEqual(start, -1);
+  const body = app.slice(start, app.indexOf("\n    });", start));
+  assert.match(body, /await PumpOffAlarm\.previewAlarmSound\(\{ uri: state\.pumpOffAlarmSoundUri \|\| null, vibrate: state\.pumpOffAlarmVibrate !== false \}\);/);
+  assert.doesNotMatch(body, /saveSession|syncNativeTimelineAlarms/);
+});
+
+test("the sound/vibrate choice is a local device preference, not shared job data - present in snapshotPayload, re-applied over an incoming shared payload in applySharedActiveJob, and restored via applyPayload", () => {
+  assert.match(app, /pumpOffAlarmSoundUri: state\.pumpOffAlarmSoundUri \|\| null,/);
+  assert.match(app, /pumpOffAlarmSoundName: state\.pumpOffAlarmSoundName \|\| "Default alarm sound",/);
+  assert.match(app, /pumpOffAlarmVibrate: state\.pumpOffAlarmVibrate !== false,/);
+
+  const sharedStart = app.indexOf("function applySharedActiveJob(payload){");
+  const sharedBody = app.slice(sharedStart, app.indexOf("applyPayload({ ...payload, ...localPreferences }", sharedStart));
+  assert.match(sharedBody, /pumpOffAlarmSoundUri: state\.pumpOffAlarmSoundUri,/, "must be in localPreferences so an incoming shared payload can never silently change it");
+  assert.match(sharedBody, /pumpOffAlarmVibrate: state\.pumpOffAlarmVibrate,/);
+
+  assert.match(app, /applyPumpOffAlarmSound\(payload\.pumpOffAlarmSoundUri \|\| null, payload\.pumpOffAlarmSoundName \|\| "Default alarm sound", payload\.pumpOffAlarmVibrate !== false\);/);
+});
+
+test("syncNativeTimelineAlarms threads the current sound/vibrate choice into every scheduled alarm entry", () => {
+  const body = functionBody("syncNativeTimelineAlarms");
+  assert.match(body, /sound: state\.pumpOffAlarmSoundUri \|\| null,/);
+  assert.match(body, /vibrate: state\.pumpOffAlarmVibrate !== false/);
+});
+
+test("the native plugin reads sound/vibrate per schedule entry and threads them through the alarm PendingIntent, receiver, and alarm-screen Activity", () => {
+  // Reading and threading moved into PumpOffAlarmScheduler when the boot
+  // receiver started needing the identical PendingIntent - see
+  // timeline-alarm-recovery.test.js.
+  assert.match(schedulerJava, /entry\.isNull\(PumpOffAlarmStore\.FIELD_SOUND\) \? null : entry\.optString\(PumpOffAlarmStore\.FIELD_SOUND, null\)/);
+  assert.match(schedulerJava, /entry\.optBoolean\(PumpOffAlarmStore\.FIELD_VIBRATE, true\)/);
+  assert.match(schedulerJava, /arm\(context, id, at,/);
+
+  assert.match(receiverJava, /static final String EXTRA_SOUND = "sound";/);
+  assert.match(receiverJava, /static final String EXTRA_VIBRATE = "vibrate";/);
+  assert.match(receiverJava, /if \(sound != null\) fullScreenIntent\.putExtra\(EXTRA_SOUND, sound\);/);
+
+  // Held as fields rather than onCreate locals, because the alarm now starts
+  // and stops across the activity's visible lifetime instead of once.
+  assert.match(activityJava, /soundUri = intent\.getStringExtra\(PumpOffAlarmReceiver\.EXTRA_SOUND\);/);
+  assert.match(activityJava, /vibrateEnabled = intent\.getBooleanExtra\(PumpOffAlarmReceiver\.EXTRA_VIBRATE, true\);/);
+  assert.match(activityJava, /if \(soundUri != null\) \{\s*\n\s*alarmSound = Uri\.parse\(soundUri\);/);
+  assert.match(activityJava, /if \(vibrateEnabled\) startVibration\(\);/, "picking no vibration must skip the vibrate call entirely, not just zero out the pattern");
+  // And carried onward, so returning through the notification keeps the sound.
+  assert.match(receiverJava, /if \(sound != null\) screenIntent\.putExtra\(EXTRA_SOUND, sound\);/);
+});
+
+test("the ringtone picker excludes silent as an option - operators can change the sound, but can't accidentally pick no sound for an unmissable alarm", () => {
+  assert.match(pluginJava, /RingtoneManager\.EXTRA_RINGTONE_SHOW_SILENT, false\);/);
+});
+
+test("picking the picker's own Default entry is stored as the real sentinel URI (not null), so it keeps following the device's system default alarm sound if that's changed later", () => {
+  assert.match(pluginJava, /if \(uri\.equals\(RingtoneManager\.getDefaultUri\(RingtoneManager\.TYPE_ALARM\)\)\) return "Default alarm sound";/);
+});
+
+test("capacitor.config.json configures a real default notification icon/color, not the placeholder Capacitor ships with", () => {
+  const config = capacitorConfig.plugins && capacitorConfig.plugins.LocalNotifications;
+  assert.ok(config, "expected plugins.LocalNotifications in capacitor.config.json");
+  assert.equal(config.smallIcon, "ic_stat_timeline");
+  assert.ok(fs.existsSync("android/app/src/main/res/drawable-mdpi/ic_stat_timeline.png"));
+  assert.ok(fs.existsSync("android/app/src/main/res/drawable-xxxhdpi/ic_stat_timeline.png"));
+});
+
+test("wake lock and POST_NOTIFICATIONS still come from Capacitor's own plugin manifest merge, not from hand-editing this file", () => {
+  assert.doesNotMatch(manifest, /WAKE_LOCK|POST_NOTIFICATIONS/, "these are supplied by the plugin's own manifest at build/sync time, not hand-declared here");
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.VIBRATE" \/>/);
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.SCHEDULE_EXACT_ALARM" \/>/);
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.USE_FULL_SCREEN_INTENT" \/>/);
+});
+
+// RECEIVE_BOOT_COMPLETED moved out of that set when the app gained a boot
+// receiver of its own (PumpOffBootReceiver). @capacitor/local-notifications
+// happens to declare the same permission, so the merged manifest would carry
+// it either way - but inheriting it would make our alarm re-arming depend on a
+// dependency we keep only for its POST_NOTIFICATIONS request. Dropping that
+// dependency would silently stop alarms surviving a reboot, which is the exact
+// class of quiet failure the boot receiver exists to end.
+test("RECEIVE_BOOT_COMPLETED is declared by this app, not inherited from a plugin it could stop using", () => {
+  assert.match(manifest, /<uses-permission android:name="android\.permission\.RECEIVE_BOOT_COMPLETED" \/>/);
+  assert.match(manifest, /android:name="\.PumpOffBootReceiver"/, "the permission is only justified by our own receiver");
+});

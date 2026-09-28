@@ -66,7 +66,7 @@ are stored as HTML and can be converted back with
 2. Delete `notes-editor-vendor.src.js`, `notes-markdown.js`,
    `notes-editor.test.js`, `vendor/tiptap-notes.min.js`, this file.
 3. `npm install` (drops the `@tiptap/*` + `esbuild` devDependencies).
-4. Run `node --test *.test.js`.
+4. Run `node --test tests/*.test.js`.
 5. Optional data cleanup — only if you want the store back to pure Markdown:
    for each note with `bodyFormat === "html"`, set
    `body = PolynNotesMarkdown.htmlToMarkdown(body)` and `bodyFormat = "markdown"`

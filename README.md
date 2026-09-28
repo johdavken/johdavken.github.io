@@ -81,8 +81,8 @@ The Android app is a Capacitor shell around the same files (`npm run sync:androi
 ## Tests
 
 ```sh
-node --test *.test.js
+node --test tests/*.test.js
 git diff --check
 ```
 
-Slate's tests are the `slate-*.test.js` files at the repo root. SQL behavior is covered by source-level contract tests (`*-schema.test.js`).
+Tests live in [`tests/`](tests/) and run from the repo root; Slate's are the `slate-*.test.js` files. SQL behavior is covered by source-level contract tests (`*-schema.test.js`).
