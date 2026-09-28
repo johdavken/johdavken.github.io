@@ -1,80 +1,88 @@
-# Polyn
+# Resin.tools — Slate
 
-Resin.Tools is a static, browser-based production utility. Browser `localStorage` is always the immediate working state; optional Supabase-backed RT Sync adds remote persistence and live updates without making the application dependent on a network connection.
+[Resin.tools](https://resin.tools) is a dependency-light web app for blown film operators: it plans resin hopper run-downs, manages recipe setup and receiver hopper weights, and keeps an active job in step across every device on a line.
 
-## Optional RT Sync setup
+**Slate** is its current interface. It is the default view on desktops and floor tablets, and it runs as a presentation layer over the same application runtime as the original floor UI — one app, one Supabase connection, one RT Sync session.
 
-1. Create a Supabase project and enable anonymous sign-ins under Authentication.
-2. Run [`supabase/migrations/202607310001_line_sync.sql`](supabase/migrations/202607310001_line_sync.sql) and each later applicable migration in [`supabase/migrations`](supabase/migrations) in filename order, in the Supabase SQL editor or through the Supabase CLI. In particular, RT Sync deployments need [`202608040001_active_job_noop_guard.sql`](supabase/migrations/202608040001_active_job_noop_guard.sql), [`202608050001_regrant_update_active_job.sql`](supabase/migrations/202608050001_regrant_update_active_job.sql), and [`202608150001_active_job_stale_noop_guard.sql`](supabase/migrations/202608150001_active_job_stale_noop_guard.sql).
-3. Set the public project URL and publishable key in [`supabase-config.js`](supabase-config.js). These values are intentionally public client configuration. Never place a service-role or secret key in this repository.
-4. Deploy the static files normally. If Supabase, authentication, or the network is unavailable, Polyn continues in local-only mode.
+## Which view you get
 
-The migration creates private workspace membership, revision-checked active jobs, revision-checked Saved Line Settings, temporary four-character linking codes stored only as keyed digests, RLS policies, and the public RPC interface used by the browser client.
+All views are the same document ([`index.html`](index.html)); the query string picks the presentation.
 
-## RT Sync behavior
+| URL | View |
+| --- | --- |
+| `?view=slate` | **Slate** |
+| `?view=legacy` | The original floor UI |
+| `?view=station` | Station, the experimental desktop console |
+| _(none)_ | The device's saved choice; otherwise Slate on a desktop window ≥ 1100 px or a tablet-sized touch screen, and the floor UI on phones |
 
-- **Disconnect on this device** stops synchronization locally and preserves membership.
-- **Leave RT Sync** removes the current anonymous browser identity from the line. An owner must transfer ownership first.
-- **Remove linked device** lets an owner remove another member.
-- **Delete line workspace** permanently deletes the shared line and is owner-only.
+[`slate-host.js`](slate-host.js) makes that decision and loads Slate's styles and scripts only when Slate is the view, so the floor UI never carries Slate's code. Phones can opt in from the floor UI's **Slate (Beta)** link and then Slate's Settings.
 
-Each browser has an anonymous Supabase identity and a separate local device ID. One identity may join multiple line workspaces, and the selected line is stored locally. The current active job and Saved Line Settings use an on-device outbox when offline. Local edits are saved before upload, and reconnecting retries pending work. Conflict/replacement backups are retained locally in a bounded history.
+Slate draws for three tiers ([`slate/slate-tier.js`](slate/slate-tier.js)): mouse desktop, touch tablet (both orientations, gloved operators) and phone. The design notes and implementation logs are in [`slate/TABLET-PLAN.md`](slate/TABLET-PLAN.md) and [`slate/MOBILE-PLAN.md`](slate/MOBILE-PLAN.md).
 
-No CAPTCHA is required in the initial version. Link-code generation, hashing, expiry, and attempt limiting are isolated in the database design so additional abuse protection can be introduced later without replacing the client data model.
+## What Slate does
 
-## Resin catalog service
+- **Recipe** — the line's layers and hoppers as a draft: resin search from the shared catalog, blend percentages with Hopper 1 derived from Hoppers 2–6, bulk edit, drag-and-drop rearrangement with Undo/Cancel/Done, and Rows or Columns layouts.
+- **Weights** — receiver hopper weights by physical position, kept separate from the recipe.
+- **Recipe Book** — shared Recipes and Receiver Weight Profiles for the workspace: load (with a preview of what will and will not change), save, update, rename, duplicate, favorite, delete.
+- **Timeline** — the run-down to the next changeover, with tracking, pump-off, and correction of a hopper that ran out early.
+- **Resin Balance** — resin totals, with production and scrap entry.
+- **Tools** — Formulas (pounds per 1,000 ft, unit conversions, product density, working back from a weighed set), Winding Tension, Work Alarm, changeover and line-rate estimates.
+- **RT Sync** — join a line by code or QR, see linked devices, resolve conflicts in Slate's own dialog.
+- **Admin** (verified administrators only) — Workspaces, Line Configuration, Resin Database.
+- **Settings** — theme families (Catppuccin, Everforest, Gruvbox, Retro '82, Ristretto, Rosé Pine, Solitude, Tokyo Night, Yaru), each with a light and dark half; backgrounds; layouts; view and input preferences.
 
-[`resin-catalog-service.js`](resin-catalog-service.js) provides the UI-independent `PolynResinCatalog` API: `getResins()`, `getResinByCode(code)`, `refreshResins()`, `getCachedResins()`, `clearResinCache()`, and `subscribe(listener)`. `getResins()` returns immediately, prioritizing a valid local cache and then the unchanged hard-coded catalog in [`resin-data.js`](resin-data.js), while refreshing Supabase in the background. `refreshResins()` returns `{ loaded, resins, reason? }` and never discards a valid cache when Supabase is unavailable or returns invalid data.
-
-The browser cache key is `polyn.resinCatalog.v1`. Its versioned JSON envelope is `{ version: 1, cachedAt, resins }`; it contains only normalized public resin records, never Supabase configuration or credentials. Invalid JSON, an incompatible version, or invalid catalog rows are ignored safely.
-
-The Recipe Panel and Resin Lookup call `getResins()` for an immediate catalog and use `subscribe()` to adopt a successful background refresh without polling. Future resin-facing UI should use this same service rather than reading fallback data directly.
-
-## Resin UI data flow
+## How it fits together
 
 ```text
-Supabase
-  ↓
-PolynResinCatalog
-  ↓
-Recipe Panel / Resin Lookup
+app.js  (the application: state, calculations, RT Sync, storage)
+   │  publishes to
+   ▼
+station-*-bridge.js  (state, command, connection, recipes, weight profiles, admin)
+   │  read by
+   ▼
+slate/slate.js  →  slate/slate-*.js  (Slate's sections and tools)
 ```
 
-Both resin-facing UI paths now consume the same normalized catalog records from `PolynResinCatalog`. The Recipe autocomplete updates its in-memory name list after a successful background refresh; Resin Lookup uses the same current records for exact matches and suggestions. Existing hard-coded data remains the service’s offline fallback.
+- **The application is the only writer.** Slate subscribes to the bridges as an ordinary consumer and changes state only by dispatching commands through the command bridge; it never reaches into the floor UI's DOM.
+- **Slate's modules** live in [`slate/`](slate/), one file per section or tool, booted by [`slate/slate.js`](slate/slate.js). Styles and theme files are in [`slate/styles/`](slate/styles/).
+- **Standalone harness.** [`slate/slate.html`](slate/slate.html) loads Slate without `app.js` and falls back to a demo line ([`slate/slate-demo.js`](slate/slate-demo.js)) — useful for layout work, not for live data.
+- **Shared services** are used unchanged from the rest of the app: `PolynResinCatalog` ([`resin-catalog-service.js`](resin-catalog-service.js)), `PolynWorkspaceConfigurations` ([`workspace-configurations-service.js`](workspace-configurations-service.js)) and `PolynWorkspaceConfigurationPayloads` ([`workspace-configuration-payloads.js`](workspace-configuration-payloads.js)). The `Polyn` prefix on these globals and storage keys is historical and kept for compatibility.
 
-## Workspace configuration payload helpers
+## Data model in brief
 
-[`workspace-configuration-payloads.js`](workspace-configuration-payloads.js) exposes `PolynWorkspaceConfigurationPayloads`, a UI-independent boundary for future Workspace Configurations work. Version-1 payloads always include `schema_version: 1`; unsupported versions and malformed payloads are rejected with structured validation results before application.
+- **Recipes** hold line type, naming mode, layer percentages, and each hopper's resin and blend percentage. Loading one never touches receiver weights or runtime state.
+- **Receiver Weight Profiles** hold only physical hopper weights for a layout. Loading one changes only weights.
+- **Runtime state** — tracking, pump-off, timeline, sync outbox, device identity — belongs to neither.
+- Hopper 1's percentage is always `100 − (H2 … H6)`.
 
-- A Receiver Weight Profile contains only line/layout identity, hopper naming mode, and six receiver weights per layer. Applying one is atomic, requires the current physical layout to match, and changes only `hopper.weight`.
-- A Recipe contains only line type, naming mode, layer percentages, and each hopper's resin name/code and blend percentage. Applying one atomically updates only recipe fields, preserves receiver weights and runtime flags, and recalculates Hopper 1 from Hoppers 2–6 using the current app rule. The payload retains Hopper 1's resin and stored percentage, but its percentage must agree with that remainder and is recalculated on application. A blank resin is `null` in the payload; unrecognized or inactive codes remain strings.
+[`CLAUDE.md`](CLAUDE.md) is the full project guide and the source of truth for these rules.
 
-The helpers intentionally coexist with the legacy full snapshot/save system and are not yet wired to production UI, storage, cloud services, or synchronization. Later database/service/UI phases should create and validate a payload with these helpers, apply it after their own user-flow checks, then orchestrate rendering and persistence outside the module. Favorite status belongs to the future saved-document record, not a recipe payload.
+## Backend (optional)
 
-## Workspace configuration service
+Browser `localStorage` is always the immediate working state. Supabase adds RT Sync, shared configurations, the resin catalog and admin tooling; without it the app runs local-only.
 
-[`workspace-configurations-service.js`](workspace-configurations-service.js) provides the UI-independent `PolynWorkspaceConfigurations` service for the Phase 2 `workspace_configurations` database contract. Its API is `getCached`, `listCached`, `listRecipes`, `listReceiverWeightProfiles`, `refresh`, `create`, `update`, `rename`, `duplicate`, `delete`, `setFavorite`, `clearWorkspaceCache`, and `subscribe`.
+1. Create a Supabase project and enable anonymous sign-ins.
+2. Apply [`supabase/migrations`](supabase/migrations) in filename order (`supabase db push`).
+3. Set the project URL and **publishable** key in [`supabase-config.js`](supabase-config.js). Never put a service-role key in this repository.
+4. Edge Functions live in [`supabase/functions`](supabase/functions) (`recipe-scan`, `rt-cloud`, `database-health`).
 
-Documents are normalized to `{ id, workspaceId, type, name, normalizedName, schemaVersion, payload, favorite, createdBy, updatedBy, createdAt, updatedAt }`. The service uses the existing authenticated RT Sync client only through `lineSync.getWorkspaceConfigurationTransport()`; it never creates another session or exposes credentials. Each workspace has an isolated `polyn.workspaceConfigurations.v1::<workspace-id>` cache envelope containing version, workspace ID, timestamp, and separate profile/recipe arrays.
+See [`supabase/README.md`](supabase/README.md) for the migration ledger, RT Sync RPCs, resin administration and admin-assisted workspace recovery.
 
-Cached reads are safe offline, but writes are never queued. Cloud refreshes and all mutations use the Phase 2 RPCs, preserve the previous valid cache on failure, and notify subscribers only after a successful cache replacement. Creates and updates validate a detached payload through the Phase 1 helpers before calling Supabase. This is last-write-wins, has no Realtime subscription or polling. Never use a service-role key in browser code.
+## Running locally
 
-## Shared workspace configuration viewer
+```sh
+npm run serve          # http://127.0.0.1:8080  (no-store static server, no build step)
+```
 
-The existing **Line Configurations** panel now shows read-only **Receiver Weight Profiles** and **Recipes** for the currently connected RT Sync workspace, above the unchanged local configuration controls. It renders that workspace's cached items immediately, performs one refresh after a workspace change or panel initialization, and offers a manual refresh. Cached items remain visible with a concise stale/offline message if refresh fails; no workspace means no cloud items are shown.
+Then open `http://127.0.0.1:8080/?view=slate`, or `slate/slate.html` for the demo harness.
 
-Every cloud load opens a confirmation dialog. Recipe loads use the Phase 1 recipe helper and may change line type, naming mode, layer percentages, and hopper assignments/percentages while preserving weights, tracking, pump-off state, offsets, runtime state, workspace identity, and preferences. Weight Profile loads use the corresponding Phase 1 helper and change only receiver weights; incompatible physical layouts are rejected without partial application. A successful load renders/calculates, persists ordinary local session state, and emits one normal RT Sync active-job mutation. This phase is read/load-only: it has no cloud editing controls, Realtime, polling, offline writes, or changes to legacy local configurations.
-
-Shared Workspace Configurations can now also be managed from this same panel. **Save Current Weights** creates a narrow Receiver Weight Profile; **Save Current Recipe** creates a narrow Recipe. Existing shared items can be updated from the current app state, renamed, duplicated, or deleted; Recipes alone can be favorited, which keeps them first in their existing alphabetical groups. Duplicate names present an explicit Cancel, Update Existing, or Choose Another Name decision. All changes use the Phase 3 service and preserve the current workspace/application state. The local Save/Load configuration system remains separate and unchanged; this adds no Realtime, polling, or offline write queue.
-
-## Resin administration
-
-The Admin Login uses a dedicated, persisted email/password Supabase client whose auth storage key is separate from RT Sync’s anonymous session. Database authorization comes exclusively from `public.admin_users` and `resins` RLS policies; hiding the editor is not the authorization mechanism. Successful editor writes refresh `PolynResinCatalog` without reloading the page, so active recipe and lookup results update on subsequent interactions. See [the Supabase setup instructions](supabase/README.md#resin-administration); never add a service-role key to browser code.
+The Android app is a Capacitor shell around the same files (`npm run sync:android`, see [`capacitor.config.json`](capacitor.config.json)); the GitHub Pages deployment does not use it.
 
 ## Tests
 
-Run the browser-independent test suite with:
-
 ```sh
 node --test *.test.js
+git diff --check
 ```
+
+Slate's tests are the `slate-*.test.js` files at the repo root. SQL behavior is covered by source-level contract tests (`*-schema.test.js`).
