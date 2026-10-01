@@ -105,13 +105,15 @@ test("the flag is read from the URL and matched exactly; a URL naming no view fa
   assert.match(host, /catch \(error\) \{\s*return false;\s*\}/);
   // The device test: the stored choice first (legacy says no everywhere);
   // in the app only a tablet's screen says yes; in the browser a desktop's
-  // window, or a tablet's screen with a touch pointer; nothing to measure says no.
+  // window, or a tablet-sized screen or larger whatever the window's width or
+  // the pointer; nothing to measure says no.
   assert.match(host, /const MIN_WIDTH = 1100;/);
   assert.match(host, /const TABLET_MIN_SHORT = 600;/);
   assert.match(host, /const TABLET_MIN_LONG = 900;/);
   assert.match(host, /if \(choice === "legacy"\) return false;/);
   assert.match(host, /if \(native\) return tablet;/);
-  assert.match(host, /return tablet && matches\("\(pointer: coarse\)"\) === true;/);
+  assert.match(host, /if \(wideWindow\(\)\) return true;\s*return tablet;/);
+  assert.doesNotMatch(host, /pointer: coarse"\) === true/);
   assert.match(host, /root\.matchMedia\(query\)\.matches/);
   assert.match(host, /return Number\(root\.innerWidth\) >= MIN_WIDTH;/);
   // A throwing native bridge reads as the app: never a desktop by accident.

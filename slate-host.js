@@ -30,10 +30,12 @@
  *      choosing it, from the floor UI's "Slate (Beta)" link and then
  *      Slate's Settings;
  *   2. otherwise the device: Slate on a desktop's window (at least
- *      MIN_WIDTH wide, outside the app), on a tablet's screen with a touch
- *      pointer, and in the Android app on a tablet's screen; the floor UI
- *      on a phone, in the browser or the app. Slate draws for a finger
- *      there on its own (slate/slate-tier.js).
+ *      MIN_WIDTH wide, outside the app), on any screen the size of a
+ *      tablet's or larger in the browser - whatever the window's width or
+ *      the pointer, so a narrow desktop window is Slate too (the user's
+ *      choice, 2026-10-01) - and in the Android app on a tablet's screen;
+ *      the floor UI on a phone, in the browser or the app. Slate draws for
+ *      a finger, or a narrow window, there on its own (slate/slate-tier.js).
  *
  * A tablet's screen is judged by the screen, not the window, so turning
  * the device never flips the view: its short side at least
@@ -57,7 +59,8 @@
 
   const FLAG = "view";
   const VALUE = "slate";
-  /* The narrowest window Slate is drawn for (slate-shell.js says the same). */
+  /* The narrowest window that is Slate whatever the screen (slate-tier.js
+   * calls it wide); a narrower one is Slate on a tablet-sized screen. */
   const MIN_WIDTH = 1100;
   const TABLET_MIN_SHORT = 600;
   /* 900, not 960: the unfolded Galaxy Z Fold reports 933x704 and gets Slate
@@ -182,7 +185,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.55.17";
+  const VERSION = "0.55.18";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a
@@ -262,7 +265,7 @@
     const tablet = tabletScreen();
     if (native) return tablet;
     if (wideWindow()) return true;
-    return tablet && matches("(pointer: coarse)") === true;
+    return tablet;
   }
 
   function requested() {

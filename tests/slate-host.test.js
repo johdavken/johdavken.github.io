@@ -366,8 +366,13 @@ test("a tablet's screen boots Slate with a touch pointer in the browser and in t
     assert.equal(view(run("https://resin.tools/", { wide: false, coarse: true, screen })), null, `browser phone ${screen}`);
     assert.equal(view(run("https://resin.tools/", { wide: true, native: true, screen })), null, `app phone ${screen}`);
   }
-  // A narrow desktop window on a big screen, with a mouse, keeps the floor UI as before.
-  assert.equal(view(run("https://resin.tools/", { wide: false, coarse: false, screen: [1920, 1080] })), null);
+  // A narrow desktop window on a big screen, with a mouse, is Slate too: the
+  // screen decides, not the window (Slate draws its narrow tier there).
+  for (const screen of [[1920, 1080], [3072, 1728], [1366, 768]]) {
+    assert.equal(view(run("https://resin.tools/", { wide: false, coarse: false, screen })), "slate", `narrow desktop window ${screen}`);
+  }
+  // A phone's screen with a mouse is still a phone.
+  assert.equal(view(run("https://resin.tools/", { wide: false, coarse: false, screen: PHONE })), null);
   // The app with no screen to measure keeps the floor UI.
   assert.equal(view(run("https://resin.tools/", { wide: true, native: true })), null);
 });
