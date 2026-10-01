@@ -268,14 +268,10 @@
     const handlings = element(doc, "div", "slate-settings__modes", { role: "radiogroup", "aria-label": "Handling" });
     const handlingButtons = new Map();
     for (const [mode, label, note] of [
-      ["lift", "Lift", "The card rises off the page; the hopper it would land on swells to meet it."],
+      ["lift", "Lift", "A frosted card rises off the page, the page blurred through it; the hopper it would land on swells to meet it."],
       ["tilt", "Tilt", "Lifted, and it leans the way you carry it, settling upright when you pause."],
       ["float", "Float", "It bobs gently as you carry it and settles over a hopper."],
-      ["glow", "Glow", "The card stays flat and its edge breathes; the hopper under it answers."],
-      ["glass", "Glass", "A frosted card, the page blurred through it."],
-      ["stamp", "Stamp", "Made for Gruvbox: flat, a hard offset shadow, pressed down over a hopper."],
-      ["neon", "Neon", "Made for Retro 82: a lit edge, scan lines and a flicker as it switches on."],
-      ["still", "Still", "No movement: the card follows the pointer as it is."]
+      ["glow", "Glow", "The card stays flat and its edge breathes; the hopper under it answers."]
     ]) {
       const button = element(doc, "button", "slate-settings__mode", { type: "button", role: "radio", "aria-checked": "false", "data-handling": mode });
       button.appendChild(text(doc, "span", "slate-settings__mode-label", label));

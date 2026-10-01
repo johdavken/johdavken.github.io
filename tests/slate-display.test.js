@@ -166,8 +166,10 @@ test("hosted, the root carries the background; a switch flips the attribute alon
   assert.equal(bootHosted({ linked: false }).hostEl.getAttribute("data-background"), "none");
 });
 
-test("the handling is lift, tilt, glow or still, defaults to lift, persists beside the others, and an old record without it reads lift", () => {
-  assert.deepEqual(display.HANDLINGS, ["lift", "tilt", "float", "glow", "glass", "stamp", "neon", "still"]);
+test("the handling is lift, tilt, float or glow, defaults to lift, persists beside the others, and an old record without it, or with a retired one, reads lift", () => {
+  assert.deepEqual(display.HANDLINGS, ["lift", "tilt", "float", "glow"]);
+  // Glass is folded into Lift; Stamp, Neon and Still are retired (2026-10-01).
+  for (const retired of ["glass", "stamp", "neon", "still"]) assert.equal(display.normalize({ handling: retired }).handling, "lift", `${retired} did not fall back to lift`);
   assert.equal(display.DEFAULTS.handling, "lift");
   assert.equal(display.normalize({ handling: "tilt" }).handling, "tilt");
   assert.equal(display.normalize({ handling: "bounce" }).handling, "lift");
@@ -181,7 +183,7 @@ test("the handling is lift, tilt, glow or still, defaults to lift, persists besi
   assert.equal(display.create(node(), storage({ [display.STORAGE_KEY]: JSON.stringify({ tracking: "manual" }) })).getHandling(), "lift");
 });
 
-test("Settings offers the eight handlings as radios after Layout, withheld on a phone with it, and drives the controller alone", () => {
+test("Settings offers the four handlings as radios after Layout, withheld on a phone with it, and drives the controller alone", () => {
   const doc = makeDocument();
   const controller = display.create(node(), storage());
   const view = settings.create(doc, { theme: null, themes: [], display: controller });
@@ -192,15 +194,14 @@ test("Settings offers the eight handlings as radios after Layout, withheld on a 
   assert.equal(labels.indexOf("Handling"), labels.indexOf("Layout") + 1);
   const modes = view.element.querySelectorAll("[data-handling]");
   assert.deepEqual(modes.map(one => one.getAttribute("data-handling")), [...display.HANDLINGS]);
-  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Lift", "Tilt", "Float", "Glow", "Glass", "Stamp", "Neon", "Still"]);
+  assert.deepEqual(modes.map(one => one.querySelector(".slate-settings__mode-label").textContent), ["Lift", "Tilt", "Float", "Glow"]);
   assert.equal(modes.length % 2, 0, "an odd number of handlings leaves the grid ragged");
-  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false", "false", "false", "false", "false", "false"], "Lift is the default");
-  assert.match(view.handling("stamp").textContent, /Made for Gruvbox/);
-  assert.match(view.handling("neon").textContent, /Made for Retro 82/);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["true", "false", "false", "false"], "Lift is the default");
+  assert.match(view.handling("lift").textContent, /frosted/, "Lift is Glass's frosted card too");
   click(view.handling("tilt"));
   assert.equal(controller.getHandling(), "tilt");
   assert.equal(controller.getLayout(), "grid", "a handling click moved the layout");
-  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "true", "false", "false", "false", "false", "false", "false"]);
+  assert.deepEqual(modes.map(one => one.getAttribute("aria-checked")), ["false", "true", "false", "false"]);
   const inert = settings.create(doc, { theme: null, themes: [], display: null });
   assert.match(inert.element.querySelectorAll(".slate-settings__note").map(one => one.textContent).join(" "), /Handling cannot be changed/);
   click(inert.handling("glow"));
@@ -242,13 +243,13 @@ test("a tracked or pumped-off card is raised and inks its id, and nothing paints
 test("hosted, the root carries the handling as data-drag-motion, and a switch flips it alone", () => {
   const { hostEl, executed, controller } = bootHosted({ linked: false, stored: { handling: "tilt" } });
   assert.equal(hostEl.getAttribute("data-drag-motion"), "tilt");
-  controller.setHandling("still");
-  assert.equal(hostEl.getAttribute("data-drag-motion"), "still");
+  controller.setHandling("glow");
+  assert.equal(hostEl.getAttribute("data-drag-motion"), "glow");
   assert.equal(executed.length, 0);
   assert.equal(bootHosted({ linked: false }).hostEl.getAttribute("data-drag-motion"), "lift");
 });
 
-test("the handling sheet: the card lifts under Lift and Tilt, leans by --slate-drag-sway under Tilt, breathes under Glow, and Still has no rule; the Grid's drop target and origin are marked; reduced motion stops it all", () => {
+test("the handling sheet: the card lifts under Lift and Tilt, leans by --slate-drag-sway under Tilt, breathes under Glow, and Lift is frosted; the retired styles have no rule; the Grid's drop target and origin are marked; reduced motion stops it all", () => {
   const css = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "recipe-edit.css"), "utf8");
   // The selector's own rule: the last one it heads, not a shared list.
   const rule = selector => {
@@ -259,14 +260,18 @@ test("the handling sheet: the card lifts under Lift and Tilt, leans by --slate-d
   assert.match(css, /\.slate-root\[data-drag-motion="lift"\] \.slate-drag-proxy__card,\n\.slate-root\[data-drag-motion="tilt"\] \.slate-drag-proxy__card \{\s*animation: slate-drag-lift/);
   assert.match(rule('.slate-root[data-drag-motion="tilt"] .slate-drag-proxy__card'), /rotate: var\(--slate-drag-sway, 0deg\);/);
   assert.match(rule('.slate-root[data-drag-motion="glow"] .slate-drag-proxy__card'), /animation: slate-drag-glow/);
-  assert.doesNotMatch(css, /data-drag-motion="still"/, "Still is the absence of motion, not a rule");
-  for (const motion of display.HANDLINGS.filter(one => one !== "still")) {
+  for (const retired of ["glass", "stamp", "neon", "still"]) assert.doesNotMatch(css, new RegExp(`data-drag-motion="${retired}"`), `${retired} is retired but still styled`);
+  assert.doesNotMatch(css, /@keyframes slate-drag-(stamp|flicker|appear)/, "a retired style's keyframes remain");
+  for (const motion of display.HANDLINGS) {
     assert.match(css, new RegExp(`\\.slate-root\\[data-drag-motion="${motion}"\\] \\.slate-drag-proxy__card`), `${motion} has no card rule`);
   }
   // Settling over a hopper: the proxy says so.
   assert.match(rule('.slate-root[data-drag-motion="float"] .slate-drag-proxy__card.is-over'), /animation: none;/);
-  assert.match(rule('.slate-root[data-drag-motion="stamp"] .slate-drag-proxy__card'), /box-shadow: 6px 6px 0 var\(--slate-warning\);/);
-  assert.match(rule('.slate-root[data-drag-motion="neon"] .slate-drag-proxy__card::after'), /repeating-linear-gradient/);
+  // Lift wears Glass's frost: the page blurred through a see-through card.
+  const lift = rule('.slate-root[data-drag-motion="lift"] .slate-drag-proxy__card');
+  assert.match(lift, /backdrop-filter: blur\(10px\) saturate\(1\.4\);/);
+  assert.match(lift, /background: color-mix\(in srgb, var\(--slate-surface-raised\) 45%, transparent\);/);
+  assert.match(rule('.slate-root[data-drag-motion="lift"] .slate-drag-proxy__card.is-over'), /border-color: var\(--slate-accent\);/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-drop-target'), /border-color: var\(--slate-accent\);/);
   assert.match(rule('.slate-root[data-layers="grid"] .slate-hopper[data-recipe].is-dragging'), /border-style: dashed;/);
   assert.match(rule("\n.slate-drag-proxy__card"), /grid-template-areas:\s*"id pct"\s*"resin resin";/);

@@ -237,3 +237,39 @@ test("the selection: pick toggles a row, a Shift run fills the layer between the
   view.pick("A:2");
   assert.deepEqual(view.picked(), [], "a destroyed form still picks");
 });
+
+test("a row with an edit still to be applied is marked is-pending, as a picked row is lit; undoing the edit, or the form going, takes the mark", () => {
+  const { view, row } = boot();
+  const a2pct = row("A2").querySelector(".slate-hopper__draft-pct");
+  const a3resin = row("A3").querySelector(".slate-hopper__draft-resin");
+  assert.equal(row("A2").classList.contains("is-pending"), false, "an untouched row is pending");
+  const was = a2pct.value;
+  typed(a2pct, "35");
+  assert.equal(row("A2").classList.contains("is-pending"), true, "a changed blend did not mark its row");
+  assert.equal(row("A3").classList.contains("is-pending"), false, "a row the edit did not touch is pending");
+  typed(a3resin, "LD105");
+  assert.equal(row("A3").classList.contains("is-pending"), true, "a changed resin did not mark its row");
+  typed(a2pct, was);
+  assert.equal(row("A2").classList.contains("is-pending"), false, "an edit typed back to the line kept its mark");
+  view.destroy();
+  assert.equal(row("A3").classList.contains("is-pending"), false, "the mark outlived the form");
+});
+
+test("the pending mark is the picked cell's glow alone - no fill, no lift - over the cell's own shadow, and holds still under reduced motion", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const css = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "recipe-edit.css"), "utf8");
+  const at = css.indexOf(".slate-root .slate-hopper[data-recipe].is-pending {");
+  assert.ok(at > -1, "no rule for the pending cell");
+  const rule = css.slice(at, css.indexOf("}", at));
+  assert.match(rule, /outline: 0 solid var\(--slate-accent-soft\);/);
+  assert.match(rule, /animation: slate-pending-glow 1\.4s ease-in-out infinite;/);
+  // The glow alone: the fill, the lift and the accent edge are the pick's.
+  assert.doesNotMatch(rule, /background|scale|box-shadow|border/);
+  assert.doesNotMatch(css, /is-pending[^{]*\{[^}]*(background|scale):/, "a pending cell is filled or lifted");
+  assert.match(css, /@keyframes slate-pending-glow \{[\s\S]*?outline-width: 0;[\s\S]*?outline-width: 6px;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.slate-root \.slate-hopper\[data-recipe\]\.is-pending,[\s\S]*?animation: none;/);
+  // The text keeps the edited field's own colour change.
+  const recipe = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "recipe.css"), "utf8");
+  assert.match(recipe, /\.slate-hopper__draft-resin\.is-drafted,\n\.slate-recipe\.is-form \.slate-hopper__draft-pct\.is-drafted \{\s*color: var\(--slate-accent-text\);/);
+});

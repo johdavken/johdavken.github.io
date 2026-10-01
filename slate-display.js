@@ -28,14 +28,13 @@
  * HANDLING
  *
  * How a hopper's card moves while it is dragged (components/recipe-edit.css):
- * `lift`, the default, raises it off the page and swells the cell it would
- * land on; `tilt` lifts it and leans it the way it is carried; `float`
- * bobs it; `glow` keeps it flat and breathes its edge; `glass` frosts it;
- * `stamp` (made for Gruvbox) is flat with a hard offset shadow; `neon`
- * (made for Retro 82) lights its edge and lays scan lines over it; `still`
- * does none of it. Written
- * onto the root as data-drag-motion. A reduced-motion device gets still
- * whatever is chosen.
+ * `lift`, the default, raises a frosted card off the page, the page
+ * blurred through it, and swells the cell it would land on; `tilt` lifts it
+ * and leans it the way it is carried; `float` bobs it; `glow` keeps it flat
+ * and breathes its edge. Written onto the root as data-drag-motion. A
+ * reduced-motion device gets no movement whatever is chosen. Glass was
+ * folded into Lift, and Stamp, Neon and Still retired (2026-10-01): a
+ * device that saved one reads lift.
  *
  * MEASURE
  *
@@ -118,7 +117,7 @@
   const DEFAULTS = Object.freeze({ background: "none", handling: "lift", measure: "diameter", tracking: "automatic", layout: "grid", layerOrder: "forward", timeline: "realtime", host: "auto" });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   const BACKGROUNDS = Object.freeze(["none", "smoke", "ember", "tide", "dunes", "hearth", "horizon", "solitude"]);
-  const HANDLINGS = Object.freeze(["lift", "tilt", "float", "glow", "glass", "stamp", "neon", "still"]);
+  const HANDLINGS = Object.freeze(["lift", "tilt", "float", "glow"]);
   const MEASURES = Object.freeze(["diameter", "circumference"]);
   const TRACKING_MODES = Object.freeze(["automatic", "assisted", "manual"]);
   const LAYOUTS = Object.freeze(["grid", "grid-top"]);

@@ -103,7 +103,7 @@ test("in Settings it stands under the Handling choices, plays while Settings sho
   view.onShow();
   assert.equal(view.preview().running(), true);
   const before = view.preview().card();
-  click(view.handling("neon"));
+  click(view.handling("float"));
   assert.ok(view.preview().card() !== before, "a new choice did not replay the preview");
   const again = view.preview().card();
   controller.setTrackingMode("manual");
