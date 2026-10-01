@@ -144,11 +144,14 @@
       }
     }
 
-    // Plain fields have no box: what will be sent is marked on the field.
+    // A row with an edit still to be applied is marked is-pending, and
+    // lit as a picked row is (recipe-edit.css). Plain fields have no box:
+    // what will be sent is marked on the field too.
     function paintDrafted() {
-      if (!plain) return;
       for (const [key, slot] of byKey) {
         const change = draftModule.changesFor({ [key]: base[key] }, { [key]: draft[key] }, sameResin)[0] || {};
+        slot.entry.row.classList.toggle("is-pending", change.resin !== undefined || change.pct !== undefined);
+        if (!plain) continue;
         slot.resin.classList.toggle("is-drafted", change.resin !== undefined);
         if (slot.pct) slot.pct.classList.toggle("is-drafted", change.pct !== undefined);
       }
@@ -371,7 +374,7 @@
         if (slot.preview && slot.preview.parentNode) slot.preview.parentNode.removeChild(slot.preview);
         show(slot.entry.cells.resin, true);
         show(slot.entry.cells.pct, true);
-        slot.entry.row.classList.remove("is-drafting", "is-changed-underneath", "is-picked");
+        slot.entry.row.classList.remove("is-drafting", "is-changed-underneath", "is-picked", "is-pending");
         slot.entry.note.textContent = "";
         show(slot.entry.note, false);
       }

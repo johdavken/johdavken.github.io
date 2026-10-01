@@ -399,6 +399,18 @@
   }
 }
 
+/* A pending cell's pulse: the pick's ring, alone. */
+@keyframes slate-pending-glow {
+  0%,
+  100% {
+    outline-width: 0;
+  }
+
+  50% {
+    outline-width: 6px;
+  }
+}
+
 /* Clear selection's softer pulse: the ring alone, narrower. */
 @keyframes slate-clear-glow {
   0%,
@@ -494,6 +506,7 @@
   }
 
   .slate-root .slate-hopper[data-recipe].is-picked,
+  .slate-root .slate-hopper[data-recipe].is-pending,
   .slate-root .slate-fill__clear.is-lit,
   .slate-root .slate-fill__clear {
     animation: none;
@@ -790,6 +803,17 @@
   scale: 1.03;
   box-shadow: var(--slate-shadow-pop), inset 0 0 0 var(--slate-stroke) var(--slate-accent);
   animation: slate-pick-glow 1.4s ease-in-out infinite;
+}
+
+/* A cell with an edit still to be applied (is-pending, slate-recipe-form.js)
+   wears the pick's pulse alone - no fill, no lift - and its edited text
+   keeps its accent (is-drafted, recipe.css). An outline, so the ring
+   rides over a tracked or pumped-off cell's own shadow. */
+.slate-root .slate-hopper[data-recipe].is-pending {
+  z-index: 1;
+  outline: 0 solid var(--slate-accent-soft);
+  outline-offset: 0;
+  animation: slate-pending-glow 1.4s ease-in-out infinite;
 }
 
 .slate-recipe__fill {
