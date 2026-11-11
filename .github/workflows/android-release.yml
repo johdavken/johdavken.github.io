@@ -95,8 +95,14 @@ jobs:
           APP_ID="tools.resin.app$APP_ID_SUFFIX"
           CODE="${{ steps.version.outputs.versionCode }}"
           echo "$BADGING" | grep -q "name='$APP_ID' versionCode='$CODE'" || { echo "::error::APK is not $APP_ID at $CODE"; exit 1; }
-          CERT=$("$TOOLS/apksigner" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-          [ "$CERT" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK signed with $CERT, not the installed key"; exit 1; }
+          # Print apksigner's whole report: its signer lines are labelled
+          # "Signer #1" by some build-tools and "Signer (minSdkVersion=..)"
+          # by others, so match any signer line and require that every one
+          # carries the installed key.
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apksigner.txt
+          CERTS=$(sed -n 's/^Signer.* certificate SHA-256 digest: //p' apksigner.txt | sort -u)
+          echo "signer certificates: ${CERTS:-none}"
+          [ "$CERTS" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK signed with '${CERTS:-nothing}', not the installed key"; exit 1; }
           NAME="$APP_ID-$CODE.apk"
           cp "$APK" "$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
