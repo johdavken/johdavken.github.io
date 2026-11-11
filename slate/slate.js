@@ -63,9 +63,8 @@
   const displayModule = root.PolynSlateDisplay || null;
   const tierModule = root.PolynSlateTier || null;
   const dismissModule = root.PolynSlateDismiss || null;
-  const phoneDrawerModule = root.PolynSlatePhoneDrawer || null;
-  /* The inputs that raise no keyboard: the grip stays up for these. */
-  const NO_KEYBOARD_INPUTS = new Set(["button", "checkbox", "radio", "range", "color", "file", "submit", "reset", "image", "hidden"]);
+  /* A phone's Lines sheet, raised from Home's mark. */
+  const lineSwitcherModule = root.PolynSlateLineSwitcher || null;
   const homeModule = root.PolynSlateHome || null;
   const lineModule = root.PolynSlateLine || null;
 
@@ -130,7 +129,8 @@
    * Each has a home - what it shows when no tool is in it. */
   const panes = {};
   let railView = null;
-  let phoneDrawer = null;
+  /* A phone's Lines sheet (slate-line-switcher.js), when there is one. */
+  let lines = null;
   /* Every section the boot defines (start() fills it), for the bar to
    * know which are tools. */
   const sectionDefinitions = [];
@@ -207,13 +207,11 @@
     container.setAttribute("data-viewport", tier.width);
     container.setAttribute("data-orientation", tier.orientation || "portrait");
     // Wide again, or a mouse: there is no drawer or page to hold open,
-    // and no rail sheet to raise.
+    // and no Lines sheet to keep up.
     if (asideOpen && !drawer() && !page()) setAside(false);
-    if (railOpen && !page()) setRail(false);
-    placeSync();
-    // Home is a phone's alone: listed there, and left for the Recipe
-    // when the screen stops being one.
-    if (railView) railView.setListed(HOME, page());
+    if (lines && lines.isOpen() && !page()) lines.close();
+    // Home is a phone's alone, and a phone has no rail: Home is never the
+    // rail's, and is left for the Recipe when the screen stops being one.
     if (!page() && sections && sections.current() && sections.current().id === HOME) sections.show(DEFAULT_SECTION);
     // The Recipe holds both (slate-recipe.js): the Book under its tabs,
     // Weights as its third. Neither is ever the rail's.
@@ -236,6 +234,7 @@
       else sections.show(DEFAULT_SECTION);
     }
     paintTitle();
+    paintHomeButton();
   }
 
   /* SCANNING
@@ -287,7 +286,7 @@
   function paintScrim() {
     const scrim = container ? container.querySelector("[data-slate-scrim]") : null;
     if (!scrim) return;
-    if ((asideOpen && drawer()) || railOpen) scrim.removeAttribute("hidden");
+    if ((asideOpen && drawer()) || (lines && lines.isOpen())) scrim.removeAttribute("hidden");
     else scrim.setAttribute("hidden", "");
   }
   function setAside(open) {
@@ -299,6 +298,7 @@
     paintScrim();
     paintTitle();
     paintAsideMark();
+    paintHomeButton();
   }
 
   /* Which rail item the aside lights. In a drawer, what it holds while it
@@ -312,39 +312,29 @@
     else railView.setActivePane("aside", id === TIMELINE ? null : id);
   }
 
-  /* THE RAIL AS A SHEET (phone)
-   *
-   * The grip floating at the foot (slate-phone-drawer.js) slides the rail
-   * up over a scrim, following a swipe; a choice, the scrim, the grip, a
-   * swipe down or Back lowers it. */
-  let railOpen = false;
-  let railOffStack = null;
   let statsOffStack = null;
-  function setRail(open) {
-    railOpen = !!open && page();
-    if (!railOpen && sync && sync.isOpen() && syncInSheet) sync.close(false);
-    if (railOpen && !railOffStack && dismissModule) railOffStack = dismissModule.register(() => setRail(false));
-    if (!railOpen && railOffStack) { const off = railOffStack; railOffStack = null; off(); }
-    if (mounts.rail) mounts.rail.classList.toggle("is-open", railOpen);
-    if (phoneDrawer) phoneDrawer.setExpanded(railOpen);
-    paintScrim();
-  }
 
-  /* RT SYNC'S PLACE
+  /* THE WAY HOME (phone)
    *
-   * In the header's corner - and on a phone, where the header gives its
-   * row to the page, at the foot of the menu's sheet beside Settings. A
-   * move closes the panel: a node moved while focused loses its focus. */
-  let syncInSheet = false;
-  function placeSync() {
-    if (!sync) return;
-    const foot = railView && railView.element && typeof railView.element.querySelector === "function" ? railView.element.querySelector(".slate-rail__foot") : null;
-    const inSheet = page() && !!foot;
-    if (inSheet === syncInSheet && sync.element.parentNode) return;
-    if (sync.isOpen()) sync.close(false);
-    syncInSheet = inSheet;
-    if (inSheet) foot.appendChild(sync.element);
-    else if (mounts.sync) mounts.sync.appendChild(sync.element);
+   * A phone has no menu: Home leads everywhere, and every other page - a
+   * section, or the Timeline or a tool laid over it - carries Home at the
+   * left of the header (slate-shell.js builds it hidden). Android's Back
+   * walks the same way. */
+  function onPhonePage() {
+    if (!page() || !sections) return false;
+    const showing = sections.current();
+    return asideOpen || !!(showing && showing.id !== HOME);
+  }
+  function paintHomeButton() {
+    const button = container ? container.querySelector("[data-slate-home]") : null;
+    if (!button) return;
+    if (onPhonePage()) button.removeAttribute("hidden");
+    else button.setAttribute("hidden", "");
+  }
+  function goHome() {
+    if (!sections || !sections.section(HOME)) return;
+    setAside(false);
+    sections.show(HOME);
   }
 
   /* The header names the centre's section - or, on a phone, the page laid
@@ -405,12 +395,11 @@
   }
 
   /* The overdue dot: a hopper past its mark and still running. On a
-   * tablet it is the rail's Timeline's; on a phone the grip's, and Home's
-   * in the sheet it raises, the Timeline being one of Home's steps. */
+   * tablet it is the rail's Timeline's; a phone says it in the line under
+   * Home's Timeline step. */
   function paintOverdue() {
     const overdue = !!(summary && typeof summary.entries === "function") && summary.entries().some(entry => entry && entry.overdue && !entry.pumpOff);
-    if (phoneDrawer) phoneDrawer.setDot(overdue);
-    if (railView) { railView.setAlert(TIMELINE, overdue); railView.setAlert(HOME, overdue); }
+    if (railView) railView.setAlert(TIMELINE, overdue);
   }
 
   /* TIER
@@ -612,7 +601,11 @@
       },
       clock: at => (rundown && typeof rundown.formatClock === "function" ? rundown.formatClock(at) : new Date(at).toLocaleTimeString()),
       // RT Sync's status, read for the mark; the Home page asks nothing of it.
-      sync: () => (connection && typeof connection.getStatus === "function" ? connection.getStatus() : null)
+      sync: () => (connection && typeof connection.getStatus === "function" ? connection.getStatus() : null),
+      // The mark raises the Lines sheet; a tile is drawn only for a page
+      // this page has.
+      lines: () => { if (lines) lines.open(); },
+      has: id => sectionDefinitions.some(one => one.id === id)
     });
 
     const definitions = sectionDefinitions;
@@ -629,7 +622,7 @@
       { id: TIMELINE, label: "Timeline", group: "sections", pane: "aside", drawer: true, icon: "timeline", create: (d, c) => timelineModule.create(d, Object.assign({}, c, { onTick, visibility: doc, view: root })) },
       { id: "resin-balance", label: "Resin Balance", group: "sections", pane: "aside", icon: "balance", create: (d, c) => balanceModule.create(d, Object.assign({}, c, {
         totals: resinTotals,
-        back: () => home("aside"),
+        back: () => closeAside(),
         // Under a finger production and scrap are entered from Resin
         // Balance: the words and the entry are the job cards' own.
         job: {
@@ -641,13 +634,13 @@
       // How to Use: a short guide to a changeover, under Resin Balance and
       // in the aside as it is.
       ...(guideModule ? [{ id: "guide", label: guideModule.TITLE, group: "sections", pane: "aside", icon: "guide", create: (d, c) => guideModule.create(d, Object.assign({}, c, {
-        back: () => home("aside"),
+        back: () => closeAside(),
         more: weightsGuideModule ? () => panes.aside.swap.show("weights-guide") : null
       })) }] : []),
       // Hopper Weights Configuration: How to Use's specifics, reached from
       // it and swapped into the same place; the rail lists it nowhere.
       ...(weightsGuideModule ? [{ id: "weights-guide", label: weightsGuideModule.TITLE, group: "aside", pane: "aside", icon: "guide", create: (d, c) => weightsGuideModule.create(d, Object.assign({}, c, {
-        back: () => home("aside"),
+        back: () => closeAside(),
         guide: () => panes.aside.swap.show("guide")
       })) }] : []),
       // The administrator's three. Listed under Resin Balance and marked
@@ -657,13 +650,23 @@
       { id: "workspaces", label: workspacesModule.TITLE, group: "sections", admin: true, icon: "workspaces", create: (d, c) => workspacesModule.create(d, c) },
       { id: "line-config", label: lineConfigModule.TITLE, group: "sections", admin: true, icon: "lines", create: (d, c) => lineConfigModule.create(d, Object.assign({}, c, { lineIdentity })) },
       { id: "resins", label: resinDbModule.TITLE, group: "sections", admin: true, icon: "resins", create: (d, c) => resinDbModule.create(d, c) },
-      { id: "formulas", label: formulasModule.TITLE, group: "tools", pane: "aside", icon: "gauge", create: (d, c) => formulasModule.create(d, Object.assign({}, c, { conversions: unitConversions, densities: formulaDensities, back: () => home("aside") })) },
-      { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => home("aside") })) },
+      { id: "formulas", label: formulasModule.TITLE, group: "tools", pane: "aside", icon: "gauge", create: (d, c) => formulasModule.create(d, Object.assign({}, c, { conversions: unitConversions, densities: formulaDensities, back: () => closeAside() })) },
+      { id: "winding-tension", label: windingModule.TITLE, group: "tools", pane: "aside", icon: "winding", create: (d, c) => windingModule.create(d, Object.assign({}, c, { winding: windingTension, back: () => closeAside() })) },
       ...(workAlarmTool ? [{ id: "work-alarm", label: workAlarmTool.TITLE, group: "tools", pane: "aside", icon: "alarm", create: (d, c) => workAlarmTool.create(d, Object.assign({}, c, {
         workAlarm: workAlarmModule && typeof workAlarmModule.shared === "function" ? { device: workAlarmModule.shared(), format: workAlarmModule } : null,
-        back: () => home("aside")
+        back: () => closeAside()
       })) }] : []),
-      { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, c) },
+      // On a phone Settings is also the way to How to Use and, while an
+      // administrator is signed in, to the administrator's sections - a
+      // phone has no rail to list them (slate-settings.js shows both there
+      // alone).
+      { id: "settings", label: "Settings", group: "foot", icon: "settings", create: (d, c) => settingsModule.create(d, Object.assign({}, c, {
+        pages: {
+          go: id => goTo(id),
+          guide: guideModule ? { id: "guide", label: guideModule.TITLE } : null,
+          admin: sectionDefinitions.filter(one => one.admin).map(one => ({ id: one.id, label: one.label }))
+        }
+      })) },
       // The Scrap card, already built and painted by the job's cards: the
       // stats row's home, the way the Timeline is the aside's.
       { id: SCRAP, label: "Scrap", group: "stats", pane: "stats", create: () => ({ element: stats.card(SCRAP).card }) }
@@ -671,10 +674,16 @@
     const paneOf = definition => definition.pane || rail.CENTRE;
     const inPane = name => definitions.filter(definition => paneOf(definition) === name);
     const home = name => panes[name].swap.show(panes[name].home);
+    /* A tool's own close: the aside's home comes back - and on a phone,
+     * where the aside is a page over the centre, the page is lowered too,
+     * back to what it was opened from (Home, or Settings for How to Use)
+     * rather than onto the Timeline's page. */
+    const closeAside = () => { if (page()) setAside(false); home("aside"); };
 
     sections = sectionsModule.mountSections(doc, mounts.centre, inPane(rail.CENTRE), ctx, {
       onChange(definition) {
         if (railView) railView.setActive(definition.id);
+        paintHomeButton();
         // Home carries the job's figures itself: the strip steps aside
         // (shell.css), its editors still rising from it as sheets.
         if (mounts.stats) mounts.stats.classList.toggle("is-home", definition.id === HOME);
@@ -708,10 +717,8 @@
         const definition = definitions.find(one => one.id === id);
         if (!definition) return;
         const name = paneOf(definition);
-        // On a phone the sheet is lowered by any choice, and a section
-        // takes the screen from the Timeline's page.
+        // On a phone a section takes the screen from the Timeline's page.
         if (page()) {
-          setRail(false);
           if (name === rail.CENTRE) { setAside(false); sections.show(id); return; }
           if (name === "aside") { panes.aside.swap.show(id); setAside(true); return; }
         }
@@ -731,43 +738,6 @@
       }
     });
     if (mounts.rail) mounts.rail.appendChild(railView.element);
-    if (phoneDrawerModule && mounts.grip && mounts.rail) {
-      const sheet = mounts.rail;
-      phoneDrawer = phoneDrawerModule.create(doc, {
-        sheet,
-        enabled: () => page() && !(sync && sync.isOpen()),
-        isOpen: () => railOpen,
-        height: () => (typeof sheet.getBoundingClientRect === "function" ? sheet.getBoundingClientRect().height : 0),
-        // The sheet under the finger: shown, without its slide, at the
-        // drag's place; let go, it takes its slide back to where it settles.
-        follow: shift => {
-          sheet.classList.toggle("is-dragging", shift !== null);
-          if (shift === null) sheet.style.removeProperty("--slate-sheet-shift");
-          else sheet.style.setProperty("--slate-sheet-shift", `${shift}px`);
-        },
-        settle: open => setRail(open)
-      });
-      mounts.grip.appendChild(phoneDrawer.element);
-      // Typing, the keyboard shortens the page (slate-host.js) and the grip
-      // would ride on top of it: it steps aside while a field that raises
-      // the keyboard has focus, and is back when focus leaves for anything
-      // else.
-      const typingIn = node => {
-        if (!node || !node.tagName) return false;
-        const tag = String(node.tagName).toUpperCase();
-        if (tag === "TEXTAREA") return true;
-        if (node.isContentEditable || node.getAttribute("contenteditable") === "true") return true;
-        if (tag !== "INPUT") return false;
-        return !NO_KEYBOARD_INPUTS.has(String(node.getAttribute("type") || "text").toLowerCase());
-      };
-      const paintTyping = typing => {
-        if (typing) mounts.grip.setAttribute("hidden", "");
-        else mounts.grip.removeAttribute("hidden");
-      };
-      container.addEventListener("focusin", event => paintTyping(typingIn(event && event.target)));
-      container.addEventListener("focusout", event => paintTyping(typingIn(event && event.relatedTarget)));
-    }
-
     // The administrator's sections appear and vanish with the one session,
     // wherever it was opened or ended - here, the floor UI or Station. A
     // section left open when access goes hands the centre back to Recipe.
@@ -777,7 +747,8 @@
       for (const id of adminSections) railView.setListed(id, open);
       if (open) return;
       const showing = sections.current();
-      if (showing && adminSections.includes(showing.id)) sections.show(DEFAULT_SECTION);
+      // A phone's start is Home; elsewhere the Recipe.
+      if (showing && adminSections.includes(showing.id)) sections.show(page() && sections.section(HOME) ? HOME : DEFAULT_SECTION);
     }
     applyAdmin();
     if (admin && typeof admin.subscribe === "function") admin.subscribe(applyAdmin);
@@ -786,21 +757,39 @@
     // tokens reach it; the sync module registers it with the bridge.
     const conflict = conflictModule ? conflictModule.create(doc) : null;
     if (conflict) container.appendChild(conflict.element);
-    sync = syncModule.create(doc, {
-      connection, admin, conflict, lineIdentity,
-      // Opened from the menu's sheet, the panel takes the sheet's place:
-      // the sheet stays up behind it, unseen, and is back when it closes.
-      onToggle: open => { if (mounts.rail) mounts.rail.classList.toggle("is-covered", open && syncInSheet && railOpen); }
-    });
-    placeSync();
+    // In the header's corner. On a phone its pill is not drawn (sync.css):
+    // the panel is reached from the Lines sheet, and rises as a sheet.
+    sync = syncModule.create(doc, { connection, admin, conflict, lineIdentity });
+    if (mounts.sync) mounts.sync.appendChild(sync.element);
+
+    // A phone's Lines sheet: the lines this device has joined, raised by a
+    // tap on Home's mark. It switches through the sync module, which stays
+    // the one requester of connection actions.
+    if (lineSwitcherModule && homeModule) {
+      lines = lineSwitcherModule.create(doc, {
+        status: () => (connection && typeof connection.getStatus === "function" ? connection.getStatus() : null),
+        select: id => sync.selectLine(id),
+        reconnect: () => sync.reconnectLine(),
+        openSync: options => sync.open(options),
+        onToggle: () => paintScrim()
+      });
+      container.appendChild(lines.element);
+      if (connection && typeof connection.subscribe === "function") connection.subscribe(() => lines.update());
+    }
+    // Home's mark is the line's: it follows RT Sync as it moves - a switch,
+    // a device joining - not only the job's publishes.
+    if (connection && typeof connection.subscribe === "function") connection.subscribe(() => refreshHome());
 
     if (displayController && typeof displayController.subscribe === "function") displayController.subscribe(onDisplayChange);
 
+    const homeButton = container.querySelector("[data-slate-home]");
+    if (homeButton) homeButton.addEventListener("click", () => goHome());
+
     const scrim = container.querySelector("[data-slate-scrim]");
-    if (scrim) scrim.addEventListener("click", () => { if (railOpen) setRail(false); else setAside(false); });
+    if (scrim) scrim.addEventListener("click", () => { if (lines && lines.isOpen()) lines.close(); else setAside(false); });
     container.addEventListener("keydown", event => {
       if (!event || event.key !== "Escape") return;
-      if (railOpen) setRail(false);
+      if (lines && lines.isOpen()) lines.close();
       else if (asideOpen) setAside(false);
     });
 
@@ -810,7 +799,7 @@
      * `polyn:android-back` on the document) and otherwise hands the key to
      * the application's own handler, which would act on the hidden floor
      * UI. Slate always answers: Back closes what is open on top - a
-     * popover, the drawer, a phone's Timeline page or its rail sheet - then
+     * popover, the drawer, a phone's Timeline page or its Lines sheet - then
      * on a phone takes a section other than the Recipe back to the Recipe,
      * and with nothing left lets the app go to the background, as Android
      * expects. */
@@ -887,6 +876,7 @@
     for (const name of Object.keys(panes)) home(name);
     // A phone opens on Home, as the floor UI's phone does.
     if (page() && sections.section(HOME)) sections.show(HOME);
+    paintHomeButton();
     onPublish();
     if (bridge && typeof bridge.subscribe === "function") bridge.subscribe(() => onPublish());
   }

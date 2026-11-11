@@ -43,10 +43,40 @@
   white-space: normal;
 }
 
+/* The way Home: a phone's alone (slate.js shows it there, on every page
+   but Home), since a phone has no menu. */
+.slate-root .slate-header__home {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-1);
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-3) 0 var(--slate-space-1);
+  border: 0;
+  border-radius: var(--slate-radius);
+  background: none;
+  color: var(--slate-accent);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-root .slate-header__home[hidden] {
+  display: none;
+}
+
+.slate-root .slate-header__home:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-header__home-mark {
+  font-size: var(--slate-text-2xl);
+  line-height: 1;
+}
+
 /* ---- A phone ----
-   No header row: RT Sync stands in the menu's sheet (slate.js), and a
-   phone's pages are named by what they show, so no title. A notice, when
-   there is one, is the header's whole content. */
+   No title: a phone's pages are named by what they show. The row holds
+   the way Home on every page but Home, and a notice when there is one.
+   RT Sync's pill is not drawn - Home's mark is the line's, and raises the
+   Lines sheet, whose foot opens the panel (it rises as a sheet). */
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-header__title {
   display: none;
@@ -56,4 +86,8 @@
   order: 1;
   flex: 1 0 100%;
   margin-bottom: var(--slate-space-2);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__trigger {
+  display: none;
 }

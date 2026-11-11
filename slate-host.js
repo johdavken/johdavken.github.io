@@ -175,8 +175,8 @@
     "slate/slate-work-alarm.js",
     "slate/slate-tier.js",
     "slate/slate-rail.js",
-    "slate/slate-phone-drawer.js",
     "slate/slate-home.js",
+    "slate/slate-line-switcher.js",
     "slate/slate-sections.js",
     "slate/slate-shell.js",
     "slate/slate.js"
@@ -185,7 +185,7 @@
   /* The one cache tag for every Slate asset. Bumped on every Slate change,
    * together with this file's own ?v= in index.html - a stale app.js under
    * fresh Slate modules reads as "the application did not connect". */
-  const VERSION = "0.55.18";
+  const VERSION = "0.55.19";
 
   /* The native Android shell, whose bridge is on the page before any
    * script runs. A throwing bridge reads as the app: never assume a

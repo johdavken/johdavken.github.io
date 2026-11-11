@@ -26,6 +26,7 @@
   "use strict";
 
   const ADMIN_TITLE = "Administrator access";
+  const PHONE_ADMIN_OPENS = "On a phone, Workspaces, Line Configuration and Resin Database are listed here while an administrator is signed in.";
   const ADMIN_LEAD = "Administrator tools run on the application's own admin session, the same one the floor UI and Station use. Nothing here is stored by Slate.";
 
   function element(doc, name, className, attributes) {
@@ -103,6 +104,9 @@
    * @param {object[]} [ctx.themes]    the registry (PolynSlateTheme.THEMES)
    * @param {object|null} [ctx.display] the display controller {getBackground, setBackground, getHandling, setHandling, getTrackingMode, setTrackingMode, getLayout, setLayout, getLayerOrder, setLayerOrder, getTimelineView, setTimelineView, subscribe}
    * @param {object|null} [ctx.admin]  the admin bridge, for the sign-in block
+   * @param {object} [ctx.pages]        a phone's ways on from Settings, which has no rail:
+   *        { go(id), guide: {id, label}|null, admin: [{id, label}] } - How to Use, and the
+   *        administrator's sections while one is signed in (settings.css shows both on a phone alone)
    * @param {function} [ctx.say]       a line for the operator
    */
   function create(doc, ctx) {
@@ -111,6 +115,16 @@
     const themes = Array.isArray(settings.themes) ? settings.themes : [];
     const admin = settings.admin || null;
     const say = typeof settings.say === "function" ? settings.say : () => {};
+    const pages = settings.pages && typeof settings.pages.go === "function" ? settings.pages : null;
+
+    /* A row that opens another page: a phone's way on, where the rail is not. */
+    function pageLink(definition, className) {
+      const button = element(doc, "button", `slate-settings__page ${className || ""}`.trim(), { type: "button", "data-settings-page": definition.id });
+      button.appendChild(text(doc, "span", "slate-settings__page-label", definition.label));
+      button.appendChild(text(doc, "span", "slate-settings__page-chevron", "\u203a", { "aria-hidden": "true" }));
+      button.addEventListener("click", () => pages.go(definition.id));
+      return button;
+    }
 
     const rootEl = element(doc, "div", "slate-settings");
 
@@ -361,6 +375,14 @@
     if (!display) opening.appendChild(text(doc, "p", "slate-settings__note", "What this device opens cannot be changed on this page."));
     rootEl.appendChild(opening);
 
+    // How to Use: a phone's way to the guide (the rail lists it elsewhere).
+    if (pages && pages.guide) {
+      const help = element(doc, "section", "slate-settings__group slate-settings__group--pages", { "aria-label": "Help" });
+      help.appendChild(text(doc, "h2", "slate-settings__heading", "Help"));
+      help.appendChild(pageLink(pages.guide));
+      rootEl.appendChild(help);
+    }
+
     // Administrator access: last, and closed until it is wanted.
     const adminGroup = element(doc, "section", "slate-settings__group slate-settings__admin", { "aria-label": ADMIN_TITLE });
     const adminToggle = element(doc, "button", "slate-settings__admin-toggle", { type: "button", "aria-expanded": "false", "data-slate-admin": "disclosure" });
@@ -386,6 +408,8 @@
     for (const node of [emailField, passwordField, signInButton]) adminForm.appendChild(node);
     adminBody.appendChild(adminForm);
     adminBody.appendChild(text(doc, "p", "slate-settings__admin-opens", adminModule ? adminModule.WORDING.opens : ""));
+    // A phone has no rail: there the sections are listed here.
+    if (pages && Array.isArray(pages.admin) && pages.admin.length) adminBody.appendChild(text(doc, "p", "slate-settings__admin-opens slate-settings__admin-opens--phone", PHONE_ADMIN_OPENS));
 
     // Signed in: who, and the way out.
     const adminSession = element(doc, "div", "slate-settings__admin-form", { hidden: "" });
@@ -394,6 +418,10 @@
     adminSession.appendChild(adminEmail);
     adminSession.appendChild(signOutButton);
     adminBody.appendChild(adminSession);
+    // Signed in, a phone's way to the administrator's sections.
+    const adminPages = element(doc, "div", "slate-settings__admin-pages", { hidden: "" });
+    if (pages && Array.isArray(pages.admin)) for (const definition of pages.admin) adminPages.appendChild(pageLink(definition, "slate-settings__page--admin"));
+    adminBody.appendChild(adminPages);
 
     const adminNote = element(doc, "p", "slate-settings__admin-note", { role: "status", hidden: "" });
     adminBody.appendChild(adminNote);
@@ -429,6 +457,7 @@
       show(adminWho, on);
       show(adminForm, !on);
       show(adminSession, on);
+      show(adminPages, on && !!adminPages.firstChild);
       adminEmail.textContent = access.email ? `Signed in as ${access.email}` : "Signed in";
       for (const [button, control] of [[signInButton, "signIn"], [signOutButton, "signOut"]]) {
         const can = !!able[control];

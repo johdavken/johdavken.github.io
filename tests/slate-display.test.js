@@ -1153,7 +1153,7 @@ test("a tablet's rail Timeline carries the dot while a hopper is overdue and run
   assert.match(railCss, /\.slate-root\[data-input="touch"\] \.slate-rail__item\.is-alert::after \{[^}]*background: var\(--slate-overdue\);/);
 });
 
-test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home leads to its pages, the grip slides up the menu, and Back walks back Home before it lets the app go", () => {
+test("on a phone the layers stand on top whatever is chosen, the app opens on Home, Home's steps and tiles lead to every page, the header leads back Home, and Back walks back Home before it lets the app go", () => {
   const media = fakeMedia({ coarse: true, width: 412 });
   const { hostEl, executed } = bootHosted({ linked: false, env: media, stored: { layout: "grid-top" } });
   const doc = hostEl.ownerDocument;
@@ -1161,78 +1161,80 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.equal(hostEl.getAttribute("data-layers"), "top", "a phone took the Grid");
   assert.equal(hostEl.slateDisplay.getLayout(), "grid-top", "the operator's choice was overwritten");
   const aside = hostEl.querySelector("[data-slate-mount='aside']");
-  const rail = hostEl.querySelector("[data-slate-mount='rail']");
   const scrim = hostEl.querySelector("[data-slate-scrim]");
+  const homeButton = hostEl.querySelector("[data-slate-home]");
   const title = () => hostEl.querySelector(".slate-header__title").textContent;
-  // No bar along the foot, and no Tools sheet: one grip.
+  // No bar, no Tools sheet, no grip: Home is the way everywhere.
   assert.equal(hostEl.querySelector("[data-bar-key]"), null, "the bar is still built");
   assert.equal(hostEl.querySelector(".slate-toolsheet"), null, "the Tools sheet is still built");
-  const grip = hostEl.querySelector("[data-slate-mount='grip'] .slate-grip");
-  assert.ok(grip, "no grip at the foot");
+  assert.equal(hostEl.querySelector("[data-slate-mount='grip']"), null, "the grip's dock is still built");
+  assert.equal(hostEl.querySelector(".slate-grip"), null, "the grip is still built");
   const step = id => hostEl.querySelector(`[data-home-step='${id}']`);
-  const item = id => hostEl.querySelector(`.slate-rail__item[data-section='${id}']`);
+  const tile = id => hostEl.querySelector(`[data-home-tile='${id}']`);
   const shown = () => hostEl.querySelector("[data-slate-mount='centre']").querySelectorAll(".slate-section").find(one => !one.hasAttribute("hidden"));
   const back = () => {
     const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
     for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  // A phone opens on Home.
+  // A phone opens on Home, and Home has no way Home.
   assert.equal(shown().getAttribute("data-section"), "home");
+  assert.ok(homeButton.hasAttribute("hidden"), "Home offers the way Home");
+  // The four tiles, in the operator's order, after the steps.
+  assert.deepEqual(hostEl.querySelectorAll("[data-home-tile]").map(one => one.getAttribute("data-home-tile")), ["winding-tension", "settings", "work-alarm", "formulas"]);
+
   // Home's steps lead to the Recipe, the Timeline (the page over the centre, no scrim) and Resin Balance.
   click(step("recipe"));
   assert.equal(shown().getAttribute("data-section"), "recipe");
+  assert.ok(!homeButton.hasAttribute("hidden"), "the Recipe has no way Home");
   back();
   assert.equal(shown().getAttribute("data-section"), "home", "Back did not come home from the Recipe");
+  assert.ok(homeButton.hasAttribute("hidden"));
   click(step("timeline"));
   assert.ok(aside.classList.contains("is-open"));
   assert.ok(scrim.hasAttribute("hidden"), "the Timeline's page raised a scrim");
   assert.equal(title(), "Timeline");
+  assert.ok(!homeButton.hasAttribute("hidden"), "the Timeline's page has no way Home");
+  click(homeButton);
+  assert.ok(!aside.classList.contains("is-open"), "the way Home left the Timeline's page up");
+  assert.equal(shown().getAttribute("data-section"), "home");
+  assert.ok(homeButton.hasAttribute("hidden"));
 
-  // The grip slides the rail up over the scrim, with everything; a choice
-  // lowers it and takes the screen from the Timeline's page. The Recipe's
-  // own pages (the Book, Weights) are not on it: they stand in the Recipe
-  // (slate-recipe.js).
-  click(grip);
-  assert.ok(rail.classList.contains("is-open"));
-  assert.ok(!scrim.hasAttribute("hidden"));
-  assert.equal(grip.getAttribute("aria-expanded"), "true");
-  for (const id of ["recipe-book", "weights"]) assert.ok(item(id).hasAttribute("hidden"), `the phone's rail lists ${id}`);
-  for (const id of ["home", "recipe", "settings", "formulas", "winding-tension"]) assert.ok(!item(id).hasAttribute("hidden"), `the phone's rail leaves out ${id}`);
-  click(item("recipe"));
-  assert.ok(!rail.classList.contains("is-open"));
-  assert.equal(grip.getAttribute("aria-expanded"), "false");
-  assert.ok(!aside.classList.contains("is-open"));
-  assert.equal(shown().getAttribute("data-section"), "recipe");
-  click(grip);
-  click(item("settings"));
+  // The tiles: Settings takes the centre, the tools the aside's page.
+  click(tile("settings"));
   assert.equal(shown().getAttribute("data-section"), "settings");
   assert.equal(hostEl.querySelector(".slate-settings__legacy-link"), null, "Settings still links to the floor UI");
-  click(grip);
-  click(item("winding-tension"));
-  assert.ok(!rail.classList.contains("is-open"));
+  // Settings is a phone's way to How to Use.
+  click(hostEl.querySelector("[data-settings-page='guide']"));
   assert.ok(aside.classList.contains("is-open"));
-  assert.equal(title(), "Winding Tension");
-  click(grip);
-  click(item("home"));
-  assert.equal(shown().getAttribute("data-section"), "home");
+  assert.equal(title(), "How to Use");
+  back();
   assert.ok(!aside.classList.contains("is-open"));
-  // The scrim, the grip again and Escape lower the sheet.
-  click(grip);
-  click(scrim);
-  assert.ok(!rail.classList.contains("is-open"), "the scrim left the sheet up");
-  click(grip);
-  click(grip);
-  assert.ok(!rail.classList.contains("is-open"), "the grip left the sheet up");
+  assert.equal(shown().getAttribute("data-section"), "settings", "Back from How to Use did not return to Settings");
+  click(homeButton);
+  for (const [id, label] of [["winding-tension", "Winding Tension"], ["work-alarm", "Work Alarm"], ["formulas", "Formulas"]]) {
+    click(tile(id));
+    assert.ok(aside.classList.contains("is-open"), `${id} is not the aside's page`);
+    assert.equal(title(), label);
+    assert.ok(!homeButton.hasAttribute("hidden"));
+    click(homeButton);
+    assert.ok(!aside.classList.contains("is-open"));
+    assert.equal(shown().getAttribute("data-section"), "home");
+  }
 
-  // Back: the sheet, the page, then the section, then the app.
-  click(grip);
-  let event = back();
-  assert.ok(!rail.classList.contains("is-open"), "Back left the sheet up");
-  assert.equal(event.detail.minimize, false);
+  // A tool's own close lowers its page, back to Home - not onto the
+  // Timeline's page.
+  click(tile("winding-tension"));
+  click(aside.querySelector("[data-section='winding-tension'] .slate-panel__close"));
+  assert.ok(!aside.classList.contains("is-open"), "the tool's close left the aside's page up");
+  assert.equal(shown().getAttribute("data-section"), "home");
+  assert.ok(homeButton.hasAttribute("hidden"));
+
+  // Back: the page, then the section, then the app.
   click(step("timeline"));
-  event = back();
+  let event = back();
   assert.ok(!aside.classList.contains("is-open"), "Back left the page up");
+  assert.equal(event.detail.minimize, false);
   click(step("recipe"));
   event = back();
   assert.equal(event.detail.minimize, false);
@@ -1241,103 +1243,145 @@ test("on a phone the layers stand on top whatever is chosen, the app opens on Ho
   assert.equal(event.defaultPrevented, true);
   assert.equal(event.detail.minimize, true);
 
-  // The overdue dot rides the grip, and Home in the sheet, with the Timeline's.
-  const overdue = hostEl.querySelector(".slate-timeline").classList.contains("is-overdue");
-  assert.equal(!grip.querySelector(".slate-grip__dot").hasAttribute("hidden"), overdue, "the grip's dot disagrees with the Timeline");
-  assert.equal(item("home").classList.contains("is-alert"), overdue);
+  // The rail is built and never drawn on a phone.
+  const railCss = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "rail.css"), "utf8");
+  assert.match(railCss, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-rail \{\n  display: none;\n\}/);
 
-  // A phone's rail sheet does not list the Timeline: Home reaches it.
-  assert.ok(hostEl.querySelector(".slate-rail__item[data-section='timeline']").hasAttribute("hidden"));
-
-  // Wider again: no page, no sheet, the operator's layout back, Home unlisted.
+  // Wider again: no page, the operator's layout back, Home unlisted, no way Home.
+  click(step("recipe"));
   click(step("timeline"));
-  click(grip);
   media.change({ width: 1280 });
   assert.equal(hostEl.getAttribute("data-viewport"), "wide");
   assert.equal(hostEl.getAttribute("data-layers"), "grid");
   assert.equal(hostEl.getAttribute("data-grid-heads"), "top");
   assert.ok(!aside.classList.contains("is-open"));
-  assert.ok(!rail.classList.contains("is-open"));
   assert.ok(hostEl.querySelector(".slate-rail__item[data-section='home']").hasAttribute("hidden"));
+  assert.ok(homeButton.hasAttribute("hidden"), "a desktop was offered the way Home");
   assert.equal(executed.length, 0);
 });
 
-test("on a phone RT Sync stands at the foot of the menu beside Settings, its panel takes the menu's place until it closes, and wider it is back in the header", () => {
+/* The connection bridge as the application connects it: a status the test
+ * moves, and every request recorded and answered. */
+function fakeConnection(status, answer) {
+  const listeners = new Set();
+  const requests = [];
+  let current = status;
+  return {
+    requests,
+    isConnected: () => true,
+    getStatus: () => current,
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+    request(name, args) { requests.push({ name, args }); return Promise.resolve(typeof answer === "function" ? answer(name, args) : { ok: true }); },
+    set(next) { current = next; for (const listener of listeners) listener(); }
+  };
+}
+
+function lineStatus(over) {
+  return Object.assign({
+    enabled: true, available: true, assigned: true, linked: true,
+    line: { workspaceId: "ws-10", name: "Line 10", lineNumber: 10, displayName: "Line 10", role: "member" },
+    workspaces: [{ id: "ws-10", name: "Line 10", lineNumber: 10, displayName: "Line 10" }, { id: "ws-9", name: "Line 9", lineNumber: 9, displayName: "Line 9" }],
+    deviceLabel: "Fold",
+    status: { key: "synced", label: "Synced", known: true, message: "", pendingCount: 0, lastSyncAt: null, adminRequired: false },
+    devices: [{ label: "Fold", role: "member", joinedAt: null, lastSeenAt: null, thisDevice: true }],
+    deviceCount: 1, joinCode: null, busy: { active: false, action: null },
+    can: { refresh: true, reconnect: false, addDevice: true, join: true, select: true, leave: true, relabel: true }
+  }, over || {});
+}
+
+test("on a phone a tap on Home's mark raises the Lines sheet over a scrim; another line is one tap, asked once through RT Sync, and the sheet goes when it lands; a refusal keeps it; its foot opens RT Sync's panel, which stays in the header with its pill undrawn", async () => {
   const media = fakeMedia({ coarse: true, width: 412 });
-  const { hostEl } = bootHosted({ linked: true, env: media });
-  const rail = hostEl.querySelector("[data-slate-mount='rail']");
-  const foot = rail.querySelector(".slate-rail__foot");
-  const header = hostEl.querySelector("[data-slate-mount='sync']");
+  const connection = fakeConnection(lineStatus(), (name, args) => (args && args.id === "ws-gone" ? { ok: false, code: "failed", message: "That line is not remembered on this device." } : { ok: true }));
+  const { hostEl, executed } = bootHosted({ linked: true, env: Object.assign(media, { PolynStationConnectionBridge: connection }) });
+  const doc = hostEl.ownerDocument;
+  const scrim = hostEl.querySelector("[data-slate-scrim]");
+  const sheet = hostEl.querySelector(".slate-lines");
   const syncEl = hostEl.querySelector(".slate-sync");
-  const trigger = syncEl.querySelector(".slate-sync__trigger");
   const panel = syncEl.querySelector(".slate-sync__panel");
-  const grip = hostEl.querySelector(".slate-grip");
+  const mark = hostEl.querySelector("[data-home-lines]");
   const back = () => {
     const event = { type: "polyn:android-back", detail: { minimize: false }, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopPropagation() {} };
-    for (const handler of hostEl.ownerDocument.listeners["polyn:android-back"] || []) handler(event);
+    for (const handler of doc.listeners["polyn:android-back"] || []) handler(event);
     return event;
   };
-  assert.ok(syncEl.parentNode === foot, "RT Sync is not in the menu's foot");
-  assert.equal(header.querySelector(".slate-sync"), null, "RT Sync is still in the header");
-  assert.ok(foot.querySelector(".slate-rail__item[data-section='settings']"), "Settings left the foot");
-  click(grip);
-  click(trigger);
-  assert.ok(!panel.hasAttribute("hidden"));
-  assert.ok(rail.classList.contains("is-open"), "the menu was lowered under the panel");
-  assert.ok(rail.classList.contains("is-covered"), "the menu shows beside the panel");
-  // Its own Escape (Close's path: this harness has no status to render
-  // its buttons), then Back: the menu is back each time.
-  for (const handler of syncEl.listeners.keydown || []) handler({ type: "keydown", key: "Escape", stopPropagation() {} });
-  assert.ok(panel.hasAttribute("hidden"));
-  assert.ok(rail.classList.contains("is-open") && !rail.classList.contains("is-covered"), "closing the panel did not bring the menu back");
-  click(trigger);
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  // RT Sync stands in the header; on a phone its pill is not drawn.
+  assert.ok(syncEl.parentNode === hostEl.querySelector("[data-slate-mount='sync']"), "RT Sync left the header");
+  const headerCss = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "header.css"), "utf8");
+  assert.match(headerCss, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-sync__trigger \{\n  display: none;/);
+  assert.equal(mark.getAttribute("aria-label"), "Lines — Line 10, Synced");
+
+  // Opening changes nothing.
+  assert.ok(sheet.hasAttribute("hidden"));
+  click(mark);
+  assert.ok(!sheet.hasAttribute("hidden"));
+  assert.ok(!scrim.hasAttribute("hidden"), "no scrim behind the sheet");
+  assert.deepEqual(connection.requests, []);
+  assert.ok(sheet.querySelector("[data-line-id='ws-10']").classList.contains("is-current"));
+
+  // Back and the scrim close it.
+  back();
+  assert.ok(sheet.hasAttribute("hidden"), "Back left the sheet up");
+  assert.ok(scrim.hasAttribute("hidden"));
+  click(mark);
+  click(scrim);
+  assert.ok(sheet.hasAttribute("hidden"), "the scrim left the sheet up");
+
+  // One tap on Line 9: one selectWorkspace, and the sheet goes.
+  click(mark);
+  click(sheet.querySelector("[data-line-id='ws-9']"));
+  await tick();
+  await tick();
+  // Made inside the page's realm: compared as data.
+  assert.deepEqual(JSON.parse(JSON.stringify(connection.requests)), [{ name: "selectWorkspace", args: { id: "ws-9" } }]);
+  assert.ok(sheet.hasAttribute("hidden"), "the sheet stayed up after the switch");
+  assert.ok(scrim.hasAttribute("hidden"));
+  connection.set(lineStatus({ line: { workspaceId: "ws-9", name: "Line 9", lineNumber: 9, displayName: "Line 9", role: "member" } }));
+  assert.equal(mark.getAttribute("aria-label"), "Lines — Line 9, Synced", "Home's mark did not follow the switch");
+
+  // A refusal keeps the sheet up, with the reason.
+  connection.set(lineStatus({ workspaces: [...lineStatus().workspaces, { id: "ws-gone", name: "Gone", lineNumber: 3, displayName: "Line 3" }] }));
+  click(mark);
+  click(sheet.querySelector("[data-line-id='ws-gone']"));
+  await tick();
+  await tick();
+  assert.ok(!sheet.hasAttribute("hidden"), "a refusal closed the sheet");
+  assert.equal(sheet.querySelector(".slate-lines__note").textContent, "That line is not remembered on this device.");
+
+  // The foot: RT Sync's panel, which rises in the sheet's place; Back closes it.
+  click(sheet.querySelector("[data-lines-do='panel']"));
+  assert.ok(sheet.hasAttribute("hidden"));
+  assert.ok(!panel.hasAttribute("hidden"), "the panel did not open");
   back();
   assert.ok(panel.hasAttribute("hidden"), "Back left the panel up");
-  assert.ok(rail.classList.contains("is-open") && !rail.classList.contains("is-covered"), "Back did not return to the menu");
-  // The menu lowered with the panel up takes the panel with it.
-  click(trigger);
+  click(mark);
+  click(sheet.querySelector("[data-lines-do='join']"));
+  assert.ok(panel.querySelector(".slate-sync__input--code"), "Join another line did not open the join form");
   back();
-  back();
-  assert.ok(!rail.classList.contains("is-open"));
-  click(grip);
-  click(trigger);
-  click(hostEl.querySelector("[data-slate-scrim]"));
-  assert.ok(!rail.classList.contains("is-open"), "the scrim left the menu up");
-  assert.ok(panel.hasAttribute("hidden"), "the panel outlived its menu");
-  assert.ok(!rail.classList.contains("is-covered"));
 
+  // Wider, an open sheet goes with the phone.
+  click(mark);
   media.change({ width: 1280 });
-  assert.ok(syncEl.parentNode === header, "wider, RT Sync did not return to the header");
-  media.change({ width: 412 });
-  assert.ok(syncEl.parentNode === foot);
+  assert.ok(sheet.hasAttribute("hidden"), "a desktop kept the phone's sheet");
+  assert.ok(scrim.hasAttribute("hidden"));
+  assert.equal(executed.length, 0, "switching lines dispatched a command");
 });
 
-test("on a phone an aside page - How to Use, the Weights guide, a tool - ends clear of the grip: the clearance is the panel's, which runs past its section, not the aside's", () => {
+test("on a phone an aside page - How to Use, the Weights guide, a tool - ends clear of the system bar: the clearance is the panel's, which runs past its section, not the aside's", () => {
   const css = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "panel.css"), "utf8");
   const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at > -1, `no rule for ${selector}`); return css.slice(at, css.indexOf("}", at)); };
-  assert.match(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-panel'), /padding-bottom: calc\(var\(--slate-space-3\) \+ var\(--slate-grip-clear\) \+ var\(--slate-inset-bottom\)\);/);
-  assert.doesNotMatch(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-aside'), /--slate-grip-clear/, "the aside's padding stands under the section, not under the text");
+  assert.match(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-panel'), /padding-bottom: calc\(var\(--slate-space-3\) \+ var\(--slate-inset-bottom\)\);/);
+  assert.doesNotMatch(rule('.slate-root[data-input="touch"][data-viewport="phone"] .slate-aside'), /--slate-inset-bottom/, "the aside's padding stands under the section, not under the text");
 });
 
-test("on a phone the grip steps aside while a field that raises the keyboard has focus, and comes back when focus leaves it", () => {
-  const { hostEl } = bootHosted({ linked: false, env: fakeMedia({ coarse: true, width: 412 }) });
-  const doc = hostEl.ownerDocument;
-  const dock = hostEl.querySelector("[data-slate-mount='grip']");
-  const fire = (type, detail) => { for (const handler of hostEl.listeners[type] || []) handler(Object.assign({ type }, detail)); };
-  const field = type => { const node = doc.createElement("input"); if (type) node.setAttribute("type", type); return node; };
-  assert.ok(!dock.hasAttribute("hidden"));
-  fire("focusin", { target: field() });
-  assert.ok(dock.hasAttribute("hidden"), "the grip rode on the keyboard");
-  fire("focusout", { relatedTarget: field("number") });
-  assert.ok(dock.hasAttribute("hidden"), "moving to the next field brought the grip back over the keyboard");
-  fire("focusout", { relatedTarget: doc.createElement("button") });
-  assert.ok(!dock.hasAttribute("hidden"), "the grip stayed away with the keyboard down");
-  fire("focusin", { target: field("checkbox") });
-  assert.ok(!dock.hasAttribute("hidden"), "a checkbox hid the grip");
-  fire("focusin", { target: doc.createElement("textarea") });
-  assert.ok(dock.hasAttribute("hidden"));
-  fire("focusout", { relatedTarget: null });
-  assert.ok(!dock.hasAttribute("hidden"));
+test("nothing of the grip is left: no module, no mount, no token, no clearance", () => {
+  const ROOT = path.join(__dirname, "..");
+  assert.ok(!fs.existsSync(path.join(ROOT, "slate", "slate-phone-drawer.js")));
+  const host = fs.readFileSync(path.join(ROOT, "slate-host.js"), "utf8");
+  assert.doesNotMatch(host, /phone-drawer/);
+  const styles = path.join(ROOT, "slate", "styles");
+  const sheets = [path.join(styles, "tokens.css"), path.join(styles, "shell.css"), ...fs.readdirSync(path.join(styles, "components")).map(name => path.join(styles, "components", name))];
+  for (const file of sheets) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /--slate-grip-|\.slate-grip/, `${path.basename(file)} still styles the grip`);
 });
 
 test("the application's pump-off alert is Slate's to show: the event is taken, the alert says which hopper, and Dismiss or Back closes it and stops the vibration", () => {

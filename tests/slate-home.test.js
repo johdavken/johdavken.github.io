@@ -1,8 +1,8 @@
 "use strict";
 
 /* slate-home.js: a phone's first page - the mark, the line, the two
- * figures and the three steps, each saying how it stands. It asks the
- * boot for everything and dispatches nothing. */
+ * figures, the three steps, each saying how it stands, and the four
+ * tiles. It asks the boot for everything and dispatches nothing. */
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -90,7 +90,7 @@ test("on a phone Home is one screen that never scrolls: it takes the page cell's
   assert.match(brand, /flex: 0 1 auto;/, "the mark does not give");
   assert.match(brand, /min-height: \d+px;/, "the mark can shrink to nothing");
   assert.match(css, /\n\.slate-home__brand \.slate-logo \{[^}]*max-height: 100%;/);
-  assert.match(css, new RegExp(`\\.slate-home__steps \\{\\s*flex: none;`), "the steps give instead of the mark");
+  assert.match(css, /\.slate-home__steps,\n[^{]*\.slate-home__tiles \{\s*flex: none;/, "the steps or the tiles give instead of the mark");
 });
 
 test("the mark's confluence follows RT Sync: the line's number where the die sits, a tick per device, the state as the mark's own", () => {
@@ -145,4 +145,51 @@ test("the mark's confluence follows RT Sync: the line's number where the die sit
   assert.ok(svg.querySelector(".slate-logo__line").hasAttribute("hidden"));
   assert.equal(svg.querySelectorAll(".slate-logo__device").length, 0);
   assert.equal(svg.getAttribute("aria-label"), "Resin.Tools");
+});
+
+test("under the steps, four tiles two by two in the operator's order - Winding Tension, Settings, Work Alarm, Formulas - each opening its page; a tile without a page here is left out", () => {
+  assert.deepEqual(homeModule.TILES.map(one => one.id), ["winding-tension", "settings", "work-alarm", "formulas"]);
+  const doc = makeDocument();
+  const went = [];
+  const view = homeModule.create(doc, { now: () => NOW, home: { go: id => went.push(id) } });
+  view.update(null);
+  const tiles = view.element.querySelectorAll("[data-home-tile]");
+  assert.deepEqual(tiles.map(one => one.getAttribute("data-home-tile")), ["winding-tension", "settings", "work-alarm", "formulas"]);
+  assert.deepEqual(tiles.map(one => one.querySelector(".slate-home__tile-label").textContent), ["Winding Tension", "Settings", "Work Alarm", "Formulas"]);
+  for (const tile of tiles) assert.ok(tile.querySelector("svg.slate-home__tile-glyph path").getAttribute("d"), "a tile has no icon");
+  // After the steps, in the page's order.
+  const children = view.element.children;
+  assert.ok(children.indexOf(view.element.querySelector(".slate-home__tiles")) > children.indexOf(view.element.querySelector(".slate-home__steps")));
+  for (const tile of tiles) click(tile);
+  assert.deepEqual(went, ["winding-tension", "settings", "work-alarm", "formulas"]);
+
+  // A page without the Work Alarm (no work-alarm.js) draws no tile for it.
+  const without = homeModule.create(makeDocument(), { home: { has: id => id !== "work-alarm" } });
+  assert.deepEqual(without.element.querySelectorAll("[data-home-tile]").map(one => one.getAttribute("data-home-tile")), ["winding-tension", "settings", "formulas"]);
+
+  const css = fs.readFileSync(path.join(__dirname, "..", "slate", "styles", "components", "home.css"), "utf8");
+  assert.match(css, /\n\.slate-home__tiles \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, "the tiles are not two by two");
+});
+
+test("the mark is a button that raises the Lines sheet, named for the line it shows; a tap changes nothing else", () => {
+  const doc = makeDocument();
+  let raised = 0;
+  const went = [];
+  const opened = [];
+  let current = { enabled: true, assigned: true, linked: true, line: { lineNumber: 10, displayName: "Line 10" }, status: { key: "synced", label: "Synced" }, devices: [] };
+  const view = homeModule.create(doc, { now: () => NOW, home: { sync: () => current, lines: () => { raised += 1; }, go: id => went.push(id), open: field => opened.push(field) } });
+  view.update(null);
+  const brand = view.element.querySelector("[data-home-lines]");
+  assert.equal(brand.tagName.toLowerCase(), "button");
+  assert.equal(brand.getAttribute("type"), "button");
+  assert.equal(brand.getAttribute("aria-haspopup"), "dialog");
+  assert.ok(brand.querySelector("svg.slate-logo"), "the mark is not inside the button");
+  assert.equal(brand.getAttribute("aria-label"), "Lines — Line 10, Synced");
+  click(brand);
+  assert.equal(raised, 1);
+  assert.deepEqual(went, []);
+  assert.deepEqual(opened, []);
+  current = null;
+  view.refresh();
+  assert.equal(brand.getAttribute("aria-label"), "Lines");
 });

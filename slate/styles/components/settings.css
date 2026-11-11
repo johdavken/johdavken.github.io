@@ -603,3 +603,62 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__modes {
   gap: var(--slate-space-2);
 }
+
+/* ---- A phone's ways on ----
+   A phone has no rail: Settings is its way to How to Use and, signed in,
+   to the administrator's sections (slate-settings.js). Built everywhere,
+   drawn on a phone alone - elsewhere the rail lists them. */
+.slate-settings__group--pages,
+.slate-settings__admin-pages {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__group--pages {
+  display: block;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__admin-pages:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+}
+
+/* The rail's wording is a desktop's; a phone's says where they are. */
+.slate-settings__admin-opens--phone,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__admin-opens {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-settings__admin-opens--phone {
+  display: block;
+}
+
+.slate-root .slate-settings__page {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  width: 100%;
+  min-height: var(--slate-tap);
+  padding: var(--slate-space-2) var(--slate-space-4);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  color: var(--slate-text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.slate-root .slate-settings__page:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-settings__page-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.slate-settings__page-chevron {
+  flex: none;
+  color: var(--slate-text-faint);
+  font-size: var(--slate-text-xl);
+}

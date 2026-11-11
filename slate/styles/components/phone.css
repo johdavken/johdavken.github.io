@@ -1,90 +1,21 @@
-/* A phone (touch, data-viewport="phone"; slate/slate-tier.js): the grip
-   floating at the foot of the screen, and the one shape every popover
+/* A phone (touch, data-viewport="phone"): the one shape every popover
    takes there - a sheet risen from the foot. Each component's own sheet
    keeps its phone rules for its contents; the geometry of the sheet is
-   here, once.
-
-   The grip (slate-phone-drawer.js): no bar along the foot - Home leads to
-   the Recipe, the Timeline and Resin Balance - but a pill floating over
-   the page, clear of the gesture bar, that slides the rail up as a sheet
-   (components/rail.css). Built everywhere, seen only on a phone under
-   touch, and gone while its sheet is up. */
-
-.slate-grip-dock {
-  display: none;
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-grip-dock {
-  position: fixed;
-  bottom: calc(var(--slate-inset-bottom) + var(--slate-space-2));
-  left: 50%;
-  z-index: 28;
-  display: block;
-  transform: translateX(-50%);
-}
-
-.slate-root .slate-grip {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 112px;
-  height: var(--slate-grip-height);
-  padding: 0 var(--slate-space-5);
-  border: var(--slate-stroke) solid var(--slate-border);
-  border-radius: 999px;
-  background: var(--slate-surface-raised);
-  box-shadow: var(--slate-shadow-pop);
-  color: var(--slate-text-muted);
-  font-size: var(--slate-text-xs);
-  font-weight: 600;
-  line-height: var(--slate-line-tight);
-  letter-spacing: 0.04em;
-  touch-action: none;
-  transition: opacity var(--slate-motion-ack) var(--slate-motion-ease);
-}
-
-.slate-root .slate-grip:active {
-  background: var(--slate-surface-selected);
-}
-
-.slate-root .slate-grip[aria-expanded="true"] {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.slate-grip__bar {
-  width: 32px;
-  height: 4px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-/* The grip's dot: a hopper is overdue (the Timeline, one of Home's steps). */
-.slate-grip__dot {
-  position: absolute;
-  top: 5px;
-  right: 12px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--slate-overdue);
-}
+   here, once. There is no menu: Home leads everywhere (slate-home.js). */
 
 /* ---- Sheets ----
    The job's editors and pickers, the layer's menu, the
-   Scan menu and the RT Sync panel: anchored to what opened them they
-   would run off a phone's screen, so there each rises from the foot, the
-   screen's width, over the grip, clear of the gesture bar - and above the
-   keyboard, which shortens the page on a phone (slate-host.js). */
+   Scan menu, the RT Sync panel and the Lines sheet: anchored to what
+   opened them they would run off a phone's screen, so there each rises
+   from the foot, the screen's width, clear of the gesture bar - and above
+   the keyboard, which shortens the page on a phone (slate-host.js). */
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-lines:not([hidden]) {
   position: fixed;
   top: auto;
   right: 0;
@@ -121,16 +52,148 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slate-root .slate-grip {
-    transition: none;
-  }
-
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-card__editor,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-time,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-wizard,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-layer-menu__list,
   .slate-root[data-input="touch"][data-viewport="phone"] .slate-scan__menu:not([hidden]),
-  .slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel {
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-sync__panel,
+  .slate-root[data-input="touch"][data-viewport="phone"] .slate-lines {
     animation: none;
   }
+}
+
+/* ---- Lines (slate-line-switcher.js) ----
+   The lines this device has joined, raised by a tap on Home's mark: the
+   line's number large, its name beside it, this device's line marked;
+   the full RT Sync panel and joining another line at the foot. A phone's
+   alone: it is never opened elsewhere. */
+.slate-lines {
+  display: none;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-lines:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+}
+
+.slate-lines__title {
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-lines__note {
+  margin: 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-md);
+}
+
+.slate-lines__note.is-error {
+  color: var(--slate-danger);
+  font-weight: 600;
+}
+
+.slate-lines__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-root .slate-lines__line {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+  color: var(--slate-text);
+  text-align: left;
+}
+
+.slate-root .slate-lines__line:active:not(:disabled) {
+  background: var(--slate-surface-selected);
+}
+
+.slate-root .slate-lines__line.is-current {
+  border-color: var(--slate-accent);
+}
+
+/* This device's line, connected, is no choice: it reads as current, not
+   as switched off. */
+.slate-root .slate-lines__line:disabled {
+  cursor: default;
+}
+
+.slate-root .slate-lines__line.is-current:disabled {
+  opacity: 1;
+}
+
+.slate-root .slate-lines__line:disabled:not(.is-current) {
+  opacity: 0.5;
+}
+
+.slate-lines__number {
+  flex: none;
+  min-width: 2ch;
+  color: var(--slate-accent);
+  font-size: var(--slate-text-2xl);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.slate-lines__words {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slate-lines__name {
+  overflow: hidden;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-lines__sub {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-lines__check {
+  flex: none;
+  color: var(--slate-accent);
+  font-size: var(--slate-text-xl);
+  font-weight: 700;
+}
+
+.slate-lines__foot {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-lines__action {
+  min-height: var(--slate-tap);
+  padding: 0 var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border);
+  border-radius: var(--slate-radius);
+  color: var(--slate-text);
+  font-weight: 600;
+  text-align: center;
+}
+
+.slate-root .slate-lines__action:disabled {
+  opacity: 0.5;
 }

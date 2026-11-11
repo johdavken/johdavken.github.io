@@ -515,9 +515,13 @@
 
     const outsideCloser = dismissal(doc, node => typeof rootEl.contains === "function" && rootEl.contains(node), () => close(false));
 
-    function open() {
-      if (state.open) return;
+    /* `options.join`: open on the join form (a phone's Lines sheet asks
+     * for it); a panel already open turns to the form. */
+    function open(options) {
+      const join = !!(options && options.join);
+      if (state.open) { if (join && !state.joining) { state.joining = true; renderPanel(); } return; }
       state.open = true;
+      state.joining = join;
       state.leaving = false;
       show(panel, true);
       trigger.setAttribute("aria-expanded", "true");
@@ -565,7 +569,26 @@
     if (admin && typeof admin.subscribe === "function") admin.subscribe(() => { if (state.open) renderPanel(); });
     update();
 
-    return Object.freeze({ element: rootEl, panel, trigger, open, close, update, isOpen: () => state.open, status: () => state.status });
+    /* Make one of the remembered lines this device's line - a phone's
+     * Lines sheet (slate-line-switcher.js) asks through here, so this stays
+     * the one file that requests a connection action. Resolves with the
+     * bridge's answer; a refusal leaves everything as it was. */
+    async function selectLine(id) {
+      if (!connection) return { ok: false, code: "unavailable", message: "RT Sync is not available on this page." };
+      if (state.pending) return { ok: false, code: "busy", message: "RT Sync is busy; try again in a moment." };
+      const result = await ask("selectWorkspace", { id: String(id) });
+      return result;
+    }
+
+    /* Reconnect this device's own line, as the panel's Reconnect does - the
+     * Lines sheet's row for a disconnected line. */
+    async function reconnectLine() {
+      if (!connection) return { ok: false, code: "unavailable", message: "RT Sync is not available on this page." };
+      if (state.pending) return { ok: false, code: "busy", message: "RT Sync is busy; try again in a moment." };
+      return ask("reconnect");
+    }
+
+    return Object.freeze({ element: rootEl, panel, trigger, open, close, update, selectLine, reconnectLine, isOpen: () => state.open, status: () => state.status });
   }
 
   return Object.freeze({ ACTIONS, CODE_PATTERN, LABEL_MAX, NO_LINE, summarize, gaugeTicks, lineFacts, isExpired, offersLines, guidance, formatWhen, create });
