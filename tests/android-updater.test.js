@@ -33,7 +33,10 @@ test("the workflow builds the package the Fold runs, signed with the installed k
   // Certificate digest (not a file hash) of ~/.config/.android/debug.keystore,
   // read off the installed APK with apksigner 2026-11-11.
   assert.equal(env("EXPECTED_CERT_SHA256"), "1b0c01400d249ae4be4231a69e59a94e87df061185d5be4da10bbd174bc5d026");
-  assert.match(workflow, /\[ "\$CERT" = "\$EXPECTED_CERT_SHA256" \] \|\| \{[^}]*exit 1; \}/);
+  assert.match(workflow, /\[ "\$CERTS" = "\$EXPECTED_CERT_SHA256" \] \|\| \{[^\n]*exit 1; \}$/m);
+  // Any signer label ("Signer #1" or "Signer (minSdkVersion=24, ...)"), and
+  // all of them must be the one key - the first CI run met the second form.
+  assert.match(workflow, /sed -n 's\/\^Signer\.\* certificate SHA-256 digest: \/\/p' apksigner\.txt \| sort -u/);
   assert.match(workflow, /name='\$APP_ID' versionCode='\$CODE'/);
 });
 
