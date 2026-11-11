@@ -34,9 +34,19 @@ test("the workflow builds the package the Fold runs, signed with the installed k
   // read off the installed APK with apksigner 2026-11-11.
   assert.equal(env("EXPECTED_CERT_SHA256"), "1b0c01400d249ae4be4231a69e59a94e87df061185d5be4da10bbd174bc5d026");
   assert.match(workflow, /\[ "\$CERTS" = "\$EXPECTED_CERT_SHA256" \] \|\| \{[^\n]*exit 1; \}$/m);
-  // Any signer label ("Signer #1" or "Signer (minSdkVersion=24, ...)"), and
-  // all of them must be the one key - the first CI run met the second form.
-  assert.match(workflow, /sed -n 's\/\^Signer\.\* certificate SHA-256 digest: \/\/p' apksigner\.txt \| sort -u/);
+  // Every signer label apksigner uses - the first two CI runs each met a
+  // form the pattern of the day missed. Run the workflow's own extraction
+  // over all three and over the real --verbose output from run 43069779239.
+  const line = workflow.match(/^\s*CERTS=\$\((.+) apksigner\.txt \| (.+)\)$/m);
+  assert.ok(line, "the CERTS extraction line");
+  const { execFileSync } = require("node:child_process");
+  const extract = report => execFileSync("bash", ["-c", `${line[1]} | ${line[2]}`], { input: report, encoding: "utf8" }).trim();
+  const key = "1b0c01400d249ae4be4231a69e59a94e87df061185d5be4da10bbd174bc5d026";
+  assert.equal(extract(`Verifies\nNumber of signers: 1\nV2 Signer: certificate DN: C=US, O=Android, CN=Android Debug\nV2 Signer: certificate SHA-256 digest: ${key}\nV2 Signer: certificate SHA-1 digest: 5fce789e\nV2 Signer: public key SHA-256 digest: 728753ab\n`), key);
+  assert.equal(extract(`Signer #1 certificate DN: CN=Android Debug\nSigner #1 certificate SHA-256 digest: ${key}\n`), key);
+  assert.equal(extract(`Signer (minSdkVersion=24, maxSdkVersion=32) certificate SHA-256 digest: ${key}\nSigner (minSdkVersion=33) certificate SHA-256 digest: ${key}\n`), key);
+  assert.equal(extract(`V2 Signer: certificate SHA-256 digest: ${key}\nV3 Signer: certificate SHA-256 digest: deadbeef\n`), `${key}\ndeadbeef`, "two keys never collapse into one");
+  assert.equal(extract("Verifies\n"), "");
   assert.match(workflow, /name='\$APP_ID' versionCode='\$CODE'/);
 });
 

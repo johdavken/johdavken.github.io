@@ -95,12 +95,13 @@ jobs:
           APP_ID="tools.resin.app$APP_ID_SUFFIX"
           CODE="${{ steps.version.outputs.versionCode }}"
           echo "$BADGING" | grep -q "name='$APP_ID' versionCode='$CODE'" || { echo "::error::APK is not $APP_ID at $CODE"; exit 1; }
-          # Print apksigner's whole report: its signer lines are labelled
-          # "Signer #1" by some build-tools and "Signer (minSdkVersion=..)"
-          # by others, so match any signer line and require that every one
-          # carries the installed key.
+          # Print apksigner's whole report. Its signer lines come as
+          # "Signer #1 certificate SHA-256 digest: X", "V2 Signer: certificate
+          # SHA-256 digest: X" (--verbose, the runner) or "Signer (minSdk..)
+          # ...", so take the last field of every such line and require that
+          # all of them are the installed key.
           "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apksigner.txt
-          CERTS=$(sed -n 's/^Signer.* certificate SHA-256 digest: //p' apksigner.txt | sort -u)
+          CERTS=$(grep -E 'Signer.*certificate SHA-256 digest: ' apksigner.txt | awk '{print $NF}' | sort -u)
           echo "signer certificates: ${CERTS:-none}"
           [ "$CERTS" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK signed with '${CERTS:-nothing}', not the installed key"; exit 1; }
           NAME="$APP_ID-$CODE.apk"
