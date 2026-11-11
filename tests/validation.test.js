@@ -128,3 +128,66 @@ test("saved configuration validation remains compatible with legacy versions", (
     assert.equal(validateConfigPayload(payload).valid, true);
   }
 });
+
+/* balanceHopperBlend: one hopper's blend changed, balanced the way the
+ * blender panel on the line does it. */
+const { balanceHopperBlend } = require("../validation.js");
+const layerOf = rows => rows.map(([resinName, pct]) => ({ resinName, pct, weight: 400, track: true, pumpOff: false }));
+
+test("balanceHopperBlend: H1 holding a resin stays the remainder (unchanged behaviour)", () => {
+  const hoppers = layerOf([["HD", 60], ["LL", 40], ["", 0], ["", 0], ["", 0], ["", 0]]);
+  const ok = balanceHopperBlend(hoppers, 2, 25);
+  assert.equal(ok.valid, true);
+  assert.equal(ok.balanceIndex, 0);
+  assert.deepEqual(ok.changed, [2]);
+  assert.deepEqual(ok.pcts.slice(1), [40, 25, 0, 0, 0]);
+  const over = balanceHopperBlend(hoppers, 2, 70);
+  assert.equal(over.valid, false);
+  assert.equal(over.total, 110);
+  assert.match(over.message, /cannot total more than 100/);
+});
+
+test("balanceHopperBlend: an empty H1 hands the change to the first hopper in use", () => {
+  const hoppers = layerOf([["", 0], ["", 0], ["", 0], ["HD", 90], ["LL", 10], ["", 0]]);
+  const up = balanceHopperBlend(hoppers, 2, 5);
+  assert.equal(up.valid, true);
+  assert.equal(up.balanceIndex, 3);
+  assert.deepEqual(up.pcts, [0, 0, 5, 85, 10, 0]);
+  assert.deepEqual(up.changed, [2, 3]);
+  // Editing the first hopper in use itself balances against the next one.
+  const self = balanceHopperBlend(hoppers, 3, 80);
+  assert.equal(self.balanceIndex, 4);
+  assert.deepEqual(self.pcts, [0, 0, 0, 80, 20, 0]);
+  // Not enough to give: refused, naming the hopper with the line's label.
+  const short = balanceHopperBlend(hoppers, 4, 15, { label: i => `A${i + 1}` });
+  assert.equal(short.valid, true, "H5 + 5 comes out of H4");
+  const tooMuch = balanceHopperBlend(hoppers, 2, 95, { label: i => `A${i + 1}` });
+  assert.equal(tooMuch.valid, false);
+  assert.equal(tooMuch.code, "blend_total");
+  assert.equal(tooMuch.message, "A4 only has 90% to give.");
+});
+
+test("balanceHopperBlend: an empty H1's leftover is used up first, and never refilled", () => {
+  // Built hopper by hopper: H4 at 90 left 10 on an empty H1.
+  const hoppers = layerOf([["", 10], ["", 0], ["", 0], ["HD", 90], ["LL", 0], ["", 0]]);
+  const fill = balanceHopperBlend(hoppers, 4, 10);
+  assert.deepEqual(fill.pcts.slice(1), [0, 0, 90, 10, 0], "the 10 came out of H1's leftover, H4 untouched");
+  const past = balanceHopperBlend(hoppers, 4, 15);
+  assert.deepEqual(past.pcts.slice(1), [0, 0, 85, 15, 0], "leftover first, the rest from H4");
+  const down = balanceHopperBlend(layerOf([["", 0], ["", 0], ["", 0], ["HD", 85], ["LL", 15], ["", 0]]), 4, 5);
+  assert.deepEqual(down.pcts.slice(1), [0, 0, 95, 5, 0], "a decrease goes to H4, not the empty H1");
+});
+
+test("balanceHopperBlend: a fresh layer falls back to H1; decimals stay exact; input is not mutated", () => {
+  const fresh = layerOf([["", 100], ["", 0], ["", 0], ["", 0], ["", 0], ["", 0]]);
+  const first = balanceHopperBlend(fresh, 1, 30);
+  assert.equal(first.balanceIndex, 0);
+  assert.deepEqual(first.pcts.slice(1), [30, 0, 0, 0, 0]);
+  const dec = layerOf([["", 0], ["A", 70.1], ["B", 29.9], ["", 0], ["", 0], ["", 0]]);
+  const snapshot = JSON.stringify(dec);
+  const res = balanceHopperBlend(dec, 2, 30.2);
+  assert.deepEqual(res.pcts.slice(1, 3), [69.8, 30.2]);
+  assert.equal(JSON.stringify(dec), snapshot);
+  assert.equal(balanceHopperBlend(dec, 0, 10).code, "bad_argument");
+  assert.equal(balanceHopperBlend(dec, 2, 101).code, "out_of_range");
+});

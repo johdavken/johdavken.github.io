@@ -1,7 +1,7 @@
 {
   "validation.js": {
-    "v": "0.19",
-    "hash": "9bdff8cdb2d657d8"
+    "v": "0.20.0",
+    "hash": "8cfe947dda33c27e"
   },
   "scheduling.js": {
     "v": "0.18.4",
@@ -224,8 +224,8 @@
     "hash": "b8efd231de7bb46f"
   },
   "app.js": {
-    "v": "0.33.13",
-    "hash": "7a82d6a4e5ecae7f"
+    "v": "0.33.14",
+    "hash": "eaf892bb6de61ee1"
   },
   "resin-admin-ui.js": {
     "v": "0.20.4",

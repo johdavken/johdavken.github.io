@@ -328,6 +328,43 @@ test("setHopperBlend refuses H1, a blend that would exceed 100, and is a no-op a
   assert.equal(h.hopper("current", "A", 0).pct, 0);
 });
 
+/* The line panel's balancing: with Hopper 1 empty, the difference comes
+ * out of (and goes back into) the first hopper in use. */
+function emptyH1Layer(h) {
+  const hoppers = h.state.layers[0].hoppers;
+  const set = [["", 0], ["", 0], ["", 0], ["HD-4", 90], ["LL-5", 10], ["", 0]];
+  set.forEach(([resinName, pct], i) => { hoppers[i].resinName = resinName; hoppers[i].pct = pct; hoppers[i].track = false; });
+}
+
+test("setHopperBlend with an empty H1 takes the difference from the first hopper in use, in one edit", () => {
+  const h = boot();
+  emptyH1Layer(h);
+  const result = h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 2, pct: 5 }));
+  assert.equal(result.ok, true);
+  assert.deepEqual(h.state.layers[0].hoppers.map(x => x.pct), [0, 0, 5, 85, 10, 0], "H4 gave the 5%, H1 stayed 0");
+  assert.equal(h.recipeEditHistory.current.undo.length, 1, "one history entry for both hoppers");
+  assert.equal(h.log.notified.length, 1, "one RT Sync mutation for both hoppers");
+
+  // Lowering gives it back to H4, not to the empty H1.
+  assert.equal(h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 2, pct: 0 })).ok, true);
+  assert.deepEqual(h.state.layers[0].hoppers.map(x => x.pct), [0, 0, 0, 90, 10, 0]);
+
+  // Undo restores both hoppers together.
+  assert.equal(h.dispatch("undo", { recipe: "current" }).ok, true);
+  assert.deepEqual(h.state.layers[0].hoppers.map(x => x.pct), [0, 0, 5, 85, 10, 0]);
+});
+
+test("setHopperBlend refuses, untouched, when the balance hopper cannot cover the difference", () => {
+  const h = boot();
+  emptyH1Layer(h);
+  const before = h.stateJson();
+  const refused = h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 2, pct: 95 }));
+  assert.equal(refused.code, "blend_total");
+  assert.match(refused.message, /Hopper 4 only has 90% to give/);
+  assert.equal(h.stateJson(), before);
+  assert.equal(h.log.saves, 0);
+});
+
 test("out-of-range and malformed percentages never reach the executor", () => {
   const h = boot();
   assert.equal(h.dispatch("setHopperBlend", Object.assign({}, CUR, { index: 1, pct: 101 })).code, "out_of_range");

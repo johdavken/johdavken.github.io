@@ -6005,19 +6005,29 @@
               return;
             }
 
-            const otherPercentages = L.hoppers.slice(1).map((item,index)=>
-              index === hi - 1 ? candidate.value : item.pct
-            );
-            const totalResult = validation.validateHopperPercentages(otherPercentages);
-            e.target.setCustomValidity(totalResult.valid ? "" : totalResult.message);
-            e.target.setAttribute("aria-invalid", String(!totalResult.valid));
-            e.target.title = totalResult.valid ? "" : totalResult.message;
-            if (!totalResult.valid) return;
+            // The line panel's balancing: the difference comes out of H1
+            // when it holds a resin, else out of the first hopper in use
+            // (validation.balanceHopperBlend).
+            const balance = validation.balanceHopperBlend(L.hoppers, hi, candidate.value, {
+              label: i => hopperBadgeLabel(L.name, i)
+            });
+            e.target.setCustomValidity(balance.valid ? "" : balance.message);
+            e.target.setAttribute("aria-invalid", String(!balance.valid));
+            e.target.title = balance.valid ? "" : balance.message;
+            if (!balance.valid) return;
 
             beginRecipeEditInput();
+            balance.changed.forEach(i=>{ L.hoppers[i].pct = balance.pcts[i]; });
             hopper.pct = candidate.value;
             recomputeAutoH1(L);
             refreshCellState();
+            balance.changed.forEach(i=>{
+              if (i === hi) return;
+              const ref = cellRefs.get(`${L.name}:${i}`);
+              if (!ref) return;
+              ref.pctInput.value = String(clampNum(L.hoppers[i].pct));
+              ref.refreshCellState();
+            });
             cellRefs.get(`${L.name}:0`)?.refreshCellState();
             const h1Input = table.querySelector(`#p_${L.name}_0`);
             if (h1Input) h1Input.value = String(clampNum(L.hoppers[0].pct));
@@ -10001,22 +10011,22 @@
       },
 
       /* The grid's percentage field: H1 is read-only and derived; the
-       * candidate is checked against the other hoppers' shares with the
-       * same validateHopperPercentages the field uses, then hopper.pct is
+       * candidate is balanced with the same validation.balanceHopperBlend
+       * the field uses - the difference comes out of H1 when it holds a
+       * resin, else out of the first hopper in use - then the blends are
        * set and recomputeAutoH1 keeps H1 the remainder. */
       setHopperBlend(args){
         if (args.index === 0) return contract.failure("h1_derived");
         const at = locate(args.recipe, args.layer, args.index);
         if (at.failure) return at.failure;
-        const others = at.layer.hoppers.slice(1).map((item, i)=>(i === args.index - 1 ? args.pct : item.pct));
-        const total = validation.validateHopperPercentages(others);
-        if (!total.valid){
-          at.release();
-          return contract.failure("blend_total", { total: total.total, message: total.message });
-        }
         if (clampNum(at.hopper.pct) === args.pct){ at.release(); return unchanged(); }
+        const balance = validation.balanceHopperBlend(at.layer.hoppers, args.index, args.pct);
+        if (!balance.valid){
+          at.release();
+          return contract.failure("blend_total", { total: balance.total, message: balance.message });
+        }
         const before = snapshotRecipeEdit(args.recipe);
-        at.hopper.pct = args.pct;
+        balance.changed.forEach(i=>{ at.layer.hoppers[i].pct = balance.pcts[i]; });
         recomputeAutoH1(at.layer);
         const persisted = commit({ sync: true });
         recordRecipeEdit(before, args.recipe);
