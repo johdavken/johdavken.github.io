@@ -7,11 +7,17 @@
  * output - and three numbered steps with a line each on how they stand:
  * the Recipe (how many hoppers change resin at the changeover), the Timeline
  * (what is late, what comes next) and Resin Balance (the job's pounds).
+ * Under the steps, four tiles two by two - Winding Tension, Settings, Work
+ * Alarm, Formulas - the phone's way to what has no step: there is no menu.
+ *
+ * The mark is a button: a tap raises the Lines sheet (slate-line-switcher.js,
+ * through `ctx.home.lines`), the lines this device has joined to choose
+ * between.
  *
  * It reads and asks, nothing more: the figures and the lines come through
  * `ctx.home`, which the boot fills from the job's cards, the Timeline and
  * the balance's own arithmetic; a tap on a figure opens that card's editor
- * and a tap on a step opens its page, each through the boot. It dispatches
+ * and a tap on a step or a tile opens its page, each through the boot. It dispatches
  * nothing. Listed only on a phone (slate.js); elsewhere the rail and the
  * panes already show all of it.
  */
@@ -19,10 +25,14 @@
   const logo = typeof require === "function"
     ? require("./slate-logo.js")
     : (root && root.PolynSlateLogo);
-  const api = factory(logo);
+  // The rail's glyphs, for the tiles: one drawing of each tool's icon.
+  const rail = typeof require === "function"
+    ? require("./slate-rail.js")
+    : (root && root.PolynSlateRail);
+  const api = factory(logo, rail);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PolynSlateHome = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (logoModule, railModule) {
   "use strict";
 
   const TITLE = "Home";
@@ -35,6 +45,33 @@
     Object.freeze({ id: "timeline", label: "Timeline" }),
     Object.freeze({ id: "resin-balance", label: "Resin Balance" })
   ]);
+  /* Two by two, read across: the order is the operator's. */
+  const TILES = Object.freeze([
+    Object.freeze({ id: "winding-tension", label: "Winding Tension", icon: "winding" }),
+    Object.freeze({ id: "settings", label: "Settings", icon: "settings" }),
+    Object.freeze({ id: "work-alarm", label: "Work Alarm", icon: "alarm" }),
+    Object.freeze({ id: "formulas", label: "Formulas", icon: "gauge" })
+  ]);
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const LINES_LABEL = "Lines";
+
+  function glyph(doc, name) {
+    const glyphs = railModule && railModule.GLYPHS ? railModule.GLYPHS : {};
+    const svg = doc.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "slate-home__tile-glyph");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", glyphs[name] || glyphs.generic || "M4 4h12v12H4Z");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.6");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+    return svg;
+  }
 
   function element(doc, name, className, attributes) {
     const node = doc.createElement(name);
@@ -114,7 +151,9 @@
    *                              go(id), recipe(resolved) -> {line, planned, resinChanges},
    *                              timeline() -> entries, balance(resolved) -> total pounds,
    *                              clock(at) -> "5:20 PM",
-   *                              sync() -> the connection bridge's status, for the mark }
+   *                              sync() -> the connection bridge's status, for the mark,
+   *                              lines() - raise the Lines sheet, has(id) -> whether a
+   *                              tile's page exists here (a tile without one is left out) }
    * @param {function} [ctx.now]
    */
   function create(doc, ctx) {
@@ -124,7 +163,9 @@
     const now = typeof settings.now === "function" ? settings.now : () => Date.now();
 
     const rootEl = element(doc, "div", "slate-home");
-    const brand = element(doc, "div", "slate-home__brand");
+    // The mark is the way to the Lines sheet: a button the mark's size.
+    const brand = element(doc, "button", "slate-home__brand", { type: "button", "aria-haspopup": "dialog", "data-home-lines": "" });
+    brand.addEventListener("click", () => call("lines"));
     // The mark alive to RT Sync where the logo module offers it; the plain
     // mark otherwise.
     const mark = logoModule && typeof logoModule.createLive === "function"
@@ -168,10 +209,24 @@
     });
     rootEl.appendChild(steps);
 
+    const tiles = element(doc, "div", "slate-home__tiles");
+    for (const tile of TILES) {
+      if (typeof home.has === "function" && !home.has(tile.id)) continue;
+      const button = element(doc, "button", "slate-home__tile", { type: "button", "data-home-tile": tile.id });
+      button.appendChild(glyph(doc, tile.icon));
+      button.appendChild(text(doc, "span", "slate-home__tile-label", tile.label));
+      button.addEventListener("click", () => call("go", tile.id));
+      tiles.appendChild(button);
+    }
+    rootEl.appendChild(tiles);
+
     let resolvedNow = null;
 
     function paint() {
-      if (mark) mark.update(syncMark(call("sync")));
+      const markNow = syncMark(call("sync"));
+      if (mark) mark.update(markNow);
+      const label = markNow.label ? `${LINES_LABEL} — ${markNow.label}` : LINES_LABEL;
+      if (brand.getAttribute("aria-label") !== label) brand.setAttribute("aria-label", label);
       setText(lineEl, call("line", resolvedNow) || "");
       for (const [field, figure] of figures) {
         const shown = call("readout", field) || { value: "", sub: "" };
@@ -192,5 +247,5 @@
     return Object.freeze({ element: rootEl, update, refresh: paint });
   }
 
-  return Object.freeze({ TITLE, READOUTS, STEPS, syncMark, recipeLine, timelineLine, balanceLine, create });
+  return Object.freeze({ TITLE, READOUTS, STEPS, TILES, syncMark, recipeLine, timelineLine, balanceLine, create });
 });

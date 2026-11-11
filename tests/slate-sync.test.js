@@ -382,3 +382,46 @@ test("a shown join code offers New code, which mints another and draws its QR; a
   click(off.view.trigger);
   assert.ok(off.view.panel.querySelector("[data-action='newJoinCode']").hasAttribute("disabled"));
 });
+
+test("selectLine is a phone's Lines sheet's way to switch: one selectWorkspace request with the id, the answer handed back, nothing asked on top of a request in flight", async () => {
+  const { connection, view } = boot(statusOf(), { answers: { selectWorkspace: args => (args.id === "ws-gone" ? { ok: false, code: "failed", message: "That line is not remembered on this device." } : { ok: true }) } });
+  assert.deepEqual(await view.selectLine("ws-2"), { ok: true });
+  assert.deepEqual(connection.requests, [{ name: "selectWorkspace", args: { id: "ws-2" } }]);
+  const refused = await view.selectLine("ws-gone");
+  assert.equal(refused.ok, false);
+  assert.equal(refused.message, "That line is not remembered on this device.");
+  // A request in flight: the second is refused here, not sent.
+  let release;
+  const slow = boot(statusOf(), { answers: { selectWorkspace: () => new Promise(resolve => { release = resolve; }) } });
+  const first = slow.view.selectLine("ws-2");
+  const second = await slow.view.selectLine("ws-3");
+  assert.equal(second.ok, false);
+  assert.equal(second.code, "busy");
+  release({ ok: true });
+  assert.deepEqual(await first, { ok: true });
+  assert.deepEqual(slow.connection.requests.map(one => one.args.id), ["ws-2"]);
+  // No connection at all: refused, nothing thrown.
+  assert.equal((await boot(null).view.selectLine("ws-2")).ok, false);
+});
+
+test("reconnectLine asks the bridge's reconnect, as the panel's Reconnect does", async () => {
+  const { connection, view } = boot(statusOf({ linked: false }));
+  assert.deepEqual(await view.reconnectLine(), { ok: true });
+  assert.deepEqual(connection.requests, [{ name: "reconnect", args: undefined }]);
+  assert.equal((await boot(null).view.reconnectLine()).ok, false);
+});
+
+test("open({ join: true }) opens the panel on its join form, and turns an open panel to it; a plain open does not", () => {
+  const { view } = boot(statusOf());
+  view.open();
+  assert.equal(view.panel.querySelector(".slate-sync__input--code"), null, "a plain open showed the join form");
+  view.open({ join: true });
+  assert.ok(view.panel.querySelector(".slate-sync__input--code"), "an open panel did not turn to the join form");
+  view.close(false);
+  view.open({ join: true });
+  assert.ok(view.isOpen());
+  assert.ok(view.panel.querySelector(".slate-sync__input--code"), "the panel did not open on the join form");
+  view.close(false);
+  view.open();
+  assert.equal(view.panel.querySelector(".slate-sync__input--code"), null, "the join form outlived its close");
+});

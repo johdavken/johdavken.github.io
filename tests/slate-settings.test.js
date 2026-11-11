@@ -291,3 +291,48 @@ test("on a phone Settings is the desktop's at a phone's size: the galleries two 
   assert.ok(view.element.querySelectorAll(".slate-settings__background-note").length >= 2);
   assert.equal(view.element.querySelectorAll(".slate-settings__mode-note.slate-settings__background-note").length, view.element.querySelectorAll("[data-background-choice]").length);
 });
+
+test("handed a phone's ways on, Settings lists How to Use under Help, and - signed in, inside the administrator's block - the administrator's sections; each opens its page; drawn on a phone alone", async () => {
+  const doc = makeDocument();
+  const admin = makeAdmin();
+  const went = [];
+  const view = settings.create(doc, {
+    theme: null, themes: theme.THEMES, admin,
+    pages: {
+      go: id => went.push(id),
+      guide: { id: "guide", label: "How to Use" },
+      admin: [{ id: "workspaces", label: "Workspaces" }, { id: "line-config", label: "Line Configuration" }, { id: "resins", label: "Resin Database" }]
+    }
+  });
+  const el = view.element;
+  const groups = el.querySelectorAll(".slate-settings__group");
+  assert.equal(groups[groups.length - 1].getAttribute("aria-label"), "Administrator access", "the admin block is not last");
+  assert.equal(groups[groups.length - 2].getAttribute("aria-label"), "Help");
+  const help = groups[groups.length - 2];
+  assert.ok(help.classList.contains("slate-settings__group--pages"));
+  click(help.querySelector("[data-settings-page='guide']"));
+  assert.deepEqual(went, ["guide"]);
+
+  // The administrator's sections: hidden until one is signed in.
+  const adminPages = el.querySelector(".slate-settings__admin-pages");
+  assert.ok(adminPages.hasAttribute("hidden"), "an operator was offered the administrator's sections");
+  assert.ok(el.querySelector(".slate-settings__admin-body").contains(adminPages));
+  admin.set({ signedIn: true, isAdmin: true, email: "ada@example.com" });
+  assert.ok(!adminPages.hasAttribute("hidden"));
+  assert.deepEqual(adminPages.querySelectorAll("[data-settings-page]").map(one => one.getAttribute("data-settings-page")), ["workspaces", "line-config", "resins"]);
+  assert.deepEqual(adminPages.querySelectorAll(".slate-settings__page-label").map(one => one.textContent), ["Workspaces", "Line Configuration", "Resin Database"]);
+  click(adminPages.querySelector("[data-settings-page='line-config']"));
+  assert.deepEqual(went, ["guide", "line-config"]);
+  admin.set({ signedIn: false, isAdmin: false, email: "" });
+  assert.ok(adminPages.hasAttribute("hidden"), "signed out, the sections stayed");
+  assert.ok(el.querySelector(".slate-settings__admin-opens--phone"), "a phone is not told where the sections are");
+
+  // Without the ways on (no rail-less page), none of it is built.
+  const plain = settings.create(makeDocument(), { theme: null, themes: theme.THEMES, admin: makeAdmin() });
+  assert.equal(plain.element.querySelector("[data-settings-page]"), null);
+  assert.equal(plain.element.querySelector(".slate-settings__admin-opens--phone"), null);
+
+  const css = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "slate", "styles", "components", "settings.css"), "utf8");
+  assert.match(css, /\n\.slate-settings__group--pages,\n\.slate-settings__admin-pages \{\n  display: none;/, "drawn off a phone, where the rail lists them");
+  assert.match(css, /\.slate-root\[data-input="touch"\]\[data-viewport="phone"\] \.slate-settings__group--pages \{\n  display: block;/);
+});

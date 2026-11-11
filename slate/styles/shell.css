@@ -120,8 +120,8 @@
    the centre and the aside in the same cell - the aside is a page laid
    over the centre while Home's Timeline is chosen (components/panel.css)
    - and each scrolls on its own, so the header and the strip stay put.
-   The rail is a sheet slid up by the grip floating at the foot
-   (components/phone.css, rail.css); the page scrolls clear of it. */
+   There is no rail: Home leads everywhere, and the header carries the
+   way back to it (components/header.css). */
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-shell {
   grid-template-columns: minmax(0, 1fr);
@@ -139,7 +139,8 @@
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-header {
   flex-wrap: wrap;
   row-gap: 0;
-  /* Nothing on the row but a notice: RT Sync is in the menu's sheet. */
+  /* Nothing on the row but the way Home and a notice: RT Sync is reached
+     from Home's mark. */
   min-height: 0;
   padding: 0 var(--slate-space-3);
 }
@@ -154,7 +155,7 @@
   grid-area: page;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--slate-space-3) var(--slate-space-2) calc(var(--slate-space-3) + var(--slate-grip-clear) + var(--slate-inset-bottom));
+  padding: var(--slate-space-3) var(--slate-space-2) calc(var(--slate-space-3) + var(--slate-inset-bottom));
 }
 
 /* Behind the open drawer; hidden (slate.js) whenever the drawer is shut. */
@@ -202,7 +203,7 @@
 }
 
 /* The offer to open Slate every time (slate.js): a quiet strip at the foot,
-   over the page, until it is answered. On a phone it stands above the grip. */
+   over the page, until it is answered. */
 .slate-offer {
   position: fixed;
   right: var(--slate-space-3);
@@ -220,10 +221,6 @@
   border-radius: var(--slate-radius-lg);
   background: var(--slate-surface-raised);
   box-shadow: var(--slate-shadow-pop);
-}
-
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-offer {
-  bottom: calc(var(--slate-inset-bottom) + var(--slate-grip-clear) + var(--slate-space-1));
 }
 
 .slate-offer__text {

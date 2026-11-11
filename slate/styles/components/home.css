@@ -1,7 +1,8 @@
 /* Home (slate-home.js): a phone's first page. The mark, large and
-   turning; the line's name; the changeover and the output as the floor
-   UI's home shows them; and three numbered steps, each with how it
-   stands. Seen only on a phone (slate.js lists it there alone). */
+   turning - a button that raises the Lines sheet; the line's name; the
+   changeover and the output as the floor UI's home shows them; three
+   numbered steps, each with how it stands; and four tiles, two by two,
+   for the rest. Seen only on a phone (slate.js lists it there alone). */
 
 .slate-home {
   display: flex;
@@ -13,15 +14,24 @@
 
 /* The mark: the letterforms in the text colour, the streams in the
    theme's (slate-logo.js), turning on rail.css's keyframes. */
-.slate-home__brand {
+.slate-root .slate-home__brand {
   display: flex;
   justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--slate-radius-lg);
+  background: none;
   color: var(--slate-text);
 }
 
+/* A press on the mark answers where the finger is. */
+.slate-root .slate-home__brand:active {
+  background: var(--slate-surface-selected);
+}
+
 .slate-home__brand .slate-logo {
-  /* Large: the header gives its row to the page on a phone, and RT Sync
-     stands in the menu's sheet, so the mark has the top of the screen. */
+  /* Large: the header gives its row to Home on a phone, and RT Sync is
+     reached through the mark, so the mark has the top of the screen. */
   width: min(88%, 380px);
   /* No taller than the room the brand is given: on a short phone it is
      the mark that gives (below). */
@@ -160,7 +170,48 @@
   font-size: var(--slate-text-xl);
 }
 
+/* The tiles: two by two, an icon over a name, a finger's target each. */
+.slate-home__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-2);
+}
+
+.slate-root .slate-home__tile {
+  display: flex;
+  align-items: center;
+  gap: var(--slate-space-3);
+  min-width: 0;
+  min-height: 56px;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface-raised);
+  box-shadow: var(--slate-shadow-card);
+  color: var(--slate-text);
+  text-align: left;
+}
+
+.slate-root .slate-home__tile:active {
+  background: var(--slate-surface-selected);
+}
+
+.slate-home__tile-glyph {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--slate-accent);
+}
+
+.slate-home__tile-label {
+  min-width: 0;
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  line-height: var(--slate-line-tight);
+}
+
 @media (hover: hover) {
+  .slate-root .slate-home__tile:hover,
   .slate-root .slate-home__step:hover,
   .slate-root .slate-home__readout:hover {
     background: var(--slate-surface-hover);
@@ -188,12 +239,14 @@
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-home__brand {
   flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
   min-height: 72px;
 }
 
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-home__line,
 .slate-root[data-input="touch"][data-viewport="phone"] .slate-home__readouts,
-.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__steps {
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__steps,
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-home__tiles {
   flex: none;
 }

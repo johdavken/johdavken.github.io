@@ -19,7 +19,7 @@
 
   /* Every mount point the boot file looks for. Named here so the shell and
    * the code that fills it cannot disagree about what exists. */
-  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside", "grip"]);
+  const MOUNTS = Object.freeze(["rail", "header", "notice", "sync", "stats", "centre", "aside"]);
 
   const TOO_SMALL = "Slate needs a window at least 1100px wide. Use Resin.Tools (Legacy) on this screen.";
 
@@ -57,6 +57,12 @@
     shell.appendChild(element(doc, "nav", "slate-rail", { "data-slate-mount": "rail", "aria-label": "Sections" }));
 
     const header = element(doc, "header", "slate-header", { "data-slate-mount": "header" });
+    // A phone's way back to Home from any other page (slate.js shows it
+    // there alone); a phone has no menu.
+    const home = element(doc, "button", "slate-header__home", { type: "button", "data-slate-home": "", hidden: "" });
+    home.appendChild(text(doc, "span", "slate-header__home-mark", "\u2039", { "aria-hidden": "true" }));
+    home.appendChild(text(doc, "span", "slate-header__home-label", "Home"));
+    header.appendChild(home);
     header.appendChild(text(doc, "h1", "slate-header__title", "Slate"));
     header.appendChild(element(doc, "p", "slate-header__notice", { "data-slate-mount": "notice", role: "status", hidden: "" }));
     header.appendChild(element(doc, "div", "slate-header__sync", { "data-slate-mount": "sync" }));
@@ -65,9 +71,6 @@
     shell.appendChild(element(doc, "section", "slate-stats", { "data-slate-mount": "stats", "aria-label": "Job" }));
     shell.appendChild(element(doc, "section", "slate-centre", { "data-slate-mount": "centre", "aria-label": "Workspace" }));
     shell.appendChild(element(doc, "aside", "slate-aside", { "data-slate-mount": "aside", "aria-label": "Timeline", id: "slate-aside" }));
-    // A phone's grip floating at the foot, which slides the rail up as a
-    // sheet (slate-phone-drawer.js): seen only there.
-    shell.appendChild(element(doc, "div", "slate-grip-dock", { "data-slate-mount": "grip" }));
 
     root.appendChild(shell);
     // Behind the aside's drawer: a press on it closes the drawer.
