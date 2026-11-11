@@ -138,9 +138,10 @@ test("the layer Total readout is hidden on the reworked grid - the total is 100 
 });
 
 test("every write path that could break the 100% invariant refuses before writing", () => {
-  // Typing: the per-cell handler bails when H2-H6 would exceed 100.
-  assert.match(app, /const totalResult = validation\.validateHopperPercentages\(otherPercentages\);/);
-  assert.match(app, /if \(!totalResult\.valid\) return;/);
+  // Typing: the per-cell handler balances the change (balanceHopperBlend,
+  // whose last check is validateHopperPercentages) and bails when it cannot.
+  assert.match(app, /const balance = validation\.balanceHopperBlend\(L\.hoppers, hi, candidate\.value,/);
+  assert.match(app, /if \(!balance\.valid\) return;/);
   // Bulk apply: a pre-flight pass across every layer, refused with a message
   // naming the layer, before any hopper is written.
   assert.match(app, /const result = validation\.validateHopperPercentages\(projected\);\s*\n\s*if \(!result\.valid\)\{/);

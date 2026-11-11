@@ -57,6 +57,69 @@
     return { valid: true, total, values };
   }
 
+  /* One hopper's blend changed, the way the blender panel on the line
+   * balances it. The difference comes out of (or goes back into) a
+   * balance hopper:
+   *   - Hopper 1 when it has a resin - the long-standing rule, H1 is the
+   *     remainder (re-derived by the caller's recomputeAutoH1);
+   *   - otherwise the first hopper in use (a resin or a blend) other than
+   *     the one being edited. An increase first uses up whatever leftover
+   *     an empty H1 holds, so a recipe built hopper by hopper does not
+   *     strand a share there; a decrease never hands a share to an empty
+   *     H1;
+   *   - with no hopper in use, H1 again (a fresh layer).
+   * Pure: returns the layer's new blends (index 0 is left for the caller to
+   * derive) or a refusal, never touching `hoppers`. `label(i)` names a
+   * hopper in a message (the line's own badge), defaulting to "Hopper N". */
+  function balanceHopperBlend(hoppers, index, value, { label } = {}) {
+    const name = typeof label === "function" ? label : i => `Hopper ${i + 1}`;
+    if (!Array.isArray(hoppers) || !Number.isInteger(index) || index < 1 || index >= hoppers.length) {
+      return { valid: false, code: "bad_argument", message: "That hopper is not part of the layer." };
+    }
+    const checked = validatePercentage(value, `${name(index)} percentage`);
+    if (!checked.valid) return { valid: false, code: "out_of_range", message: checked.message };
+    const round = n => Math.round(n * 1e6) / 1e6;
+    const pcts = hoppers.map(h => {
+      const n = Number(String(h?.pct ?? "").replace(/,/g, ""));
+      return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+    });
+    const hasResin = i => String(hoppers[i]?.resinName ?? "").trim() !== "";
+    const next = pcts.slice();
+    next[index] = checked.value;
+    const delta = round(checked.value - pcts[index]);
+
+    let balanceIndex = 0;
+    if (!hasResin(0)) {
+      for (let i = 1; i < pcts.length; i++) {
+        if (i !== index && (hasResin(i) || pcts[i] > 0)) { balanceIndex = i; break; }
+      }
+    }
+    if (balanceIndex > 0 && delta !== 0) {
+      let fromBalance = delta;
+      if (delta > 0) {
+        const sumOthers = pcts.slice(1).reduce((sum, n) => sum + n, 0);
+        const h1Leftover = Math.max(0, round(100 - sumOthers));
+        fromBalance = Math.max(0, round(delta - h1Leftover));
+      }
+      const balanced = round(pcts[balanceIndex] - fromBalance);
+      if (balanced < 0) {
+        return {
+          valid: false,
+          code: "blend_total",
+          balanceIndex,
+          message: `${name(balanceIndex)} only has ${pcts[balanceIndex]}% to give.`
+        };
+      }
+      next[balanceIndex] = balanced;
+    }
+
+    const total = validateHopperPercentages(next.slice(1));
+    if (!total.valid) return { valid: false, code: "blend_total", total: total.total, message: total.message };
+    const changed = [];
+    for (let i = 1; i < next.length; i++) if (next[i] !== pcts[i]) changed.push(i);
+    return { valid: true, pcts: next, changed, balanceIndex };
+  }
+
   function validateConfigPayload(payload, { requireTotals = true } = {}) {
     const errors = [];
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -208,6 +271,7 @@
     validateNumber,
     validatePercentage,
     validateHopperPercentages,
+    balanceHopperBlend,
     validateConfigPayload,
     validateActiveJobPayload,
     SUPPORTED_ACTIVE_JOB_VERSIONS
