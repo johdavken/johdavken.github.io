@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Resin Tools</string>
+    <!-- app_name is a resValue in app/build.gradle (-PresinAppName). -->
     <string name="title_activity_main">Resin Tools</string>
     <string name="package_name">tools.resin.app</string>
     <string name="custom_url_scheme">tools.resin.app</string>

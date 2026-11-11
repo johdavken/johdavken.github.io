@@ -152,3 +152,28 @@ test("a host is followed only when index.html loads it, and a host without its l
     fs.rmSync(tmp, { force: true });
   }
 });
+
+test("--boot-view stamps the view into www/index.html only, first in <head>", () => {
+  const { stampBootView, bootViewArg } = require("../scripts/build-www.js");
+  const stamped = stampBootView("<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n</head></html>", "slate");
+  const script = '<script>(function(){try{var u=new URL(location.href);if(!u.searchParams.get("view")){u.searchParams.set("view","slate");history.replaceState(null,"",u.toString());}}catch(e){}})();</script>';
+  assert.equal(stamped, `<!doctype html>\n<html>\n<head>\n  ${script}\n  <meta charset="utf-8">\n</head></html>`);
+  assert.throws(() => stampBootView("<head></head>", "slate\"><script>"), /not a view name/);
+  assert.throws(() => stampBootView("<head></head>", ""), /not a view name/);
+  assert.throws(() => stampBootView("<html></html>", "slate"), /no <head>/);
+  assert.equal(bootViewArg([]), null);
+  assert.equal(bootViewArg(["--boot-view", "slate"]), "slate");
+  assert.throws(() => bootViewArg(["--boot-view"]), /needs a view name/);
+
+  const source = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  try {
+    buildWww({ bootView: "slate" });
+    const out = fs.readFileSync(path.join(OUT, "index.html"), "utf8");
+    assert.ok(out.includes(script));
+    assert.equal(out, stampBootView(source, "slate"));
+    assert.equal(fs.readFileSync(path.join(ROOT, "index.html"), "utf8"), source, "the repo's index.html is untouched");
+  } finally {
+    buildWww();
+  }
+  assert.equal(fs.readFileSync(path.join(OUT, "index.html"), "utf8"), source, "a plain build is unstamped");
+});
