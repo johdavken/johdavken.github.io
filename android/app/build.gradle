@@ -20,7 +20,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 37
-        versionName "1.1.26"
+        versionName "1.1.27"
         // The GitHub release workflow (.github/workflows/android-release.yml)
         // passes these with -P; a local build keeps the defaults. versionName
         // above stays the one source of the version (index.html shows it, and
