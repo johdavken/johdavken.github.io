@@ -25,6 +25,14 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    // Checks the repo's GitHub Releases for a newer APK of this package
+    // (AppUpdater throttles itself: once per cold start, then every few hours).
+    @Override
+    public void onResume() {
+        super.onResume();
+        AppUpdater.onResume(this);
+    }
+
     // singleTask launchMode means an already-running instance is reused via
     // onNewIntent rather than a fresh onCreate - without this, tapping
     // "Open Resin.Tools" on the alarm screen while the app was already

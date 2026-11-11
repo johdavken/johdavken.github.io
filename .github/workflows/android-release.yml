@@ -1,0 +1,110 @@
+# Builds the Android APK from source and publishes it as a GitHub Release.
+# Phones running the app pick it up through AppUpdater (releases/latest).
+#
+# Ship a version:   bump versionName in android/app/build.gradle and the
+#                   v-labels in index.html as usual, merge, then
+#                   git tag v1.1.27 && git push origin v1.1.27
+#                   (the job refuses a tag that differs from build.gradle)
+#
+# The APK is the package the Fold runs (tools.resin.app.slatepreview, booting
+# into Slate) signed with the same debug key as the hand-built copies, so it
+# installs over them and keeps each phone's RT Sync identity. The job refuses
+# to publish an APK signed with any other key.
+#
+# Needs one repository secret, ANDROID_DEBUG_KEYSTORE_B64: the keystore
+# base64-encoded (base64 -w0 ~/.config/.android/debug.keystore).
+
+name: Android release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+env:
+  APP_ID_SUFFIX: .slatepreview
+  APP_NAME: Slate Preview
+  BOOT_VIEW: slate
+  # SHA-256 of the signing CERTIFICATE (apksigner --print-certs / keytool -list),
+  # not of the keystore file: ~/.config/.android/debug.keystore's key, read off
+  # the installed tools.resin.app.slatepreview APK.
+  EXPECTED_CERT_SHA256: 1b0c01400d249ae4be4231a69e59a94e87df061185d5be4da10bbd174bc5d026
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Version from tag
+        id: version
+        run: node scripts/release-version.js "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests (release tooling)
+        run: node --test tests/build-www.test.js tests/release-version.test.js tests/android-updater.test.js
+
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "::error::ANDROID_DEBUG_KEYSTORE_B64 secret is not set"; exit 1; fi
+          mkdir -p "$RUNNER_TEMP/android-user"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/android-user/debug.keystore"
+          echo "ANDROID_USER_HOME=$RUNNER_TEMP/android-user" >> "$GITHUB_ENV"
+
+      - name: Web bundle
+        run: |
+          node scripts/build-www.js --boot-view "$BOOT_VIEW"
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug \
+            -PresinAppIdSuffix="$APP_ID_SUFFIX" \
+            -PresinAppName="$APP_NAME" \
+            -PresinVersionCode="${{ steps.version.outputs.versionCode }}"
+
+      - name: Check package, version and signature
+        id: apk
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          BADGING=$("$TOOLS/aapt2" dump badging "$APK" | head -1)
+          echo "$BADGING"
+          APP_ID="tools.resin.app$APP_ID_SUFFIX"
+          CODE="${{ steps.version.outputs.versionCode }}"
+          echo "$BADGING" | grep -q "name='$APP_ID' versionCode='$CODE'" || { echo "::error::APK is not $APP_ID at $CODE"; exit 1; }
+          CERT=$("$TOOLS/apksigner" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          [ "$CERT" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK signed with $CERT, not the installed key"; exit 1; }
+          NAME="$APP_ID-$CODE.apk"
+          cp "$APK" "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.name }}" \
+            --title "Resin Tools ${{ steps.version.outputs.versionName }}" \
+            --generate-notes --latest

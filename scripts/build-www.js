@@ -107,7 +107,30 @@ function stylesheetAssetReferences(stylesheetRelativePath) {
   return refs;
 }
 
-function buildWww() {
+// The Android shell can open into a named view (?view=slate) when the URL
+// names none, the way a hand-built Slate Preview APK always has. Only the
+// www/ copy of index.html is stamped - the repo's index.html and the
+// GitHub Pages site are untouched - and the stamp is the first thing in
+// <head>, before any host script reads the URL. A link that names a view
+// (?view=legacy) still wins.
+function stampBootView(html, view) {
+  if (!/^[a-z][a-z-]*$/.test(view || "")) throw new Error(`build-www: boot view "${view}" is not a view name.`);
+  const head = html.match(/<head[^>]*>/i);
+  if (!head) throw new Error("build-www: index.html has no <head> to stamp a boot view into.");
+  const script = `<script>(function(){try{var u=new URL(location.href);if(!u.searchParams.get("view")){u.searchParams.set("view","${view}");history.replaceState(null,"",u.toString());}}catch(e){}})();</script>`;
+  const at = head.index + head[0].length;
+  return `${html.slice(0, at)}\n  ${script}${html.slice(at)}`;
+}
+
+function bootViewArg(argv) {
+  const i = argv.indexOf("--boot-view");
+  if (i === -1) return null;
+  const view = argv[i + 1];
+  if (!view || view.startsWith("--")) throw new Error("build-www: --boot-view needs a view name, e.g. --boot-view slate.");
+  return view;
+}
+
+function buildWww({ bootView = null } = {}) {
   const html = fs.readFileSync(path.join(ROOT, INDEX_HTML_RELATIVE), "utf8");
   const htmlRefs = localRuntimeReferences(html);
   const manifestRefs = htmlRefs
@@ -135,12 +158,18 @@ function buildWww() {
     count += 1;
   }
 
+  if (bootView) {
+    const outIndex = path.join(OUT, INDEX_HTML_RELATIVE);
+    fs.writeFileSync(outIndex, stampBootView(fs.readFileSync(outIndex, "utf8"), bootView));
+  }
+
   return { count, files };
 }
 
 if (require.main === module) {
-  const { count } = buildWww();
-  console.log(`build-www: copied ${count} files referenced by index.html into ${path.relative(ROOT, OUT)}/`);
+  const bootView = bootViewArg(process.argv.slice(2));
+  const { count } = buildWww({ bootView });
+  console.log(`build-www: copied ${count} files referenced by index.html into ${path.relative(ROOT, OUT)}/${bootView ? ` (boots into ?view=${bootView})` : ""}`);
 }
 
-module.exports = { buildWww, localRuntimeReferences, hostAssetReferences, stylesheetAssetReferences, FOLLOWED_HOSTS, ROOT, OUT };
+module.exports = { buildWww, stampBootView, bootViewArg, localRuntimeReferences, hostAssetReferences, stylesheetAssetReferences, FOLLOWED_HOSTS, ROOT, OUT };
