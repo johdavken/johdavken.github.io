@@ -91,7 +91,20 @@
   let scanInFlight = false;      // guards against a second submission while one request is already in flight
   let pendingDestination = null; // "current" | "next" when the scan was started for a named recipe (a view whose tabs are not this page), else null = the page on screen
 
+  // A host that draws the scan in its own clothes (Slate) registers a
+  // presenter through setPresenter() below. While one is registered the
+  // three dialogs in index.html are never opened: every step - the
+  // orientation question, the capture, its status line, the review - is
+  // handed to the presenter instead, and it answers through the flow
+  // setPresenter() returns. The capture, upload, mapping and apply stay
+  // here: one implementation, two sets of clothes.
+  let presenter = null;
+
   function setStatus(id, text, isError){
+    if (presenter){
+      presenter.status(id === "recipeScanReviewStatus" ? "review" : "capture", text || "", !!isError);
+      return;
+    }
     const el = $(id);
     if (!el) return;
     el.textContent = text || "";
@@ -150,6 +163,7 @@
   // --- orientation fallback (unrecognized lines only) ----------------------
 
   function openOrientationDialog(){
+    if (presenter){ presenter.orientation(); return; }
     const dialog = $("recipeScanOrientationDialog");
     if (!dialog?.showModal) return;
     dialog.addEventListener("close", () => {
@@ -178,6 +192,10 @@
     // Photo/Choose Photo choice instead of the web's single Scan button.
     // Never both at once.
     const native = isNativePlatform();
+    if (presenter){
+      presenter.capture({ kind: pendingSourceType, title: copy.title, description: copy.description, native });
+      return;
+    }
     const webRow = $("recipeScanCaptureWebRow");
     const nativeRow = $("recipeScanCaptureNativeRow");
     if (webRow) webRow.hidden = native;
@@ -186,6 +204,8 @@
   }
 
   function closeCaptureDialog(){
+    // A presenter puts its own steps away: the next step replaces this one.
+    if (presenter) return;
     $("recipeScanCaptureDialog")?.close?.();
   }
 
@@ -541,6 +561,11 @@
   }
 
   function openReviewDialog(){
+    if (presenter){
+      setStatus("recipeScanReviewStatus", "");
+      presenter.review(reviewModel());
+      return;
+    }
     const dialog = $("recipeScanReviewDialog");
     if (!dialog?.showModal) return;
     setStatus("recipeScanReviewStatus", "");
@@ -549,7 +574,47 @@
   }
 
   function closeReviewDialog(){
+    if (presenter) return;
     $("recipeScanReviewDialog")?.close?.();
+  }
+
+  // The review as data, for a presenter to draw: what renderReview() puts
+  // in the dialog, in the same words, without the DOM. Read-only except
+  // the layer percentages the scan could not read, which the presenter
+  // sets through flow.setLayerPct (as layerPctNode's input does).
+  function reviewModel(){
+    const destination = serviceApi.getRecipePageLabel?.(pendingDestination) || "Current Recipe";
+    const warnings = [];
+    if (serviceApi.hasNonEmptyRecipe?.(pendingDestination)) warnings.push(`This will overwrite the ${destination.toLowerCase()} assignments.`);
+    if (pendingScan?.layer_percentage_total_status && pendingScan.layer_percentage_total_status !== "ok"){
+      warnings.push("The scanned layer percentages don't total 100% — review carefully before applying.");
+    }
+    const scanned = orderedScanLayers();
+    const layers = (pendingPayload?.layers || []).map((layer, index) => {
+      const scannedLayer = scanned[index];
+      return {
+        index,
+        name: String(layer.name || ""),
+        pct: Number.isFinite(Number(layer.layer_pct)) ? Number(layer.layer_pct) : null,
+        // "estimated" = not read: the one value the operator types here.
+        pctState: layer.layer_pct_estimated ? "estimated" : (layer.layer_pct_derived ? "calculated" : "read"),
+        componentsOff: !!(scannedLayer?.component_percentage_total_status && scannedLayer.component_percentage_total_status !== "ok"),
+        hoppers: (layer.hoppers || []).map((hopper, hopperIndex) => ({
+          label: `H${hopperIndex + 1}`,
+          resin: hopper.resin_name ? String(hopper.resin_name) : "",
+          pct: Number.isFinite(Number(hopper.pct)) ? Number(hopper.pct) : null,
+          state: !hopper.resin_name ? "missing" : (hopperIndex === 0 ? "auto" : (hopper.percentage_estimated ? "estimated" : "read"))
+        }))
+      };
+    });
+    return {
+      kind: pendingSourceType,
+      destination,
+      title: `Review Scanned Recipe — ${destination}`,
+      applyLabel: `Apply to ${destination}`,
+      warnings,
+      layers
+    };
   }
 
   function applyReview(){
@@ -617,5 +682,42 @@
   // Setup's own Scan Recipe shortcut, app.js) can trigger the exact same
   // flow as the Tools panel/status-bar buttons above, without duplicating
   // startScan's orientation-prompt/dialog logic.
-  root.PolynRecipeScanUI = { startScan };
+  // A presenter: { orientation(), capture({kind, title, description,
+  // native}), status(step, text, isError), review(model) } - step is
+  // "capture" or "review". Registering one returns the flow it answers
+  // through; null puts the dialogs back. The presenter shows and hides its
+  // own steps: the flow never tells it to close, it closes on the answer
+  // it gave (apply's ok, cancel).
+  function setPresenter(next){
+    const valid = next && ["orientation", "capture", "status", "review"].every(name => typeof next[name] === "function");
+    presenter = valid ? next : null;
+    if (!presenter) return null;
+    return Object.freeze({
+      chooseOrientation(value){
+        if (value === "inside" || value === "outside"){ pendingOrientation = value; openCaptureDialog(); }
+        else resetPendingScan();
+      },
+      submitFile: file => submitFile(file),
+      takePhoto: () => captureFromNativeCamera(),
+      choosePhoto: () => captureFromNativeGallery(),
+      busy: () => scanInFlight,
+      setLayerPct(index, value){
+        const layer = pendingPayload?.layers?.[index];
+        if (!layer) return;
+        const number = parseFloat(value);
+        layer.layer_pct = Number.isFinite(number) ? number : 0;
+      },
+      // applyReview() resets the pending scan only when the apply landed;
+      // a refusal keeps it and says why through status("review", ...).
+      apply(){
+        if (!pendingPayload) return { ok: false };
+        applyReview();
+        return { ok: pendingPayload === null };
+      },
+      retake: () => retakeScan(),
+      cancel: () => resetPendingScan()
+    });
+  }
+
+  root.PolynRecipeScanUI = { startScan, setPresenter };
 })(typeof globalThis !== "undefined" ? globalThis : this);
