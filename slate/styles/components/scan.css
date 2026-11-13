@@ -1,0 +1,225 @@
+/* The recipe scan in Slate's own sheet (slate-scan-sheet.js): which layer
+   is A, the photo, the review. It wears the conflict question's card
+   (modal.css) and adds the review's layers; on a phone the card rises
+   from the foot as every phone sheet does. */
+
+.slate-scan-sheet__card {
+  display: flex;
+  flex-direction: column;
+  width: 520px;
+  max-height: calc(100dvh - 2 * var(--slate-space-5));
+}
+
+.slate-scan-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slate-space-3);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.slate-scan-sheet__status {
+  margin: var(--slate-space-3) 0 0;
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-md);
+}
+
+.slate-scan-sheet__status.is-error {
+  color: var(--slate-danger);
+  font-weight: 600;
+}
+
+.slate-scan-sheet.is-busy .slate-scan-sheet__status:not(.is-error) {
+  color: var(--slate-accent-text);
+  font-weight: 600;
+}
+
+.slate-scan-sheet__actions {
+  flex: none;
+}
+
+.slate-scan-sheet__file {
+  display: none;
+}
+
+/* ---- The review ---- */
+
+.slate-scan-sheet__warning {
+  margin: 0;
+  padding: var(--slate-space-2) var(--slate-space-3);
+  border-radius: var(--slate-radius);
+  background: var(--slate-warning-soft);
+  color: var(--slate-text);
+  font-size: var(--slate-text-md);
+  line-height: var(--slate-line-normal);
+}
+
+.slate-scan-sheet__layer {
+  flex: none;
+  padding: var(--slate-space-3);
+  border: var(--slate-stroke) solid var(--slate-border-subtle);
+  border-radius: var(--slate-radius-lg);
+  background: var(--slate-surface);
+}
+
+.slate-scan-sheet__layer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slate-space-3);
+  min-height: 32px;
+}
+
+.slate-scan-sheet__layer-name {
+  font-family: var(--slate-font-display);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+.slate-scan-sheet__layer-pct {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The field inherits its type (base.css): the share's own size. */
+.slate-scan-sheet__layer-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slate-space-2);
+  color: var(--slate-text);
+  font-size: var(--slate-text-lg);
+  font-weight: 600;
+}
+
+/* The one value typed here, a share the scan could not read: a field
+   with the amber edge of what was not read. */
+.slate-scan-sheet__layer-input {
+  --slate-field-width: 88px;
+  --slate-field-padding: var(--slate-space-1) var(--slate-space-2);
+  --slate-field-border: var(--slate-stroke) solid var(--slate-warning);
+  --slate-field-radius: var(--slate-radius);
+  --slate-field-bg: var(--slate-surface-sunken);
+  --slate-field-min-height: 32px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-root[data-input="touch"] .slate-scan-sheet__layer-input {
+  --slate-field-min-height: var(--slate-tap);
+}
+
+.slate-scan-sheet__unit {
+  color: var(--slate-text-muted);
+}
+
+.slate-scan-sheet__tag {
+  color: var(--slate-text-muted);
+  font-size: var(--slate-text-sm);
+  font-weight: 400;
+}
+
+/* What the scan could not read: the amber the recipe uses for a value
+   that is not what it should be. */
+.slate-scan-sheet__flag {
+  color: var(--slate-warning);
+  font-size: var(--slate-text-sm);
+  font-weight: 600;
+}
+
+.slate-scan-sheet__flag--line {
+  margin: var(--slate-space-1) 0 0;
+}
+
+.slate-scan-sheet__hoppers {
+  display: flex;
+  flex-direction: column;
+  margin: var(--slate-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slate-scan-sheet__hopper {
+  display: grid;
+  grid-template-columns: 2.5em minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--slate-space-3);
+  padding: var(--slate-space-1) 0;
+  border-top: var(--slate-stroke) solid var(--slate-border-subtle);
+  font-size: var(--slate-text-md);
+}
+
+.slate-scan-sheet__hopper-id {
+  color: var(--slate-text-muted);
+  font-family: var(--slate-font-mono);
+  font-size: var(--slate-text-sm);
+}
+
+.slate-scan-sheet__resin {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slate-scan-sheet__hopper-pct {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--slate-space-2);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.slate-scan-sheet__hopper.is-missing .slate-scan-sheet__resin,
+.slate-scan-sheet__hopper.is-missing .slate-scan-sheet__hopper-pct {
+  color: var(--slate-text-faint);
+}
+
+/* ---- A phone: the card is a sheet from the foot, the answers stacked,
+   the first one under the thumb's reach at the bottom of the list. */
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet__card {
+  width: 100%;
+  max-height: 90dvh;
+  padding: var(--slate-space-4) var(--slate-space-4) calc(var(--slate-space-4) + var(--slate-inset-bottom));
+  border-bottom: 0;
+  border-radius: var(--slate-radius-lg) var(--slate-radius-lg) 0 0;
+  animation: slate-sheet-rise var(--slate-motion-move) var(--slate-motion-ease);
+}
+
+/* Apply (or Take photo) across the foot, the other two side by side under
+   it: the review keeps the height of the screen. Two answers, or the
+   question of which layer is A, stack as modal.css stacks them. */
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet__actions {
+  margin-top: var(--slate-space-4);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet__actions:not(.slate-scan-sheet__actions--stack) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slate-space-3);
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet__answer--lead {
+  grid-column: 1 / -1;
+}
+
+.slate-root[data-input="touch"][data-viewport="phone"] .slate-scan-sheet__answer {
+  justify-content: center;
+  text-align: center;
+}
+
+/* While the photo is read, every answer but Cancel is held. */
+.slate-root .slate-scan-sheet__answer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -79,6 +79,7 @@
   const statCards = root.PolynSlateStatCards;
   const syncModule = root.PolynSlateSync;
   const conflictModule = root.PolynSlateConflict;
+  const scanSheetModule = root.PolynSlateScanSheet;
   const settingsModule = root.PolynSlateSettings;
   const timelineModule = root.PolynSlateTimeline;
   const balanceModule = root.PolynSlateResinBalance;
@@ -241,9 +242,11 @@
    *
    * The application's recipe scan (recipe-scan-ui.js): photograph a job
    * traveler or a dosing screen, read it, review it, apply it. Slate starts
-   * it for the recipe tab on screen and draws none of it - the capture and
-   * review are the application's own dialogs, which the host lets through
-   * over Slate. The application reads the photo only for a connected line.
+   * it for the recipe tab on screen, and draws its steps in Slate's own
+   * sheet (slate-scan-sheet.js, registered with the flow at boot as its
+   * presenter); the photo, the reading and the apply stay the
+   * application's. The application reads the photo only for a connected
+   * line.
    * Read at boot: index.html loads the scan modules before Slate's. */
   function scanner() {
     const ui = root.PolynRecipeScanUI || null;
@@ -757,6 +760,15 @@
     // tokens reach it; the sync module registers it with the bridge.
     const conflict = conflictModule ? conflictModule.create(doc) : null;
     if (conflict) container.appendChild(conflict.element);
+    // The scan's steps - which layer is A, the photo, the review - in
+    // Slate's sheet, in the root beside it: the application's scan flow
+    // hands each step to it instead of opening its own dialogs.
+    const scanUi = root.PolynRecipeScanUI || null;
+    if (scanSheetModule && scanUi && typeof scanUi.setPresenter === "function") {
+      const scanSheet = scanSheetModule.create(doc);
+      container.appendChild(scanSheet.element);
+      scanSheet.useFlow(scanUi.setPresenter(scanSheet.presenter));
+    }
     // In the header's corner. On a phone its pill is not drawn (sync.css):
     // the panel is reached from the Lines sheet, and rises as a sheet.
     sync = syncModule.create(doc, { connection, admin, conflict, lineIdentity });

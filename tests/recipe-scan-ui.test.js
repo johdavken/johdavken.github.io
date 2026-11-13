@@ -271,7 +271,7 @@ test("recipe-scan-ui.js loads after app.js, so window.PolynRecipeScanBridge alre
 });
 
 test("startScan is exported so other entry points (Recipe Setup's own Scan Recipe shortcut) can trigger the same flow without duplicating its orientation/dialog logic", () => {
-  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan \};/);
+  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan, setPresenter \};/);
 });
 
 test("a scan started for a named recipe carries it to the review and the apply; an unnamed or unknown one leaves the page on screen to decide", () => {

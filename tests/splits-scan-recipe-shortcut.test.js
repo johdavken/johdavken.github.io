@@ -82,7 +82,7 @@ test("choosing a source closes the popup and calls the exact same startScan flow
 });
 
 test("recipe-scan-ui.js exports startScan precisely so this button can call it", () => {
-  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan \};/);
+  assert.match(ui, /root\.PolynRecipeScanUI = \{ startScan, setPresenter \};/);
 });
 
 test("splitsScanShortcut is reassigned to the current instance on every render, so the outside-click/Escape handlers below always check the live element", () => {

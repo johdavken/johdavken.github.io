@@ -96,8 +96,8 @@
     "hash": "321e27ea24add8dc"
   },
   "slate-host.js": {
-    "v": "0.55.19",
-    "hash": "cf4c100be9371a2c"
+    "v": "0.55.20",
+    "hash": "4a2e76e7f1298b7a"
   },
   "workspace-configuration-payloads.js": {
     "v": "0.20.1",
@@ -272,7 +272,7 @@
     "hash": "1e15eea6e26d8f9e"
   },
   "recipe-scan-ui.js": {
-    "v": "0.4.2",
-    "hash": "cb2c5d03ee7d22c9"
+    "v": "0.4.3",
+    "hash": "3ea1aeff1ce7f7d2"
   }
 }
